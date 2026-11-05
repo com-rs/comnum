@@ -1,0 +1,26 @@
+[package]
+name = "comnum-dsp"
+description = "Waveform-agnostic signal processing of comnum: filtering, resampling, synchronisation, estimation, spectral estimation, Bussgang's decomposition, adaptive equalisation, dispersion compensation, back-propagation, predistortion"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+homepage.workspace = true
+documentation = "https://docs.rs/comnum-dsp"
+keywords = ["dsp", "filter", "resampling", "carrier-recovery", "communications"]
+categories.workspace = true
+readme = "README.md"
+
+[package.metadata.docs.rs]
+rustdoc-args = ["--html-in-header", "katex-header.html"]
+all-features = true
+
+[lints]
+workspace = true
+
+[dependencies]
+comnum-core.workspace = true
+comnum-math.workspace = true
+ndarray.workspace = true

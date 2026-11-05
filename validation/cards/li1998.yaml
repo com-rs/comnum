@@ -1,0 +1,87 @@
+id: li1998
+title: MSE of the robust OFDM channel estimator, infinite and finite length
+literature: li1998
+evidence: [closed_form, curve]
+source:
+  kind: paper
+  reference: "Y. Li, L. J. Cimini, N. R. Sollenberger, Robust channel estimation for OFDM systems with rapid dispersive fading channels, IEEE Trans. Commun. 46(7), 902-915, 1998"
+  locator: "Fig. 3(a) and Fig. 4(a), (c); eqs. (57), (69)-(74)"
+  file: synchronisation/1998_li_robust-channel-estimation-ofdm_tcom.pdf
+description: >
+  The MSE (dB, normalised to the channel power) of the estimator designed for a flat
+  band-limited Doppler spectrum and a uniform delay profile, by
+  comnum::waveform::ofdm::wiener::RobustDesign: the infinite-length estimator of eq. (57)
+  against the Doppler (Fig. 3(a)) and the L-tap temporal filter of eqs. (69)-(74) against
+  L (Fig. 4(a), (c)), at an SNR of 10 dB, K = 120 tones, T_s = 160 us, T_f = 200 us,
+  K_o = max(1, ceil(K t_d / T_s)).
+run:
+  test: validation/tests/synchronisation/li1998.rs::li_cimini_sollenberger_1998_figs_3_and_4
+tier: ci
+duration: "under a second"
+tolerance: {atol: 0.5}
+why: "Fig. 3 read on its grid to about 0.5 dB"
+findings:
+  - "the 60 readings agree within 0.26 dB (0.5 dB of reading precision on Fig. 3, 0.3 dB on Fig. 4) with K = 120 tones and an SNR of 10 dB, neither given for these figures: K = 128 would move the drops of Fig. 3(b) to 64, 32, 21 and 16 Hz, against 60, 30, 20 and 15 Hz on the figure"
+  - "eq. (56) prints K_o = ceil(Delta f t_max K); the figures follow K_o = floor(K t_max / T_s) + 1, the taps of the grid from 0 to t_max (16 at 20 us, 31 at 40 us, 1 at 0): with the ceiling the L-tap values at 20 and 40 us are 0.3 to 0.47 dB too low and the t_d = 0 curve of Fig. 3 vanishes; comnum counts the taps"
+  - "a finite filter converges slowly to the infinite one: at 40 Hz and 20 us, 100 taps are 0.8 dB above eq. (57), as in Fig. 4"
+cases:
+  - {inputs: {figure: 3a, td_us: 0.0, fd_hz: 1.0}, expected: -53.0}
+  - {inputs: {figure: 3a, td_us: 0.0, fd_hz: 10.0}, expected: -44.0}
+  - {inputs: {figure: 3a, td_us: 0.0, fd_hz: 100.0}, expected: -35.7}
+  - {inputs: {figure: 3a, td_us: 0.0, fd_hz: 200.0}, expected: -33.7}
+  - {inputs: {figure: 3a, td_us: 5.0, fd_hz: 1.0}, expected: -47.4}
+  - {inputs: {figure: 3a, td_us: 5.0, fd_hz: 10.0}, expected: -38.2}
+  - {inputs: {figure: 3a, td_us: 5.0, fd_hz: 100.0}, expected: -30.0}
+  - {inputs: {figure: 3a, td_us: 5.0, fd_hz: 200.0}, expected: -28.0}
+  - {inputs: {figure: 3a, td_us: 10.0, fd_hz: 1.0}, expected: -44.7}
+  - {inputs: {figure: 3a, td_us: 10.0, fd_hz: 10.0}, expected: -35.5}
+  - {inputs: {figure: 3a, td_us: 10.0, fd_hz: 100.0}, expected: -27.3}
+  - {inputs: {figure: 3a, td_us: 10.0, fd_hz: 200.0}, expected: -25.3}
+  - {inputs: {figure: 3a, td_us: 20.0, fd_hz: 1.0}, expected: -42.0}
+  - {inputs: {figure: 3a, td_us: 20.0, fd_hz: 10.0}, expected: -33.0}
+  - {inputs: {figure: 3a, td_us: 20.0, fd_hz: 100.0}, expected: -24.6}
+  - {inputs: {figure: 3a, td_us: 20.0, fd_hz: 200.0}, expected: -22.7}
+  - {inputs: {figure: 3a, td_us: 40.0, fd_hz: 1.0}, expected: -39.3}
+  - {inputs: {figure: 3a, td_us: 40.0, fd_hz: 10.0}, expected: -30.2}
+  - {inputs: {figure: 3a, td_us: 40.0, fd_hz: 100.0}, expected: -22.2}
+  - {inputs: {figure: 3a, td_us: 40.0, fd_hz: 200.0}, expected: -20.2}
+  - {inputs: {figure: "4", td_us: 20.0, fd_hz: 10.0, taps: 1}, expected: -18.8, tolerance: {atol: 0.3}, why: "Fig. 4 read on its grid to about 0.3 dB"}
+  - {inputs: {figure: "4", td_us: 20.0, fd_hz: 10.0, taps: 2}, expected: -21.7, tolerance: {atol: 0.3}, why: "Fig. 4 read on its grid to about 0.3 dB"}
+  - {inputs: {figure: "4", td_us: 20.0, fd_hz: 10.0, taps: 3}, expected: -23.3, tolerance: {atol: 0.3}, why: "Fig. 4 read on its grid to about 0.3 dB"}
+  - {inputs: {figure: "4", td_us: 20.0, fd_hz: 10.0, taps: 5}, expected: -25.6, tolerance: {atol: 0.3}, why: "Fig. 4 read on its grid to about 0.3 dB"}
+  - {inputs: {figure: "4", td_us: 20.0, fd_hz: 10.0, taps: 10}, expected: -26.7, tolerance: {atol: 0.3}, why: "Fig. 4 read on its grid to about 0.3 dB"}
+  - {inputs: {figure: "4", td_us: 20.0, fd_hz: 10.0, taps: 20}, expected: -27.0, tolerance: {atol: 0.3}, why: "Fig. 4 read on its grid to about 0.3 dB"}
+  - {inputs: {figure: "4", td_us: 20.0, fd_hz: 10.0, taps: 50}, expected: -29.6, tolerance: {atol: 0.3}, why: "Fig. 4 read on its grid to about 0.3 dB"}
+  - {inputs: {figure: "4", td_us: 20.0, fd_hz: 10.0, taps: 100}, expected: -30.2, tolerance: {atol: 0.3}, why: "Fig. 4 read on its grid to about 0.3 dB"}
+  - {inputs: {figure: "4", td_us: 20.0, fd_hz: 40.0, taps: 1}, expected: -18.8, tolerance: {atol: 0.3}, why: "Fig. 4 read on its grid to about 0.3 dB"}
+  - {inputs: {figure: "4", td_us: 20.0, fd_hz: 40.0, taps: 2}, expected: -21.6, tolerance: {atol: 0.3}, why: "Fig. 4 read on its grid to about 0.3 dB"}
+  - {inputs: {figure: "4", td_us: 20.0, fd_hz: 40.0, taps: 3}, expected: -22.8, tolerance: {atol: 0.3}, why: "Fig. 4 read on its grid to about 0.3 dB"}
+  - {inputs: {figure: "4", td_us: 20.0, fd_hz: 40.0, taps: 5}, expected: -23.3, tolerance: {atol: 0.3}, why: "Fig. 4 read on its grid to about 0.3 dB"}
+  - {inputs: {figure: "4", td_us: 20.0, fd_hz: 40.0, taps: 10}, expected: -24.0, tolerance: {atol: 0.3}, why: "Fig. 4 read on its grid to about 0.3 dB"}
+  - {inputs: {figure: "4", td_us: 20.0, fd_hz: 40.0, taps: 20}, expected: -25.6, tolerance: {atol: 0.3}, why: "Fig. 4 read on its grid to about 0.3 dB"}
+  - {inputs: {figure: "4", td_us: 20.0, fd_hz: 40.0, taps: 50}, expected: -26.5, tolerance: {atol: 0.3}, why: "Fig. 4 read on its grid to about 0.3 dB"}
+  - {inputs: {figure: "4", td_us: 20.0, fd_hz: 40.0, taps: 100}, expected: -26.9, tolerance: {atol: 0.3}, why: "Fig. 4 read on its grid to about 0.3 dB"}
+  - {inputs: {figure: "4", td_us: 20.0, fd_hz: 200.0, taps: 1}, expected: -18.9, tolerance: {atol: 0.3}, why: "Fig. 4 read on its grid to about 0.3 dB"}
+  - {inputs: {figure: "4", td_us: 20.0, fd_hz: 200.0, taps: 2}, expected: -20.2, tolerance: {atol: 0.3}, why: "Fig. 4 read on its grid to about 0.3 dB"}
+  - {inputs: {figure: "4", td_us: 20.0, fd_hz: 200.0, taps: 3}, expected: -20.3, tolerance: {atol: 0.3}, why: "Fig. 4 read on its grid to about 0.3 dB"}
+  - {inputs: {figure: "4", td_us: 20.0, fd_hz: 200.0, taps: 5}, expected: -21.0, tolerance: {atol: 0.3}, why: "Fig. 4 read on its grid to about 0.3 dB"}
+  - {inputs: {figure: "4", td_us: 20.0, fd_hz: 200.0, taps: 10}, expected: -21.5, tolerance: {atol: 0.3}, why: "Fig. 4 read on its grid to about 0.3 dB"}
+  - {inputs: {figure: "4", td_us: 20.0, fd_hz: 200.0, taps: 20}, expected: -22.0, tolerance: {atol: 0.3}, why: "Fig. 4 read on its grid to about 0.3 dB"}
+  - {inputs: {figure: "4", td_us: 20.0, fd_hz: 200.0, taps: 50}, expected: -22.2, tolerance: {atol: 0.3}, why: "Fig. 4 read on its grid to about 0.3 dB"}
+  - {inputs: {figure: "4", td_us: 20.0, fd_hz: 200.0, taps: 100}, expected: -22.4, tolerance: {atol: 0.3}, why: "Fig. 4 read on its grid to about 0.3 dB"}
+  - {inputs: {figure: "4", td_us: 5.0, fd_hz: 40.0, taps: 1}, expected: -24.8, tolerance: {atol: 0.3}, why: "Fig. 4 read on its grid to about 0.3 dB"}
+  - {inputs: {figure: "4", td_us: 5.0, fd_hz: 40.0, taps: 2}, expected: -27.2, tolerance: {atol: 0.3}, why: "Fig. 4 read on its grid to about 0.3 dB"}
+  - {inputs: {figure: "4", td_us: 5.0, fd_hz: 40.0, taps: 3}, expected: -27.7, tolerance: {atol: 0.3}, why: "Fig. 4 read on its grid to about 0.3 dB"}
+  - {inputs: {figure: "4", td_us: 5.0, fd_hz: 40.0, taps: 5}, expected: -28.0, tolerance: {atol: 0.3}, why: "Fig. 4 read on its grid to about 0.3 dB"}
+  - {inputs: {figure: "4", td_us: 5.0, fd_hz: 40.0, taps: 10}, expected: -29.6, tolerance: {atol: 0.3}, why: "Fig. 4 read on its grid to about 0.3 dB"}
+  - {inputs: {figure: "4", td_us: 5.0, fd_hz: 40.0, taps: 20}, expected: -30.6, tolerance: {atol: 0.3}, why: "Fig. 4 read on its grid to about 0.3 dB"}
+  - {inputs: {figure: "4", td_us: 5.0, fd_hz: 40.0, taps: 50}, expected: -31.7, tolerance: {atol: 0.3}, why: "Fig. 4 read on its grid to about 0.3 dB"}
+  - {inputs: {figure: "4", td_us: 5.0, fd_hz: 40.0, taps: 100}, expected: -32.2, tolerance: {atol: 0.3}, why: "Fig. 4 read on its grid to about 0.3 dB"}
+  - {inputs: {figure: "4", td_us: 40.0, fd_hz: 40.0, taps: 1}, expected: -16.0, tolerance: {atol: 0.3}, why: "Fig. 4 read on its grid to about 0.3 dB"}
+  - {inputs: {figure: "4", td_us: 40.0, fd_hz: 40.0, taps: 2}, expected: -18.7, tolerance: {atol: 0.3}, why: "Fig. 4 read on its grid to about 0.3 dB"}
+  - {inputs: {figure: "4", td_us: 40.0, fd_hz: 40.0, taps: 3}, expected: -20.3, tolerance: {atol: 0.3}, why: "Fig. 4 read on its grid to about 0.3 dB"}
+  - {inputs: {figure: "4", td_us: 40.0, fd_hz: 40.0, taps: 5}, expected: -21.1, tolerance: {atol: 0.3}, why: "Fig. 4 read on its grid to about 0.3 dB"}
+  - {inputs: {figure: "4", td_us: 40.0, fd_hz: 40.0, taps: 10}, expected: -21.4, tolerance: {atol: 0.3}, why: "Fig. 4 read on its grid to about 0.3 dB"}
+  - {inputs: {figure: "4", td_us: 40.0, fd_hz: 40.0, taps: 20}, expected: -22.8, tolerance: {atol: 0.3}, why: "Fig. 4 read on its grid to about 0.3 dB"}
+  - {inputs: {figure: "4", td_us: 40.0, fd_hz: 40.0, taps: 50}, expected: -23.9, tolerance: {atol: 0.3}, why: "Fig. 4 read on its grid to about 0.3 dB"}
+  - {inputs: {figure: "4", td_us: 40.0, fd_hz: 40.0, taps: 100}, expected: -24.4, tolerance: {atol: 0.3}, why: "Fig. 4 read on its grid to about 0.3 dB"}

@@ -1,0 +1,44 @@
+id: foschini1991_fig3
+title: The DGD of the PMD sections is Maxwellian (Foschini and Poole, Fig. 3)
+literature: foschini1991
+evidence: [curve, closed_form]
+source:
+  kind: paper
+  reference: "G. J. Foschini, C. D. Poole, Statistical theory of polarization dispersion in single mode fibers, J. Lightw. Technol. 9(11), 1439-1456, 1991"
+  locator: "Sec. V (the components of the dispersion vector i.i.d. Gaussian, its length Maxwellian), Fig. 3 (the density for a mean of 21 ps: its mode, 0.044 per ps at 18 to 19 ps, read on the grid)"
+  file: fiber/1991_foschini_statistical-theory-polarization-dispersion_jlt.pdf
+description: >
+  20000 links of 20 sections drawn by comnum::channel::optical::pmd::PmdLink::with_mean_dgd
+  (mean DGD 21 ps, the mean of Fig. 3); the DGD is the length of the output PMD vector of
+  the lumped response (eq. (5.19) of Gordon and Kogelnik 2000). Measured: the mean over
+  the target, the mean over the rms (sqrt(8 / (3 pi)) = 0.9213 for a Maxwellian), the
+  fraction of links below the quartiles of the Maxwell law whose component deviation is
+  rms / sqrt(3), the density at the mode of Fig. 3 (sqrt(2) sigma = 18.6 ps) in a bin of
+  1 ps, and the mean and variance of the three Stokes components of the input PMD vector.
+run:
+  test: validation/tests/fiber/foschini1991.rs::the_dgd_of_the_sections_is_maxwellian
+tier: campaign
+duration: "0.3 s on an Apple M6 (release)"
+why: >
+  20000 links leave 0.4 % of standard error on the mean and 0.3 % on the quartile
+  fractions; the density at the mode (about 870 links in the bin) has 3.4 % of
+  standard error, and the peak of the drawn density of Fig. 3 is read to about 5 %
+  (the closed form of the same mean gives 0.0446); the components have 1 % of
+  standard error on their variance
+findings:
+  - "the DGD of 20000 links of 20 sections is Maxwellian: mean 21.09 ps for a target of 21, mean over rms 0.9233 (0.9213), 24.5 %, 49.4 % and 74.7 % of the links below the quartiles of the Maxwell law, 0.0436 per ps at the mode against 0.044 read on Fig. 3 (0.0446 in closed form)"
+  - "the input PMD vector is isotropic (component means within 0.003 of the rms, variances 0.99 to 1.01 of E tau^2 / 3); the output one is not: no rotation follows the last section, whose DGD lies along the first Stokes axis of the output frame (a mean of tau_N = 5.0 ps, 0.22 of the rms, on that component, the other two at zero). The DGD, a length, does not see it; a receiver that reads the output Stokes frame would"
+
+cases:
+  - {inputs: {quantity: mean_over_target}, expected: 1.0, tolerance: {rtol: 0.02}}
+  - {inputs: {quantity: mean_over_rms}, expected: 0.9213, tolerance: {rtol: 0.01}}
+  - {inputs: {quantity: fraction_below_quantile, p: 0.25}, expected: 0.25, tolerance: {atol: 0.01}}
+  - {inputs: {quantity: fraction_below_quantile, p: 0.5}, expected: 0.5, tolerance: {atol: 0.01}}
+  - {inputs: {quantity: fraction_below_quantile, p: 0.75}, expected: 0.75, tolerance: {atol: 0.01}}
+  - {inputs: {quantity: density_at_mode_per_ps}, expected: 0.044, tolerance: {rtol: 0.08}, note: "Fig. 3, the peak of the Maxwell density for a mean of 21 ps, read to about 5 %; the closed form gives 0.0446"}
+  - {inputs: {quantity: component_mean_over_rms, component: 0}, expected: 0.0, tolerance: {atol: 0.02}}
+  - {inputs: {quantity: component_mean_over_rms, component: 1}, expected: 0.0, tolerance: {atol: 0.02}}
+  - {inputs: {quantity: component_mean_over_rms, component: 2}, expected: 0.0, tolerance: {atol: 0.02}}
+  - {inputs: {quantity: component_variance_ratio, component: 0}, expected: 1.0, tolerance: {rtol: 0.04}}
+  - {inputs: {quantity: component_variance_ratio, component: 1}, expected: 1.0, tolerance: {rtol: 0.04}}
+  - {inputs: {quantity: component_variance_ratio, component: 2}, expected: 1.0, tolerance: {rtol: 0.04}}

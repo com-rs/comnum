@@ -1,0 +1,19 @@
+# comnum
+
+> Link-level simulation of digital communication systems (wireless and optical) in Rust, with Python bindings. Every block is validated against closed forms, standards tables, published figures and reference tools. Programs and agents describe a link as a declarative specification and run it with `comnum run SPEC --json`.
+
+## For programs and agents
+
+- [Guide](crates/comnum-spec/GUIDE_AGENTS.md): the loop (blocks, check, run, verify), the specification format, the JSON of results and errors, the time budget, the pitfalls; also printed by `comnum guide`
+- `comnum blocks --json`: every block with its parameters, their units and JSON Schemas
+- `comnum schema`: the JSON Schema of a block of a link
+- [Example specifications](specs/): campaigns ready to run; `specs/validation/` holds the ones checked against references
+
+## Evidence
+
+- [Literature](docs/LITERATURE.md): every paper and standard reproduced, with the tolerance and the gaps
+- [Maturity](docs/MATURITY.md): the level of evidence of every module
+
+## Contributing with an agent
+
+- [AGENTS.md](AGENTS.md): the rules for agents that change comnum itself

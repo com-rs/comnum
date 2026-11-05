@@ -1,0 +1,77 @@
+id: ccsds131_exact
+title: The tables, polynomials, markers and code lengths of CCSDS 131.0-B-5
+literature: ccsds131
+evidence: [table]
+source:
+  kind: standard
+  reference: "CCSDS 131.0-B-5, TM Synchronization and Channel Coding, Recommended Standard (Blue Book), Issue 5, September 2023"
+  locator: "Table F-1 and examples 1-2 of Annex F; Annex G; Sec. 4.3.8; Table 3-1; Tables 6-2 and 7-5; Tables 7-1, C-1 and Sec. 7.4.2; Sec. 10.4.3 NOTE 2; Figures 9-1 to 9-6"
+  file: standards/ccsds_131.0-b-5_2023_tm-sync-channel-coding.pdf
+description: >
+  comnum::fec::ccsds and comnum::systems::ccsds against the values the standard prints,
+  which gives no error-rate figure: the 256 rows of Table F-1 (alpha^i of the field of
+  F(x) and its dual-basis image), the coefficients of g(x) of Annex G, the sizes of an
+  interleaved Reed-Solomon codeblock, the output sequences of Table 3-1, the codeword
+  lengths of Tables 6-2 and 7-5, ten random codewords of every LDPC encoder against the
+  parity checks of Table 7-1 and Sec. 7.4.2, the first 40 bits of both pseudo-random
+  sequences and the bits of the markers.
+run:
+  test: validation/tests/systems/ccsds131.rs::the_codes_follow_the_tables_of_ccsds_131_0_b_5
+tier: campaign
+duration: "1 s in release"
+tolerance: {exact: true}
+why: "tables, polynomials and lengths: every value must be equal"
+findings: []
+cases:
+  - {inputs: {item: table_f1_rows}, expected: 256}
+  - {inputs: {item: annex_f_examples}, expected: 2}
+  - {inputs: {item: annex_g_coefficients, e: 16}, expected: 17}
+  - {inputs: {item: annex_g_coefficients, e: 8}, expected: 9}
+  - {inputs: {item: rs_check_bits_e16_i5}, expected: 1280}
+  - {inputs: {item: rs_codeblock_bits_e16_i5}, expected: 10200}
+  - {inputs: {item: table_3_1_sequence, rate: "2/3"}, expected: 1}
+  - {inputs: {item: table_3_1_sequence, rate: "3/4"}, expected: 1}
+  - {inputs: {item: table_3_1_sequence, rate: "5/6"}, expected: 1}
+  - {inputs: {item: table_3_1_sequence, rate: "7/8"}, expected: 1}
+  - {inputs: {item: table_6_2_n, k: 1784, rate: "1/2"}, expected: 3576}
+  - {inputs: {item: table_6_2_n, k: 1784, rate: "1/3"}, expected: 5364}
+  - {inputs: {item: table_6_2_n, k: 1784, rate: "1/4"}, expected: 7152}
+  - {inputs: {item: table_6_2_n, k: 1784, rate: "1/6"}, expected: 10728}
+  - {inputs: {item: table_6_2_n, k: 3568, rate: "1/2"}, expected: 7144}
+  - {inputs: {item: table_6_2_n, k: 3568, rate: "1/3"}, expected: 10716}
+  - {inputs: {item: table_6_2_n, k: 3568, rate: "1/4"}, expected: 14288}
+  - {inputs: {item: table_6_2_n, k: 3568, rate: "1/6"}, expected: 21432}
+  - {inputs: {item: table_6_2_n, k: 7136, rate: "1/2"}, expected: 14280}
+  - {inputs: {item: table_6_2_n, k: 7136, rate: "1/3"}, expected: 21420}
+  - {inputs: {item: table_6_2_n, k: 7136, rate: "1/4"}, expected: 28560}
+  - {inputs: {item: table_6_2_n, k: 7136, rate: "1/6"}, expected: 42840}
+  - {inputs: {item: table_6_2_n, k: 8920, rate: "1/2"}, expected: 17848}
+  - {inputs: {item: table_6_2_n, k: 8920, rate: "1/3"}, expected: 26772}
+  - {inputs: {item: table_6_2_n, k: 8920, rate: "1/4"}, expected: 35696}
+  - {inputs: {item: table_6_2_n, k: 8920, rate: "1/6"}, expected: 53544}
+  - {inputs: {item: ldpc_c2_n}, expected: 8160}
+  - {inputs: {item: ldpc_codewords, code: "7/8"}, expected: 1}
+  - {inputs: {item: table_7_5_n, k: 1024, rate: "1/2"}, expected: 2048}
+  - {inputs: {item: table_7_5_n, k: 1024, rate: "2/3"}, expected: 1536}
+  - {inputs: {item: table_7_5_n, k: 1024, rate: "4/5"}, expected: 1280}
+  - {inputs: {item: table_7_5_n, k: 4096, rate: "1/2"}, expected: 8192}
+  - {inputs: {item: table_7_5_n, k: 4096, rate: "2/3"}, expected: 6144}
+  - {inputs: {item: table_7_5_n, k: 4096, rate: "4/5"}, expected: 5120}
+  - {inputs: {item: table_7_5_n, k: 16384, rate: "1/2"}, expected: 32768}
+  - {inputs: {item: table_7_5_n, k: 16384, rate: "2/3"}, expected: 24576}
+  - {inputs: {item: table_7_5_n, k: 16384, rate: "4/5"}, expected: 20480}
+  - {inputs: {item: ldpc_codewords, code: "ar4ja 1024 1/2"}, expected: 1}
+  - {inputs: {item: ldpc_codewords, code: "ar4ja 1024 2/3"}, expected: 1}
+  - {inputs: {item: ldpc_codewords, code: "ar4ja 1024 4/5"}, expected: 1}
+  - {inputs: {item: ldpc_codewords, code: "ar4ja 4096 1/2"}, expected: 1}
+  - {inputs: {item: ldpc_codewords, code: "ar4ja 4096 2/3"}, expected: 1}
+  - {inputs: {item: ldpc_codewords, code: "ar4ja 4096 4/5"}, expected: 1}
+  - {inputs: {item: ldpc_codewords, code: "ar4ja 16384 1/2"}, expected: 1}
+  - {inputs: {item: ldpc_codewords, code: "ar4ja 16384 2/3"}, expected: 1}
+  - {inputs: {item: ldpc_codewords, code: "ar4ja 16384 4/5"}, expected: 1}
+  - {inputs: {item: randomizer_first_bits, sequence: long}, expected: 40}
+  - {inputs: {item: randomizer_first_bits, sequence: short}, expected: 40}
+  - {inputs: {item: marker_bits, marker: "1ACFFC1D"}, expected: 1}
+  - {inputs: {item: marker_bits, marker: "352EF853"}, expected: 1}
+  - {inputs: {item: marker_bits, marker: "034776C7272895B0"}, expected: 1}
+  - {inputs: {item: marker_bits, marker: "25D5C0CE8990F6C9461BF79C"}, expected: 1}

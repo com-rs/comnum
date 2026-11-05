@@ -1,0 +1,175 @@
+id: ts38101_4_pdsch
+title: NR PDSCH demodulation requirements, FDD, normal performance
+literature: ts38101_4
+evidence: [table]
+source:
+  kind: standard
+  reference: "3GPP TS 38.101-4 V19.4.0 (2026-09), NR; User Equipment (UE) radio transmission and reception; Part 4: Performance requirements"
+  locator: "clause 5.2.2.1.1, Table 5.2.2.1.1-3 (2RX test 1-2), clause 5.2.3.1.1, Table 5.2.3.1.1-3 (4RX test 1-2); R.PDSCH.1-1.2 of Table A.3.2.1.1-1; TDLC300 of Table B.2.1.1-4; case 2 of FR1 FDD of the RAN4 alignment (companies 1 to 4, see the description)"
+  file: standards/3gpp_ts-38.101-4_v19.4.0_nr-ue-performance-requirements.pdf
+description: >
+  The PDSCH of comnum::systems::nr (TS 38.211, 38.212, 38.214) through TDLC300-100 with
+  2 transmit antennas and 2 or 4 receive antennas of low correlation: R.PDSCH.1-1.2 (6
+  PRBs, QPSK, MCS 4, TBS 480), a random Type I precoder per PRG of 2 PRBs at every slot,
+  HARQ with 4 processes and redundancy versions 0, 2, 3, 1, the TRS of slots 10 and 11,
+  no PDSCH in slot 0 of every 20. The receiver estimates the precoded channel by a
+  robust 2-D Wiener filter (delays up to the cyclic prefix, Doppler 100 Hz) with the
+  noise variance known, and combines by maximum ratio; perfect synchronisation; the
+  channel applied per subcarrier without inter-carrier interference. The requirement is
+  an upper bound on the SNR of 70 % of the maximum throughput.
+  The industry reference is the alignment of RAN4 #88bis (Chengdu, October 2018), whose
+  results are anonymised here as companies 1 to 4, numbered by their SNR of 70 % with 2
+  RX: the four contributions R4-1812164, R4-1812461, R4-1813439 and R4-1813632
+  (https://www.3gpp.org/ftp/tsg_ran/WG4_Radio/TSGR4_88Bis/Docs/), under the assumptions of
+  R4-1811723 (https://www.3gpp.org/ftp/tsg_ran/WG4_Radio/TSGR4_88/Docs/). Their values
+  come from a table, a spreadsheet, vector curves and a raster figure read on its pixels.
+  The bounds: a receiver that knows the channel (genie) and a Wiener estimator designed
+  for the 2.6 us of TDLC300.
+run:
+  test: validation/tests/systems/ts38101_4.rs::ts_38101_4_test_1_2_tdlc300_100
+tier: campaign
+duration: "about seven minutes in release"
+findings:
+  - "with the robust estimator, 70 % of the maximum throughput at -1.89 dB with 2 receive antennas and -4.89 dB with 4, against the requirements of 0.2 and -2.9 dB: margins of 2.09 and 1.99 dB"
+  - "the four companies of the alignment, 2 RX / 4 RX: company 1 -2.33 / -4.96 dB, company 2 -2.02 / -5.24 dB, company 3 -1.97 / -5.45 dB (read on the pixels, 0.04 dB per pixel), company 4 -1.84 / -4.87 dB: mean -2.04 / -5.13 dB, spans 0.49 and 0.58 dB; comnum -1.89 / -4.89 dB, 0.15 and 0.24 dB above the means, 0.05 and 0.02 dB from company 4, whose curves it follows within 0.035 of throughput, a little steeper"
+  - "the spread is that of the channel estimators: with the channel known (genie) comnum reaches 70 % at -3.88 and -7.40 dB, 2.0 and 2.5 dB below its robust estimator; with the Wiener estimator designed for the 2.6 us of TDLC300 instead of the cyclic prefix (4.69 us), -2.48 and -5.37 dB. The four companies lie between these two designs: realistic estimators, spread by what they assume about the channel"
+  - "the assumptions of the alignment (R4-1811723): an MMSE-IRC receiver, random Type I precoding per slot and 2-PRB bundle, the TR 38.901 channel without simplification, a transmitter EVM of 6 %, the TRS in symbols 4 and 8, the DM-RS in 2 and 9; nothing on the channel estimation. Under them (the example ts38101_4_alignment, the DM-RS kept in 2 and 11): -1.76 to -1.95 dB (2 RX) and -4.86 to -4.98 dB (4 RX), within the Monte Carlo (about 0.1 dB)"
+  - "fixed on 2 November 2026: the LLRs counted the estimation error once per receive antenna, (noise + N_rx MSE)/g instead of (noise + MSE)/g; the fix moved the result from -1.75 to -1.89 dB (2 RX) and from -4.87 to -4.89 dB (4 RX)"
+  - "these are simulations, each company with its own simulator, not measurements of handsets: the requirement adds an implementation margin of about 2 dB to them; the receiver of comnum has perfect synchronisation, the noise variance known and no inter-carrier interference"
+cases:
+  - inputs: {test: "1-2", antennas: 2x2, quantity: snr_70_db}
+    expected: {max: 0.2}
+    note: "Table 5.2.2.1.1-3: 70 % of the maximum throughput at 0.2 dB, a minimum performance (the SNR of a conformant receiver is at most this)"
+  - inputs: {test: "1-2", antennas: 2x4, quantity: snr_70_db}
+    expected: {max: -2.9}
+    note: "Table 5.2.3.1.1-3: 70 % at -2.9 dB with 4 receive antennas"
+  - inputs: {test: "1-2", antennas: 2x2, quantity: snr_70_db, reference: company 4}
+    expected: -1.8
+    tolerance: {atol: 0.3}
+    why: "company 4 prints -1.8 dB (-1.84 on its curve); 0.3 dB: the 0.1 dB of the print, the Monte Carlo (3800 slots, 0.8 % of throughput, about 0.1 dB) and the receivers (MMSE-IRC there, maximum ratio here)"
+  - inputs: {test: "1-2", antennas: 2x4, quantity: snr_70_db, reference: company 4}
+    expected: -4.9
+    tolerance: {atol: 0.3}
+    why: "company 4 prints -4.9 dB (-4.87 on its curve); the same budget"
+  - inputs: {test: "1-2", antennas: 2x2, quantity: throughput, snr_db: -4.0, reference: company 4}
+    expected: 0.531
+    tolerance: {atol: 0.05}
+    why: "the fraction of the maximum throughput (0.456 Mbps) on the curve of company 4, read from its vector paths (0.002); 0.05: the Monte Carlo (0.8 %) and the receivers"
+  - inputs: {test: "1-2", antennas: 2x2, quantity: throughput, snr_db: -3.0, reference: company 4}
+    expected: 0.611
+    tolerance: {atol: 0.05}
+    why: "the fraction of the maximum throughput (0.456 Mbps) on the curve of company 4, read from its vector paths (0.002); 0.05: the Monte Carlo (0.8 %) and the receivers"
+  - inputs: {test: "1-2", antennas: 2x2, quantity: throughput, snr_db: -2.0, reference: company 4}
+    expected: 0.688
+    tolerance: {atol: 0.05}
+    why: "the fraction of the maximum throughput (0.456 Mbps) on the curve of company 4, read from its vector paths (0.002); 0.05: the Monte Carlo (0.8 %) and the receivers"
+  - inputs: {test: "1-2", antennas: 2x2, quantity: throughput, snr_db: -1.0, reference: company 4}
+    expected: 0.762
+    tolerance: {atol: 0.05}
+    why: "the fraction of the maximum throughput (0.456 Mbps) on the curve of company 4, read from its vector paths (0.002); 0.05: the Monte Carlo (0.8 %) and the receivers"
+  - inputs: {test: "1-2", antennas: 2x2, quantity: throughput, snr_db: 0.0, reference: company 4}
+    expected: 0.827
+    tolerance: {atol: 0.05}
+    why: "the fraction of the maximum throughput (0.456 Mbps) on the curve of company 4, read from its vector paths (0.002); 0.05: the Monte Carlo (0.8 %) and the receivers"
+  - inputs: {test: "1-2", antennas: 2x4, quantity: throughput, snr_db: -7.0, reference: company 4}
+    expected: 0.491
+    tolerance: {atol: 0.05}
+    why: "the fraction of the maximum throughput (0.456 Mbps) on the curve of company 4, read from its vector paths (0.002); 0.05: the Monte Carlo (0.8 %) and the receivers"
+  - inputs: {test: "1-2", antennas: 2x4, quantity: throughput, snr_db: -6.0, reference: company 4}
+    expected: 0.586
+    tolerance: {atol: 0.05}
+    why: "the fraction of the maximum throughput (0.456 Mbps) on the curve of company 4, read from its vector paths (0.002); 0.05: the Monte Carlo (0.8 %) and the receivers"
+  - inputs: {test: "1-2", antennas: 2x4, quantity: throughput, snr_db: -5.0, reference: company 4}
+    expected: 0.688
+    tolerance: {atol: 0.05}
+    why: "the fraction of the maximum throughput (0.456 Mbps) on the curve of company 4, read from its vector paths (0.002); 0.05: the Monte Carlo (0.8 %) and the receivers"
+  - inputs: {test: "1-2", antennas: 2x4, quantity: throughput, snr_db: -4.0, reference: company 4}
+    expected: 0.783
+    tolerance: {atol: 0.05}
+    why: "the fraction of the maximum throughput (0.456 Mbps) on the curve of company 4, read from its vector paths (0.002); 0.05: the Monte Carlo (0.8 %) and the receivers"
+  - inputs: {test: "1-2", antennas: 2x4, quantity: throughput, snr_db: -3.0, reference: company 4}
+    expected: 0.865
+    tolerance: {atol: 0.05}
+    why: "the fraction of the maximum throughput (0.456 Mbps) on the curve of company 4, read from its vector paths (0.002); 0.05: the Monte Carlo (0.8 %) and the receivers"
+  - inputs: {test: "1-2", antennas: 2x2, quantity: snr_70_db, reference: "RAN4 #88bis"}
+    expected: {min: -2.63, max: -1.54}
+    note: "the four companies of the alignment span -2.33 to -1.84 dB; 0.3 dB on each side for the Monte Carlo and the readings"
+  - inputs: {test: "1-2", antennas: 2x4, quantity: snr_70_db, reference: "RAN4 #88bis"}
+    expected: {min: -5.75, max: -4.57}
+    note: "the four companies span -5.45 to -4.87 dB; 0.3 dB on each side"
+  - inputs: {test: "1-2", antennas: 2x2, quantity: snr_70_db, reference: company 1}
+    expected: -2.33
+    tolerance: {atol: 0.6}
+    why: "the SNR of 70 % of company 1; 0.6 dB: the spread of the four companies (0.49 and 0.58 dB), their receivers not specified, and the Monte Carlo"
+  - inputs: {test: "1-2", antennas: 2x2, quantity: snr_70_db, reference: company 2}
+    expected: -2.02
+    tolerance: {atol: 0.6}
+    why: "the SNR of 70 % of company 2; 0.6 dB: the spread of the four companies (0.49 and 0.58 dB), their receivers not specified, and the Monte Carlo"
+  - inputs: {test: "1-2", antennas: 2x2, quantity: snr_70_db, reference: company 3}
+    expected: -1.97
+    tolerance: {atol: 0.6}
+    why: "the SNR of 70 % of company 3; 0.6 dB: the spread of the four companies (0.49 and 0.58 dB), their receivers not specified, and the Monte Carlo"
+  - inputs: {test: "1-2", antennas: 2x4, quantity: snr_70_db, reference: company 1}
+    expected: -4.96
+    tolerance: {atol: 0.6}
+    why: "the SNR of 70 % of company 1; 0.6 dB: the spread of the four companies (0.49 and 0.58 dB), their receivers not specified, and the Monte Carlo"
+  - inputs: {test: "1-2", antennas: 2x4, quantity: snr_70_db, reference: company 2}
+    expected: -5.24
+    tolerance: {atol: 0.6}
+    why: "the SNR of 70 % of company 2; 0.6 dB: the spread of the four companies (0.49 and 0.58 dB), their receivers not specified, and the Monte Carlo"
+  - inputs: {test: "1-2", antennas: 2x4, quantity: snr_70_db, reference: company 3}
+    expected: -5.45
+    tolerance: {atol: 0.6}
+    why: "the SNR of 70 % of company 3; 0.6 dB: the spread of the four companies (0.49 and 0.58 dB), their receivers not specified, and the Monte Carlo"
+  - inputs: {test: "1-2", antennas: 2x2, quantity: throughput, snr_db: -4.0, reference: company 2}
+    expected: 0.5102
+    tolerance: {atol: 0.06}
+    why: "the throughput of company 2 over 456 kbps, from its spreadsheet (exact); 0.06: the Monte Carlo (0.8 %) and the receivers"
+  - inputs: {test: "1-2", antennas: 2x2, quantity: throughput, snr_db: -3.0, reference: company 2}
+    expected: 0.6
+    tolerance: {atol: 0.06}
+    why: "the throughput of company 2 over 456 kbps, from its spreadsheet (exact); 0.06: the Monte Carlo (0.8 %) and the receivers"
+  - inputs: {test: "1-2", antennas: 2x2, quantity: throughput, snr_db: -2.0, reference: company 2}
+    expected: 0.702
+    tolerance: {atol: 0.06}
+    why: "the throughput of company 2 over 456 kbps, from its spreadsheet (exact); 0.06: the Monte Carlo (0.8 %) and the receivers"
+  - inputs: {test: "1-2", antennas: 2x2, quantity: throughput, snr_db: -1.0, reference: company 2}
+    expected: 0.7893
+    tolerance: {atol: 0.06}
+    why: "the throughput of company 2 over 456 kbps, from its spreadsheet (exact); 0.06: the Monte Carlo (0.8 %) and the receivers"
+  - inputs: {test: "1-2", antennas: 2x2, quantity: throughput, snr_db: 0.0, reference: company 2}
+    expected: 0.8655
+    tolerance: {atol: 0.06}
+    why: "the throughput of company 2 over 456 kbps, from its spreadsheet (exact); 0.06: the Monte Carlo (0.8 %) and the receivers"
+  - inputs: {test: "1-2", antennas: 2x4, quantity: throughput, snr_db: -7.0, reference: company 2}
+    expected: 0.5066
+    tolerance: {atol: 0.06}
+    why: "the throughput of company 2 over 456 kbps, from its spreadsheet (exact); 0.06: the Monte Carlo (0.8 %) and the receivers"
+  - inputs: {test: "1-2", antennas: 2x4, quantity: throughput, snr_db: -6.0, reference: company 2}
+    expected: 0.6099
+    tolerance: {atol: 0.06}
+    why: "the throughput of company 2 over 456 kbps, from its spreadsheet (exact); 0.06: the Monte Carlo (0.8 %) and the receivers"
+  - inputs: {test: "1-2", antennas: 2x4, quantity: throughput, snr_db: -5.0, reference: company 2}
+    expected: 0.7314
+    tolerance: {atol: 0.06}
+    why: "the throughput of company 2 over 456 kbps, from its spreadsheet (exact); 0.06: the Monte Carlo (0.8 %) and the receivers"
+  - inputs: {test: "1-2", antennas: 2x4, quantity: throughput, snr_db: -4.0, reference: company 2}
+    expected: 0.8454
+    tolerance: {atol: 0.06}
+    why: "the throughput of company 2 over 456 kbps, from its spreadsheet (exact); 0.06: the Monte Carlo (0.8 %) and the receivers"
+  - inputs: {test: "1-2", antennas: 2x4, quantity: throughput, snr_db: -3.0, reference: company 2}
+    expected: 0.9271
+    tolerance: {atol: 0.06}
+    why: "the throughput of company 2 over 456 kbps, from its spreadsheet (exact); 0.06: the Monte Carlo (0.8 %) and the receivers"
+  - inputs: {test: "1-2", antennas: 2x2, quantity: snr_70_db, receiver: genie}
+    expected: {max: -2.33}
+    note: "the channel known: below every company (the best at -2.33 dB), no estimated receiver can beat it"
+  - inputs: {test: "1-2", antennas: 2x4, quantity: snr_70_db, receiver: genie}
+    expected: {max: -5.45}
+    note: "below every company (the best at -5.45 dB)"
+  - inputs: {test: "1-2", antennas: 2x2, quantity: snr_70_db, receiver: matched}
+    expected: {max: -1.84}
+    note: "the Wiener estimator designed for the delays of TDLC300 (2.6 us): at least as good as the weakest company (-1.84 dB)"
+  - inputs: {test: "1-2", antennas: 2x4, quantity: snr_70_db, receiver: matched}
+    expected: {max: -4.87}
+    note: "at least as good as the weakest company (-4.87 dB)"

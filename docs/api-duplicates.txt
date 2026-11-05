@@ -1,0 +1,173 @@
+# The public names defined in several modules that are accepted, with the number of
+# modules (files) that define each and the reason it is not a copy: the same verb on
+# different types (an interface: `decode`, `modulate`, `n`, `k`), or a thin wrapper of
+# one shared kernel (`frequency_correlation`, `ase_psd`). Reviewed with the audits of
+# 29-30 October 2026 and again on 3 November 2026 (no copy left among them).
+#
+# `python3 tools/api_index.py --duplicates --check` (in `just check`) fails on a name
+# defined in several modules that is not listed here, and on a listed name defined in
+# more modules than its count: factor the code into one kernel, or add the name (raise
+# its count) with the reason it is not a copy. It also fails when a count is too high
+# (lower it, or remove the name once it is defined once).
+#
+#   name                 modules  # reason
+
+# Types (structs, enums, traits; the Python classes apart from the Rust types they
+# wrap). Different things under a generic name, not copies; candidates for a clearer
+# name in the breaking batch (section 5 of the review of 30 October 2026):
+Carrier                 2  # comnum_waveform::ofdm::nr::Carrier (an NR grid, the subcarrier k at (k - K/2) Δf) / ofdm::lte::Carrier (an LTE grid with its empty DC subcarrier, built on the NR one)
+Frame                   2  # comnum_spec::blocks::frame::Frame (a frame of a specification) / hdlc::Frame (an HDLC frame found in a bit stream)
+Estimate                2  # comnum_sim::stats (the estimate of a metric) / comnum_waveform::ofdm::sync (a timing and frequency estimate)
+Modulation              2  # dvbs2 (QPSK to 32APSK) / dvbt (QPSK, 16-QAM, 64-QAM): the constellations of two standards
+Profile                 2  # comnum_channel::multipath (the TDL power-delay profiles) / comnum_channel::cdl::tables (the CDL cluster tables)
+Receiver                2  # comnum_mimo::receiver (a MIMO detector applied channel use after channel use) / comnum_waveform::ce_ofdm (the choice of CE-OFDM phase demodulator)
+
+# The other names, each with its reason:
+at                      2  # RamanGain::at (the Raman gain at a frequency offset) / wiener::Correlation2d::at (the channel correlation at a time-frequency lag): the value of a function at a point
+awgn                    2  # comnum_channel::awgn (adds the noise) / NormalApproximation::awgn (the normal approximation of the AWGN channel)
+base_graph              2  # NrLdpc::base_graph (the base graph of one code block) / nr::transport::TransportBlock::base_graph (the one TS 38.212 Sec. 7.2.2 chooses for a transport block): the same accessor
+ber                     3  # comnum_metrics::errors (measured on bits) / mapping::theory and css::theory (the closed forms of two modulations)
+bits                    4  # source::bits (random bits) / the bits of a sequence, of a BigUint, of a DVB-T cell or TPS frame
+block                   2  # Interleaver::block (the row-column interleaver) / PilotPattern::block (the pilot pattern of whole symbols)
+bussgang                2  # Rapp::bussgang and Saleh::bussgang are thin wrappers of comnum_dsp::nonlinear::bussgang_of, the kernel of nonlinear::bussgang
+check_link              2  # blocks::check_link is the thin wrapper of schema::check_link on the registry, as json_schema
+coefficients            2  # getters of different objects: the taps of a predistorter, the arm coefficients of a Mach-Zehnder modulator
+constellation           8  # the constellation of three standards (dvbs2, dvbt, nr), their accessors, and comnum.plot.constellation (a plot)
+data_res                2  # ofdm::link::OfdmFrame::data_res (the data REs of a generic grid) / nr::pdsch::Pdsch::data_res (those of a PDSCH slot, TS 38.211 Sec. 7.3.1.5): the same notion on two grids
+decode                 13  # the decoder of each code (BCH, RS, OSTBC, differential, the FEC of the standards, the BCH of LTE): one verb, different codes / ais::message::decode (the fields of an AIS message)
+deinterleave            2  # Interleaver::deinterleave (a permutation) / dvbt::InnerInterleaver::deinterleave (the LLRs of a DVB-T symbol): the same verb
+detect                  5  # differential::detect, ofdm::detection::detect (per RE), OfdmFrame::detect (calls the former), Gamp::detect, Photodiode::detect
+encode                 10  # the encoder of each code (BCH, RS, trellis, OSTBC, differential, the FEC of the standards): one verb, different codes
+energy                  2  # Constellation::energy calls comnum_math::power on its points
+ensure                  2  # comnum_core::ensure (an error unless a condition holds) / SamplingCheck::ensure (the sampling conditions of a split-step run)
+estimate                8  # the estimators of different quantities (OFDM channel, MIMO channel, symbols, cumulants); OfdmFrame::estimate calls the OFDM kernel
+fft_len                 3  # Ofdm::fft_len (the IFFT of a configured modulator, L N) / ofdm::dvbt::Mode::fft_len (the FFT of a DVB-T mode) / ofdm::lte::fft_len (the usual FFT of an LTE bandwidth)
+lowpass                 2  # Butterworth::lowpass (a filter design, bilinear) / interpolation::lowpass (a band-limited interpolation of samples at given positions)
+checksum                2  # Crc::checksum (the parity bits of a CRC) / ais::nmea::checksum (the exclusive-or checksum of an NMEA sentence)
+filter                  3  # fft::filter (circular, by a frequency response) / Fir::filter (linear FIR) / Ofdm::filter (keeps the active subcarriers)
+frame                   3  # Dvbs2Fec::frame (the frame size) / Dvbt::frame (the OFDM frame structure): accessors / hdlc::frame (the bits of an HDLC frame)
+frequency_correlation   2  # Tdl::frequency_correlation calls comnum_dsp::estimation::frequency_correlation
+from_bits               2  # BigUint::from_bits (an integer of its bits) / lte::mib::Mib::from_bits (the fields of a MIB): the inverse of to_bits
+identity                2  # linalg::identity (the identity matrix) / Puncturer::identity (the pattern that keeps every bit)
+inner_decode            2  # Dvbs::inner_decode / Dvbt::inner_decode: the same step (the bytes after the Viterbi decoder) of two standards
+interleaver             2  # TurboCode::interleaver / ccsds::CcsdsTurbo::interleaver: the permutation of the second encoder of two turbo codes
+inverse                 2  # Fft::inverse (the inverse transform) / gf2::Matrix::inverse (the inverse of a binary matrix): the same word in two fields
+json_schema             3  # blocks::json_schema is the thin wrapper of schema::json_schema on the registry; ParamInfo::json_schema is that of one parameter
+k_factor_db             2  # cdl::tables (the K-factor of a CDL profile) / multipath::Echoes (of a static channel of echoes)
+ldpc                    2  # Dvbs2Fec::ldpc / ccsds::CcsdsLdpc::ldpc: accessors of the LDPC code of two standards
+ldpc_mut                2  # Dvbs2Fec::ldpc_mut / ccsds::CcsdsLdpc::ldpc_mut: the decoder settings of the LDPC code of two standards
+linear                  2  # interpolation::linear (an interpolator) / Array::linear (a uniform linear antenna array)
+load                    2  # comnum.spec.load (a specification, by the Rust parser) / Results.load (recorded results)
+max_doppler_hz          2  # Cdl::max_doppler_hz calls the kernel comnum_channel::multipath::max_doppler_hz
+mode                    2  # Dvbt::mode / ofdm::dvbt::DvbtFrame::mode: accessors of the transmission mode
+modulation              2  # dvbs2::Modcod::modulation / dvbt::Dvbt::modulation: accessors of the constellation of two standards
+mse                     5  # comnum_metrics::errors::mse (measured) / LowRank::mse and Training::mse (the closed forms of two estimators)
+multiplex               2  # wdm::multiplex (the channels of a WDM grid side by side) / fm::mpx::multiplex (the stereophonic multiplex of FM broadcasting): the multiplex of two systems
+n_streams               3  # the number of streams of a signal, of a precoder and of a frame: accessors
+n_subcarriers           2  # ResourceGrid::n_subcarriers / lte::Carrier::n_subcarriers: the size of a grid
+number                  2  # comnum_sim::json::number (a JSON number) / Modcod::number (the MODCOD field)
+occupied_bandwidth      2  # the closed forms of two waveforms, CE-OFDM and CSS
+ofdm                    2  # Dvbt::ofdm (the modulator of a link) / ofdm::dvbt::DvbtFrame::ofdm (builds it for a guard interval)
+plan                    2  # fft::plan (a transform prepared for a size) / wiener::Wiener2d::plan (an interpolator factored for its positions): the same verb, an operator prepared once and applied many times
+power                   2  # comnum_math::power / Signal::power and DualPol::power (comnum-core, which cannot depend on comnum-math, a crate of its layer)
+profile                 5  # the timing profile of a campaign (comnum-spec, and its Python accessors) / GnModel::profile (a Raman profile)
+psd                     4  # comnum_dsp::spectrum::psd (Welch) / ce_ofdm::theory::psd (a closed form) / comnum.plot.psd (draws the former)
+pss                     2  # ofdm::nr::pss (the BPSK m-sequence of length 127 of NR) / ofdm::lte::pss (the Zadoff–Chu sequence of length 62 of LTE): the PSS of two standards
+puncturer               2  # Punctured::puncturer and PuncturedTurbo::puncturer (the pattern of a punctured code) / InnerRate::puncturer (the pattern of a code rate of DVB)
+receive                 3  # nr::pdsch::Pdsch::receive (the LLRs of a PDSCH slot) / fm::rds::receive (the groups and the station of an RDS): the receiver of two systems / ais::receive (the packets of an AIS channel)
+rms_delay_spread        2  # multipath::rms_delay_spread (of a list of taps) / Echoes::rms_delay_spread (of the echoes, computed by the former)
+row                     2  # comnum_sim::ConditionResult (the flattened record of a condition) / comnum_waveform::otfs::EffectiveChannel (one row of the sparse channel matrix)
+run                     10 # the run of different objects (a runner, a specification, a solver, an equalizer, a loop, a density evolution): one verb
+run_with_gain           2  # SplitStep::run_with_gain (one polarisation) / ManakovSplitStep::run_with_gain (two), the same distributed gain on the two solvers of nlse
+sampling_check          3  # Ssfm::sampling_check and ManakovSsfm::sampling_check are the thin wrappers of nlse::sampling_check on their fields
+sequence                2  # Scrambler::sequence (the sequence of a configured scrambler) / ccsds::Randomizer::sequence (the two sequences of CCSDS)
+ser                     2  # the closed forms of two modulations, mapping::theory and css::theory
+ser_esn0                2  # comnum_mapping::theory (a constellation) / ce_ofdm::theory (the waveform at the SNR of its linear regime, on the former)
+snr                     2  # GnModel::snr (the SNR of a WDM channel) / ce_ofdm::theory::snr (that of a CE-OFDM subcarrier)
+specular                2  # Profile::specular (the delay and power of the specular component of a profile) / Tdl::specular (its tap index and normalised power in a built channel)
+sss                     2  # ofdm::nr::sss (the Gold sequence of length 127 of NR) / ofdm::lte::sss (the two interleaved m-sequences of LTE): the SSS of two standards
+stream                  2  # comnum_core::rng::stream (a generator) / Signal::stream (a slice of a signal)
+symbol                  2  # css (a chirp symbol) / ofdm::dvbt::DvbtFrame::symbol (the cells of a DVB-T symbol)
+symbols                 4  # source::symbols (random symbols) / the symbols of labels, of a training sequence, of the DMRS
+symbols_len             2  # Dvbs::symbols_len / Dvbt::symbols_len: the symbols of a burst of two standards
+to_bits                 2  # BigUint::to_bits (the bits of an integer) / lte::mib::Mib::to_bits (the 24 bits of a MIB)
+transmit                3  # ofdm::link::transmit (a generic OFDM frame) / nr::pdsch::Pdsch::transmit (a PDSCH slot): the transmitter of two links / ais::transmit (the GMSK of AIS packets)
+useful_bit_rate         2  # Dvbs::useful_bit_rate / Dvbt::useful_bit_rate: the useful bit rate of two standards
+with_sample_rate        2  # Fbmc / Cpm: the same builder of the sample rate on the two modems whose fields are private (ADR 0012)
+
+# Methods only, on different types, each the accessor or the verb of its own object
+# (an interface, not a copy; checked on 3 November 2026: none recomputes a kernel that
+# another module exports):
+add                     4
+ase_psd                 2
+below                   2
+bind                    2
+bit_map                 2
+bits_per_symbol         3
+block_len               4
+check                  20
+code                    5
+conditions              2
+config                  2
+dbp                     2
+decoder_mut             2
+delays                  4
+demap_bits              2
+demodulate              10  # ais::demodulate (the line levels of an AIS channel)
+describe                2
+draw                    6
+field                   3
+frequency_response      3
+from_json               4
+from_name              15
+from_rows               2
+generator               2
+ideal                   2
+indices                 2
+info_positions          2
+k                       5
+list                    2
+llr                     4
+m                       3
+map_bits                2
+mean                    2
+merge                   2
+modulate               13
+mul                     2
+n                       3
+n_clusters              2
+n_fft                   3
+n_out                   2
+n_rx                    2
+n_samples               2
+n_states                2
+n_symbols               6
+n_tx                    4
+names                   2
+nearest                 2
+noise_variance          3
+order                   4  # Butterworth::order (the filter order), Constellation::order, the differential and GF(2^m) orders: accessors of different objects
+period                  4
+phase                   2
+phase_response          2
+position                2  # ais::message::Message::position (the position of a report) / fm::rds::Offset::position (the position of a block in a group)
+points                  3
+powers                  3
+propagate               3
+random                  3
+rate                   12
+record                  2
+rows                    2
+run_dual                2
+sample_rate             8
+set_streams             2
+subcarrier              2
+t                       2
+taps                    6
+trellis                 3
+trial                   2
+uniform                 5
+value                   3
+values                  3
+variance                2
+with_list               2

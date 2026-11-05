@@ -1,0 +1,27 @@
+[package]
+name = "comnum-mimo"
+description = "MIMO detection (linear, SIC, ML, sphere decoder, K-best, message passing), space-time block codes, precoding and capacity of comnum"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+homepage.workspace = true
+documentation = "https://docs.rs/comnum-mimo"
+keywords = ["mimo", "space-time", "sphere-decoder", "precoding", "wireless"]
+categories.workspace = true
+readme = "README.md"
+
+[package.metadata.docs.rs]
+rustdoc-args = ["--html-in-header", "katex-header.html"]
+all-features = true
+
+[lints]
+workspace = true
+
+[dependencies]
+comnum-core.workspace = true
+comnum-math.workspace = true
+comnum-mapping.workspace = true
+ndarray.workspace = true

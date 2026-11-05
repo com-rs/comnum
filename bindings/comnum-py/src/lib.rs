@@ -1,0 +1,362 @@
+//! Python bindings of `comnum` (the `comnum._comnum` extension module).
+//!
+//! The bindings follow the Rust API closely, with NumPy arrays in and out:
+//!
+//! - signals are 1-D `complex128` arrays (any array-like is converted, so real arrays
+//!   and lists work too); bits are `uint8` arrays, symbol indices `int64` arrays;
+//! - the random generators are explicit `PyRng` objects (`comnum.Rng(seed)`),
+//!   passed to every function that draws, so that a simulation is reproducible from
+//!   its seeds;
+//! - the Rust errors become `ValueError` (invalid parameters and shapes, missing
+//!   condition keys), `ArithmeticError` (numerical failures) and `OSError`;
+//! - the long computations (split-step propagation, adaptive equalisation, blind phase
+//!   search, filtering, declarative campaigns) release the GIL;
+//! - `run_spec` runs a declarative campaign with the parallel Rust runner, and the
+//!   Python Monte Carlo runner (`comnum.sim`) runs Python trials on the same runner
+//!   ([`sim`]), with one thread;
+//! - the closed forms take a scalar (and return a float) or an array-like (and return
+//!   an array of the same shape), see [`map_real`].
+//!
+//! The submodules group the bindings by theme; they are flattened into one Python
+//! module, re-exported by the `comnum` package.
+
+use num_complex::Complex64 as C64;
+use numpy::{IntoPyArray, PyArray1, PyArray2, PyArrayMethods};
+use pyo3::exceptions::{PyArithmeticError, PyOSError, PyValueError};
+use pyo3::prelude::*;
+
+/// The `#[pymethods]` of a class wrapping a Rust value `inner`: a getter and a setter
+/// per listed field (`name / set_name: type`, the getter documented by the doc comments
+/// before it), then the other methods of the class. The fields stay those of the Rust
+/// struct: nothing is mirrored or converted back.
+macro_rules! wrapper_methods {
+    ($py:ty { $( $(#[doc = $doc:literal])* $get:ident / $set:ident : $t:ty ),* $(,)? } $($rest:tt)*) => {
+        #[pyo3::pymethods]
+        impl $py {
+            $(
+                $(#[doc = $doc])*
+                #[getter]
+                fn $get(&self) -> $t {
+                    self.inner.$get
+                }
+
+                #[setter]
+                fn $set(&mut self, value: $t) {
+                    self.inner.$get = value;
+                }
+            )*
+            $($rest)*
+        }
+    };
+}
+
+mod ais;
+mod amplifier;
+mod blind;
+mod cdl;
+mod chain;
+mod comm;
+mod converter;
+mod devices;
+mod differential;
+mod dsp;
+mod fec;
+mod fec_codes;
+mod fiber;
+mod fm;
+mod gn;
+mod link_theory;
+mod lte;
+mod math;
+mod mimo;
+mod multicarrier;
+mod nr;
+mod nr_pdsch;
+mod ofdm;
+mod ofdm_link;
+mod otfs;
+mod owc;
+mod pathloss;
+mod rng;
+mod sim;
+mod spec;
+mod spectrum;
+mod systems;
+mod verify;
+mod waveform;
+
+/// A 1-D complex array returned to Python.
+pub(crate) type CArr<'py> = Bound<'py, PyArray1<C64>>;
+/// A 1-D real array returned to Python.
+pub(crate) type FArr<'py> = Bound<'py, PyArray1<f64>>;
+/// A 1-D integer array returned to Python.
+pub(crate) type IArr<'py> = Bound<'py, PyArray1<i64>>;
+/// A 1-D array of bits returned to Python.
+pub(crate) type BArr<'py> = Bound<'py, PyArray1<u8>>;
+/// A 2-D complex array returned to Python.
+pub(crate) type CMat<'py> = Bound<'py, PyArray2<C64>>;
+/// A 2-D real array returned to Python.
+pub(crate) type FMat<'py> = Bound<'py, PyArray2<f64>>;
+
+/// Convert a `comnum` error into the matching Python exception.
+pub(crate) fn err(e: comnum::Error) -> PyErr {
+    match e {
+        comnum::Error::Config(_) | comnum::Error::Shape(_) | comnum::Error::Condition(_) => {
+            PyValueError::new_err(e.to_string())
+        }
+        comnum::Error::Numerical(_) => PyArithmeticError::new_err(e.to_string()),
+        comnum::Error::Io(_) => PyOSError::new_err(e.to_string()),
+        _ => PyValueError::new_err(e.to_string()),
+    }
+}
+
+/// A constellation family from its name (`qam`, `psk`, `pam`, `ook`).
+pub(crate) fn kind(name: &str) -> PyResult<comnum::mapping::constellation::ConstellationKind> {
+    name.parse().py()
+}
+
+/// `Result<T, comnum::Error>` into `PyResult<T>`.
+pub(crate) trait IntoPy<T> {
+    /// Map the error with [`err`].
+    fn py(self) -> PyResult<T>;
+}
+
+impl<T> IntoPy<T> for comnum::Result<T> {
+    fn py(self) -> PyResult<T> {
+        self.map_err(err)
+    }
+}
+
+/// Call `numpy.ascontiguousarray(x, dtype)`.
+pub(crate) fn as_numpy<'py>(x: &Bound<'py, PyAny>, dtype: &str) -> PyResult<Bound<'py, PyAny>> {
+    x.py().import("numpy")?.call_method1("ascontiguousarray", (x, dtype))
+}
+
+/// A 1-D array-like as complex samples.
+pub(crate) fn cvec(x: &Bound<'_, PyAny>) -> PyResult<Vec<C64>> {
+    let a = as_numpy(x, "complex128")?;
+    let a = a.cast::<PyArray1<C64>>().map_err(|_| PyValueError::new_err("expected a 1-D array of complex samples"))?;
+    Ok(a.readonly().as_array().to_vec())
+}
+
+/// A 1-D array-like as real values.
+pub(crate) fn fvec(x: &Bound<'_, PyAny>) -> PyResult<Vec<f64>> {
+    let a = as_numpy(x, "float64")?;
+    let a = a.cast::<PyArray1<f64>>().map_err(|_| PyValueError::new_err("expected a 1-D array of real values"))?;
+    Ok(a.readonly().as_array().to_vec())
+}
+
+/// A 1-D array-like of bits (`0`/`1`).
+pub(crate) fn bvec(x: &Bound<'_, PyAny>) -> PyResult<Vec<u8>> {
+    let a = as_numpy(x, "uint8")?;
+    let a = a.cast::<PyArray1<u8>>().map_err(|_| PyValueError::new_err("expected a 1-D array of bits"))?;
+    let v = a.readonly().as_array().to_vec();
+    if v.iter().any(|&b| b > 1) {
+        return Err(PyValueError::new_err("bits must be 0 or 1"));
+    }
+    Ok(v)
+}
+
+/// A 1-D array-like of bytes (integers 0 to 255).
+pub(crate) fn bytevec(x: &Bound<'_, PyAny>) -> PyResult<Vec<u8>> {
+    uvec(x)?
+        .into_iter()
+        .map(|v| u8::try_from(v).map_err(|_| PyValueError::new_err(format!("bytes must be 0 to 255, got {v}"))))
+        .collect()
+}
+
+/// A 1-D array-like of non-negative integers.
+pub(crate) fn uvec(x: &Bound<'_, PyAny>) -> PyResult<Vec<usize>> {
+    let a = as_numpy(x, "int64")?;
+    let a = a.cast::<PyArray1<i64>>().map_err(|_| PyValueError::new_err("expected a 1-D array of integers"))?;
+    a.readonly()
+        .as_array()
+        .iter()
+        .map(|&v| usize::try_from(v).map_err(|_| PyValueError::new_err(format!("negative index {v}"))))
+        .collect()
+}
+
+/// A complex array of any number of dimensions.
+pub(crate) fn carray(x: &Bound<'_, PyAny>) -> PyResult<ndarray::ArrayD<C64>> {
+    let a = as_numpy(x, "complex128")?;
+    let a = a.cast::<numpy::PyArrayDyn<C64>>().map_err(|_| PyValueError::new_err("expected a complex array"))?;
+    Ok(a.readonly().as_array().to_owned())
+}
+
+/// The streams of a `(n,)` or `(n_streams, n)` complex array, and whether it was 1-D.
+pub(crate) fn streams_in(x: &Bound<'_, PyAny>) -> PyResult<(Vec<Vec<C64>>, bool)> {
+    let a = carray(x)?;
+    match a.ndim() {
+        1 => Ok((vec![a.iter().copied().collect()], true)),
+        2 => Ok((a.outer_iter().map(|r| r.iter().copied().collect()).collect(), false)),
+        _ => Err(PyValueError::new_err(format!(
+            "expected a 1-D (n,) or 2-D (n_streams, n) array, got {} dimensions",
+            a.ndim()
+        ))),
+    }
+}
+
+/// The streams of a signal as a NumPy array: `(n,)` for one stream when the input was
+/// 1-D (`one_d`, from [`streams_in`]), `(n_streams, n)` otherwise.
+pub(crate) fn streams_out(py: Python<'_>, y: &comnum::core::signal::Signal, one_d: bool) -> Py<PyAny> {
+    if y.n_streams() == 1 && one_d {
+        carr(py, y.stream(0).to_vec()).into_any().unbind()
+    } else {
+        y.as_array().clone().into_pyarray(py).into_any().unbind()
+    }
+}
+
+/// Complex samples as a NumPy array.
+pub(crate) fn carr(py: Python<'_>, v: Vec<C64>) -> CArr<'_> {
+    v.into_pyarray(py)
+}
+
+/// A vector of indices as a NumPy array of `int64`.
+pub(crate) fn iarr(py: Python<'_>, v: Vec<usize>) -> IArr<'_> {
+    v.into_iter().map(|i| i as i64).collect::<Vec<_>>().into_pyarray(py)
+}
+
+/// A Python object (a dict, a list, a scalar) as a JSON value, through `json.dumps`.
+pub(crate) fn json(py: Python<'_>, v: &Bound<'_, PyAny>) -> PyResult<serde_json::Value> {
+    let text: String = py.import("json")?.call_method1("dumps", (v,))?.extract()?;
+    serde_json::from_str(&text).map_err(|e| PyValueError::new_err(e.to_string()))
+}
+
+/// A JSON value as a Python object, through `json.loads`.
+pub(crate) fn from_json<'py>(py: Python<'py>, v: &serde_json::Value) -> PyResult<Bound<'py, PyAny>> {
+    py.import("json")?.call_method1("loads", (v.to_string(),))
+}
+
+/// The generator of an optional Python `Rng` argument.
+pub(crate) fn rng_of<'a>(rng: &'a mut Option<PyRefMut<'_, rng::PyRng>>) -> Option<&'a mut comnum::core::rng::Rng> {
+    rng.as_deref_mut().map(|g| &mut g.inner)
+}
+
+/// Real values as a NumPy array.
+pub(crate) fn farr(py: Python<'_>, v: Vec<f64>) -> FArr<'_> {
+    v.into_pyarray(py)
+}
+
+/// A real scalar or array-like mapped element by element by `f`: a Python float for a
+/// scalar (a number or a 0-d array), an array of the same shape otherwise (the
+/// closed forms of the package accept both).
+pub(crate) fn map_real(x: &Bound<'_, PyAny>, f: impl Fn(f64) -> PyResult<f64>) -> PyResult<Py<PyAny>> {
+    let py = x.py();
+    if x.is_instance_of::<pyo3::types::PyFloat>() || x.is_instance_of::<pyo3::types::PyInt>() {
+        return Ok(f(x.extract::<f64>()?)?.into_pyobject(py)?.into_any().unbind());
+    }
+    let a = py.import("numpy")?.call_method1("asarray", (x, "float64"))?;
+    let a = a.cast::<numpy::PyArrayDyn<f64>>().map_err(|_| PyValueError::new_err("expected real values"))?;
+    let ro = a.readonly();
+    let v = ro.as_array();
+    if v.ndim() == 0 {
+        let x0 = v.iter().next().copied().unwrap_or(f64::NAN);
+        return Ok(f(x0)?.into_pyobject(py)?.into_any().unbind());
+    }
+    let out = v.iter().map(|&x| f(x)).collect::<PyResult<Vec<f64>>>()?;
+    let out = ndarray::ArrayD::from_shape_vec(v.raw_dim(), out).map_err(|e| PyValueError::new_err(e.to_string()))?;
+    Ok(out.into_pyarray(py).into_any().unbind())
+}
+
+/// The error of a failed extraction, with the message `msg`: a `TypeError` for a value of
+/// the wrong type, a `ValueError` for a value out of range (a negative or too large
+/// integer, which Python reports as an `OverflowError`).
+pub(crate) fn extract_error(py: Python<'_>, e: &PyErr, msg: &str) -> PyErr {
+    if e.is_instance_of::<pyo3::exceptions::PyTypeError>(py) {
+        pyo3::exceptions::PyTypeError::new_err(msg.to_string())
+    } else {
+        PyValueError::new_err(msg.to_string())
+    }
+}
+
+/// A count given as a Python integer: a negative one is a `ValueError` (not the
+/// `OverflowError` of an unsigned conversion).
+pub(crate) fn count(n: i64, what: &str) -> PyResult<usize> {
+    usize::try_from(n).map_err(|_| PyValueError::new_err(format!("{what} must be non-negative, got {n}")))
+}
+
+/// A boolean as Python writes it in a `repr` (`True`, `False`).
+pub(crate) fn py_bool(b: bool) -> &'static str {
+    if b { "True" } else { "False" }
+}
+
+/// Taps `(delay in s, power in dB)` from an `(n, 2)` array-like (a list of pairs works).
+pub(crate) fn taps_in(x: &Bound<'_, PyAny>) -> PyResult<Vec<(f64, f64)>> {
+    let a = as_numpy(x, "float64")?;
+    let bad = || PyValueError::new_err("the taps are an (n, 2) array of (delay in s, power in dB)");
+    let a = a.cast::<PyArray2<f64>>().map_err(|_| bad())?;
+    let ro = a.readonly();
+    let v = ro.as_array();
+    if v.ncols() != 2 {
+        return Err(bad());
+    }
+    Ok(v.rows().into_iter().map(|r| (r[0], r[1])).collect())
+}
+
+/// Taps `(delay in s, power in dB)` as an `(n, 2)` array.
+pub(crate) fn taps_out(py: Python<'_>, taps: Vec<(f64, f64)>) -> PyResult<FMat<'_>> {
+    mat(py, taps.into_iter().map(|(d, p)| vec![d, p]).collect())
+}
+
+/// The columns of a `(K, L)` grid (subcarriers × symbols), symbol-major.
+pub(crate) fn grid_in(grid: &Bound<'_, PyAny>) -> PyResult<(Vec<C64>, usize)> {
+    let a = carray(grid)?;
+    if a.ndim() != 2 {
+        return Err(PyValueError::new_err("expected a 2-D grid (subcarriers × symbols)"));
+    }
+    let (k, l) = (a.shape()[0], a.shape()[1]);
+    Ok(((0..l).flat_map(|j| (0..k).map(move |i| (i, j))).map(|(i, j)| a[[i, j]]).collect(), k))
+}
+
+/// A symbol-major grid as a `(K, L)` array.
+pub(crate) fn grid_out<'py>(py: Python<'py>, g: &[C64], k: usize) -> PyResult<Bound<'py, PyArray2<C64>>> {
+    let l = g.len() / k;
+    mat(py, (0..k).map(|i| (0..l).map(|j| g[j * k + i]).collect()).collect())
+}
+
+/// Rows of equal length as a 2-D NumPy array.
+pub(crate) fn mat<T: numpy::Element + Clone>(py: Python<'_>, rows: Vec<Vec<T>>) -> PyResult<Bound<'_, PyArray2<T>>> {
+    PyArray2::from_vec2(py, &rows).map_err(|e| PyValueError::new_err(e.to_string()))
+}
+
+/// Communication algorithms in Rust: sources, modulation, metrics, DSP, fibre and
+/// device models (see the `comnum` package documentation).
+#[pymodule]
+fn _comnum(m: &Bound<'_, PyModule>) -> PyResult<()> {
+    m.add("__version__", env!("CARGO_PKG_VERSION"))?;
+    rng::register(m)?;
+    math::register(m)?;
+    comm::register(m)?;
+    blind::register(m)?;
+    link_theory::register(m)?;
+    lte::register(m)?;
+    nr::register(m)?;
+    nr_pdsch::register(m)?;
+    converter::register(m)?;
+    dsp::register(m)?;
+    fiber::register(m)?;
+    fm::register(m)?;
+    ais::register(m)?;
+    gn::register(m)?;
+    devices::register(m)?;
+    mimo::register(m)?;
+    ofdm::register(m)?;
+    amplifier::register(m)?;
+    spectrum::register(m)?;
+    multicarrier::register(m)?;
+    ofdm_link::register(m)?;
+    otfs::register(m)?;
+    owc::register(m)?;
+    pathloss::register(m)?;
+    cdl::register(m)?;
+    differential::register(m)?;
+    fec::register(m)?;
+    fec_codes::register(m)?;
+    chain::register(m)?;
+    spec::register(m)?;
+    sim::register(m)?;
+    systems::register(m)?;
+    waveform::register(m)?;
+    verify::register(m)?;
+    Ok(())
+}

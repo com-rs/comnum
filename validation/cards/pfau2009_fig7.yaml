@@ -1,0 +1,62 @@
+id: pfau2009_fig7
+title: Penalty of the blind phase search against the linewidth times symbol duration
+literature: pfau2009
+evidence: [curve]
+source:
+  kind: paper
+  reference: "T. Pfau, S. Hoffmann, R. Noé, Hardware-efficient coherent digital receiver concept with feedforward carrier recovery for M-QAM constellations, J. Lightw. Technol. 27(8), 989-999, 2009"
+  locator: "Fig. 7: the sensitivity penalty at a BER of 1e-3 against the linewidth times symbol duration, read on the grid (0.03 dB, 10 % on the log abscissa)"
+  file: fiber/2009_pfau_blind-phase-search_jlt.pdf
+description: >
+  The link of the card pfau2009_table1 (N = 9, B = 32 or 64, the differential
+  quadrant code) at linewidth times symbol duration products from 1e-6 to the value
+  where the penalty of the figure passes 1.5 dB, for 4- to 256-QAM; 10^6 symbols per
+  point. The penalty is the Es/N0 at a BER of 1e-3 above eq. (17).
+run:
+  test: validation/tests/fiber/pfau2009.rs::the_penalty_against_the_linewidth_follows_fig_7_of_pfau_2009
+tier: campaign
+duration: "30 s on an Apple M6 (release)"
+tolerance: {atol: 0.15, rtol: 0.1}
+why: >
+  the figure is read to 0.03 dB, and 10 % on the log abscissa, where the penalty
+  grows by up to 0.3 dB per 10 % of linewidth on the steep part of the curves (the
+  relative term); the paper's points carry the Monte Carlo error of 200 000 symbols
+  (about 0.05 dB), ours of 10^6 (0.03 dB)
+findings:
+  - "the 34 points are within the tolerance: 4-, 16- and 64-QAM within 0.1 dB below the knee and within 0.27 dB on the steep part (64-QAM at 8e-5: 1.90 against 1.63, where 10 % of linewidth is worth 0.3 dB); 256-QAM runs 0.12 to 0.17 dB below the figure over the whole range, the gap of its floor (card pfau2009_fig6)"
+  - "the knee of every curve, where the penalty passes 1 dB, falls at the linewidth of Table I within the reading of the abscissa"
+cases:
+  - {inputs: {m: 4, dfts: 1.0e-06}, expected: 0.77}
+  - {inputs: {m: 4, dfts: 1.0e-05}, expected: 0.79}
+  - {inputs: {m: 4, dfts: 3.0e-05}, expected: 0.8}
+  - {inputs: {m: 4, dfts: 1.0e-04}, expected: 0.82}
+  - {inputs: {m: 4, dfts: 2.0e-04}, expected: 0.88}
+  - {inputs: {m: 4, dfts: 4.0e-04}, expected: 0.99}
+  - {inputs: {m: 4, dfts: 6.0e-04}, expected: 1.05}
+  - {inputs: {m: 4, dfts: 8.0e-04}, expected: 1.29}
+  - {inputs: {m: 4, dfts: 1.0e-03}, expected: 1.55}
+  - {inputs: {m: 16, dfts: 1.0e-06}, expected: 0.59}
+  - {inputs: {m: 16, dfts: 1.0e-05}, expected: 0.6}
+  - {inputs: {m: 16, dfts: 3.0e-05}, expected: 0.61}
+  - {inputs: {m: 16, dfts: 5.0e-05}, expected: 0.72}
+  - {inputs: {m: 16, dfts: 7.0e-05}, expected: 0.78}
+  - {inputs: {m: 16, dfts: 1.0e-04}, expected: 0.8}
+  - {inputs: {m: 16, dfts: 1.4e-04}, expected: 1.04}
+  - {inputs: {m: 16, dfts: 2.0e-04}, expected: 1.31}
+  - {inputs: {m: 16, dfts: 3.0e-04}, expected: 2.02}
+  - {inputs: {m: 64, dfts: 1.0e-06}, expected: 0.5}
+  - {inputs: {m: 64, dfts: 3.0e-06}, expected: 0.55}
+  - {inputs: {m: 64, dfts: 5.0e-06}, expected: 0.57}
+  - {inputs: {m: 64, dfts: 1.0e-05}, expected: 0.62}
+  - {inputs: {m: 64, dfts: 2.0e-05}, expected: 0.77}
+  - {inputs: {m: 64, dfts: 3.0e-05}, expected: 0.88}
+  - {inputs: {m: 64, dfts: 4.0e-05}, expected: 1.02}
+  - {inputs: {m: 64, dfts: 6.0e-05}, expected: 1.23}
+  - {inputs: {m: 64, dfts: 8.0e-05}, expected: 1.63}
+  - {inputs: {m: 256, dfts: 1.0e-06}, expected: 0.65}
+  - {inputs: {m: 256, dfts: 2.0e-06}, expected: 0.66}
+  - {inputs: {m: 256, dfts: 3.0e-06}, expected: 0.73}
+  - {inputs: {m: 256, dfts: 5.0e-06}, expected: 0.84}
+  - {inputs: {m: 256, dfts: 7.0e-06}, expected: 0.97}
+  - {inputs: {m: 256, dfts: 1.0e-05}, expected: 1.15}
+  - {inputs: {m: 256, dfts: 1.5e-05}, expected: 1.54}

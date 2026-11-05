@@ -1,0 +1,20 @@
+# The validation tests named after an entry of validation/literature.yaml that do not
+# load a card yet: their published values and tolerances are still written in the test.
+# `python tools/cards.py --check` fails on such a test that is not listed here (a new
+# comparison with a reference keeps its values in a card, `validation/cards/README.md`),
+# and on a listed test that now loads a card (remove it). The list only shrinks.
+coding/aff3ct.rs           # the recorded outputs of AFF3CT, compared in the test
+coding/alvarado2018.rs
+coding/caire1998.rs
+coding/schulte2016.rs
+fiber/bromage2004.rs
+fiber/eghbali2014.rs
+hardware/banelli2000.rs
+hardware/ding2004.rs
+hardware/ieee1139.rs
+mimo/loyka2001.rs
+synchronisation/chang2002.rs
+synchronisation/coleri2002.rs
+synchronisation/massey1972.rs
+synchronisation/schmidl1997.rs
+systems/lin2019.rs

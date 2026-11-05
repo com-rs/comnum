@@ -1,0 +1,45 @@
+[package]
+name = "comnum-spec"
+description = "Declarative Monte Carlo campaigns of comnum (YAML, JSON, TOML), validation against the literature, recordings I/O (SigMF, raw IQ, NPY) and the comnum command"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+homepage.workspace = true
+documentation = "https://docs.rs/comnum-spec"
+keywords = ["simulation", "monte-carlo", "yaml", "sigmf", "communications"]
+categories.workspace = true
+readme = "README.md"
+
+[package.metadata.docs.rs]
+rustdoc-args = ["--html-in-header", "katex-header.html"]
+features = []
+
+[lints]
+workspace = true
+
+[[bin]]
+name = "comnum"
+path = "src/bin/comnum.rs"
+doc = false   # the lib `comnum` (the facade) has the same rustdoc path
+
+[dependencies]
+comnum-core.workspace = true
+comnum-math.workspace = true
+comnum-dsp.workspace = true
+comnum-mapping.workspace = true
+comnum-waveform.workspace = true
+comnum-fec.workspace = true
+comnum-mimo.workspace = true
+ndarray.workspace = true
+comnum-channel.workspace = true
+comnum-hardware.workspace = true
+comnum-metrics.workspace = true
+comnum-sim.workspace = true
+comnum-systems.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+serde_norway.workspace = true
+toml.workspace = true

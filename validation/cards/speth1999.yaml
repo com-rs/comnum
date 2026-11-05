@@ -1,0 +1,98 @@
+id: speth1999
+title: SNR-loss budget of an OFDM receiver and the impairments of synchronisation
+literature: speth1999
+evidence: [closed_form, curve]
+source:
+  kind: paper
+  reference: "M. Speth, S. A. Fechtel, G. Fock, H. Meyr, Optimum receiver design for wireless broad-band systems using OFDM - Part I, IEEE Trans. Commun. 47(11), 1668-1677, 1999"
+  locator: "Figs. 2, 3 (AWGN) and 7; eqs. (20), (30), (40), (47), (51); Secs. IV-A, IV-B"
+  file: synchronisation/1999_speth_optimum-receiver-ofdm-part1_tcom.pdf
+description: >
+  The closed forms of comnum::waveform::ofdm::budget against the figures they draw:
+  the largest Doppler f_D T_u for an SNR loss (Fig. 7, eqs. (47), (51)), the gain of a
+  channel estimator for a loss (Fig. 2, eq. (20)) and the numbers of the text. Then
+  simulations on comnum::waveform::ofdm::Ofdm: the interference of an FFT window late
+  by n samples (Fig. 3, AWGN, N = 2048, K = 1705, no guard interval, 40 QPSK symbols),
+  the interference of Jakes fading within a symbol (eq. (47), one tap, 64 sinusoids,
+  256 subcarriers, 400 symbols, the channel averaged over the symbol as the estimate),
+  and the rotation of the subcarriers by a sampling clock offset of 1e-3 through
+  comnum::hardware::oscillator::sampling_offset (eq. (40), 256 subcarriers, 200 active,
+  guard 32, oversampling 4, 8 symbols).
+run:
+  test: validation/tests/synchronisation/speth1999.rs::speth_1999_snr_loss_budget
+tier: ci
+duration: "a few seconds"
+tolerance: {atol: 3.0e-3}
+why: "Fig. 7 read on its grid at 400 dpi, about 0.003 on the ordinate"
+findings:
+  - "Fig. 7: the 25 readings agree with the bound of eqs. (47) and (51) within the reading precision (at most 0.0003 apart at 30 dB, 0.1 dB); the paper does not print the formula, the curves are this bound. The CFO tolerance of eq. (43) is the same curve divided by sqrt(2) (text of Sec. IV-C3)"
+  - "eq. (42) is the small-offset limit of the exact intercarrier interference of comnum_waveform::ofdm::sync::ici_power: within 1 % for offsets up to 0.02 subcarrier (unit test of budget)"
+  - "Fig. 3, AWGN: the simulated interference of a late window follows eq. (30), 2n/N - (n/N)^2, from 1.7e-3 at 2 samples to 2.9e-2 at 30 (the simulated points of the figure lie 3 to 7 % below eq. (30) where they can be read); the multipath curves are not reproducible (the profile is not given)"
+  - "eq. (47): the simulated interference of Jakes fading within a symbol is within 0.2 % (f_D T_u = 0.05) and 0.8 % (0.1) of pi^2/6 (f_D T_u)^2, with the channel averaged over the symbol as the estimate"
+  - "eqs. (38)-(40): a sampling clock offset of 1e-3 turns subcarrier k by 2 pi zeta k (N + N_g)/N per symbol; the slope simulated through sampling_offset is 0.85 % below (the attenuation si(pi phi_k) and the intercarrier interference, neglected by the paper)"
+  - "eq. (31) prints the condition of an early window as 0 < n_eps T < -(T_g - tau_i), which cannot hold for an echo inside the guard interval; comnum reads n_eps < tau_i - N_g (budget::timing_noise_power)"
+  - "Sec. IV-C2: K = 6817 and zeta = 1e-4 give an extra offset of zeta K/2 = 0.3408 subcarrier at the band edges, as printed"
+cases:
+  - {inputs: {quantity: max_doppler, snr_db: 10.0, loss_db: 0.1}, expected: 0.037}
+  - {inputs: {quantity: max_doppler, snr_db: 10.0, loss_db: 0.5}, expected: 0.081}
+  - {inputs: {quantity: max_doppler, snr_db: 10.0, loss_db: 1.0}, expected: 0.112}
+  - {inputs: {quantity: max_doppler, snr_db: 10.0, loss_db: 2.0}, expected: 0.15}
+  - {inputs: {quantity: max_doppler, snr_db: 10.0, loss_db: 3.0}, expected: 0.174}
+  - {inputs: {quantity: max_doppler, snr_db: 15.0, loss_db: 0.1}, expected: 0.021}
+  - {inputs: {quantity: max_doppler, snr_db: 15.0, loss_db: 0.5}, expected: 0.046}
+  - {inputs: {quantity: max_doppler, snr_db: 15.0, loss_db: 1.0}, expected: 0.063}
+  - {inputs: {quantity: max_doppler, snr_db: 15.0, loss_db: 2.0}, expected: 0.084}
+  - {inputs: {quantity: max_doppler, snr_db: 15.0, loss_db: 3.0}, expected: 0.098}
+  - {inputs: {quantity: max_doppler, snr_db: 20.0, loss_db: 0.1}, expected: 0.012}
+  - {inputs: {quantity: max_doppler, snr_db: 20.0, loss_db: 0.5}, expected: 0.026}
+  - {inputs: {quantity: max_doppler, snr_db: 20.0, loss_db: 1.0}, expected: 0.035}
+  - {inputs: {quantity: max_doppler, snr_db: 20.0, loss_db: 2.0}, expected: 0.047}
+  - {inputs: {quantity: max_doppler, snr_db: 20.0, loss_db: 3.0}, expected: 0.055}
+  - {inputs: {quantity: max_doppler, snr_db: 25.0, loss_db: 0.1}, expected: 0.0065}
+  - {inputs: {quantity: max_doppler, snr_db: 25.0, loss_db: 0.5}, expected: 0.014}
+  - {inputs: {quantity: max_doppler, snr_db: 25.0, loss_db: 1.0}, expected: 0.02}
+  - {inputs: {quantity: max_doppler, snr_db: 25.0, loss_db: 2.0}, expected: 0.027}
+  - {inputs: {quantity: max_doppler, snr_db: 25.0, loss_db: 3.0}, expected: 0.031}
+  - {inputs: {quantity: max_doppler, snr_db: 30.0, loss_db: 0.1}, expected: 0.004}
+  - {inputs: {quantity: max_doppler, snr_db: 30.0, loss_db: 0.5}, expected: 0.008}
+  - {inputs: {quantity: max_doppler, snr_db: 30.0, loss_db: 1.0}, expected: 0.011}
+  - {inputs: {quantity: max_doppler, snr_db: 30.0, loss_db: 2.0}, expected: 0.015}
+  - {inputs: {quantity: max_doppler, snr_db: 30.0, loss_db: 3.0}, expected: 0.017}
+  - inputs: {quantity: estimator_gain, loss_db: 0.1}
+    expected: 43
+    tolerance: {atol: 0.5}
+    why: "read on the grid of Fig. 2, about 0.5 on G"
+  - inputs: {quantity: estimator_gain, loss_db: 0.5}
+    expected: 8.2
+    tolerance: {atol: 0.5}
+    why: "read on the grid of Fig. 2, about 0.5 on G"
+  - inputs: {quantity: estimator_gain, loss_db: 1.0}
+    expected: 3.9
+    tolerance: {atol: 0.5}
+    why: "read on the grid of Fig. 2, about 0.5 on G"
+  - inputs: {quantity: estimator_gain, loss_db: 2.0}
+    expected: 1.7
+    tolerance: {atol: 0.5}
+    why: "read on the grid of Fig. 2, about 0.5 on G"
+  - inputs: {quantity: estimator_gain, loss_db: 3.0}
+    expected: 1.0
+    tolerance: {atol: 0.5}
+    why: "read on the grid of Fig. 2, about 0.5 on G"
+  - inputs: {quantity: estimator_loss_db, gain: 10.0}
+    expected: 0.41
+    tolerance: {atol: 5.0e-3}
+    why: "printed with two decimals (Sec. IV-A)"
+  - inputs: {quantity: timing_margin_db, loss_db: 0.1}
+    expected: 16.4
+    tolerance: {atol: 0.05}
+    why: "printed with one decimal (Sec. IV-B)"
+  - {inputs: {quantity: timing_interference, offset: 2}, expected: 1.7e-3, tolerance: {rtol: 0.15}, why: "Fig. 3, simulated points read on the log grid, about 0.05 decade"}
+  - {inputs: {quantity: timing_interference, offset: 4}, expected: 3.7e-3, tolerance: {rtol: 0.15}, why: "Fig. 3, simulated points read on the log grid, about 0.05 decade"}
+  - {inputs: {quantity: timing_interference, offset: 6}, expected: 5.7e-3, tolerance: {rtol: 0.15}, why: "Fig. 3, simulated points read on the log grid, about 0.05 decade"}
+  - {inputs: {quantity: timing_interference, offset: 8}, expected: 7.6e-3, tolerance: {rtol: 0.15}, why: "Fig. 3, simulated points read on the log grid, about 0.05 decade"}
+  - {inputs: {quantity: timing_interference, offset: 10}, expected: 9.5e-3, tolerance: {rtol: 0.15}, why: "Fig. 3, simulated points read on the log grid, about 0.05 decade"}
+  - {inputs: {quantity: timing_interference, offset: 20}, expected: 1.9e-2, tolerance: {rtol: 0.15}, why: "Fig. 3, simulated points read on the log grid, about 0.05 decade"}
+  - {inputs: {quantity: timing_interference, offset: 30}, expected: 2.7e-2, tolerance: {rtol: 0.15}, why: "Fig. 3, simulated points read on the log grid, about 0.05 decade"}
+  - {inputs: {quantity: doppler_interference, fd_tu: 0.05}, expected: 4.112e-3, tolerance: {rtol: 0.1}, why: "eq. (47), a second-order approximation, against a Monte Carlo of 400 symbols"}
+  - {inputs: {quantity: doppler_interference, fd_tu: 0.1}, expected: 1.645e-2, tolerance: {rtol: 0.1}, why: "eq. (47), a second-order approximation, against a Monte Carlo of 400 symbols"}
+  - {inputs: {quantity: clock_offset_phase_slope, zeta: 1.0e-3}, expected: 7.0686e-3, tolerance: {rtol: 0.02}, why: "eq. (40) neglects the intercarrier interference; the interpolation of the clock offset is exact to about 1e-3"}

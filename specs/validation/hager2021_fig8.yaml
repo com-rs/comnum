@@ -1,0 +1,120 @@
+# Fig. 8 of Häger & Pfister, "Physics-based deep learning for fiber-optic communication
+# systems", IEEE JSAC 39(1), 280-294, 2021 (arXiv:2010.14258): effective SNR versus
+# launch power for 32 GBd over 10 x 100 km of standard fibre with Gaussian symbols, for
+# linear equalisation and frequency-domain DBP with 2, 4 and 500 steps per span (the
+# learned DBP of the figure is not reproduced). The link of Table I: beta2 = -21.683
+# ps²/km at 194.6 THz, gamma = 1.3 /W/km, 0.2 dB/km, noise figure 5 dB, root-raised cosine
+# of roll-off 0.1, frames of 1024 symbols, propagation at 6 samples per symbol with 500
+# logarithmic steps per span (Table I), receivers at 2. The steps of the DBP are the
+# modified logarithmic steps of Zhang, Li & Dong (2013) with the adjusting factor 0.4
+# (Sec. IV-C). The published values were read from the vector paths of the figure
+# (about 0.02 dB), at the integer powers it marks, inside its frame (16.5 to 29.5 dB).
+# Found: linear equalisation within 0.06 dB, DBP with 2 steps within 0.14 dB, with 500
+# steps within 0.15 dB, with 4 steps within 0.12 dB up to 4 dBm. From 5 to 8 dBm the DBP
+# with 4 steps of comnum is 0.29, 0.54, 1.07 and 1.03 dB above the figure: its coarse
+# steps take the phase of the power integrated over the step (the effective length
+# 2 sinh(a d/2)/a), where the code of the paper (github.com/chaeger/LDBP, the SSM
+# parameters) takes the power at the middle of the step times the step, 33 % less phase
+# on a step of 70 km. With that convention (`nonlinear_length: step`, the cases *_step)
+# the DBP with 4 steps is within 0.09 dB up to 6 dBm and 0.24 and 0.33 dB above at 7 and
+# 8 dBm, the DBP with 2 steps within 0.14 dB: the gap was the nonlinear step, and
+# comnum's default back-propagates better than the paper's baseline at high power. The
+# steps decide the curves: with uniform or Bosco's logarithmic steps the DBP with 2
+# steps is 2.6 to 4.9 and 1.7 to 3.1 dB below the figure from 2 to 6 dBm. About 150 s
+# on 12 threads: a campaign, not in the CI.
+name: hager2021_fig8
+description: Häger & Pfister (2021) Fig. 8, linear equalisation and DBP with 2, 4 and 500 steps per span, 32 GBd over 10 x 100 km
+seed: 8
+batch: 4
+fiber: {n_spans: 10, span_km: 100, alpha_db_km: 0.2, gamma_w_km: 1.3, d_ps_nm_km: 17.20934, fc_hz: 194.6e12, nf_db: 5.0}
+cases:
+  - {receiver: linear, steps: 1, nonlinear: false, nl: effective}
+  - {receiver: dbp2, steps: 2, nonlinear: true, nl: effective}
+  - {receiver: dbp4, steps: 4, nonlinear: true, nl: effective}
+  - {receiver: dbp500, steps: 500, nonlinear: true, nl: effective}
+  - {receiver: dbp2_step, steps: 2, nonlinear: true, nl: step}
+  - {receiver: dbp4_step, steps: 4, nonlinear: true, nl: step}
+grid:
+  power_dbm: [-5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5, 6, 7, 8]
+link:
+  - {type: source, constellation: gaussian, n_symbols: 1024, symbol_rate: 32e9}
+  - {type: pulse_shape, sps: 6, rolloff: 0.1, n_taps: 1537}
+  - {type: normalize, power_dbm: $power_dbm}
+  - {type: ssfm, steps_per_span: 500}
+  - {type: resample, sps: 2}
+  - {type: dbp, steps_per_span: $steps, nonlinear: $nonlinear, step_distribution: modified_logarithmic, step_factor: 0.4, nonlinear_length: $nl}
+  - {type: matched_filter, rolloff: 0.1, n_taps: 513}
+  - {type: decimate, method: offset}
+metrics: {report: [snr_eff_db], skip_start: 64, skip_end: 64}
+stop: {max_trials: 16}
+expect:
+  - name: Linear equalisation
+    source: Häger & Pfister, IEEE JSAC 39(1), 2021, Fig. 8 (vector paths)
+    where: {receiver: linear}
+    metric: snr_eff_db
+    curve:
+      along: power_dbm
+      x: [-5, -4, -3, -2, -1, 0]
+      y: [16.66, 17.42, 18.03, 18.31, 18.19, 17.47]
+    atol: 0.3
+    why: "the curves are read to 0.02 dB; 0.3 dB covers the Monte Carlo of 16 frames of 1024 symbols (about 0.1 dB at the peak) and the differences of the split-step schemes (the paper: asymmetric forward steps, its own nonlinear step in the DBP)"
+  - name: DBP, 2 steps per span (modified logarithmic steps)
+    source: Häger & Pfister, IEEE JSAC 39(1), 2021, Fig. 8 (vector paths)
+    where: {receiver: dbp2}
+    metric: snr_eff_db
+    curve:
+      along: power_dbm
+      x: [-5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5, 6]
+      y: [16.86, 17.83, 18.81, 19.75, 20.63, 21.39, 21.94, 22.11, 21.77, 20.80, 19.14, 16.93]
+    atol: 0.3
+    why: "as the linear equalisation; with uniform or Bosco's logarithmic steps the same receiver is 2.6 to 4.9 and 1.7 to 3.1 dB below the curve from 2 to 6 dBm: the curve identifies the steps"
+  - name: DBP, 4 steps per span, up to 4 dBm
+    source: Häger & Pfister, IEEE JSAC 39(1), 2021, Fig. 8 (vector paths)
+    where: {receiver: dbp4}
+    metric: snr_eff_db
+    curve:
+      along: power_dbm
+      x: [-5, -4, -3, -2, -1, 0, 1, 2, 3, 4]
+      y: [16.86, 17.88, 18.86, 19.86, 20.83, 21.82, 22.75, 23.65, 24.45, 25.03]
+    atol: 0.3
+    why: "as the linear equalisation; from 5 to 8 dBm the receiver is 0.3 to 1.1 dB above the figure, because its nonlinear step is not the paper's (the cases dbp4_step reproduce them)"
+  - name: DBP, 500 steps per span
+    source: Häger & Pfister, IEEE JSAC 39(1), 2021, Fig. 8 (vector paths)
+    where: {receiver: dbp500}
+    metric: snr_eff_db
+    curve:
+      along: power_dbm
+      x: [-5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5, 6, 7, 8]
+      y: [16.89, 17.88, 18.87, 19.86, 20.84, 21.82, 22.79, 23.75, 24.64, 25.52, 26.26, 26.72, 26.66, 25.16]
+    atol: 0.3
+    why: "as the linear equalisation"
+  - name: DBP, 2 steps per span, the nonlinear step of the paper
+    source: Häger & Pfister, IEEE JSAC 39(1), 2021, Fig. 8 (vector paths)
+    where: {receiver: dbp2_step}
+    metric: snr_eff_db
+    curve:
+      along: power_dbm
+      x: [-5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5, 6]
+      y: [16.86, 17.83, 18.81, 19.75, 20.63, 21.39, 21.94, 22.11, 21.77, 20.80, 19.14, 16.93]
+    atol: 0.3
+    why: "as the linear equalisation"
+  - name: DBP, 4 steps per span, the nonlinear step of the paper, up to 6 dBm
+    source: Häger & Pfister, IEEE JSAC 39(1), 2021, Fig. 8 (vector paths)
+    where: {receiver: dbp4_step}
+    metric: snr_eff_db
+    curve:
+      along: power_dbm
+      x: [-5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5, 6]
+      y: [16.86, 17.88, 18.86, 19.86, 20.83, 21.82, 22.75, 23.65, 24.45, 25.03, 25.22, 24.58]
+    atol: 0.3
+    why: "as the linear equalisation"
+  - name: DBP, 4 steps per span, the nonlinear step of the paper, 7 and 8 dBm
+    source: Häger & Pfister, IEEE JSAC 39(1), 2021, Fig. 8 (vector paths)
+    where: {receiver: dbp4_step}
+    metric: snr_eff_db
+    curve:
+      along: power_dbm
+      x: [7, 8]
+      y: [22.63, 19.56]
+    atol: 0.5
+    why: "the curve falls by 2 to 3 dB per dBm there: the Monte Carlo of 16 frames leaves intervals of 0.2 to 0.4 dB, and the paper's forward steps (asymmetric) and phase-offset removal are not reproduced; 0.24 and 0.33 dB were found"

@@ -1,0 +1,57 @@
+id: pfau2009_fig6
+title: Penalty of the blind phase search and of an ideal carrier recovery against the number of test phases
+literature: pfau2009
+evidence: [curve, claim]
+source:
+  kind: paper
+  reference: "T. Pfau, S. Hoffmann, R. Noé, Hardware-efficient coherent digital receiver concept with feedforward carrier recovery for M-QAM constellations, J. Lightw. Technol. 27(8), 989-999, 2009"
+  locator: "Fig. 6 (a) 4- and 16-QAM, (b) 64- and 256-QAM: the sensitivity penalty at a BER of 1e-3 against log2 B, read on the grid (0.03 dB); the floors in the text of Sec. V-A"
+  file: fiber/2009_pfau_blind-phase-search_jlt.pdf
+description: >
+  The link of the card pfau2009_table1 without phase noise, with B = 8 to 256 test
+  phases: the blind phase search (receiver "search"), and the carrier phase known
+  exactly and rounded to the grid of the B test phases (receiver "ideal", the "ideal
+  carrier recovery" of the paper, whose penalty is the differential quadrant code and
+  the phase quantisation alone). The penalty is the Es/N0 at a BER of 1e-3 above
+  eq. (17); 10^6 symbols per point.
+run:
+  test: validation/tests/fiber/pfau2009.rs::the_penalty_against_the_test_phases_follows_fig_6_of_pfau_2009
+tier: campaign
+duration: "25 s on an Apple M6 (release)"
+tolerance: {atol: 0.15}
+why: >
+  the figure is read to 0.03 dB; the paper's points carry the Monte Carlo error of
+  200 000 symbols at a BER of 1e-3 (about 0.05 dB on a crossing) and ours of 10^6
+  (0.03 dB); the floors of the text are given to 0.05 dB
+findings:
+  - "the floors of Sec. V-A are reproduced: 0.68, 0.56, 0.47 and 0.36 dB (search) and 0.55, 0.43, 0.31 and 0.25 dB (ideal) at B = 256 against 0.7, 0.6, 0.5, 0.55 and 0.5, 0.4, 0.3, 0.35; the 4-QAM and 16-QAM curves within 0.15 dB from B = 8 (16-QAM: 16) to 256, except 16-QAM at B = 16"
+  - "the carrier phase must start anywhere (a uniform offset): with the carrier on the grid of the test phases, as the first version of this link had it, the quantisation of the phase costs nothing and the penalties sit 0.1 to 0.2 dB below the paper (256-QAM: 0.34 dB against 0.55)"
+  - "not reproduced, and not explained: the steep rise of the paper's curves at the smallest B for 64- and 256-QAM, and the 256-QAM search floor (16-QAM, B = 16, search: 0.57 against 0.77; 64-QAM, B = 16, search: 1.16 against 1.53; 64-QAM, B = 16, ideal: 0.37 against 1.12; 256-QAM, B = 32, search: 0.57 against 1.78; 256-QAM, B = 32, ideal: 0.37 against 1.06; 256-QAM, B = 64, search: 0.50 against 0.65; 256-QAM, B = 64, ideal: 0.26 against 0.53; 256-QAM, B = 128, search: 0.41 against 0.58; 256-QAM, B = 256, search: 0.36 against 0.55)"
+  - "the paper's ideal carrier recovery is not specified beyond \"knows the exact carrier phase\" with a quantised phase: rounding to the nearest test phase (this card) or truncation; truncation gives 0.97 and 1.13 dB at 64-QAM, B = 16 and 256-QAM, B = 32 against 1.12 and 1.06, but 1.11 dB at 4-QAM, B = 8 against 0.69, so neither reading reproduces the whole figure"
+  - "every penalty of the paper includes the Monte Carlo error of 200 000 symbols at a BER of 1e-3 (about 0.05 dB); the differences above are larger"
+cases:
+  - {inputs: {m: 4, log2_b: 3, receiver: search}, expected: 0.92}
+  - {inputs: {m: 4, log2_b: 3, receiver: ideal}, expected: 0.69}
+  - {inputs: {m: 4, log2_b: 4, receiver: search}, expected: 0.72}
+  - {inputs: {m: 4, log2_b: 4, receiver: ideal}, expected: 0.6}
+  - {inputs: {m: 4, log2_b: 5, receiver: search}, expected: 0.71}
+  - {inputs: {m: 4, log2_b: 5, receiver: ideal}, expected: 0.56}
+  - {inputs: {m: 4, log2_b: 6, receiver: search}, expected: 0.7}
+  - {inputs: {m: 4, log2_b: 6, receiver: ideal}, expected: 0.52}
+  - {inputs: {m: 4, log2_b: 8, receiver: search}, expected: 0.7}
+  - {inputs: {m: 4, log2_b: 8, receiver: ideal}, expected: 0.52}
+  - {inputs: {m: 16, log2_b: 4, receiver: ideal}, expected: 0.63}
+  - {inputs: {m: 16, log2_b: 5, receiver: search}, expected: 0.59}
+  - {inputs: {m: 16, log2_b: 5, receiver: ideal}, expected: 0.47}
+  - {inputs: {m: 16, log2_b: 6, receiver: search}, expected: 0.58}
+  - {inputs: {m: 16, log2_b: 6, receiver: ideal}, expected: 0.42}
+  - {inputs: {m: 16, log2_b: 8, receiver: search}, expected: 0.58}
+  - {inputs: {m: 16, log2_b: 8, receiver: ideal}, expected: 0.39}
+  - {inputs: {m: 64, log2_b: 5, receiver: search}, expected: 0.68}
+  - {inputs: {m: 64, log2_b: 5, receiver: ideal}, expected: 0.54}
+  - {inputs: {m: 64, log2_b: 6, receiver: search}, expected: 0.49}
+  - {inputs: {m: 64, log2_b: 6, receiver: ideal}, expected: 0.4}
+  - {inputs: {m: 64, log2_b: 8, receiver: search}, expected: 0.48}
+  - {inputs: {m: 64, log2_b: 8, receiver: ideal}, expected: 0.31}
+  - {inputs: {m: 256, log2_b: 7, receiver: ideal}, expected: 0.38}
+  - {inputs: {m: 256, log2_b: 8, receiver: ideal}, expected: 0.36}

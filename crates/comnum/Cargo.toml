@@ -1,0 +1,83 @@
+[package]
+name = "comnum"
+description = "Link-level simulation of digital communication systems, wireless and optical: the facade of the comnum workspace"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+homepage.workspace = true
+documentation = "https://docs.rs/comnum"
+keywords.workspace = true
+categories.workspace = true
+readme = "../../README.md"
+# the test of the specifications reads specs/ of the repository, outside the crate
+exclude = ["tests/specs.rs"]
+
+[package.metadata.docs.rs]
+rustdoc-args = ["--html-in-header", "katex-header.html"]
+features = ["optical", "spec"]
+
+[lints]
+workspace = true
+
+[dependencies]
+comnum-core.workspace = true
+comnum-math.workspace = true
+comnum-dsp.workspace = true
+comnum-fec.workspace = true
+comnum-mapping.workspace = true
+comnum-waveform.workspace = true
+comnum-mimo.workspace = true
+comnum-channel.workspace = true
+comnum-hardware.workspace = true
+comnum-metrics.workspace = true
+comnum-sim.workspace = true
+comnum-spec = { workspace = true, optional = true }
+comnum-systems.workspace = true
+
+[dev-dependencies]
+criterion.workspace = true
+serde_json.workspace = true
+
+[features]
+default = ["optical", "spec"]
+# optical fibre and optical devices (`channel::optical`, `hardware::optical`)
+optical = ["comnum-channel/optical", "comnum-hardware/optical"]
+# declarative campaigns, recordings I/O (`comnum::spec`, `comnum::io`)
+spec = ["dep:comnum-spec"]
+
+[[example]]
+name = "ber_awgn"
+path = "../../examples/ber_awgn.rs"
+
+[[example]]
+name = "coherent_link"
+path = "../../examples/coherent_link.rs"
+required-features = ["optical"]
+
+[[example]]
+name = "ssfm_dbp"
+path = "../../examples/ssfm_dbp.rs"
+required-features = ["optical"]
+
+[[example]]
+name = "make_capture"
+path = "../../examples/make_capture.rs"
+required-features = ["spec"]
+
+[[example]]
+name = "lte_mib"
+path = "../../examples/lte_mib.rs"
+required-features = ["spec"]
+
+[[example]]
+name = "ais"
+path = "../../examples/ais.rs"
+required-features = ["spec"]
+
+[[bench]]
+name = "blocks"
+path = "../../benchmarks/rust/blocks.rs"
+harness = false

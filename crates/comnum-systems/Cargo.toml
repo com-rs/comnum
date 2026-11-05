@@ -1,0 +1,30 @@
+[package]
+name = "comnum-systems"
+description = "Standard-compliant reference chains of comnum: DVB-S, DVB-S2 and DVB-T"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+homepage.workspace = true
+documentation = "https://docs.rs/comnum-systems"
+keywords = ["dvb-s2", "satellite", "standards", "simulation", "communications"]
+categories.workspace = true
+readme = "README.md"
+
+[package.metadata.docs.rs]
+rustdoc-args = ["--html-in-header", "katex-header.html"]
+all-features = true
+
+[lints]
+workspace = true
+
+[dependencies]
+comnum-core.workspace = true
+comnum-dsp.workspace = true
+comnum-fec.workspace = true
+comnum-hardware.workspace = true
+comnum-mapping.workspace = true
+comnum-math.workspace = true
+comnum-waveform.workspace = true

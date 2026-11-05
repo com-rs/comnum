@@ -1,0 +1,25 @@
+[package]
+name = "comnum-fec"
+description = "Channel coding of comnum: CRC, scrambling, interleaving, convolutional codes and puncturing, turbo, LDPC, polar, Reed–Solomon and BCH codes, distribution matching"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+homepage.workspace = true
+documentation = "https://docs.rs/comnum-fec"
+keywords = ["fec", "ldpc", "polar-codes", "turbo-codes", "reed-solomon"]
+categories.workspace = true
+readme = "README.md"
+
+[package.metadata.docs.rs]
+rustdoc-args = ["--html-in-header", "katex-header.html"]
+all-features = true
+
+[lints]
+workspace = true
+
+[dependencies]
+comnum-core.workspace = true
+comnum-math.workspace = true

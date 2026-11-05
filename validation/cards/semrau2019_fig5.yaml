@@ -1,0 +1,83 @@
+id: semrau2019_fig5
+title: The closed form after 6 x 100 km, coherent and incoherent accumulation, without and with ISRS (Semrau, Killey & Bayvel, Fig. 5)
+literature: semrau2019
+evidence: [curve, claim, closed_form]
+source:
+  kind: paper
+  reference: "D. Semrau, R. I. Killey, P. Bayvel, A closed-form approximation of the Gaussian noise model in the presence of inter-channel stimulated Raman scattering, J. Lightw. Technol. 37(9), 1924-1936, 2019 (arXiv 1808.07940v2)"
+  locator: "Fig. 5, the dashed closed-form curves, coherent (epsilon = 0.15) and incoherent, of panels (a) without and (b) with ISRS, read from the vector paths at -4.8, -4, -2.4, -0.8, 0, 0.8, 2.4, 4, 4.8 and 5 THz (0.02 dB; the curves are drawn from -4.8 THz); Sec. III-A (epsilon = 0.15 by Poggiolini 2012 eq. (22) over the channel bandwidth; the incoherent form 0.2 dB below on average); eq. (5)"
+  file: fiber/2019_semrau_closed-form-gn-isrs_jlt_arxiv.pdf
+description: >
+  The link of Table I over 6 spans of 100 km at 0 dBm/ch. (see semrau2019_fig4a), C_r =
+  0 in panel (a) and 0.028 /W/km/THz in panel (b). The NLI coefficient eta_6 (dB) of eq.
+  (5): the SPM of eq. (10) times 6^(1 + epsilon) with epsilon = 0.15 (coherent) or 0
+  (incoherent), plus the XPM of eq. (11) times 6. The claim: the mean over the ten
+  frequencies of the card of the coherent minus the incoherent form, per panel. The
+  closed form: epsilon of Poggiolini 2012 eq. (22) over 40.004 GHz (coherence_factor)
+  against the 0.15 of Sec. III-A.
+run:
+  test: validation/tests/fiber/semrau2019.rs::the_accumulation_over_six_spans_follows_the_dashed_curves_of_fig_5
+tier: ci
+duration: "milliseconds"
+tolerance: {atol: 0.35}
+why: >
+  the curves are read to 0.02 dB; the SPM term left out of eq. (10) (see
+  semrau2019_fig4a) weighs 6^0.15 = 1.3 times more in the coherent form; the claim is a
+  range around "0.2 dB on average"; epsilon to the two digits printed; wider at the
+  high-frequency edge under ISRS (notes)
+findings:
+  - "without ISRS (a) the coherent form is within 0.17 dB of the dashed curve from -4 to 4.8 THz (-0.17 at -4, -0.07 at -2.4, +0.01 to +0.10 from -0.8 to 4, 0.00 at 4.8), -0.32 dB at -4.8 THz and -0.24 at 5 THz; the incoherent form within 0.15 dB from -4 to 4.8 THz, -0.30 at -4.8 and -0.23 at 5 THz"
+  - "with ISRS (b) the gap grows towards the high-frequency edge as in Fig. 4a: +0.09 to +0.17 dB from -4.8 to -2.4 THz, within 0.07 from -0.8 to 0.8, -0.13 at 2.4, -0.28 at 4, -0.46 at 4.8 and -0.74 dB at 5 THz (coherent; the incoherent form within 0.06 dB of these gaps)"
+  - "the coherent form exceeds the incoherent one by 0.175 dB (a) and 0.157 dB (b) on average over the ten frequencies, the paper's own dashed curves by 0.19 and 0.18 dB: the 0.2 dB of Sec. III-A"
+  - "epsilon of Poggiolini 2012 eq. (22) over the channel bandwidth of 40.004 GHz, 6 spans of 100 km: 0.1512, the 0.15 of Sec. III-A"
+cases:
+  - inputs: {claim: epsilon}
+    expected: 0.15
+    tolerance: {atol: 0.005}
+    note: "Poggiolini 2012 eq. (22) over B_i, Sec. III-A, two digits"
+  - inputs: {claim: incoherent_cost_db, panel: a}
+    expected: {min: 0.15, max: 0.25}
+    note: "the incoherent form costs 0.2 dB on average over 6 spans (Sec. III-A)"
+  - inputs: {claim: incoherent_cost_db, panel: b}
+    expected: {min: 0.15, max: 0.25}
+    note: "the incoherent form costs 0.2 dB on average over 6 spans (Sec. III-A)"
+  - {inputs: {panel: a, accumulation: coherent, f_thz: -4.8}, expected: 36.79}
+  - {inputs: {panel: a, accumulation: coherent, f_thz: -4.0}, expected: 37.31}
+  - {inputs: {panel: a, accumulation: coherent, f_thz: -2.4}, expected: 37.69}
+  - {inputs: {panel: a, accumulation: coherent, f_thz: -0.8}, expected: 37.93}
+  - {inputs: {panel: a, accumulation: coherent, f_thz: 0.0}, expected: 38.04}
+  - {inputs: {panel: a, accumulation: coherent, f_thz: 0.8}, expected: 38.13}
+  - {inputs: {panel: a, accumulation: coherent, f_thz: 2.4}, expected: 38.27}
+  - {inputs: {panel: a, accumulation: coherent, f_thz: 4.0}, expected: 38.27}
+  - {inputs: {panel: a, accumulation: coherent, f_thz: 4.8}, expected: 37.91}
+  - {inputs: {panel: a, accumulation: coherent, f_thz: 5.0}, expected: 37.07}
+  - {inputs: {panel: a, accumulation: incoherent, f_thz: -4.8}, expected: 36.57}
+  - {inputs: {panel: a, accumulation: incoherent, f_thz: -4.0}, expected: 37.11}
+  - {inputs: {panel: a, accumulation: incoherent, f_thz: -2.4}, expected: 37.51}
+  - {inputs: {panel: a, accumulation: incoherent, f_thz: -0.8}, expected: 37.76}
+  - {inputs: {panel: a, accumulation: incoherent, f_thz: 0.0}, expected: 37.87}
+  - {inputs: {panel: a, accumulation: incoherent, f_thz: 0.8}, expected: 37.96}
+  - {inputs: {panel: a, accumulation: incoherent, f_thz: 2.4}, expected: 38.11}
+  - {inputs: {panel: a, accumulation: incoherent, f_thz: 4.0}, expected: 38.1}
+  - {inputs: {panel: a, accumulation: incoherent, f_thz: 4.8}, expected: 37.71}
+  - {inputs: {panel: a, accumulation: incoherent, f_thz: 5.0}, expected: 36.82}
+  - {inputs: {panel: b, accumulation: coherent, f_thz: -4.8}, expected: 38.26}
+  - {inputs: {panel: b, accumulation: coherent, f_thz: -4.0}, expected: 38.56}
+  - {inputs: {panel: b, accumulation: coherent, f_thz: -2.4}, expected: 38.47}
+  - {inputs: {panel: b, accumulation: coherent, f_thz: -0.8}, expected: 38.21}
+  - {inputs: {panel: b, accumulation: coherent, f_thz: 0.0}, expected: 38.05}
+  - {inputs: {panel: b, accumulation: coherent, f_thz: 0.8}, expected: 37.87}
+  - {inputs: {panel: b, accumulation: coherent, f_thz: 2.4}, expected: 37.47}
+  - {inputs: {panel: b, accumulation: coherent, f_thz: 4.0}, expected: 36.91}
+  - {inputs: {panel: b, accumulation: coherent, f_thz: 4.8}, expected: 36.29, tolerance: {atol: 0.6}, note: "the high-frequency edge under ISRS, as 4.8 THz at 2 dBm of Fig. 4a, six times"}
+  - {inputs: {panel: b, accumulation: coherent, f_thz: 5.0}, expected: 35.47, tolerance: {atol: 0.8}, note: "the edge channel under ISRS: the asinh term of eq. (10) nearly vanishes and the curves of the paper end above their own markers (see semrau2019_fig4a)"}
+  - {inputs: {panel: b, accumulation: incoherent, f_thz: -4.8}, expected: 38.01}
+  - {inputs: {panel: b, accumulation: incoherent, f_thz: -4.0}, expected: 38.35}
+  - {inputs: {panel: b, accumulation: incoherent, f_thz: -2.4}, expected: 38.28}
+  - {inputs: {panel: b, accumulation: incoherent, f_thz: -0.8}, expected: 38.03}
+  - {inputs: {panel: b, accumulation: incoherent, f_thz: 0.0}, expected: 37.88}
+  - {inputs: {panel: b, accumulation: incoherent, f_thz: 0.8}, expected: 37.71}
+  - {inputs: {panel: b, accumulation: incoherent, f_thz: 2.4}, expected: 37.32}
+  - {inputs: {panel: b, accumulation: incoherent, f_thz: 4.0}, expected: 36.77}
+  - {inputs: {panel: b, accumulation: incoherent, f_thz: 4.8}, expected: 36.15, tolerance: {atol: 0.6}, note: "the high-frequency edge under ISRS, as 4.8 THz at 2 dBm of Fig. 4a, six times"}
+  - {inputs: {panel: b, accumulation: incoherent, f_thz: 5.0}, expected: 35.29, tolerance: {atol: 0.8}, note: "the edge channel under ISRS: the asinh term of eq. (10) nearly vanishes and the curves of the paper end above their own markers (see semrau2019_fig4a)"}

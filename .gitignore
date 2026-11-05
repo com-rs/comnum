@@ -1,0 +1,31 @@
+target/
+.venv/
+__pycache__/
+*.so
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+results/
+# the curves recorded by the validation campaigns for the documentation are kept
+!validation/results/
+# except the recorded results of the benchmark against other libraries
+!benchmarks/libraries/results/
+docs/python/_build/
+docs/python/auto_examples/
+docs/python/auto_tutorials/
+docs/python/api/generated/
+docs/python/sg_execution_times.rst
+# the standards and papers of references/ are not redistributable, nor is their list
+references/
+# reading cards of papers and standards: local working notes, never published
+validation/readings/
+# no PDF anywhere in the repository (papers, standards, theses, exports)
+*.pdf
+*.PDF
+.DS_Store
+# local tools and build outputs
+.claude/
+dist/
+.venv-agent/
+# captures of real signals (HackRF): never committed
+captures/

@@ -1,0 +1,11 @@
+# The environment of the benchmark on a GPU machine (benchmarks/libraries/runpod.sh):
+# Sionna at the version of requirements.txt, the packages the scripts import, and torch
+# left to the image of the machine (the RunPod PyTorch template ships it with CUDA;
+# pip downloads the CUDA build of PyPI otherwise). komm and OptiCommPy are not run
+# there: they have no GPU path, and their CPU times are those of the laptop.
+sionna==2.2.0
+torch>=2.6
+numpy>=2.0
+scipy>=1.14
+packaging>=24
+psutil>=6

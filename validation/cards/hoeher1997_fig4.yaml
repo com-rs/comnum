@@ -1,0 +1,38 @@
+id: hoeher1997_fig4
+title: Average MSE of 2-D Wiener filtering of pilots in time and frequency
+literature: hoeher1997
+evidence: [curve]
+source:
+  kind: paper
+  reference: "P. Hoeher, S. Kaiser, P. Robertson, Two-dimensional pilot-symbol-aided channel estimation by Wiener filtering, Proc. IEEE ICASSP, vol. 3, 1845-1848, 1997"
+  locator: "Fig. 4, read at 0 to 40 dB"
+  file: synchronisation/1997_hoeher_2d-pilot-wiener-channel-estimation_icassp.pdf
+description: >
+  The 2-D Wiener filter of comnum::waveform::ofdm::wiener::Wiener2d on a block of 58
+  symbols and 115 subcarriers with pilots every 3 symbols and 6 subcarriers (400
+  pilots), 10, 25 or 100 taps chosen by the weighted distance of Sec. 5 (method B),
+  for uniform Doppler and delay spectra (f_D T_s = 0.0832, tau_max Delta F = 0.041667),
+  the covariances known: the MSE of eq. (12) averaged over the 6670 positions, pilots
+  and edges included.
+run:
+  test: validation/tests/synchronisation/hoeher1997.rs::hoeher_1997_fig_4_two_dimensional_filtering
+tier: ci
+duration: "4 s in release, 12 s in debug"
+tolerance: {factor: 1.15}
+why: "the figures are scans, read on their log grid to about 0.05 decade (a factor 1.12)"
+findings:
+  - "the 12 readings agree within 3.6 %, inside the reading precision of the scan: the 2-D filter, the separable covariance of eq. (15) and the tap selection B of Sec. 5 reproduce the analysis curves, the floor of the 10-tap filter at 40 dB included (4.69e-4 against 4.7e-4)"
+  - "the shape of the 10-tap set and the tie-breaking of the weighted distance are not given: comnum breaks ties by the smaller time distance, then the order of the pilots"
+cases:
+  - {inputs: {taps: 10, esn0_db: 0.0}, expected: 2.70e-1}
+  - {inputs: {taps: 10, esn0_db: 10.0}, expected: 4.90e-2}
+  - {inputs: {taps: 10, esn0_db: 20.0}, expected: 6.50e-3}
+  - {inputs: {taps: 10, esn0_db: 30.0}, expected: 1.10e-3}
+  - {inputs: {taps: 10, esn0_db: 40.0}, expected: 4.70e-4}
+  - {inputs: {taps: 25, esn0_db: 0.0}, expected: 2.50e-1}
+  - {inputs: {taps: 25, esn0_db: 10.0}, expected: 3.80e-2}
+  - {inputs: {taps: 25, esn0_db: 20.0}, expected: 5.00e-3}
+  - {inputs: {taps: 25, esn0_db: 30.0}, expected: 6.30e-4}
+  - {inputs: {taps: 100, esn0_db: 0.0}, expected: 2.30e-1}
+  - {inputs: {taps: 100, esn0_db: 12.0}, expected: 2.10e-2}
+  - {inputs: {taps: 100, esn0_db: 30.0}, expected: 4.70e-4}

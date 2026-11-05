@@ -1,0 +1,138 @@
+{
+ "bch_n127_k92_t5": {
+  "ebn0_db": 5.0,
+  "decoder_mbps": 51.49,
+  "chain_mbps": null,
+  "frames": 1847156,
+  "bits_per_frame": 92,
+  "returncode": 0
+ },
+ "bch_n255_k223_t4": {
+  "ebn0_db": 5.5,
+  "decoder_mbps": 78.69,
+  "chain_mbps": null,
+  "frames": 1085233,
+  "bits_per_frame": 223,
+  "returncode": 0
+ },
+ "bch_n63_k45_t3": {
+  "ebn0_db": 5.0,
+  "decoder_mbps": 70.23,
+  "chain_mbps": null,
+  "frames": 4397182,
+  "bits_per_frame": 45,
+  "returncode": 0
+ },
+ "conv_k7_k64_viterbi": {
+  "ebn0_db": 2.5,
+  "decoder_mbps": 3.77,
+  "chain_mbps": null,
+  "frames": 426058,
+  "bits_per_frame": 64,
+  "returncode": 0
+ },
+ "ldpc_dvbs2_short_r1_2_layered_spa_i50": {
+  "ebn0_db": 0.7,
+  "decoder_mbps": 0.917,
+  "chain_mbps": null,
+  "frames": 448,
+  "bits_per_frame": 16200,
+  "returncode": 0
+ },
+ "ldpc_peg_n576_k288_flooding_oms015_i20": {
+  "ebn0_db": 2.25,
+  "decoder_mbps": 19.79,
+  "chain_mbps": null,
+  "frames": 232103,
+  "bits_per_frame": 576,
+  "returncode": 0
+ },
+ "ldpc_peg_n576_k288_flooding_spa_i50": {
+  "ebn0_db": 2.0,
+  "decoder_mbps": 2.52,
+  "chain_mbps": null,
+  "frames": 34231,
+  "bits_per_frame": 576,
+  "returncode": 0
+ },
+ "ldpc_peg_n576_k288_layered_nms075_i20": {
+  "ebn0_db": 2.0,
+  "decoder_mbps": 23.58,
+  "chain_mbps": null,
+  "frames": 270012,
+  "bits_per_frame": 576,
+  "returncode": 0
+ },
+ "ldpc_peg_n648_k540_layered_spa_i20": {
+  "ebn0_db": 3.75,
+  "decoder_mbps": 13.18,
+  "chain_mbps": null,
+  "frames": 145084,
+  "bits_per_frame": 648,
+  "returncode": 0
+ },
+ "polar_n1024_k512_sc": {
+  "ebn0_db": 2.5,
+  "decoder_mbps": 34.38,
+  "chain_mbps": null,
+  "frames": 308187,
+  "bits_per_frame": 512,
+  "returncode": 0
+ },
+ "polar_n256_k128_cascl_l8_crc11": {
+  "ebn0_db": 2.0,
+  "decoder_mbps": 1.72,
+  "chain_mbps": null,
+  "frames": 95324,
+  "bits_per_frame": 128,
+  "returncode": 0
+ },
+ "polar_n256_k128_sc": {
+  "ebn0_db": 3.0,
+  "decoder_mbps": 38.4,
+  "chain_mbps": null,
+  "frames": 1273718,
+  "bits_per_frame": 128,
+  "returncode": 0
+ },
+ "rs_n15_k11_t2": {
+  "ebn0_db": 5.5,
+  "decoder_mbps": 349.52,
+  "chain_mbps": null,
+  "frames": 7532219,
+  "bits_per_frame": 44,
+  "returncode": 0
+ },
+ "rs_n255_k239_t8": {
+  "ebn0_db": 6.25,
+  "decoder_mbps": 441.83,
+  "chain_mbps": null,
+  "frames": 262557,
+  "bits_per_frame": 1912,
+  "returncode": 0
+ },
+ "rs_n63_k55_t4": {
+  "ebn0_db": 5.75,
+  "decoder_mbps": 417.44,
+  "chain_mbps": null,
+  "frames": 1388972,
+  "bits_per_frame": 330,
+  "returncode": 0
+ },
+ "turbo_lte_k1024_maxlogmap_i6": {
+  "ebn0_db": 1.0,
+  "decoder_mbps": 9.65,
+  "chain_mbps": null,
+  "frames": 56532,
+  "bits_per_frame": 1024,
+  "returncode": 0
+ },
+ "turbo_lte_k40_logmap_i8": {
+  "ebn0_db": 2.5,
+  "decoder_mbps": 0.27,
+  "chain_mbps": null,
+  "frames": 53280,
+  "bits_per_frame": 40,
+  "returncode": 0
+ }
+}

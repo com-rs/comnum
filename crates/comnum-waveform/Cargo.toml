@@ -1,0 +1,29 @@
+[package]
+name = "comnum-waveform"
+description = "Waveforms of comnum: OFDM and DFT-spread OFDM with pilots and channel estimation, PAPR and its reduction, constant-envelope OFDM, continuous-phase modulation (CPFSK, MSK, GMSK), chirp spread spectrum, FBMC/OQAM, UFMC, OTFS"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+homepage.workspace = true
+documentation = "https://docs.rs/comnum-waveform"
+keywords = ["ofdm", "cpm", "papr", "waveform", "communications"]
+categories.workspace = true
+readme = "README.md"
+
+[package.metadata.docs.rs]
+rustdoc-args = ["--html-in-header", "katex-header.html"]
+all-features = true
+
+[lints]
+workspace = true
+
+[dependencies]
+comnum-core.workspace = true
+comnum-math.workspace = true
+comnum-dsp.workspace = true
+comnum-mapping.workspace = true
+comnum-mimo.workspace = true
+ndarray.workspace = true

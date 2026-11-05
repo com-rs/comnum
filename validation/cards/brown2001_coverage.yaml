@@ -1,0 +1,87 @@
+id: brown2001_coverage
+title: Exact coverage of the Wald and Wilson intervals of a binomial proportion
+literature: brown2001
+evidence: [table]
+source:
+  kind: paper
+  reference: "L. D. Brown, T. T. Cai, A. DasGupta, Interval estimation for a binomial proportion, Statistical Science 16(2), 101-133, 2001"
+  locator: "Tables 1-3, Sec. 1, Examples 1 and 5, Sec. 3.2, Sec. 3.3 (Fig. 8), Sec. 4.1.1"
+  file: simulation/2001_brown_interval-estimation-binomial-proportion_statsci.pdf
+description: >
+  The exact coverage C(p, n) of the Wald interval (eq. (1)) and of the Wilson interval
+  (eq. (4)) for X ~ Bin(n, p), by comnum::sim::stats::coverage: Table 1 (p = 0.5), Table 2
+  and Sec. 1 (p = 0.005 to n = 1876; n = 100), Example 1 (p = 0.2), Example 5 (99 %,
+  n = 20, the average over p by the midpoint rule on 20 000 points). The limits as
+  n -> infinity with np = gamma, where X becomes Poisson(gamma): the bound of eq. (3)
+  (Table 3), the infimum of the coverage over gamma >= 1, 5, 10 (Sec. 3.2) and the spikes
+  of the Wilson interval (Sec. 4.1.1), computed in the test from the Poisson law and the
+  limiting intervals. The values of p where the shortest expected length changes at
+  n = 25 (Sec. 3.3, Fig. 8), by comnum::sim::stats::expected_length and bisection.
+run:
+  test: validation/tests/simulation/brown2001.rs::brown_cai_dasgupta_2001_coverage_of_the_wald_and_wilson_intervals
+tier: ci
+duration: "a few seconds"
+tolerance: {atol: 5.0e-4}
+why: "the paper prints three decimals of exact probabilities"
+findings:
+  - "the 30 coverages of the Wald interval (Tables 1-2, Sec. 1, Examples 1 and 5) agree with the printed values to their rounding: the summation and eq. (1) are those of the paper (closed interval, untruncated)"
+  - "Table 3 prints 0.875 at gamma = 5; eq. (3) gives 0.8699, and Sec. 3.2 quotes 0.870 for the same limit: a misprint of the table"
+  - "Sec. 1 gives C(0.5, 17) = 0.953 and Table 1 0.951; the sum gives 0.95096, the table's value"
+  - "Sec. 3.2 quotes 0.860 for the limiting infimum of the Wald coverage over gamma >= 1; the Wald interval of X = 0 is the point 0, so the coverage of gamma = np is at most 1 - e^{-gamma} = 0.632 at gamma = 1 (eq. (3) gives 0.6315, and so does the infimum computed here): not compared"
+  - "the limiting infima of the Wilson coverage over gamma >= 5 and >= 10 are 0.9349 and 0.9361 here, 0.0011 and 0.0019 below the paper's 0.936 and 0.938, also on a grid of gamma of step 0.01 (0.9351, 0.9362): not explained; over gamma >= 1, 0.9159 rounds to the printed 0.92, and the spikes of Sec. 4.1.1 (0.8382, 0.8892) agree"
+  - "the crossing at p = 0.133 of Fig. 8 is reproduced with the untruncated Wald interval (0.1331); truncating it to [0, 1] shortens it near p = 0 and moves the crossing to 0.176: comnum returns the Wald and Agresti-Coull intervals untruncated, as the paper defines them"
+cases:
+  - {inputs: {interval: wald, n: 17, p: 0.5}, expected: 0.951, note: "Table 1; Sec. 1 prints 0.953"}
+  - {inputs: {interval: wald, n: 20, p: 0.5}, expected: 0.959}
+  - {inputs: {interval: wald, n: 25, p: 0.5}, expected: 0.957}
+  - {inputs: {interval: wald, n: 30, p: 0.5}, expected: 0.957}
+  - {inputs: {interval: wald, n: 35, p: 0.5}, expected: 0.959}
+  - {inputs: {interval: wald, n: 37, p: 0.5}, expected: 0.953}
+  - {inputs: {interval: wald, n: 42, p: 0.5}, expected: 0.956}
+  - {inputs: {interval: wald, n: 44, p: 0.5}, expected: 0.951}
+  - {inputs: {interval: wald, n: 49, p: 0.5}, expected: 0.956}
+  - {inputs: {interval: wald, n: 10, p: 0.5}, expected: 0.891}
+  - {inputs: {interval: wald, n: 12, p: 0.5}, expected: 0.854}
+  - {inputs: {interval: wald, n: 13, p: 0.5}, expected: 0.908}
+  - {inputs: {interval: wald, n: 15, p: 0.5}, expected: 0.882}
+  - {inputs: {interval: wald, n: 18, p: 0.5}, expected: 0.904}
+  - {inputs: {interval: wald, n: 23, p: 0.5}, expected: 0.907}
+  - {inputs: {interval: wald, n: 28, p: 0.5}, expected: 0.913}
+  - {inputs: {interval: wald, n: 33, p: 0.5}, expected: 0.920}
+  - {inputs: {interval: wald, n: 40, p: 0.5}, expected: 0.919}
+  - {inputs: {interval: wald, n: 591, p: 0.005}, expected: 0.945, note: "Sec. 1"}
+  - {inputs: {interval: wald, n: 592, p: 0.005}, expected: 0.792, note: "Table 2"}
+  - {inputs: {interval: wald, n: 953, p: 0.005}, expected: 0.948, note: "Sec. 1"}
+  - {inputs: {interval: wald, n: 954, p: 0.005}, expected: 0.852, note: "Table 2"}
+  - {inputs: {interval: wald, n: 1279, p: 0.005}, expected: 0.875, note: "Table 2"}
+  - {inputs: {interval: wald, n: 1583, p: 0.005}, expected: 0.889, note: "Table 2"}
+  - {inputs: {interval: wald, n: 1876, p: 0.005}, expected: 0.898, note: "Table 2"}
+  - {inputs: {interval: wald, n: 100, p: 0.106}, expected: 0.952, note: "Sec. 1"}
+  - {inputs: {interval: wald, n: 100, p: 0.107}, expected: 0.911, note: "Sec. 1"}
+  - {inputs: {interval: wald, n: 30, p: 0.2}, expected: 0.946, note: "Example 1"}
+  - {inputs: {interval: wald, n: 98, p: 0.2}, expected: 0.928, note: "Example 1"}
+  - {inputs: {interval: wald, n: 20, confidence: 0.99, quantity: average}, expected: 0.883, note: "Example 5"}
+  - {inputs: {quantity: eq_3, gamma: 5.0}, expected: 0.870, note: "Table 3 prints 0.875; Sec. 3.2 quotes 0.870 for the same limit"}
+  - {inputs: {quantity: eq_3, gamma: 7.0}, expected: 0.913, note: "Table 3"}
+  - {inputs: {quantity: eq_3, gamma: 10.0}, expected: 0.926, note: "Table 3"}
+  - {inputs: {interval: wald, quantity: limit_infimum, gamma: 5.0}, expected: 0.870, note: "Sec. 3.2"}
+  - {inputs: {interval: wald, quantity: limit_infimum, gamma: 10.0}, expected: 0.905, note: "Sec. 3.2"}
+  - inputs: {interval: wilson, quantity: limit_infimum, gamma: 1.0}
+    expected: 0.92
+    tolerance: {atol: 5.0e-3}
+    why: "printed with two decimals"
+    note: "Sec. 3.2"
+  - inputs: {interval: wilson, quantity: limit_infimum, gamma: 5.0}
+    expected: 0.936
+    tolerance: {atol: 2.0e-3}
+    why: "the agreement obtained: the infimum computed here is 0.0011 below the paper (see findings)"
+    note: "Sec. 3.2"
+  - inputs: {interval: wilson, quantity: limit_infimum, gamma: 10.0}
+    expected: 0.938
+    tolerance: {atol: 2.0e-3}
+    why: "the agreement obtained: the infimum computed here is 0.0019 below the paper (see findings)"
+    note: "Sec. 3.2"
+  - {inputs: {interval: wilson, quantity: limit_spike, confidence: 0.95, gamma: 0.1765}, expected: 0.838, note: "Sec. 4.1.1"}
+  - {inputs: {interval: wilson, quantity: limit_spike, confidence: 0.99, gamma: 0.1174}, expected: 0.889, note: "Sec. 4.1.1"}
+  - {inputs: {quantity: shortest, from: wald, to: jeffreys}, expected: 0.133, note: "Sec. 3.3, n = 25"}
+  - {inputs: {quantity: shortest, from: jeffreys, to: wilson}, expected: 0.210, note: "Sec. 3.3, n = 25"}

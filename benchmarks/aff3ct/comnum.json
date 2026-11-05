@@ -1,0 +1,19 @@
+{
+ "bch_n127_k92_t5": {"ebn0_db": 5, "decoder_mbps": 107.9098, "chain_mbps": 33.0128, "frames": 9383459, "ber": 8.844e-4, "counted_bits": 92},
+ "bch_n255_k223_t4": {"ebn0_db": 5.5, "decoder_mbps": 178.6769, "chain_mbps": 43.1168, "frames": 6409933, "ber": 5.254e-4, "counted_bits": 223},
+ "bch_n63_k45_t3": {"ebn0_db": 5, "decoder_mbps": 142.7133, "chain_mbps": 31.9550, "frames": 25371259, "ber": 1.645e-3, "counted_bits": 45},
+ "conv_k7_k64_viterbi": {"ebn0_db": 2.5, "decoder_mbps": 3.9328, "chain_mbps": 3.1814, "frames": 491600, "ber": 2.912e-3, "counted_bits": 64},
+ "ldpc_dvbs2_short_r1_2_layered_spa_i50": {"ebn0_db": 0.7, "decoder_mbps": 1.1309, "chain_mbps": 1.1367, "frames": 559, "ber": 6.721e-3, "counted_bits": 16200},
+ "ldpc_peg_n576_k288_flooding_oms015_i20": {"ebn0_db": 2.25, "decoder_mbps": 7.5138, "chain_mbps": 6.3891, "frames": 104358, "ber": 4.278e-3, "counted_bits": 576},
+ "ldpc_peg_n576_k288_flooding_spa_i50": {"ebn0_db": 2, "decoder_mbps": 2.7945, "chain_mbps": 2.7934, "frames": 38817, "ber": 3.619e-3, "counted_bits": 576},
+ "ldpc_peg_n576_k288_layered_nms075_i20": {"ebn0_db": 2, "decoder_mbps": 10.6939, "chain_mbps": 8.5331, "frames": 148527, "ber": 4.600e-3, "counted_bits": 576},
+ "ldpc_peg_n648_k540_layered_spa_i20": {"ebn0_db": 3.75, "decoder_mbps": 14.2840, "chain_mbps": 10.8416, "frames": 176346, "ber": 5.535e-4, "counted_bits": 648},
+ "polar_n1024_k512_sc": {"ebn0_db": 2.5, "decoder_mbps": 13.2316, "chain_mbps": 9.9305, "frames": 206744, "ber": 2.089e-3, "counted_bits": 512},
+ "polar_n256_k128_cascl_l8_crc11": {"ebn0_db": 2, "decoder_mbps": 2.1354, "chain_mbps": 1.9983, "frames": 133461, "ber": 1.194e-2, "counted_bits": 128},
+ "polar_n256_k128_sc": {"ebn0_db": 3, "decoder_mbps": 12.8039, "chain_mbps": 9.6864, "frames": 800246, "ber": 2.390e-3, "counted_bits": 128},
+ "rs_n15_k11_t2": {"ebn0_db": 5.5, "decoder_mbps": 119.3172, "chain_mbps": 35.2304, "frames": 21694038, "ber": 1.953e-3, "counted_bits": 44},
+ "rs_n255_k239_t8": {"ebn0_db": 6.25, "decoder_mbps": 255.3867, "chain_mbps": 62.2820, "frames": 1068564, "ber": 3.147e-4, "counted_bits": 1912},
+ "rs_n63_k55_t4": {"ebn0_db": 5.75, "decoder_mbps": 238.3752, "chain_mbps": 57.0764, "frames": 5778792, "ber": 6.932e-4, "counted_bits": 330},
+ "turbo_lte_k1024_maxlogmap_i6": {"ebn0_db": 1, "decoder_mbps": 1.9270, "chain_mbps": 1.8086, "frames": 15055, "ber": 2.538e-3, "counted_bits": 1024},
+ "turbo_lte_k40_logmap_i8": {"ebn0_db": 2.5, "decoder_mbps": 0.2096, "chain_mbps": 0.2103, "frames": 41929, "ber": 2.362e-3, "counted_bits": 40}
+}

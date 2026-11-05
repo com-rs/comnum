@@ -1,0 +1,60 @@
+id: semrau2019_fig4b
+title: The change of eta_1 by ISRS against the power transfer, five channels (Semrau, Killey & Bayvel, Fig. 4b)
+literature: semrau2019
+evidence: [curve]
+source:
+  kind: paper
+  reference: "D. Semrau, R. I. Killey, P. Bayvel, A closed-form approximation of the Gaussian noise model in the presence of inter-channel stimulated Raman scattering, J. Lightw. Technol. 37(9), 1924-1936, 2019 (arXiv 1808.07940v2)"
+  locator: "Fig. 4b, the dashed (closed-form) curves of the channels at -4500, -2000, 0, 2000 and 4500 GHz, read from the vector paths at delta rho = 2, 4, ..., 12 dB (0.02 dB); eq. (3); Table I"
+  file: fiber/2019_semrau_closed-form-gn-isrs_jlt_arxiv.pdf
+description: >
+  The link of Table I over one span (see semrau2019_fig4a). The change of the NLI
+  coefficient by ISRS, 10 log10 of eta_1 with C_r = 0.028 /W/km/THz over eta_1 with
+  C_r = 0, of the channel nearest to each frequency (-4480.6, -2000.3, 0, 2000.3 and
+  4480.6 GHz on the 40.005 GHz grid), against the power transfer delta rho of eq. (3),
+  4.3 P_tot C_r L_eff B_tot with L_eff = 21.49 km and B_tot = 10.05 THz, which fixes the
+  total launch power (18.9 dBm at 2 dB, 26.7 dBm at 12 dB).
+run:
+  test: validation/tests/fiber/semrau2019.rs::the_change_of_eta_1_by_isrs_follows_the_dashed_curves_of_fig_4b
+tier: ci
+duration: "milliseconds"
+tolerance: {atol: 0.2}
+why: >
+  a difference of two readings of 0.02 dB; the channels of the grid are 20 GHz inside
+  the round frequencies of the caption; the SPM term left out of eq. (10) enters the
+  ratio through the ISRS weight of the SPM (9 to 10 dB below the XPM), which the
+  largest gap found (0.14 dB at -4500 GHz and 10 dB) shows
+findings:
+  - "within 0.14 dB at every point: -0.03 to -0.14 dB at -4500 GHz (the gap growing with the power transfer: 3.02 against 3.15 dB at 12 dB), -0.01 to -0.08 at -2000, within 0.02 at 0, +0.01 to +0.05 at 2000, +0.02 to +0.09 at 4500 GHz; the first-order ISRS term of the closed form is reproduced, including its departure from the integration curve (3.65 dB at -4500 GHz and 12 dB, assumption 2 of the paper)"
+  - "the gaps are antisymmetric in the frequency (below the paper at negative frequencies, above at positive ones) and grow with the power transfer: the ISRS weight of the SPM, T_i^2 - 4/9 of eq. (10), differs from what the term left out would give, and the channels of the grid are 20 GHz inside the round frequencies of the caption"
+cases:
+  - {inputs: {channel_ghz: -4500, delta_rho_db: 2}, expected: 0.57}
+  - {inputs: {channel_ghz: -4500, delta_rho_db: 4}, expected: 1.13}
+  - {inputs: {channel_ghz: -4500, delta_rho_db: 6}, expected: 1.67}
+  - {inputs: {channel_ghz: -4500, delta_rho_db: 8}, expected: 2.2}
+  - {inputs: {channel_ghz: -4500, delta_rho_db: 10}, expected: 2.7}
+  - {inputs: {channel_ghz: -4500, delta_rho_db: 12}, expected: 3.15}
+  - {inputs: {channel_ghz: -2000, delta_rho_db: 2}, expected: 0.26}
+  - {inputs: {channel_ghz: -2000, delta_rho_db: 4}, expected: 0.52}
+  - {inputs: {channel_ghz: -2000, delta_rho_db: 6}, expected: 0.79}
+  - {inputs: {channel_ghz: -2000, delta_rho_db: 8}, expected: 1.05}
+  - {inputs: {channel_ghz: -2000, delta_rho_db: 10}, expected: 1.32}
+  - {inputs: {channel_ghz: -2000, delta_rho_db: 12}, expected: 1.56}
+  - {inputs: {channel_ghz: 0, delta_rho_db: 2}, expected: 0.0}
+  - {inputs: {channel_ghz: 0, delta_rho_db: 4}, expected: 0.0}
+  - {inputs: {channel_ghz: 0, delta_rho_db: 6}, expected: 0.02}
+  - {inputs: {channel_ghz: 0, delta_rho_db: 8}, expected: 0.04}
+  - {inputs: {channel_ghz: 0, delta_rho_db: 10}, expected: 0.07}
+  - {inputs: {channel_ghz: 0, delta_rho_db: 12}, expected: 0.1}
+  - {inputs: {channel_ghz: 2000, delta_rho_db: 2}, expected: -0.27}
+  - {inputs: {channel_ghz: 2000, delta_rho_db: 4}, expected: -0.54}
+  - {inputs: {channel_ghz: 2000, delta_rho_db: 6}, expected: -0.79}
+  - {inputs: {channel_ghz: 2000, delta_rho_db: 8}, expected: -1.04}
+  - {inputs: {channel_ghz: 2000, delta_rho_db: 10}, expected: -1.28}
+  - {inputs: {channel_ghz: 2000, delta_rho_db: 12}, expected: -1.48}
+  - {inputs: {channel_ghz: 4500, delta_rho_db: 2}, expected: -0.6}
+  - {inputs: {channel_ghz: 4500, delta_rho_db: 4}, expected: -1.21}
+  - {inputs: {channel_ghz: 4500, delta_rho_db: 6}, expected: -1.81}
+  - {inputs: {channel_ghz: 4500, delta_rho_db: 8}, expected: -2.37}
+  - {inputs: {channel_ghz: 4500, delta_rho_db: 10}, expected: -2.88}
+  - {inputs: {channel_ghz: 4500, delta_rho_db: 12}, expected: -3.3}

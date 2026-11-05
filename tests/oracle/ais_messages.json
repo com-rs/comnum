@@ -1,0 +1,132 @@
+{
+ "data": {
+  "0": {
+   "fields": {
+    "accuracy": 1,
+    "course": 271.5,
+    "heading": 270,
+    "lat": 46.1234,
+    "lon": -9.8765,
+    "mmsi": 200123456,
+    "raim": 0,
+    "second": 42,
+    "speed": 12.3,
+    "status": 0
+   },
+   "sentences": [
+    "!AIVDO,1,1,,A,12vnT@0P1swBjO`JI5f:VpMD0000,0*3C"
+   ]
+  },
+  "1": {
+   "fields": {
+    "accuracy": 1,
+    "day": 4,
+    "epfd": 1,
+    "hour": 19,
+    "lat": 46.12,
+    "lon": -9.88,
+    "minute": 30,
+    "mmsi": 2005000,
+    "month": 11,
+    "raim": 0,
+    "second": 15,
+    "year": 2026
+   },
+   "sentences": [
+    "!AIVDO,1,1,,A,401rH21vbjCN?wBiN0JHuh100000,0*58"
+   ]
+  },
+  "2": {
+   "fields": {
+    "ais_version": 1,
+    "callsign": "TEST1",
+    "day": 5,
+    "destination": "NOWHERE",
+    "draught": 6.5,
+    "dte": 0,
+    "epfd": 1,
+    "hour": 6,
+    "imo": 1000000,
+    "minute": 30,
+    "mmsi": 200123456,
+    "month": 11,
+    "ship_type": 52,
+    "shipname": "COMNUM TEST",
+    "to_bow": 50,
+    "to_port": 8,
+    "to_starboard": 8,
+    "to_stern": 30
+   },
+   "sentences": [
+    "!AIVDO,2,1,0,A,52vnT@40?@T1@E=C400<tlqDn1@E=@000000000l6@N886jVN@CSmj1DQ@00,0*68",
+    "!AIVDO,2,2,0,A,00000000000,2*26"
+   ]
+  },
+  "3": {
+   "fields": {
+    "accuracy": 0,
+    "course": 100.0,
+    "cs": 1,
+    "heading": 511,
+    "lat": 46.15,
+    "lon": -9.9,
+    "mmsi": 200654321,
+    "raim": 0,
+    "second": 7,
+    "speed": 5.1
+   },
+   "sentences": [
+    "!AIVDO,1,1,,A,B2wFut@0<olbqh6VQ10vSwST0000,0*35"
+   ]
+  },
+  "4": {
+   "fields": {
+    "mmsi": 200654321,
+    "partno": 0,
+    "shipname": "TEST VESSEL"
+   },
+   "sentences": [
+    "!AIVDO,1,1,,A,H2wFutA@E=B1HE=<Dh0000000000,0*44"
+   ]
+  },
+  "5": {
+   "fields": {
+    "callsign": "TEST2",
+    "mmsi": 200654321,
+    "partno": 1,
+    "ship_type": 36,
+    "to_bow": 5,
+    "to_port": 1,
+    "to_starboard": 2,
+    "to_stern": 4,
+    "vendorid": "COM"
+   },
+   "sentences": [
+    "!AIVDO,1,1,,A,H2wFutDT3?=0000D5CDj000`4120,0*04"
+   ]
+  },
+  "report": {
+   "fields": {
+    "accuracy": 0,
+    "course": 359.9,
+    "heading": 0,
+    "lat": -33.8688,
+    "lon": 151.2093,
+    "mmsi": 200999999,
+    "raim": 0,
+    "second": 59,
+    "speed": 102.2,
+    "status": 1
+   },
+   "sentences": [
+    "!AIVDM,1,1,,A,12wd4?iP?v:l;VIdWd0>3h1n0000,0*62"
+   ]
+  }
+ },
+ "name": "ais_messages",
+ "numpy": "2.5.4",
+ "python": "3.12.15",
+ "recorded": "2026-11-05",
+ "tool": "pyais",
+ "version": "3.3.1"
+}

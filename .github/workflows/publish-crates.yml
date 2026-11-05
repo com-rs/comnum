@@ -1,0 +1,48 @@
+name: Publish crates
+
+# Publish (or finish publishing) the crates of a release tag on crates.io, by hand
+# (Actions → Publish crates → Run workflow). The sources are those of the tag; the
+# script `tools/publish_crates.sh` is that of the branch the workflow runs from, so that
+# a fix of the script reaches a tag already pushed. The script skips the versions
+# already on crates.io and waits on the rate limit of new crate names (one every few
+# minutes after the first ones), so a first release of the 14 crates takes one to two
+# hours. When it is done, "Re-run failed jobs" on the run of the tag in the Release
+# workflow completes the job `crates` (every crate skipped) and creates the GitHub
+# Release.
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "The release tag whose crates to publish"
+        required: true
+        default: "v0.2.0"
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  crates:
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: tools-branch
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag }}
+          path: release
+      - uses: dtolnay/rust-toolchain@stable
+      - name: the tag equals the version of the workspace
+        working-directory: release
+        run: |
+          version=$(python3 -c "import tomllib; print(tomllib.load(open('Cargo.toml', 'rb'))['workspace']['package']['version'])")
+          test "${{ inputs.tag }}" = "v${version}" || { echo "::error::tag ${{ inputs.tag }} but version ${version}"; exit 1; }
+      - name: publish the crates of the tag with the script of the branch
+        working-directory: release
+        run: bash ../tools-branch/tools/publish_crates.sh
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}

@@ -1,0 +1,27 @@
+[package]
+name = "comnum-math"
+description = "Numerical methods of comnum: special functions, Simpson, Gauss–Hermite and Gauss–Legendre quadrature, FFT plans, complex linear algebra, nearest-point search, finite fields, LFSR sequences, NLSE split-step solver"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+homepage.workspace = true
+documentation = "https://docs.rs/comnum-math"
+keywords = ["special-functions", "quadrature", "fft", "nlse", "communications"]
+categories.workspace = true
+readme = "README.md"
+
+[package.metadata.docs.rs]
+rustdoc-args = ["--html-in-header", "katex-header.html"]
+all-features = true
+
+[lints]
+workspace = true
+
+[dependencies]
+comnum-core.workspace = true
+num-complex.workspace = true
+rustfft.workspace = true
+ndarray.workspace = true

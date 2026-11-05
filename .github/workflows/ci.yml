@@ -1,0 +1,144 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+
+# Every job runs the recipes of the justfile that `just check` runs locally (check-rust,
+# check-tests, check-python), so that the two cannot differ; the list of the validation
+# specifications is ci_specs of the justfile.
+jobs:
+  rust:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@v2
+      - uses: extractions/setup-just@v2
+      - run: just check-rust
+
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - uses: extractions/setup-just@v2
+      - run: just check-tests   # default-members: all crates but the Python extension
+
+  msrv:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.85
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo build
+
+  deny:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: EmbarkStudios/cargo-deny-action@v2
+
+  # The public API of every crate against the base branch of the pull request: a
+  # breaking change fails unless the version is bumped (docs/ARCHITECTURE.md, API
+  # stability). On main there is nothing to compare with until the first release.
+  semver:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - uses: obi1kenobi/cargo-semver-checks-action@v2
+        with:
+          exclude: comnum-py
+          baseline-rev: ${{ github.event.pull_request.base.sha }}
+
+  python:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        python: ["3.11", "3.12", "3.13"]
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - uses: extractions/setup-just@v2
+      - uses: astral-sh/setup-uv@v6
+      - name: install
+        # the package and the groups test and lint at the versions of uv.lock (`just
+        # setup-py`); the oracles (OptiCommPy, GNPy, py3gpp) are recorded fixtures of
+        # tests/oracle/: the tools are not installed, the tests read the files
+        run: uv sync --locked --python ${{ matrix.python }}
+      - name: lint and generated files
+        if: matrix.os == 'ubuntu-latest' && matrix.python == '3.12'
+        run: |
+          source .venv/bin/activate
+          just check-python
+      - name: tests
+        # the long tests (marker slow: the WDM links, the dual-polarisation DBP, 80 % of
+        # the time) run once, on Linux with Python 3.12; the other systems and versions
+        # run the rest, where a platform difference would show
+        env:
+          PYTHONWARNDEFAULTENCODING: "1"   # a file opened without its encoding fails
+          SLOW: ${{ matrix.os == 'ubuntu-latest' && matrix.python == '3.12' }}
+        run: |
+          source .venv/bin/activate 2>/dev/null || source .venv/Scripts/activate
+          if [ "$SLOW" = true ]; then python -m pytest; else python -m pytest -m "not slow"; fi
+
+  # The documentation of the Python package (Sphinx, PyData theme, gallery of classical
+  # results), published to GitHub Pages from main (Settings → Pages → GitHub Actions).
+  docs-python:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - uses: astral-sh/setup-uv@v6
+      - run: |
+          uv sync --locked --group docs
+          source .venv/bin/activate
+          sphinx-build -W --keep-going -b html docs/python docs/python/_build/html
+      - uses: actions/upload-pages-artifact@v3
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        with:
+          path: docs/python/_build/html
+
+  deploy-docs:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: docs-python
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    # one deployment at a time; a deployment in progress is never cancelled
+    concurrency:
+      group: pages
+      cancel-in-progress: false
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

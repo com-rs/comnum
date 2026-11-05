@@ -1,0 +1,43 @@
+id: saul2004_fig9
+title: PSD against the Eb/N0 loss of recursive clipping and ACE, 16-QAM (Saul, Fig. 9)
+literature: saul2004
+evidence: [curve, claim]
+source:
+  kind: paper
+  reference: "A. Saul, Peak reduction for OFDM by shaping the clipping noise, Proc. IEEE VTC2004-Fall, vol. 1, 443-447, 2004"
+  locator: "Fig. 9 (16-QAM: the PSD at f/fs = 0.6 after the amplifier against the Eb/N0 loss at a BER of 1e-3, one marker per clipping ratio, read on the grid); Sec. VI-D; Table I"
+  file: multicarrier/2004_saul_peak-reduction-ofdm-shaping-clipping-noise_vtc.pdf
+description: >
+  The link of Table I: OFDM of 1024 subcarriers, 16-QAM, uncoded, oversampled twice for the
+  peak reduction, a guard interval of 11.1 % with the raised-cosine window of eq. (1)
+  over it (Ofdm::windowed), the Rapp SSPA of eq. (2) with p = 10 at an output back-off
+  of 6 dB (Rapp::scale_for_output_backoff), AWGN. Recursive clipping (ClipFilter, two
+  iterations) and the clipping-based ACE of Krongold and Jones (Ace, two iterations, the
+  projected noise added once) at clipping ratios from 12 to 0 dB by 1 dB; 100 OFDM
+  symbols per point. Each case is a published point: at its PSD (f/fs = 0.6 after the
+  amplifier, dB below the in-band density, fs the Nyquist rate of the grid) the loss of
+  comnum's curve, interpolated along the clipping ratios (the first crossing from 12 dB),
+  is compared with the published Eb/N0 loss at a BER of 1e-3.
+run:
+  test: validation/tests/multicarrier/saul2004.rs::the_clipping_and_ace_curves_of_16qam_follow_fig_9_of_saul_2004
+tier: campaign
+duration: "about 3 minutes on an Apple M6 (release)"
+tolerance: {atol: 0.4}
+why: >
+  the losses are read on the grid to 0.1 dB and the PSD to 1 dB; the curves are steeper than in Fig. 8 (about 0.1 dB of loss per dB of PSD), so the PSD reading, the estimator and the undefined fs are worth 0.2 dB of loss; the crossing of 100 symbols (400 bit errors at 1e-3) carries 0.03 dB; the window, the clipping ratio of the markers and the number of symbols are not given: 0.4 dB
+findings:
+  - "the Rapp amplifier alone at 6 dB of output back-off: -30.2 dBc and a loss of 0.38 dB (the figure's top-left marker: -31 dBc, 0.6 dB); the windowed signal before the amplifier is at -92 dBc"
+  - "recursive clipping: comnum's curve is on the figure's at both ends (0.83 against 0.95 dB at -39 dBc, 2.71 against 2.75 at -55, 8.07 against 8.2 at -65) and 0.3 to 0.5 dB below it between: 0.97 against 1.3 at -42, 1.32 against 1.7 at -47, 1.84 against 2.3 at -51, 4.39 against 4.8 at -60 (the two outside 0.4 dB are left out of the cases): not explained; the 'mismatching 0.4 dB' of Table I is not explained by the text. Below a clipping ratio of 3 dB the BER of 16-QAM floors above 1e-3 up to 25 dB of Eb/N0, where the figure's curve ends at 8.2 dB"
+  - "ACE: comnum's Ace with thirty unit-step iterations reaches the floor of the figure, -47.0 against -46.5 dBc (Sec. VI-D: the inner points of 16-QAM are not extended), at a clipping ratio of 5 dB, then hooks back as the figure does; but at a third of the figure's loss: 0.51 against 1.0 dB at -36 dBc, 0.65 against 1.3 at -41, 0.79 against 1.5 at -44, 0.89 against 2.5 at -46, 0.92 against 3.1 at -46.5 (the figure's two SGP iterations extend the points much further than the projection of comnum): a different algorithm, not reproduced; only the first marker (-32 dBc: 0.40 against 0.6 dB) is kept as a case"
+cases:
+  - {inputs: {technique: clip_filter, psd_dbc: -31}, expected: 0.6}
+  - {inputs: {technique: clip_filter, psd_dbc: -39}, expected: 0.95}
+  - {inputs: {technique: clip_filter, psd_dbc: -42}, expected: 1.3}
+  - {inputs: {technique: clip_filter, psd_dbc: -47}, expected: 1.7}
+  - {inputs: {technique: clip_filter, psd_dbc: -55}, expected: 2.75}
+  - {inputs: {technique: clip_filter, psd_dbc: -57}, expected: 3.1}
+  - {inputs: {technique: clip_filter, psd_dbc: -65}, expected: 8.2}
+  - {inputs: {technique: ace, psd_dbc: -32}, expected: 0.6}
+  - inputs: {technique: ace, claim: psd_floor_dbc}
+    expected: {min: -47.5, max: -44.5}
+    note: "Sec. VI-D: ACE does not use the inner 16-QAM points, its PSD saturates near -46 dBc (Fig. 9)"

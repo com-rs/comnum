@@ -1,0 +1,38 @@
+id: richardson2001_bp
+title: Thresholds of belief propagation on the BIAWGN channel and the BSC
+literature: richardson2001
+evidence: [table]
+source:
+  kind: paper
+  reference: "T. J. Richardson, R. L. Urbanke, The capacity of low-density parity-check codes under message-passing decoding, IEEE Trans. Inf. Theory 47(2), 599-618, 2001"
+  locator: "Table II (sigma*) and Table I (column BP); Examples 10-11, eqs. (8)-(9)"
+  file: coding/2001_richardson_capacity-ldpc-message-passing_it.pdf
+description: >
+  Discretized density evolution of belief propagation (comnum::fec::density_evolution::
+  BpDensityEvolution: LLR step 0.05, LLRs clipped at 25, at most 3000 iterations, a target
+  of 1e-7 incorrect messages; the check node combined pair by pair on the grid) for the
+  six regular ensembles; each threshold bisected to 1e-4 in a bracket of +-0.04 (sigma)
+  or +-0.02 (eps) around the printed value.
+run:
+  test: validation/tests/coding/richardson2001.rs::richardson_urbanke_2001_tables_1_and_2_belief_propagation
+tier: campaign
+duration: "about 5 minutes on an Apple M6"
+why: >
+  the paper reports its thresholds rounded down to the digits printed (Sec. III-B2):
+  a threshold of comnum passes when it lies between the printed value and the printed
+  value plus one unit of its last digit.
+findings:
+  - "every sigma* and eps* of belief propagation within the rounding of the tables: (3, 6) 0.8808 and 0.0841, (4, 8) 0.8375 and 0.0768, (5, 10) 0.7935 and 0.0680, (3, 5) 1.0092 and 0.1138, (4, 6) 1.0108 and 0.1169, (3, 4) 1.2665 and 0.1670"
+cases:
+  - {inputs: {table: II, channel: biawgn, dv: 3, dc: 6}, expected: {min: 0.88, max: 0.89}}
+  - {inputs: {table: I, channel: bsc, dv: 3, dc: 6}, expected: {min: 0.084, max: 0.085}}
+  - {inputs: {table: II, channel: biawgn, dv: 4, dc: 8}, expected: {min: 0.83, max: 0.84}}
+  - {inputs: {table: I, channel: bsc, dv: 4, dc: 8}, expected: {min: 0.076, max: 0.077}}
+  - {inputs: {table: II, channel: biawgn, dv: 5, dc: 10}, expected: {min: 0.79, max: 0.8}}
+  - {inputs: {table: I, channel: bsc, dv: 5, dc: 10}, expected: {min: 0.068, max: 0.069}}
+  - {inputs: {table: II, channel: biawgn, dv: 3, dc: 5}, expected: {min: 1.0, max: 1.1}}
+  - {inputs: {table: I, channel: bsc, dv: 3, dc: 5}, expected: {min: 0.113, max: 0.114}}
+  - {inputs: {table: II, channel: biawgn, dv: 4, dc: 6}, expected: {min: 1.01, max: 1.02}}
+  - {inputs: {table: I, channel: bsc, dv: 4, dc: 6}, expected: {min: 0.116, max: 0.117}}
+  - {inputs: {table: II, channel: biawgn, dv: 3, dc: 4}, expected: {min: 1.26, max: 1.27}}
+  - {inputs: {table: I, channel: bsc, dv: 3, dc: 4}, expected: {min: 0.167, max: 0.168}}

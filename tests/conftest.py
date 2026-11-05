@@ -1,0 +1,60 @@
+"""Shared helpers of the Python tests.
+
+- ``tests/`` is on the import path, for the recorded oracles (``from oracle import
+  oracle``) and these helpers (``from conftest import qpsk_chain``, the folders ``ROOT``
+  and ``SPECS``); so are ``tools/``, for the loader of the validation cards (``from
+  cards import cards``), and ``docs/python``, for the trials and chains that the tests
+  share with the examples of the gallery they reproduce (``from _gallery_utils import
+  coded_error_rates``);
+- :func:`qpsk_chain` and :func:`qpsk_spec` are the QPSK link over AWGN that many tests
+  run, as a chain and as a specification;
+- the ``slow`` marker labels the long tests (a WDM link with the GN model, the Raman
+  amplification of a WDM link, the dual-polarisation back-propagation): they run by
+  default and once in CI (Linux, Python 3.12); ``python -m pytest -m "not slow"``
+  leaves them out, as the other runners of CI do.
+"""
+
+from __future__ import annotations
+
+import sys
+from pathlib import Path
+from typing import Any
+
+import comnum
+from comnum import blocks as B
+
+TESTS = Path(__file__).resolve().parent
+ROOT = TESTS.parent
+SPECS = ROOT / "specs"
+for folder in (ROOT / "docs" / "python", ROOT / "tools", TESTS):
+    if str(folder) not in sys.path:
+        sys.path.insert(0, str(folder))
+
+
+def qpsk_chain(n_symbols: int = 1000, *, snr: str = "ebn0_db", **source: Any) -> comnum.Chain:
+    """QPSK over AWGN: ``tx`` (the source) and ``channel``, whose SNR is the grid variable
+    ``snr`` (``ebn0_db`` for an ``awgn_ebn0`` block, ``snr_db`` for an ``awgn`` block of
+    unit reference power)."""
+    tx = B.Source(constellation="QPSK", n_symbols=n_symbols, **source)
+    if snr == "ebn0_db":
+        channel = B.AwgnEbn0(ebn0_db=comnum.var("ebn0_db"))
+    else:
+        channel = B.Awgn(snr_db=comnum.var(snr), reference="unit")
+    return comnum.Chain(tx=tx, channel=channel)
+
+
+def qpsk_spec(n_symbols: int = 2000, **settings: Any) -> dict[str, Any]:
+    """The specification of QPSK over AWGN at the grid variable ``ebn0_db`` (BER
+    reported, 64 trials by default), updated by ``settings``."""
+    spec = {
+        "name": "qpsk",
+        "grid": {"ebn0_db": [6]},
+        "link": [
+            {"type": "source", "constellation": "QPSK", "n_symbols": n_symbols},
+            {"type": "awgn_ebn0", "ebn0_db": "$ebn0_db"},
+        ],
+        "metrics": {"report": ["ber"]},
+        "stop": {"max_trials": 64},
+    }
+    spec.update(settings)
+    return spec

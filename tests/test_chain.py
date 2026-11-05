@@ -1,0 +1,462 @@
+"""The Python chain API: named blocks, Python blocks, trace, specifications and both
+runners."""
+
+import inspect
+
+import numpy as np
+import pytest
+from conftest import SPECS, qpsk_chain
+
+import comnum
+from comnum import blocks as B
+
+
+def test_blocks_from_registry():
+    assert set(B.__all__) == {comnum.block._class_name(k) for k in comnum.spec_blocks()}
+    assert "ebn0_db" in B.AwgnEbn0.__doc__
+    assert list(inspect.signature(B.AwgnEbn0).parameters) == list(
+        comnum.spec_blocks()["awgn_ebn0"]["params"]
+    )
+    with pytest.raises(TypeError, match="snr"):
+        B.AwgnEbn0(snr=3)
+    with pytest.raises(TypeError):
+        B.AwgnEbn0(3.0)  # keyword-only
+    # a parameter equal to its default is left to the block
+    assert B.PulseShape(sps=4, n_taps=1025).spec() == {"type": "pulse_shape", "sps": 4}
+
+
+def test_containers():
+    link = qpsk_chain()
+    assert link.names == ["tx", "channel"]
+    assert len(link) == 2
+    assert link["channel"].params["ebn0_db"].name == "ebn0_db"
+    assert link.is_native
+    louder = link.replace(channel=B.AwgnEbn0(ebn0_db=20))
+    assert louder["channel"].params == {"ebn0_db": 20}
+    assert link["channel"].params["ebn0_db"].name == "ebn0_db"
+    longer = link.insert_after("tx", norm=B.Normalize())
+    assert longer.names == ["tx", "norm", "channel"]
+    nested = comnum.Chain(link=link, rx=B.Normalize())
+    assert [n for n, _ in nested.flatten()] == ["link.tx", "link.channel", "rx"]
+
+
+def test_unnamed_blocks_are_named_as_the_rust_runner_names_them():
+    link = comnum.Chain(B.Source(), B.Awgn(snr_db=3.0), Attenuator(0.5), B.Awgn(snr_db=6.0))
+    assert link.names == ["source", "awgn_2", "attenuator", "awgn_4"]
+    native = comnum.Chain(B.Source(), B.Awgn(snr_db=3.0), B.Awgn(snr_db=6.0))
+    # the labels equal the types or the Rust numbering: to_spec writes no label
+    assert all("label" not in b for b in native.to_spec()["link"])
+    assert comnum.Chain.from_spec(native.to_spec()).names == native.names
+    assert comnum.Chain(lambda frame, rng: None).names == ["block"]
+    with pytest.raises(ValueError, match="source"):
+        comnum.Chain(B.Source(), source=B.Normalize())
+
+
+def test_call_and_trace_are_reproducible():
+    link = qpsk_chain()
+    a = link({"ebn0_db": 6.0}, comnum.Rng(3))
+    b = link({"ebn0_db": 6.0}, comnum.Rng(3))
+    np.testing.assert_array_equal(a.samples, b.samples)
+    assert a.tx_bits.size == 2000
+    t = link.trace({"ebn0_db": 6.0}, comnum.Rng(3))
+    assert list(t) == ["tx", "channel"]
+    np.testing.assert_array_equal(t["tx"].samples, t["tx"].tx_symbols)
+    np.testing.assert_array_equal(t["channel"].samples, a.samples)
+    with pytest.raises(KeyError, match="ebn0_db"):
+        link({}, comnum.Rng(0))
+
+
+def test_native_run_matches_run_spec():
+    link = qpsk_chain()
+    kw = {"grid": {"ebn0_db": [2.0, 6.0]}, "metrics": ["ber", "snr_db"], "seed": 5}
+    res = link.run(stop={"max_trials": 64}, **kw)
+    ref = comnum.run_spec(link.to_spec(stop={"max_trials": 64}, **kw))
+    assert [r["metrics"]["ber"]["count"] for r in res] == [
+        r["metrics"]["ber"]["count"] for r in ref
+    ]
+    for r in res:
+        theory = comnum.theory_ber(4, r["condition"]["ebn0_db"], "qam")
+        assert r["metrics"]["ber"]["lo"] < theory < r["metrics"]["ber"]["hi"]
+
+
+def test_python_runner_matches_rust_runner():
+    """The same streams on both runners: a Python identity block switches a native
+    chain to the Python runner without changing a single error."""
+    link = qpsk_chain()
+    kw = {
+        "grid": {"ebn0_db": [3.0, 5.0]},
+        "metrics": ["ber", "ser"],
+        "stop": {"min_errors": {"ber": 100}, "max_trials": 96},
+        "seed": 11,
+        "name": "parity",
+    }
+    rust = link.run(**kw)
+    python = link.insert_after("channel", noop=lambda frame, rng: None)
+    assert not python.is_native
+    py = python.run(**kw)
+    for a, b in zip(rust, py, strict=True):
+        assert a["trials"] == b["trials"]
+        for m in ("ber", "ser"):
+            assert a["metrics"][m]["count"] == b["metrics"][m]["count"]
+            assert a["metrics"][m]["total"] == b["metrics"][m]["total"]
+
+
+class Attenuator(comnum.Block):
+    """A Python block: a fixed gain on the samples."""
+
+    def __init__(self, gain):
+        self.gain = gain
+
+    def __call__(self, frame, rng):
+        frame.samples = self.gain * frame.samples
+
+
+def test_python_block_and_recorded_values():
+    def power(frame, rng):
+        frame.record("power", float(np.mean(np.abs(frame.samples) ** 2)))
+
+    link = comnum.Chain(
+        tx=B.Source(constellation="QPSK", n_symbols=500),
+        att=Attenuator(0.5),
+        meter=power,
+        rx=B.Normalize(),
+    )
+    res = link.run(metrics=["ber"], stop={"max_trials": 8})
+    assert res[0]["metrics"]["power"]["value"] == pytest.approx(0.25)
+    assert res[0]["metrics"]["ber"]["count"] == 0
+    with pytest.raises(TypeError, match="Python blocks"):
+        link.to_spec()
+
+
+def test_python_stop_rule():
+    res = qpsk_chain().run(grid={"ebn0_db": [4.0]}, stop=comnum.sim.Stop.max_trials(10), seed=1)
+    assert res[0]["trials"] == 10  # the limit, whatever the batch
+
+
+def test_threads_are_honoured_on_the_python_path():
+    # a Stop object or a Python block runs on the threads asked for, with the same records
+    stop = comnum.sim.Stop.max_trials(4)
+    one = qpsk_chain().run(grid={"ebn0_db": [4.0]}, stop=stop, seed=3, threads=1)
+    two = qpsk_chain().run(grid={"ebn0_db": [4.0]}, stop=stop, seed=3, threads=2)
+    assert one[0]["trials"] == two[0]["trials"] == 4
+    assert one[0]["metrics"] == two[0]["metrics"]
+    python = qpsk_chain().insert_after("channel", att=Attenuator(1.0))
+    assert python.run(grid={"ebn0_db": [4.0]}, stop={"max_trials": 4}, threads=2)[0]["trials"] == 4
+
+
+def test_python_blocks_take_the_directory_of_the_specification(tmp_path):
+    seen = []
+
+    class Where(comnum.Block):
+        def bind(self, condition, **kwargs):
+            seen.append(kwargs["base_dir"])
+            return self
+
+        def __call__(self, frame, rng):
+            pass
+
+    link = comnum.Chain(tx=B.Source(n_symbols=8), where=Where())
+    link.base_dir = tmp_path
+    link({}, comnum.Rng(0))
+    link.trace({}, comnum.Rng(0))
+    assert seen == [tmp_path, tmp_path]
+
+
+def test_from_spec_round_trip():
+    chain = comnum.Chain.from_spec(SPECS / "coherent_link.yaml")
+    assert chain.names[:4] == ["source", "pulse_shape", "tx_laser", "fiber"]
+    assert chain["lo_laser"].kind == "phase_noise"
+    assert chain["fiber"].params["length_km"].name == "length_km"
+    assert chain.settings["seed"] == 7
+    spec = chain.to_spec()
+    assert spec["name"] == "coherent_link"
+    assert spec["link"][2] == {"type": "phase_noise", "label": "tx_laser", "linewidth_hz": 100e3}
+    assert spec["link"][3]["length_km"] == "$length_km"
+    again = comnum.Chain.from_spec(spec)
+    assert again.to_spec() == spec
+    assert comnum.spec_conditions(spec) == comnum.spec_conditions(SPECS / "coherent_link.yaml")
+
+
+def test_from_yaml_text_runs_like_the_specification():
+    text = """
+name: yaml
+seed: 3
+grid: {ebn0_db: [5]}
+link: [{type: source, constellation: QPSK, n_symbols: 500},
+       {type: awgn_ebn0, ebn0_db: $ebn0_db}]
+metrics: {report: [ber]}
+stop: {max_trials: 32}
+"""
+    chain = comnum.Chain.from_spec(text)
+    assert (
+        chain.run()[0]["metrics"]["ber"]["count"]
+        == (comnum.run_spec(text)[0]["metrics"]["ber"]["count"])
+    )
+
+
+# --- results, probes, traces and plots -------------------------------------------------
+
+
+def awgn_link():
+    """QPSK over AWGN at the grid variable ``snr_db``, the channel named ``ch``."""
+    link = qpsk_chain(2000, snr="snr_db")
+    return comnum.Chain(tx=link["tx"], ch=link["channel"])
+
+
+def test_results_are_tables_that_round_trip(tmp_path):
+    res = awgn_link().run(
+        grid={"snr_db": [4.0, 8.0]}, metrics=["ser", "snr_db"], stop={"max_trials": 8}
+    )
+    assert isinstance(res, comnum.Results) and isinstance(res, list)
+    assert res.variables == ["snr_db"] and res.metrics == ["ser", "snr_db"]
+    x, ser, lo, hi = res.series("snr_db", "ser", interval=True)
+    assert list(x) == [4.0, 8.0] and ser[0] > ser[1] and np.all(lo <= ser) and np.all(ser <= hi)
+    assert res.where(snr_db=8.0)[0]["condition"] == {"snr_db": 8.0}
+    rows = res.rows()
+    assert {"snr_db", "ser", "ser_lo", "ser_hi", "ser_count", "trials"} <= set(rows[0])
+    back = comnum.Results.load(res.save(tmp_path / "r.json"))
+    assert back == res and back.spec["link"][1]["type"] == "awgn"
+    # the JSON report of a specification reads back as well
+    assert len(comnum.Results(comnum.run_spec(res.spec))) == 2
+
+
+def test_where_compares_reals_to_a_relative_tolerance():
+    res = comnum.Results(
+        [
+            {"condition": {"noise_var": v, "x": x}, "metrics": {}}
+            for v, x in [(1e-12, 2.2e-16), (2e-12, 1.0)]
+        ]
+    )
+    assert [r["condition"]["noise_var"] for r in res.where(noise_var=1e-12)] == [1e-12]
+    assert [r["condition"]["noise_var"] for r in res.where(noise_var=2e-12 * (1 + 1e-12))] == [
+        2e-12
+    ]
+    assert len(res.where(x=0)) == 1  # a grid step that lands near zero
+    assert len(res.where(x=1.0 + 1e-6)) == 0
+
+
+def test_misspelt_names_and_mixed_curves_raise():
+    res = comnum.Results(
+        [
+            {
+                "condition": {"m": m, "snr_db": x},
+                "metrics": {"ser": {"value": 0.1, "lo": 0.0, "hi": 1.0}},
+            }
+            for m in (4, 16)
+            for x in (0.0, 5.0)
+        ]
+    )
+    with pytest.raises(KeyError, match="snr"):
+        res.where(snr=0.0)
+    with pytest.raises(KeyError, match="ber"):
+        res.series("snr_db", "ber", m=4)
+    with pytest.raises(KeyError, match="ebn0_db"):
+        res.series("ebn0_db", "ser", m=4)
+    with pytest.raises(ValueError, match="several curves"):
+        res.series("snr_db", "ser")  # m = 4 and m = 16 interleaved
+    x, ser = res.series("snr_db", "ser", m=16)
+    assert x.tolist() == [0.0, 5.0] and ser.tolist() == [0.1, 0.1]
+    assert len(comnum.Results().where(snr=0.0)) == 0  # no conditions, no names
+
+
+def test_compare_gathers_variants():
+    base = awgn_link()
+    res = comnum.compare(
+        {"awgn": base, "phase noise": base.insert_after("ch", pn=B.PhaseNoise(sigma_rad=0.05))},
+        grid={"snr_db": [10.0]},
+        metrics=["ser"],
+        stop={"max_trials": 8},
+    )
+    assert res.values("variant") == ["awgn", "phase noise"]
+    ser = {r["condition"]["variant"]: r["metrics"]["ser"]["value"] for r in res}
+    assert ser["phase noise"] > ser["awgn"]
+
+
+def test_probes_measure_inside_the_chain_on_both_runners():
+    link = (
+        awgn_link()
+        .insert_after("ch", rot=B.Cfo(omega_rad=0.0))
+        .probes({"tx": ["power_dbm"], "ch": ["snr_db", "ser"]}, scale="none")
+    )
+    kw = {"grid": {"snr_db": [10.0]}, "metrics": ["ser"], "stop": {"max_trials": 16}}
+    res = link.run(**kw)[0]["metrics"]
+    assert res["tx.power_dbm"]["value"] == pytest.approx(30.0)
+    assert res["ch.snr_db"]["value"] == pytest.approx(10.0, abs=0.1)
+    assert res["ch.ser"]["count"] == res["ser"]["count"]
+    # the same probes on the Python runner
+    py = link.insert_after("ch", noop=lambda frame, rng: None).run(**kw)[0]["metrics"]
+    assert py["ch.ser"]["count"] == res["ch.ser"]["count"]
+    # a probe is a block of the specification
+    assert {
+        "type": "probe",
+        "label": "ch",
+        "metrics": ["snr_db", "ser"],
+        "scale": "none",
+    } in link.to_spec()["link"]
+
+
+def test_trace_saves_every_stage(tmp_path):
+    t = awgn_link().trace({"snr_db": 10.0}, comnum.Rng(1))
+    assert isinstance(t, comnum.Trace) and list(t) == ["tx", "ch"]
+    data = np.load(t.save(tmp_path / "t.npz"))
+    np.testing.assert_array_equal(data["stage/ch/stream0"], t["ch"].samples)
+    np.testing.assert_array_equal(data["tx_symbols"], t["tx"].tx_symbols)
+
+
+def test_trace_keys_do_not_collide_with_stage_names(tmp_path):
+    # stages named like the keys of another stage (`<name>_sps`, `<name>_1`) or like
+    # `tx_symbols` keep their own arrays
+    link = comnum.Chain(
+        ch=B.Source(constellation="QPSK", n_symbols=16),
+        ch_sps=B.Awgn(snr_db=10.0),
+        tx_symbols=B.Awgn(snr_db=0.0),
+    )
+    t = link.trace({}, comnum.Rng(1))
+    data = np.load(t.save(tmp_path / "t.npz"))
+    for name in ["ch", "ch_sps", "tx_symbols"]:
+        np.testing.assert_array_equal(data[f"stage/{name}/stream0"], t[name].samples)
+    assert data["stage/ch/sps"] == 1
+    np.testing.assert_array_equal(data["tx_symbols"], t["ch"].tx_symbols)
+
+
+def test_plots_draw_frames_and_results():
+    mpl = pytest.importorskip("matplotlib")
+    mpl.use("Agg")
+    import matplotlib.pyplot as plt
+
+    link = comnum.Chain(
+        tx=B.Source(constellation="16-QAM", n_symbols=1000, pols=2),
+        shape=B.PulseShape(sps=4, rolloff=0.2),
+        ch=B.Awgn(snr_db=20.0),
+    )
+    t = link.trace({}, comnum.Rng(2))
+    ax = comnum.plot.constellation(t["tx"])
+    assert len(ax.lines) == 3  # two polarisations and the reference points
+    comnum.plot.eye(t["ch"])
+    comnum.plot.time(t["ch"], part="power")
+    comnum.plot.psd(t["ch"])
+    comnum.plot.constellation(t["ch"].samples, density=True)
+    fig = t.plot("constellation")
+    assert len([a for a in fig.axes if a.get_visible()]) == 3
+    res = awgn_link().run(grid={"snr_db": [4.0, 6.0, 8.0]}, metrics=["ser"], stop={"max_trials": 8})
+    ax = res.plot(
+        "snr_db", "ser", theory=lambda x: comnum.theory_ser(4, x - comnum.lin2db(2), "qam")
+    )
+    assert ax.get_yscale() == "log"
+    with pytest.raises(ValueError, match="2 samples per symbol"):
+        comnum.plot.eye(t["tx"])
+    with pytest.raises(KeyError, match="ber"):
+        res.plot("snr_db", "ber")
+    plt.close("all")
+
+
+@pytest.mark.parametrize(
+    ("fs", "xlabel", "ylabel", "top"),
+    [
+        (48e3, "frequency (kHz)", "PSD (dB/Hz)", 24.0),
+        (500.0, "frequency (Hz)", "PSD (dB/Hz)", 250.0),
+        (2e6, "frequency (MHz)", "PSD (dB/Hz)", 1.0),
+        (None, "frequency / sampling rate", "PSD (dB)", 0.5),
+    ],
+)
+def test_psd_labels_its_frequency_axis(fs, xlabel, ylabel, top):
+    mpl = pytest.importorskip("matplotlib")
+    mpl.use("Agg")
+    import matplotlib.pyplot as plt
+
+    z = comnum.Rng(1).complex_noise(4096, 1.0)
+    ax = comnum.plot.psd(z, fs=fs)
+    assert (ax.get_xlabel(), ax.get_ylabel()) == (xlabel, ylabel)
+    assert np.max(ax.lines[0].get_xdata()) == pytest.approx(top, rel=0.01)
+    plt.close("all")
+
+
+def test_psd_of_a_frame_on_a_normalised_time_axis_is_per_symbol():
+    mpl = pytest.importorskip("matplotlib")
+    mpl.use("Agg")
+    import matplotlib.pyplot as plt
+
+    t = comnum.Chain(tx=B.Source(n_symbols=512), shape=B.PulseShape(sps=4)).trace({}, comnum.Rng(1))
+    assert comnum.plot.psd(t["shape"]).get_xlabel() == "frequency / symbol rate"
+    plt.close("all")
+
+
+def test_pmd_rotates_and_frame_sync_restores_the_order_of_the_polarisations():
+    # a 90° rotation swaps the polarisations (and the sign of one): frame_sync finds the
+    # swap from the known symbols
+    link = comnum.Chain(
+        tx=B.Source(constellation="QPSK", n_symbols=2000, pols=2),
+        pmd=B.Pmd(theta_deg=90.0),
+        sync=B.FrameSync(start=256, length=256, max_delay=4, symmetry=0),
+    )
+    f = link({}, comnum.Rng(1))
+    assert (
+        dict(f.values)["sync.pol_swap"] == 1.0
+    )  # recorded under the name of the block in the chain
+    x = f.tx_symbols
+    np.testing.assert_allclose(np.concatenate(f.streams), x, atol=1e-9)
+    # a random realisation conserves the power of the two polarisations
+    g = comnum.Chain(
+        tx=B.Source(constellation="QPSK", n_symbols=2000, pols=2), pmd=B.Pmd(mean_dgd_ps=10.0)
+    )
+    t = g.trace({"x": 0}, comnum.Rng(2))
+    p0 = sum(np.sum(abs(s) ** 2) for s in t["tx"].streams)
+    p1 = sum(np.sum(abs(s) ** 2) for s in t["pmd"].streams)
+    assert p1 == pytest.approx(p0, rel=1e-9)
+
+
+def test_block_with_a_parameter_named_kind():
+    """`kind` of `Native` is positional-only: the blocks whose parameter is `kind`
+    (pulse_shape, matched_filter) take it as a keyword."""
+    b = B.PulseShape(kind="rc", sps=4, rolloff=0.25)
+    assert b.kind == "pulse_shape"
+    assert b.spec() == {"type": "pulse_shape", "kind": "rc", "sps": 4, "rolloff": 0.25}
+    assert B.MatchedFilter(kind="rc").params == {"kind": "rc"}
+
+
+def test_profile_on_both_runners(tmp_path):
+    """`profile=True` times every block on both runners, in the order of the link."""
+    link = comnum.Chain(
+        tx=B.Source(constellation="QPSK", n_symbols=2048),
+        shaping=B.PulseShape(sps=2),
+        channel=B.AwgnEbn0(ebn0_db=6.0),
+        mf=B.MatchedFilter(),
+        down=B.Decimate(),
+    )
+    rows = link.profile(stop={"max_trials": 4})
+    assert [r["block"] for r in rows] == ["tx", "shaping", "channel", "mf", "down", "link"]
+    assert all(r["time_ms"] >= 0 for r in rows) and rows[-1]["share"] == 1.0
+    assert abs(sum(r["share"] for r in rows[:-1]) - 1.0) < 0.5
+    assert link.run(stop={"max_trials": 2}).profile() == []
+    py = link.insert_after("channel", noop=lambda f, r: None)
+    rows = py.run(stop={"max_trials": 2}, profile=True).profile()
+    assert [r["block"] for r in rows] == ["tx", "shaping", "channel", "noop", "mf", "down", "link"]
+
+
+def test_dump_block_saves_the_first_trials(tmp_path):
+    """`dump` writes the samples of the first trials of every condition as SigMF."""
+    link = comnum.Chain(
+        tx=B.Source(constellation="QPSK", n_symbols=256, symbol_rate=1e6),
+        shaping=B.PulseShape(sps=4),
+        tap=B.Dump(dir=str(tmp_path), trials=2),
+        channel=B.Awgn(snr_db=comnum.var("snr_db")),
+        mf=B.MatchedFilter(),
+        down=B.Decimate(),
+    )
+    link.run(grid={"snr_db": [5, 10]}, stop={"max_trials": 8}, batch=8, name="dumps")
+    files = sorted(p.name for p in (tmp_path / "dumps" / "snr_db=5").iterdir())
+    assert files == ["tap_0.sigmf-data", "tap_0.sigmf-meta", "tap_1.sigmf-data", "tap_1.sigmf-meta"]
+    x, fs, meta = comnum.read_sigmf(tmp_path / "dumps" / "snr_db=10" / "tap_0.sigmf-meta")
+    assert x.shape == (1024,) and fs == 4e6
+    assert meta["global"]["comnum:sps"] == 4.0 and meta["global"]["comnum:block"] == "tap"
+    # trial 0 (by index, whatever the order the threads ran them in) is reproducible
+    # from its stream, on both runners
+    frame = link.trace({"snr_db": 10}, comnum.Rng.stream(0, "dumps", 1, 0))["tap"]
+    np.testing.assert_allclose(frame.samples, x)
+    py = link.insert_after("tx", noop=lambda f, r: None)
+    py.run(grid={"snr_db": [10]}, stop={"max_trials": 3}, name="pydumps")
+    y, _, meta = comnum.read_sigmf(tmp_path / "pydumps" / "snr_db=10" / "tap_1.sigmf-meta")
+    assert meta["global"]["comnum:trial"] == 1
+    np.testing.assert_allclose(
+        y, link.trace({"snr_db": 10}, comnum.Rng.stream(0, "pydumps", 0, 1))["tap"].samples
+    )

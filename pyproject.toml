@@ -1,0 +1,151 @@
+[build-system]
+requires = ["maturin>=1.9,<2.0"]   # PEP 639 licence metadata
+build-backend = "maturin"
+
+[project]
+name = "comnum"
+# the version of the Cargo workspace (`workspace.package.version`), read by maturin
+dynamic = ["version"]
+description = "Link-level simulation of digital communication systems, wireless and optical, in Rust with Python bindings"
+readme = "README.md"
+requires-python = ">=3.11"
+license = "MIT OR Apache-2.0"
+license-files = ["LICENSE-MIT", "LICENSE-APACHE", "THIRD_PARTY.md"]
+authors = [{ name = "Vincent Choqueuse", email = "vincent.choqueuse@gmail.com" }]
+keywords = [
+    "communications",
+    "wireless",
+    "optical communications",
+    "monte carlo",
+    "link-level simulation",
+    "channel coding",
+    "signal processing",
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "Topic :: Scientific/Engineering",
+    "Programming Language :: Rust",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Operating System :: OS Independent",
+]
+dependencies = ["numpy>=1.26"]
+
+[project.optional-dependencies]
+# comnum.plot and Results.plot
+plot = ["matplotlib>=3.9"]
+
+[project.urls]
+Homepage = "https://com-rs.github.io/comnum/"
+Documentation = "https://com-rs.github.io/comnum/"
+Repository = "https://github.com/com-rs/comnum"
+Changelog = "https://github.com/com-rs/comnum/blob/main/CHANGELOG.md"
+Issues = "https://github.com/com-rs/comnum/issues"
+
+# The development dependencies (PEP 735): not published as extras of the package.
+# `pip install --group <name>` (pip >= 25.1) installs one of them.
+[dependency-groups]
+# sigmf: the reference implementation of SigMF (LGPL-3.0), which tests/test_sigmf.py
+# reads and writes recordings with (the test is skipped without it); pyyaml and
+# jsonschema: the validation cards of validation/cards/ and their schema
+# (tests/test_cards.py); maturin: `just develop` rebuilds the extension the tests use
+test = ["maturin>=1.9,<2.0", "pytest>=8", "scipy>=1.11", "matplotlib>=3.9", "sigmf>=1.2", "pyyaml>=6", "jsonschema>=4.18"]
+# ruff, and mypy: the type check of the package and of the stub of the extension
+# (`[tool.mypy]`)
+lint = ["ruff", "mypy>=1.11"]
+# The test oracles, OptiCommPy (GPL-3.0), GNPy (BSD-3-Clause, the Raman
+# amplification) and py3gpp (AGPL-3.0, 5G NR), are never imported by the package. Their outputs are recorded
+# fixtures (tests/oracle/*.json and *.npz, with the version of the tool) that the tests
+# of tests/oracle/test_oracle.py and tests/oracle/test_gnpy_oracle.py read; the tools are only needed
+# to re-record them, a deliberate act named in the commit message:
+#   pip install --group oracle
+#   COMNUM_RECORD_ORACLE=1 python -m pytest tests/oracle/test_oracle.py tests/oracle/test_gnpy_oracle.py
+oracle = ["OptiCommPy>=0.11", "gnpy>=3.0", "py3gpp>=0.6", "pyais>=2.5"]
+# the documentation of the Python package (docs/python, `just docs-py`)
+docs = [
+    "sphinx>=8",
+    "pydata-sphinx-theme>=0.16",
+    "sphinx-gallery>=0.18",
+    "sphinx-design>=0.6",
+    "sphinx-copybutton>=0.5",
+    "matplotlib>=3.9",
+    # the gallery reads the expected values of the specifications
+    "pyyaml>=6",
+]
+
+# uv (`just setup-py`): `uv sync` installs the package, built by maturin, with the groups
+# below into .venv, at the versions of uv.lock; the oracle and docs groups only on demand
+# (`uv sync --group docs`)
+[tool.uv]
+default-groups = ["test", "lint"]
+
+[tool.maturin]
+manifest-path = "bindings/comnum-py/Cargo.toml"
+python-source = "python"
+module-name = "comnum._comnum"
+features = ["pyo3/extension-module"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+# every test runs by default (CI runs the slow ones on one runner); `-m "not slow"`
+# leaves the long ones out
+markers = ["slow: a long test (a WDM link, Raman amplification, dual-polarisation DBP)"]
+# a text file read or written without its encoding is decoded as cp1252 on Windows: with
+# PYTHONWARNDEFAULTENCODING=1 (CI and `just test`), such a call of the package, the tests
+# or the tools fails on every system (the calls of matplotlib are left alone)
+filterwarnings = ["error::EncodingWarning:(comnum|conftest|oracle|test_|cards|_common)"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "RUF"]
+ignore = ["E501", "RUF001", "RUF002", "RUF003"]  # long table rows; Greek letters and math in docstrings
+
+[tool.ruff.lint.isort]
+known-first-party = ["comnum"]
+
+# The type check of the package and of the generated stub `_comnum.pyi` (py.typed): the
+# modules of the package, and the tests, which call most of the API, are checked against
+# the declared types of the extension, so that a stub saying `-> None` for a method whose
+# value is used fails (`func-returns-value`). Not strict: the public functions are
+# annotated, the helpers need not be. The tests are checked for the stub only: their
+# deliberate misuses (wrong arguments, dynamic attributes) and the loose types of NumPy
+# expressions are not errors there.
+[tool.mypy]
+files = ["python/comnum", "tests"]
+mypy_path = ["python", "."]
+explicit_package_bases = true
+python_version = "3.11"
+check_untyped_defs = true
+warn_unused_ignores = true
+warn_redundant_casts = true
+strict_equality = true
+
+# optional imports of the package (`Results.to_frame`, the plots)
+[[tool.mypy.overrides]]
+module = ["pandas", "pandas.*", "matplotlib", "matplotlib.*"]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = ["tests.*"]
+disable_error_code = [
+    "arg-type",
+    "assignment",
+    "attr-defined",
+    "call-arg",
+    "import-not-found",
+    "import-untyped",
+    "index",
+    "list-item",
+    "misc",
+    "operator",
+    "union-attr",
+    "var-annotated",
+]

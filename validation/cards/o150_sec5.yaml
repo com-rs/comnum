@@ -1,0 +1,54 @@
+id: o150_sec5
+title: The eight pseudo-random test sequences of ITU-T O.150
+literature: o150
+evidence: [table]
+source:
+  kind: standard
+  reference: "ITU-T Recommendation O.150 (05/96), General requirements for instrumentation for performance measurements on digital transmission equipment"
+  locator: "Sec. 3 to 5 and Table 1: the registers, their feedback stages, the inversion of the output, the zero suppression of Sec. 5.5, the longest runs of zeros"
+  file: standards/itu-t_o.150_1996_prbs-measurement.pdf
+description: >
+  The eight sequences of comnum::mapping::source::O150Sequence streamed over a whole
+  period: the order of x modulo the polynomial of each clause (2^n - 1, the period of
+  a primitive polynomial), the generated sequence repeating after 2^n - 1 bits, the
+  longest run of zeros of a period read cyclically (Table 1), the longest run of ones
+  of the inverted sequences (Sec. 3), the first bits of the 511-bit sequence (Sec. 5.1).
+run:
+  test: validation/tests/modulation/o150.rs::the_sequences_follow_sec_5_and_table_1_of_o150
+tier: campaign
+duration: "3 s on an Apple M6 (release)"
+tolerance: {exact: true}
+why: "the sequences are definitions: every value is an integer that must be equal"
+findings: []
+cases:
+  - {inputs: {sequence: prbs9, quantity: order_of_x}, expected: 511}
+  - {inputs: {sequence: prbs9, quantity: longest_zeros}, expected: 8}
+  - {inputs: {sequence: prbs11, quantity: order_of_x}, expected: 2047}
+  - {inputs: {sequence: prbs11, quantity: longest_zeros}, expected: 10}
+  - {inputs: {sequence: prbs15, quantity: order_of_x}, expected: 32767}
+  - {inputs: {sequence: prbs15, quantity: longest_zeros}, expected: 15}
+  - inputs: {sequence: prbs15, quantity: longest_ones}
+    expected: 14
+    note: "Sec. 3: an inverted sequence holds n - 1 consecutive ONEs"
+  - {inputs: {sequence: prbs20, quantity: order_of_x}, expected: 1048575}
+  - {inputs: {sequence: prbs20, quantity: longest_zeros}, expected: 19}
+  - {inputs: {sequence: prbs20z, quantity: order_of_x}, expected: 1048575}
+  - {inputs: {sequence: prbs20z, quantity: longest_zeros}, expected: 14}
+  - {inputs: {sequence: prbs23, quantity: order_of_x}, expected: 8388607}
+  - {inputs: {sequence: prbs23, quantity: longest_zeros}, expected: 23}
+  - inputs: {sequence: prbs23, quantity: longest_ones}
+    expected: 22
+    note: "Sec. 3: an inverted sequence holds n - 1 consecutive ONEs"
+  - {inputs: {sequence: prbs29, quantity: order_of_x}, expected: 536870911}
+  - {inputs: {sequence: prbs29, quantity: longest_zeros}, expected: 29}
+  - inputs: {sequence: prbs29, quantity: longest_ones}
+    expected: 28
+    note: "Sec. 3: an inverted sequence holds n - 1 consecutive ONEs"
+  - {inputs: {sequence: prbs31, quantity: order_of_x}, expected: 2147483647}
+  - {inputs: {sequence: prbs31, quantity: longest_zeros}, expected: 31}
+  - inputs: {sequence: prbs31, quantity: longest_ones}
+    expected: 30
+    note: "Sec. 3: an inverted sequence holds n - 1 consecutive ONEs"
+  - inputs: {sequence: prbs9, quantity: leading_ones}
+    expected: 9
+    note: "Sec. 5.1: the sequence begins with the first ONE of 9 consecutive ONEs"

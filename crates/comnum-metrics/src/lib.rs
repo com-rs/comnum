@@ -1,0 +1,145 @@
+//! # comnum-metrics — performance metrics (OptiCommPy `optic.comm.metrics`)
+//!
+//! Error counts and rates, SNR, EVM and information rates estimated from received and
+//! transmitted symbols.
+//!
+//! | Module | Content |
+//! |---|---|
+//! | [`blind`] | estimates from the received samples alone: fourth-order cumulants, modulation classification by cumulants and by likelihood, the M2M4 SNR |
+//! | [`errors`] | error counts and rates ([`bit_errors`], [`symbol_errors`], [`block_errors`], [`ber`]), SNR ([`snr_db`], [`effective_snr_db`]), [`ls_gain`], [`fast_ber_calc`], [`evm`], [`ber_to_q_db`] |
+//! | [`information`] | [`entropy`], [`monte_carlo_gmi`], [`monte_carlo_mi`], [`information_rates`], [`posterior_rates`] |
+//! | [`spectrum`] | PAPR and its CCDF, the adjacent channel leakage ratio, Welch's power spectral density (re-exported from `comnum_dsp::spectrum`) |
+//! | [`stability`] | the frequency stability of an oscillator from its phase: Allan, modified Allan and Hadamard variances (IEEE Std 1139) |
+//!
+//! The items of [`errors`] and [`information`] are re-exported at the root.
+//!
+//! # Estimates from received and transmitted symbols
+//!
+//! [`fast_ber_calc`], [`evm`], [`monte_carlo_gmi`] and [`monte_carlo_mi`] follow the
+//! pre-processing of OptiCommPy, so that their values can be compared with it:
+//!
+//! 1. for QAM and PSK, the received sequence is rotated by $\operatorname{mean}(x/z)$,
+//!    which removes a constant phase (and gain) ambiguity;
+//! 2. both sequences are normalised to unit mean power;
+//! 3. the noise is $z - x$.
+//!
+//! The decisions use the normalised constellation of the family. The mutual
+//! information estimates assume a Gaussian channel of the measured noise variance:
+//!
+//! - GMI (bit-wise, the achievable rate of a binary decoder after a bit-interleaved
+//!   demapper): $\mathrm{GMI} = \sum_{k} \left[H/b - E \log_{2}(1 + e^{(2b_{k}-1) L_{k}})\right]$,
+//!   with $L_{k}$ the exact LLRs (clipped at $\pm 500$) and $H$ the source entropy;
+//! - MI (symbol-wise): $\mathrm{MI} = H(X) - E\left[-\log_{2} p(x \mid y)\right]$,
+//!   $p(x \mid y) \propto p(x) e^{-|y-x|^{2}/\sigma^{2}}$.
+//!
+//! The rate estimators take the prior probabilities `px` of the points: uniform
+//! symbols with `None`, a shaped source (probabilistic constellation shaping)
+//! otherwise; the constellation is then normalised to unit energy under `px` and
+//! $H(X)$ is the entropy of `px` ([`entropy`]).
+//!
+//! # Theory over AWGN
+//!
+//! [`theory_ber`], [`theory_ser`], [`theory_mi`] and [`theory_gmi`] are the closed forms
+//! of `comnum_mapping::theory`, re-exported here.
+//!
+//! # Examples
+//! ```
+//! use comnum_metrics as metrics;
+//! use comnum_mapping::constellation::{Constellation, ConstellationKind};
+//! use comnum_core::rng::Rng;
+//! use comnum_math::{db2lin, power};
+//! let c = Constellation::qam(16).unwrap().normalized();
+//! let mut rng = Rng::new(2);
+//! let (_, tx) = comnum_mapping::source::symbols(&c, 50_000, None, &mut rng).unwrap();
+//! // AWGN at Eb/N0 = 8 dB, 4 bits per symbol
+//! let noise = rng.complex_noise(tx.len(), power(&tx) / (4.0 * db2lin(8.0)));
+//! let rx: Vec<_> = tx.iter().zip(&noise).map(|(x, n)| x + n).collect();
+//! let r = metrics::fast_ber_calc(&rx, &tx, &c).unwrap();
+//! let theory = metrics::theory_ber(ConstellationKind::Qam, 16, 8.0).unwrap();
+//! assert!((r.ber / theory - 1.0).abs() < 0.15);
+//! // Es/N0 = Eb/N0 + 10 log10(b); the estimate normalises the noisy signal to unit power,
+//! // which biases it up by about 10 log10(1 + N0/Es) (0.17 dB here), as in OptiCommPy
+//! assert!((r.snr_db - (8.0 + comnum_math::lin2db(4.0))).abs() < 0.25);
+//! let g = metrics::monte_carlo_gmi(&rx, &tx, &c, None).unwrap();
+//! assert!(g.gmi > 3.8 && g.gmi < 4.0 && (g.ngmi - g.gmi / 4.0).abs() < 1e-12);
+//! ```
+
+pub mod blind;
+pub mod errors;
+pub mod information;
+mod posterior;
+pub mod spectrum;
+pub mod stability;
+
+use comnum_core::{Error, Result, ensure_shape, same_len};
+use comnum_dsp::signal::pnorm;
+use comnum_mapping::constellation::ConstellationKind;
+use comnum_math::C64;
+
+pub use comnum_mapping::theory::{ber as theory_ber, gmi as theory_gmi, mi as theory_mi, ser as theory_ser};
+pub use comnum_math::entropy;
+pub use errors::{
+    BerSerSnr, ber, ber_to_q_db, bit_errors, block_errors, effective_snr_db, evm, evm_data_aided, fast_ber_calc,
+    ls_gain, mse, phase_error_std, snr_db, symbol_errors,
+};
+pub use information::{
+    Gmi, InformationRates, PosteriorRates, information_rates, monte_carlo_gmi, monte_carlo_mi, posterior_rates,
+};
+
+/// Rotate (QAM, PSK) and normalise as OptiCommPy does before its estimates.
+fn preprocess(rx: &[C64], tx: &[C64], kind: ConstellationKind) -> Result<(Vec<C64>, Vec<C64>)> {
+    same_len(rx.len(), tx.len(), "received and transmitted symbols")?;
+    ensure_shape(!rx.is_empty(), || "empty symbol sequences".into())?;
+    let mut r = rx.to_vec();
+    if rotated(kind) {
+        let rot = qam_psk_rotation(tx, rx)
+            .ok_or_else(|| Error::Numerical("phase ambiguity: a received symbol is zero".into()))?;
+        for v in &mut r {
+            *v *= rot;
+        }
+    }
+    Ok((pnorm(&r), pnorm(tx)))
+}
+
+/// Whether OptiCommPy rotates the received symbols of this family before its estimates
+/// (QAM and PSK).
+fn rotated(kind: ConstellationKind) -> bool {
+    matches!(kind, ConstellationKind::Qam | ConstellationKind::Psk)
+}
+
+/// The rotation of OptiCommPy for QAM and PSK, $\operatorname{mean}(t / y)$ of the
+/// targets `t` over the received `y` (`None` when it is not finite, a received symbol
+/// being zero). `fastBERcalc` rotates the raw symbols before normalising them
+/// ([`preprocess`]), `calcEVM` normalises first ([`errors::evm`]): the callers keep that
+/// order, which changes the value through the gain of the rotation.
+fn qam_psk_rotation(t: &[C64], y: &[C64]) -> Option<C64> {
+    let rot = t.iter().zip(y).map(|(a, b)| a / b).sum::<C64>() / y.len() as f64;
+    rot.is_finite().then_some(rot)
+}
+
+/// Variance $\operatorname{mean} |x - \operatorname{mean} x|^{2}$ of a complex sequence (`numpy.var`).
+fn variance(x: &[C64]) -> f64 {
+    let m = x.iter().sum::<C64>() / x.len() as f64;
+    x.iter().map(|v| (v - m).norm_sqr()).sum::<f64>() / x.len() as f64
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use comnum_core::rng::Rng;
+    use comnum_mapping::constellation::Constellation;
+
+    #[test]
+    fn noiseless_estimates() {
+        let c = Constellation::qam(16).unwrap();
+        let mut rng = Rng::new(3);
+        let tx: Vec<C64> = (0..1000).map(|_| c.points()[rng.below(16)]).collect();
+        let rx: Vec<C64> = tx.iter().map(|v| v * C64::new(0.0, 2.0)).collect(); // gain and 90°
+        let r = fast_ber_calc(&rx, &tx, &c).unwrap();
+        assert_eq!((r.ber, r.ser), (0.0, 0.0));
+        assert!(evm(&rx, &c, Some(&tx)).unwrap() < 1e-20);
+        let noisy: Vec<C64> = tx.iter().map(|v| v + rng.complex_gaussian() * 0.01).collect();
+        let mi = monte_carlo_mi(&noisy, &tx, &c, None).unwrap();
+        assert!((mi - 4.0).abs() < 1e-6);
+    }
+}

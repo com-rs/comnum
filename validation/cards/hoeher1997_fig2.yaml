@@ -1,0 +1,39 @@
+id: hoeher1997_fig2
+title: Average MSE of 1-D Wiener filtering of pilots in frequency
+literature: hoeher1997
+evidence: [curve]
+source:
+  kind: paper
+  reference: "P. Hoeher, S. Kaiser, P. Robertson, Two-dimensional pilot-symbol-aided channel estimation by Wiener filtering, Proc. IEEE ICASSP, vol. 3, 1845-1848, 1997"
+  locator: "Fig. 2, read at 0 to 40 dB"
+  file: synchronisation/1997_hoeher_2d-pilot-wiener-channel-estimation_icassp.pdf
+description: >
+  The 1-D Wiener filter in frequency of comnum::waveform::ofdm::wiener::Wiener2d (pilots
+  in one symbol, every 6 of 115 subcarriers, the 3, 5 or 9 nearest pilots), for a
+  uniform delay spectrum of tau_max Delta F = 10 us / 240 us, the covariances known:
+  the MSE of eq. (12) averaged over the 115 subcarriers, pilots and edges included.
+run:
+  test: validation/tests/synchronisation/hoeher1997.rs::hoeher_1997_fig_2_one_dimensional_filtering
+tier: ci
+duration: "under a second"
+tolerance: {factor: 1.15}
+why: "the figures are scans, read on their log grid to about 0.05 decade (a factor 1.12)"
+findings:
+  - "the 15 readings agree within 10 %, inside the reading precision; at 0 dB the figure draws one curve (0.39) for 3 to 9 taps where eq. (12) gives 0.377, 0.367 and 0.355: the curves are indistinct there, the largest gap (9 %) is that of the 9-tap value"
+  - "the 3-tap floor (8.0e-4 at 40 dB, 8.7e-4 read) is set by the interpolation error, as in the figure"
+cases:
+  - {inputs: {taps: 3, esn0_db: 0.0}, expected: 3.90e-1}
+  - {inputs: {taps: 3, esn0_db: 10.0}, expected: 7.10e-2}
+  - {inputs: {taps: 3, esn0_db: 20.0}, expected: 9.30e-3}
+  - {inputs: {taps: 3, esn0_db: 30.0}, expected: 1.70e-3}
+  - {inputs: {taps: 3, esn0_db: 40.0}, expected: 8.70e-4}
+  - {inputs: {taps: 5, esn0_db: 0.0}, expected: 3.90e-1}
+  - {inputs: {taps: 5, esn0_db: 10.0}, expected: 6.00e-2}
+  - {inputs: {taps: 5, esn0_db: 20.0}, expected: 6.60e-3}
+  - {inputs: {taps: 5, esn0_db: 30.0}, expected: 9.10e-4}
+  - {inputs: {taps: 5, esn0_db: 40.0}, expected: 1.00e-4}
+  - {inputs: {taps: 9, esn0_db: 0.0}, expected: 3.90e-1}
+  - {inputs: {taps: 9, esn0_db: 10.0}, expected: 6.00e-2}
+  - {inputs: {taps: 9, esn0_db: 20.0}, expected: 6.60e-3}
+  - {inputs: {taps: 9, esn0_db: 30.0}, expected: 7.10e-4}
+  - {inputs: {taps: 9, esn0_db: 35.0}, expected: 2.30e-4}

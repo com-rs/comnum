@@ -1,0 +1,26 @@
+[package]
+name = "comnum-core"
+description = "Core vocabulary of comnum: multi-stream signal containers, block traits, unit newtypes, the seeded generator, the error type"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+homepage.workspace = true
+documentation = "https://docs.rs/comnum-core"
+keywords = ["communications", "signal", "simulation", "dsp", "rng"]
+categories.workspace = true
+readme = "README.md"
+
+[package.metadata.docs.rs]
+rustdoc-args = ["--html-in-header", "katex-header.html"]
+all-features = true
+
+[lints]
+workspace = true
+
+[dependencies]
+num-complex.workspace = true
+ndarray.workspace = true
+thiserror.workspace = true

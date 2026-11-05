@@ -1,0 +1,22 @@
+[package]
+name = "comnum-validation"
+description = "Statistical validation of comnum: simulated curves against closed forms and published results"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+publish = false
+
+[lints]
+workspace = true
+
+[dependencies]
+comnum = { workspace = true, features = ["optical"] }
+ndarray.workspace = true
+serde_json.workspace = true
+
+[features]
+default = ["spec"]
+spec = ["comnum/spec"]

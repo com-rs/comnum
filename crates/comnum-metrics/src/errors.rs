@@ -1,0 +1,317 @@
+//! Error counts and rates, SNR, EVM and the least-squares gain of a received sequence.
+//!
+//! - [`bit_errors`], [`symbol_errors`], [`block_errors`] and [`ber`] compare two
+//!   sequences directly;
+//! - [`snr_db`], [`mse`], [`evm_data_aided`], [`effective_snr_db`] and [`ls_gain`]
+//!   relate a received sequence $z$ to the transmitted one $x$;
+//! - [`fast_ber_calc`] and [`evm`] follow the pre-processing of OptiCommPy (see the
+//!   crate documentation);
+//! - [`ber_to_q_db`] is the Q factor of a bit error rate.
+//!
+//! # Model
+//!
+//! With $\rho^{2} = |\sum_{k} z_{k} x_{k}^{*}|^{2} / (\sum_{k} |z_{k}|^{2} \sum_{k} |x_{k}|^{2})$
+//! the squared correlation coefficient of the two sequences, the effective SNR after the
+//! least-squares gain of $x$ onto $z$ is
+//!
+//! $$
+//! \mathrm{SNR}_{\mathrm{eff}} = \frac{\rho^{2}}{1 - \rho^{2}},
+//! $$
+//!
+//! independent of any scaling of $z$ (Häger & Pfister 2021), and the least-squares gain
+//! that maps $z$ onto $x$ is $g = \sum_{k} x_{k} z_{k}^{*} / \sum_{k} |z_{k}|^{2}$.
+//!
+//! # References
+//!
+//! 1. C. Häger and H. D. Pfister, "Physics-based deep learning for fiber-optic
+//!    communication systems," *IEEE J. Sel. Areas Commun.*, 39(1), 280–294, 2021.
+
+use crate::preprocess;
+use comnum_core::{Result, ensure, same_len};
+use comnum_mapping::constellation::Constellation;
+use comnum_math::{C64, energy, power};
+
+/// Number of positions where two bit sequences of equal length differ (the least
+/// significant bit of every value).
+///
+/// # Errors
+/// [`comnum_core::Error::Shape`] if the sequences have different lengths.
+pub fn bit_errors(a: &[u8], b: &[u8]) -> Result<usize> {
+    same_len(a.len(), b.len(), "bit_errors")?;
+    Ok(a.iter().zip(b).filter(|(x, y)| (*x & 1) != (*y & 1)).count())
+}
+
+/// Number of positions where two label sequences of equal length differ.
+///
+/// # Errors
+/// [`comnum_core::Error::Shape`] if the sequences have different lengths.
+pub fn symbol_errors(a: &[usize], b: &[usize]) -> Result<usize> {
+    same_len(a.len(), b.len(), "symbol_errors")?;
+    Ok(a.iter().zip(b).filter(|(x, y)| x != y).count())
+}
+
+/// Number of blocks of `block_len` values in error: the blocks of `rx` and `tx` (cut
+/// at the same positions, the last one possibly shorter) that differ in at least one
+/// value.
+///
+/// # Errors
+/// [`comnum_core::Error::Shape`] if the sequences have different lengths,
+/// [`comnum_core::Error::Config`] for a block length of zero.
+///
+/// # Examples
+/// ```
+/// use comnum_metrics::block_errors;
+/// let tx = [0, 1, 1, 0, 1, 0];
+/// let rx = [0, 1, 0, 0, 1, 0];
+/// assert_eq!(block_errors(&rx, &tx, 2)?, 1);
+/// assert_eq!(block_errors(&rx, &tx, 3)?, 1);
+/// # Ok::<(), comnum_core::Error>(())
+/// ```
+pub fn block_errors(rx: &[u8], tx: &[u8], block_len: usize) -> Result<usize> {
+    same_len(rx.len(), tx.len(), "block_errors")?;
+    ensure(block_len >= 1, || "block_errors: the block length must be positive".into())?;
+    Ok(rx.chunks(block_len).zip(tx.chunks(block_len)).filter(|(a, b)| a != b).count())
+}
+
+/// Bit error rate of two equal-length bit sequences (`NaN` if empty).
+///
+/// # Errors
+/// [`comnum_core::Error::Shape`] if the sequences have different lengths.
+pub fn ber(rx_bits: &[u8], tx_bits: &[u8]) -> Result<f64> {
+    same_len(rx_bits.len(), tx_bits.len(), "ber")?;
+    Ok(if tx_bits.is_empty() { f64::NAN } else { bit_errors(rx_bits, tx_bits)? as f64 / tx_bits.len() as f64 })
+}
+
+/// Q factor in dB of a bit error rate, $20 \log_{10}\left(\sqrt{2}\, \operatorname{erfc}^{-1}(2 P_{b})\right)$
+/// ($+\infty$ for 0).
+///
+/// # Examples
+/// ```
+/// assert!((comnum_metrics::ber_to_q_db(1e-3) - 9.80).abs() < 0.01);
+/// assert_eq!(comnum_metrics::ber_to_q_db(0.0), f64::INFINITY);
+/// ```
+pub fn ber_to_q_db(ber: f64) -> f64 {
+    if ber <= 0.0 {
+        return f64::INFINITY;
+    }
+    comnum_math::amp2db(comnum_math::qfuncinv(ber))
+}
+
+/// Estimated SNR in dB of a received sequence against the transmitted one,
+/// $10 \log_{10}\left(P(x) / P(z - x)\right)$ (no normalisation).
+///
+/// # Errors
+/// [`comnum_core::Error::Shape`] if the sequences have different lengths.
+pub fn snr_db(rx: &[C64], tx: &[C64]) -> Result<f64> {
+    same_len(rx.len(), tx.len(), "snr_db")?;
+    let e: Vec<C64> = rx.iter().zip(tx).map(|(r, t)| r - t).collect();
+    Ok(comnum_math::lin2db(power(tx) / power(&e)))
+}
+
+/// Mean squared error of a received sequence against the transmitted one,
+/// $\frac{1}{N} \sum_{k} |z_{k} - x_{k}|^{2}$ (no normalisation; 0 for empty sequences).
+///
+/// # Errors
+/// [`comnum_core::Error::Shape`] if the sequences have different lengths.
+///
+/// # Examples
+/// ```
+/// use comnum_math::C64;
+/// let x = [C64::new(1.0, 0.0), C64::new(-1.0, 0.0)];
+/// let z = [C64::new(1.5, 0.0), C64::new(-1.0, 0.5)];
+/// assert_eq!(comnum_metrics::mse(&z, &x)?, 0.25);
+/// # Ok::<(), comnum_core::Error>(())
+/// ```
+pub fn mse(rx: &[C64], tx: &[C64]) -> Result<f64> {
+    same_len(rx.len(), tx.len(), "mse")?;
+    let e: Vec<C64> = rx.iter().zip(tx).map(|(r, t)| r - t).collect();
+    Ok(power(&e))
+}
+
+/// Error vector magnitude of a received sequence against the known transmitted one, as
+/// a power ratio $\sum_{k} |z_{k} - x_{k}|^{2} / \sum_{k} |x_{k}|^{2}$ (no normalisation:
+/// the inverse of [`snr_db`] in linear units). [`evm`] is OptiCommPy's, which normalises
+/// and rotates the sequences first.
+///
+/// # Errors
+/// [`comnum_core::Error::Shape`] if the sequences have different lengths.
+///
+/// # Examples
+/// ```
+/// use comnum_math::C64;
+/// let x = [C64::new(1.0, 0.0), C64::new(-1.0, 0.0)];
+/// let z = [C64::new(1.5, 0.0), C64::new(-1.0, 0.5)];
+/// assert_eq!(comnum_metrics::evm_data_aided(&z, &x)?, 0.25);
+/// let snr = comnum_math::db2lin(comnum_metrics::snr_db(&z, &x)?);
+/// assert!((comnum_metrics::evm_data_aided(&z, &x)? * snr - 1.0).abs() < 1e-15);
+/// # Ok::<(), comnum_core::Error>(())
+/// ```
+pub fn evm_data_aided(rx: &[C64], tx: &[C64]) -> Result<f64> {
+    same_len(rx.len(), tx.len(), "evm_data_aided")?;
+    let e: Vec<C64> = rx.iter().zip(tx).map(|(r, t)| r - t).collect();
+    Ok(energy(&e) / energy(tx))
+}
+
+/// The effective SNR (dB) of `z` against `x` after the least-squares gain of `x` onto
+/// `z`, $10 \log_{10}\left(\rho^{2} / (1 - \rho^{2})\right)$ (see the module; $\rho^{2} = 0$
+/// when a sequence has no energy, and the denominator is floored at the smallest
+/// positive number).
+///
+/// # Errors
+/// [`comnum_core::Error::Shape`] if the sequences have different lengths.
+///
+/// # Examples
+/// ```
+/// use comnum_math::C64;
+/// let x = [C64::new(1.0, 0.0), C64::new(-1.0, 0.0)];
+/// // a gain and a phase do not change it
+/// let z: Vec<C64> = x.iter().map(|v| v * C64::new(0.0, 3.0) + C64::new(0.1, 0.0)).collect();
+/// let s = comnum_metrics::effective_snr_db(&z, &x)?;
+/// assert!((s - comnum_math::lin2db(9.0 / 0.01f64)).abs() < 1e-9);
+/// # Ok::<(), comnum_core::Error>(())
+/// ```
+pub fn effective_snr_db(z: &[C64], x: &[C64]) -> Result<f64> {
+    same_len(z.len(), x.len(), "effective_snr_db")?;
+    let rho2 = comnum_math::stats::Correlation::between(z, x).rho_squared();
+    Ok(comnum_math::lin2db(rho2 / (1.0 - rho2).max(f64::MIN_POSITIVE)))
+}
+
+/// The least-squares complex gain $g = \sum_{k} x_{k} z_{k}^{*} / \sum_{k} |z_{k}|^{2}$
+/// that maps `z` onto `x` (it removes a constant gain and phase; 1 when `z` has no
+/// energy).
+///
+/// # Errors
+/// [`comnum_core::Error::Shape`] if the sequences have different lengths.
+///
+/// # Examples
+/// ```
+/// use comnum_math::C64;
+/// let x = [C64::new(1.0, 1.0), C64::new(-1.0, 0.5)];
+/// let z: Vec<C64> = x.iter().map(|v| v * C64::new(0.0, 2.0)).collect();
+/// let g = comnum_metrics::ls_gain(&z, &x)?;
+/// assert!((g - C64::new(0.0, -0.5)).norm() < 1e-15);
+/// # Ok::<(), comnum_core::Error>(())
+/// ```
+pub fn ls_gain(z: &[C64], x: &[C64]) -> Result<C64> {
+    same_len(z.len(), x.len(), "ls_gain")?;
+    let num: C64 = x.iter().zip(z).map(|(a, b)| a * b.conj()).sum();
+    let den: f64 = z.iter().map(C64::norm_sqr).sum();
+    Ok(if den > 0.0 { num / den } else { C64::new(1.0, 0.0) })
+}
+
+/// The standard deviation (rad) of the phase error of the received symbols `z` against
+/// the transmitted ones `x`, once the constant gain and phase of the least-squares fit
+/// ([`ls_gain`]) are removed: $\sqrt{\frac{1}{N}\sum_{k}\arg(g z_{k} x_{k}^{*})^{2}}$. The
+/// metric of Ip & Kahn (*J. Lightw. Technol.* 26(20), 2008) for a phase-modulated
+/// signal after carrier recovery; over AWGN at high SNR it tends to
+/// $1/\sqrt{2\,\mathrm{SNR}}$. Symbols of `x` at zero are skipped.
+///
+/// # Errors
+/// [`comnum_core::Error::Shape`] if the sequences have different lengths.
+///
+/// # Examples
+/// ```
+/// use comnum_math::C64;
+/// let x = [C64::new(1.0, 0.0), C64::new(0.0, 1.0), C64::new(-1.0, 0.0), C64::new(0.0, -1.0)];
+/// // a rotation of 0.3 rad plus errors of ±0.01 rad
+/// let z: Vec<C64> = x.iter().enumerate().map(|(k, v)| v * C64::from_polar(2.0, 0.3 + if k % 2 == 0 { 0.01 } else { -0.01 })).collect();
+/// assert!((comnum_metrics::phase_error_std(&z, &x)? - 0.01).abs() < 1e-9);
+/// # Ok::<(), comnum_core::Error>(())
+/// ```
+pub fn phase_error_std(z: &[C64], x: &[C64]) -> Result<f64> {
+    let g = ls_gain(z, x)?;
+    let mut sum = 0.0;
+    let mut n = 0usize;
+    for (zk, xk) in z.iter().zip(x) {
+        if xk.norm_sqr() > 0.0 {
+            sum += (g * zk * xk.conj()).arg().powi(2);
+            n += 1;
+        }
+    }
+    Ok(if n > 0 { (sum / n as f64).sqrt() } else { 0.0 })
+}
+
+/// The output of [`fast_ber_calc`].
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct BerSerSnr {
+    /// Bit error rate.
+    pub ber: f64,
+    /// Symbol error rate.
+    pub ser: f64,
+    /// SNR estimate (dB) of the received constellation, $E_{s}/N_{0}$ for a matched
+    /// filter.
+    pub snr_db: f64,
+}
+
+/// BER, SER and SNR of a received symbol sequence (OptiCommPy `fastBERcalc`).
+///
+/// `c` gives the family and the order; it does not need to be normalised.
+///
+/// # Errors
+/// [`comnum_core::Error::Shape`] for sequences of different lengths or empty ones,
+/// [`comnum_core::Error::Numerical`] for a zero received symbol (phase ambiguity).
+pub fn fast_ber_calc(rx: &[C64], tx: &[C64], c: &Constellation) -> Result<BerSerSnr> {
+    let (r, t) = preprocess(rx, tx, c.kind())?;
+    let snr_db = snr_db(&r, &t)?;
+    let cn = c.normalized();
+    let (ir, it) = (cn.decide(&r), cn.decide(&t));
+    let b = cn.bits_per_symbol();
+    let mut bit_err = 0usize;
+    let mut sym_err = 0usize;
+    for (a, bb) in ir.iter().zip(&it) {
+        let d = (a ^ bb).count_ones() as usize;
+        bit_err += d;
+        sym_err += (d > 0) as usize;
+    }
+    Ok(BerSerSnr { ber: bit_err as f64 / (b * r.len()) as f64, ser: sym_err as f64 / r.len() as f64, snr_db })
+}
+
+/// Error vector magnitude, as a power ratio $E|y - \hat{x}|^{2} / E|\hat{x}|^{2}$
+/// (OptiCommPy `calcEVM`).
+///
+/// The received sequence is normalised to unit power. With the transmitted sequence,
+/// $\hat{x}$ is that sequence normalised to unit power and, for QAM and PSK, $y$ is then
+/// multiplied by $\operatorname{mean}(\hat{x}/y)$ (OptiCommPy normalises before the
+/// rotation here, after it in `fastBERcalc`; the order changes the value through the
+/// gain of the rotation). Without it, $\hat{x}$ is the nearest point of the normalised
+/// constellation. Multiply the square root by 100 for the EVM in percent.
+///
+/// # Errors
+/// [`comnum_core::Error::Shape`] for an empty sequence or a `tx` of another length,
+/// [`comnum_core::Error::Numerical`] for a zero received symbol (phase ambiguity).
+pub fn evm(symbols: &[C64], c: &Constellation, tx: Option<&[C64]>) -> Result<f64> {
+    comnum_core::ensure_shape(!symbols.is_empty(), || "empty symbol sequence".into())?;
+    let mut y = comnum_dsp::signal::pnorm(symbols);
+    let d = match tx {
+        Some(t) => {
+            same_len(symbols.len(), t.len(), "received and transmitted symbols")?;
+            let d = comnum_dsp::signal::pnorm(t);
+            if crate::rotated(c.kind()) {
+                let rot = crate::qam_psk_rotation(&d, &y).ok_or_else(|| {
+                    comnum_core::Error::Numerical("phase ambiguity: a received symbol is zero".into())
+                })?;
+                for v in &mut y {
+                    *v *= rot;
+                }
+            }
+            d
+        }
+        None => c.normalized().project(&y),
+    };
+    let num: f64 = y.iter().zip(&d).map(|(a, b)| (a - b).norm_sqr()).sum();
+    Ok(num / d.iter().map(C64::norm_sqr).sum::<f64>())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn error_counts_reject_sequences_of_different_lengths_instead_of_truncating() {
+        assert!(matches!(bit_errors(&[0, 1, 1], &[0, 1]), Err(comnum_core::Error::Shape(_))));
+        assert!(matches!(symbol_errors(&[0, 1], &[0, 1, 2]), Err(comnum_core::Error::Shape(_))));
+        // only the least significant bit counts
+        assert_eq!(bit_errors(&[0, 1, 2], &[1, 1, 0]).unwrap(), 1);
+        assert_eq!(symbol_errors(&[0, 1, 2], &[0, 3, 2]).unwrap(), 1);
+    }
+}

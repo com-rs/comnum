@@ -1,0 +1,80 @@
+id: ip2008_fig12
+title: BP-1S, BP-SSFM10 and linear equalisation against the distance (Ip and Kahn, Fig. 12)
+literature: ip2008
+evidence: [curve, closed_form, claim]
+source:
+  kind: paper
+  reference: "E. Ip, J. M. Kahn, Compensation of dispersion and nonlinear impairments using digital backpropagation, J. Lightw. Technol. 26(20), 3416-3425, 2008"
+  locator: "Fig. 12 (phase error s.d. against the number of 80 km spans, 21.4 Gb/s 50 % RZ-QPSK at 0 dBm, no DCF, M/K = 2 in (a) and 3 in (b); the AWGN limit of Sec. II); Table I"
+  file: fiber/2008_ip_digital-backpropagation_jlt.pdf
+description: >
+  The link of Table I without DCF (SMF 0.2 dB/km, 17 ps/nm/km, 1.3 /W/km, 80 km spans,
+  EDFAs of NF 5 dB), 5 to 80 spans, 50 % RZ-QPSK at 10.7 GBd and 0 dBm, 32768 symbols,
+  the forward split-step at 2 km. The receiver: a fifth-order Butterworth at 40 % of
+  M/K times the symbol rate, M/K samples per symbol, Ssfm::backpropagate_scaled with
+  one step per span (BP-1S, the scale xi searched over 0.4 to 1.0 by 0.1) or ten
+  (BP-SSFM10, xi searched too) or none of the nonlinear phase (linear equalisation),
+  the fractionally spaced least-squares equaliser of the block on the known symbols
+  (ls_equalizer, 4 symbols on each side: residual dispersion, anti-aliasing and matched
+  filter in one), and the s.d. of the phase error after the constant gain and phase
+  (comnum_metrics::phase_error_std).
+  The AWGN limit is measured with the same receiver on the linear fibre (gamma = 0, the
+  same ASE) and computed in closed form, 1/sqrt(2 SNR).
+run:
+  test: validation/tests/fiber/ip2008.rs::the_phase_error_of_bp_1s_against_the_distance_follows_fig_12
+tier: campaign
+duration: "about 4 minutes on an Apple M6 (release, 12 threads)"
+why: >
+  the values are read on a grid of 0.05 rad to about 0.005; the Monte Carlo error of a
+  s.d. over 32768 symbols is 0.4 %; the paper's xi is optimised but not given, its
+  forward step, wavelength and carrier recovery are not given either: 0.012 rad on the
+  back-propagated curves, 0.006 on the measured AWGN limit; the closed-form limit
+  depends on the photon energy and the noise bandwidth the paper does not state (12 %);
+  the claims of the text are ranges around the ratios read on the figure
+findings:
+  - "the AWGN limit: the closed form 1/sqrt(2 SNR) with the ASE of N EDFAs of gain 16 dB and NF 5 dB at 193.1 THz in the 10.7 GHz symbol-rate bandwidth is 0.0146, 0.0327 and 0.0585 rad at 5, 25 and 80 spans against 0.014, 0.030 and 0.054 read on the dashed curve (within 8 %, the photon energy and the noise bandwidth not given); the receiver at M/K = 3 on the linear fibre measures it within 0.6 % at every distance (0.0329 at 25 spans, 0.0589 at 80); at M/K = 2 the same receiver sits 7 to 11 % above the closed form at every distance (0.0353 at 25 spans, 0.0623 at 80: the fifth-order Butterworth at 40 % of 21.4 GHz cuts the 10.7 GBd RZ signal and the equaliser enhances the noise), so the M/K = 2 measurement is not compared with the dashed curve, which the paper draws once for both panels"
+  - "not reproduced, and not explained: the nonlinear penalty of the paper is larger than comnum's at every distance, by a ratio that grows with the distance. Linear equalisation, M/K = 2: 0.0295, 0.0557, 0.0770, 0.0959 and 0.1138 rad at 5 to 25 spans against 0.043, 0.093, 0.130, 0.167 and 0.204 read (0.56 of the figure at 25 spans; the paper's curve crosses 0.23 rad near 30 spans, comnum's at 65); M/K = 3: 0.0261 to 0.0931 against 0.043 to 0.230. BP-1S, M/K = 2: 0.0207, 0.0520 and 0.1109 at 5, 25 and 80 spans against 0.033, 0.072 and 0.157 (0.71 at 80 spans); M/K = 3: 0.0181, 0.0452 and 0.0994 against 0.019, 0.056 and 0.130 (0.76). BP-SSFM10, M/K = 2: 0.0202, 0.0516 and 0.1098 against 0.031, 0.072 and 0.161; M/K = 3: 0.0155, 0.0370 and 0.0784 against 0.017, 0.041 and 0.097 (0.81), within 0.012 rad up to 50 spans. The optimum xi is 0.9 for BP-1S beyond 5 spans (0.7 to 0.8 at 5) and 1.0 for BP-SSFM10 at M/K = 3"
+  - "the causes checked: the scalar split step applies the full gamma of Table I, 0.013 /W/m = 1.3 /W/km (not 8/9 of it), with L_eff = 21.5 km of an 80 km span at 0.2 dB/km; the forward propagation runs at 2 km steps and 12 samples per symbol (the band edge of the RZ spectrum 52 dB below its peak); the same model reproduces Fig. 5 of Häger & Pfister 2021 (DBP with one step per span over 25 x 80 km) within 0.13 dB (card hager2021_fig5); the equaliser is not the cause: taps fitted on the linear fibre and applied unchanged to the nonlinear signal give 0.1246 rad at 25 spans, M/K = 2, against 0.1138 for the least-squares fit on the nonlinear signal, and 0.0528 against 0.0520 for BP-1S. At a launch power of 3 dBm the linear-equalisation curve of panel (a) is reproduced (0.0501, 0.1003, 0.1406, 0.1756 and 0.2092 at 5 to 25 spans against 0.043 to 0.204, within 0.008) and so is BP-SSFM10 of panel (b) (0.0136 to 0.0410 against 0.017 to 0.041), but not BP-1S (0.0893 at 25 spans in (a) against 0.072; 0.0758 in (b) against 0.056) nor the AWGN limit (0.0231 against 0.030): no single scale of the nonlinearity reproduces the figure. In the figure, linear equalisation is worse at M/K = 3 than at M/K = 2 (0.230 against 0.204 at 25 spans), which the oversampling does not explain; its BP curves are better at M/K = 3, as here"
+  - "kept as cases: the closed-form limit, the measured limit at M/K = 3, BP-SSFM10 at M/K = 3 up to 50 spans and BP-1S at M/K = 3 up to 25 spans (within 0.012 rad, though below the figure at every point), and the two claims of Sec. III-B on the ratio of BP-SSFM10 to BP-1S at 80 spans: 0.789 at M/K = 3 ('about 2 dB better', 0.75 on the figure) and 0.990 at M/K = 2 ('no observable difference', 1.03 on the figure)"
+cases:
+  - {inputs: {panel: b, receiver: bp_1s, spans: 5}, expected: 0.019, tolerance: {atol: 0.012}}
+  - {inputs: {panel: b, receiver: bp_1s, spans: 10}, expected: 0.03, tolerance: {atol: 0.012}}
+  - {inputs: {panel: b, receiver: bp_1s, spans: 15}, expected: 0.04, tolerance: {atol: 0.012}}
+  - {inputs: {panel: b, receiver: bp_1s, spans: 20}, expected: 0.048, tolerance: {atol: 0.012}}
+  - {inputs: {panel: b, receiver: bp_1s, spans: 25}, expected: 0.056, tolerance: {atol: 0.012}}
+  - {inputs: {panel: b, receiver: bp_ssfm10, spans: 5}, expected: 0.017, tolerance: {atol: 0.012}}
+  - {inputs: {panel: b, receiver: bp_ssfm10, spans: 10}, expected: 0.024, tolerance: {atol: 0.012}}
+  - {inputs: {panel: b, receiver: bp_ssfm10, spans: 15}, expected: 0.03, tolerance: {atol: 0.012}}
+  - {inputs: {panel: b, receiver: bp_ssfm10, spans: 20}, expected: 0.035, tolerance: {atol: 0.012}}
+  - {inputs: {panel: b, receiver: bp_ssfm10, spans: 25}, expected: 0.041, tolerance: {atol: 0.012}}
+  - {inputs: {panel: b, receiver: bp_ssfm10, spans: 30}, expected: 0.047, tolerance: {atol: 0.012}}
+  - {inputs: {panel: b, receiver: bp_ssfm10, spans: 40}, expected: 0.057, tolerance: {atol: 0.012}}
+  - {inputs: {panel: b, receiver: bp_ssfm10, spans: 50}, expected: 0.068, tolerance: {atol: 0.012}}
+  - {inputs: {panel: b, receiver: awgn_measured, spans: 5}, expected: 0.014, tolerance: {atol: 0.006}, note: "the AWGN limit measured on the linear fibre with the same receiver"}
+  - {inputs: {panel: b, receiver: awgn_measured, spans: 10}, expected: 0.02, tolerance: {atol: 0.006}, note: "the AWGN limit measured on the linear fibre with the same receiver"}
+  - {inputs: {panel: b, receiver: awgn_measured, spans: 15}, expected: 0.024, tolerance: {atol: 0.006}, note: "the AWGN limit measured on the linear fibre with the same receiver"}
+  - {inputs: {panel: b, receiver: awgn_measured, spans: 20}, expected: 0.027, tolerance: {atol: 0.006}, note: "the AWGN limit measured on the linear fibre with the same receiver"}
+  - {inputs: {panel: b, receiver: awgn_measured, spans: 25}, expected: 0.03, tolerance: {atol: 0.006}, note: "the AWGN limit measured on the linear fibre with the same receiver"}
+  - {inputs: {panel: b, receiver: awgn_measured, spans: 30}, expected: 0.033, tolerance: {atol: 0.006}, note: "the AWGN limit measured on the linear fibre with the same receiver"}
+  - {inputs: {panel: b, receiver: awgn_measured, spans: 40}, expected: 0.039, tolerance: {atol: 0.006}, note: "the AWGN limit measured on the linear fibre with the same receiver"}
+  - {inputs: {panel: b, receiver: awgn_measured, spans: 50}, expected: 0.043, tolerance: {atol: 0.006}, note: "the AWGN limit measured on the linear fibre with the same receiver"}
+  - {inputs: {panel: b, receiver: awgn_measured, spans: 60}, expected: 0.047, tolerance: {atol: 0.006}, note: "the AWGN limit measured on the linear fibre with the same receiver"}
+  - {inputs: {panel: b, receiver: awgn_measured, spans: 70}, expected: 0.051, tolerance: {atol: 0.006}, note: "the AWGN limit measured on the linear fibre with the same receiver"}
+  - {inputs: {panel: b, receiver: awgn_measured, spans: 80}, expected: 0.054, tolerance: {atol: 0.006}, note: "the AWGN limit measured on the linear fibre with the same receiver"}
+  - {inputs: {receiver: awgn_closed_form, spans: 5}, expected: 0.014, tolerance: {rtol: 0.12}, note: "1/sqrt(2 SNR) with the ASE of NF 5 dB EDFAs in the symbol-rate bandwidth at 193.1 THz; the paper gives neither its wavelength nor its noise bandwidth"}
+  - {inputs: {receiver: awgn_closed_form, spans: 10}, expected: 0.02, tolerance: {rtol: 0.12}, note: "1/sqrt(2 SNR) with the ASE of NF 5 dB EDFAs in the symbol-rate bandwidth at 193.1 THz; the paper gives neither its wavelength nor its noise bandwidth"}
+  - {inputs: {receiver: awgn_closed_form, spans: 15}, expected: 0.024, tolerance: {rtol: 0.12}, note: "1/sqrt(2 SNR) with the ASE of NF 5 dB EDFAs in the symbol-rate bandwidth at 193.1 THz; the paper gives neither its wavelength nor its noise bandwidth"}
+  - {inputs: {receiver: awgn_closed_form, spans: 20}, expected: 0.027, tolerance: {rtol: 0.12}, note: "1/sqrt(2 SNR) with the ASE of NF 5 dB EDFAs in the symbol-rate bandwidth at 193.1 THz; the paper gives neither its wavelength nor its noise bandwidth"}
+  - {inputs: {receiver: awgn_closed_form, spans: 25}, expected: 0.03, tolerance: {rtol: 0.12}, note: "1/sqrt(2 SNR) with the ASE of NF 5 dB EDFAs in the symbol-rate bandwidth at 193.1 THz; the paper gives neither its wavelength nor its noise bandwidth"}
+  - {inputs: {receiver: awgn_closed_form, spans: 30}, expected: 0.033, tolerance: {rtol: 0.12}, note: "1/sqrt(2 SNR) with the ASE of NF 5 dB EDFAs in the symbol-rate bandwidth at 193.1 THz; the paper gives neither its wavelength nor its noise bandwidth"}
+  - {inputs: {receiver: awgn_closed_form, spans: 40}, expected: 0.039, tolerance: {rtol: 0.12}, note: "1/sqrt(2 SNR) with the ASE of NF 5 dB EDFAs in the symbol-rate bandwidth at 193.1 THz; the paper gives neither its wavelength nor its noise bandwidth"}
+  - {inputs: {receiver: awgn_closed_form, spans: 50}, expected: 0.043, tolerance: {rtol: 0.12}, note: "1/sqrt(2 SNR) with the ASE of NF 5 dB EDFAs in the symbol-rate bandwidth at 193.1 THz; the paper gives neither its wavelength nor its noise bandwidth"}
+  - {inputs: {receiver: awgn_closed_form, spans: 60}, expected: 0.047, tolerance: {rtol: 0.12}, note: "1/sqrt(2 SNR) with the ASE of NF 5 dB EDFAs in the symbol-rate bandwidth at 193.1 THz; the paper gives neither its wavelength nor its noise bandwidth"}
+  - {inputs: {receiver: awgn_closed_form, spans: 70}, expected: 0.051, tolerance: {rtol: 0.12}, note: "1/sqrt(2 SNR) with the ASE of NF 5 dB EDFAs in the symbol-rate bandwidth at 193.1 THz; the paper gives neither its wavelength nor its noise bandwidth"}
+  - {inputs: {receiver: awgn_closed_form, spans: 80}, expected: 0.054, tolerance: {rtol: 0.12}, note: "1/sqrt(2 SNR) with the ASE of NF 5 dB EDFAs in the symbol-rate bandwidth at 193.1 THz; the paper gives neither its wavelength nor its noise bandwidth"}
+  - inputs: {claim: bp_ssfm10_over_bp_1s, panel: b, spans: 80}
+    expected: {min: 0.70, max: 0.85}
+    note: "BP-SSFM10 'about 2 dB better' than BP-1S at M/K = 3 (Sec. III-B): 0.097/0.130 = 0.75 on the figure, 10^(-0.1) = 0.79 for 2 dB of SNR"
+  - inputs: {claim: bp_ssfm10_over_bp_1s, panel: a, spans: 80}
+    expected: {min: 0.95, max: 1.05}
+    note: "'no observable difference' between BP-SSFM10 and BP-1S at M/K = 2 (Sec. III-B): 0.161/0.157 = 1.03 on the figure"

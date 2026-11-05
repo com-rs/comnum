@@ -1,0 +1,52 @@
+id: saul2004_fig8
+title: PSD against the Eb/N0 loss of recursive clipping and ACE, QPSK (Saul, Fig. 8)
+literature: saul2004
+evidence: [curve, claim]
+source:
+  kind: paper
+  reference: "A. Saul, Peak reduction for OFDM by shaping the clipping noise, Proc. IEEE VTC2004-Fall, vol. 1, 443-447, 2004"
+  locator: "Fig. 8 (QPSK: the PSD at f/fs = 0.6 after the amplifier against the Eb/N0 loss at a BER of 1e-3, one marker per clipping ratio, read on the grid); Sec. VI-D; Table I"
+  file: multicarrier/2004_saul_peak-reduction-ofdm-shaping-clipping-noise_vtc.pdf
+description: >
+  The link of Table I: OFDM of 1024 subcarriers, QPSK, uncoded, oversampled twice for the
+  peak reduction, a guard interval of 11.1 % with the raised-cosine window of eq. (1)
+  over it (Ofdm::windowed), the Rapp SSPA of eq. (2) with p = 10 at an output back-off
+  of 6 dB (Rapp::scale_for_output_backoff), AWGN. Recursive clipping (ClipFilter, two
+  iterations) and the clipping-based ACE of Krongold and Jones (Ace, two iterations, the
+  projected noise added once) at clipping ratios from 12 to 0 dB by 1 dB; 100 OFDM
+  symbols per point. Each case is a published point: at its PSD (f/fs = 0.6 after the
+  amplifier, dB below the in-band density, fs the Nyquist rate of the grid) the loss of
+  comnum's curve, interpolated along the clipping ratios (the first crossing from 12 dB),
+  is compared with the published Eb/N0 loss at a BER of 1e-3.
+run:
+  test: validation/tests/multicarrier/saul2004.rs::the_clipping_and_ace_curves_of_qpsk_follow_fig_8_of_saul_2004
+tier: campaign
+duration: "about 2 minutes on an Apple M6 (release)"
+tolerance: {atol: 0.2}
+why: >
+  the losses are read on the grid to 0.03 dB and the PSD to 1 dB; a slope of about 0.05 dB of loss per dB of PSD turns the PSD reading, the estimator (about 0.4 dB over 100 symbols) and the frequency fs the paper does not define into 0.1 dB of loss; the crossing of 100 symbols (200 bit errors at 1e-3) carries 0.03 dB; the window of eq. (1), the clipping ratio of the markers and the number of symbols are not given: 0.2 dB
+findings:
+  - "the Rapp amplifier alone at 6 dB of output back-off: a PSD of -30.3 dBc at f/fs = 0.6 and a loss of 0.07 dB, the top-left marker of the figure (-31 dBc, 0.05 dB); the windowed signal before the amplifier is at -92 dBc, so the floor of the figure (-86 dBc) is the regrowth, not the window"
+  - "recursive clipping: the curve of comnum, read at the PSD of every marker, is within 0.2 dB of the figure from -31 to -78 dBc (0.24 against 0.25 dB at -45.5 dBc, 0.47 against 0.50 at -55.5, 1.09 against 0.95 at -67, 2.01 against 1.95 at -78); at the deep end comnum costs more: 2.66 against 2.45 dB at -81.5 dBc, and 2.34 dB at -80 dBc where Sec. VI-D says about 2.1 (its range 2.0 to 2.2): not explained (the window of eq. (1), the number of symbols and the PSD estimator of the paper are not given)"
+  - "the clipping ratio of the markers is not that of a 1 dB grid from 12 dB: with the clipping ratio of eq. (4) comnum's PSD stays at -30.3 dBc down to 9 dB and reaches -85.4 dBc at 0 dB, so the figure's twelve markers span 1 dB of clipping ratio per 8 dB of PSD; the comparison is between curves, not markers"
+  - "ACE: comnum's Ace (the clipping-based projection of Krongold & Jones 2003, unit step) needs about thirty iterations to reach the PSD of the figure's two iterations (with two unit-step iterations it stops at -35 dBc for a loss of 0.12 dB; two iterations of step 4: -50.8 dBc, 0.45 dB; thirty of step 1: -67.4 dBc at a clipping ratio of 4.5 dB). With thirty iterations the curve follows the figure from -32 to -57 dBc within 0.2 dB (0.46 against 0.62 dB at -57 dBc) and reaches the same floor, -67.4 against -67 dBc, then hooks back as the figure does (the extension directions run out below 4.5 dB of clipping ratio); but near the floor it costs a third of the figure's loss: 0.55 against 0.80 dB at -63 dBc, 0.61 against 0.98 at -66, 0.64 against 1.10 at -67 (the loss includes the power of the extension in comnum; the paper's ACE is the smart gradient projection of [1] with the decorrelation of [4], two iterations, which extends the points further): a different algorithm, not reproduced"
+cases:
+  - {inputs: {technique: clip_filter, psd_dbc: -31}, expected: 0.05}
+  - {inputs: {technique: clip_filter, psd_dbc: -39}, expected: 0.12}
+  - {inputs: {technique: clip_filter, psd_dbc: -42}, expected: 0.17}
+  - {inputs: {technique: clip_filter, psd_dbc: -45.5}, expected: 0.25}
+  - {inputs: {technique: clip_filter, psd_dbc: -49.5}, expected: 0.35}
+  - {inputs: {technique: clip_filter, psd_dbc: -55.5}, expected: 0.5}
+  - {inputs: {technique: clip_filter, psd_dbc: -60}, expected: 0.7}
+  - {inputs: {technique: clip_filter, psd_dbc: -67}, expected: 0.95}
+  - {inputs: {technique: clip_filter, psd_dbc: -70}, expected: 1.2}
+  - {inputs: {technique: clip_filter, psd_dbc: -74}, expected: 1.55}
+  - {inputs: {technique: clip_filter, psd_dbc: -78}, expected: 1.95}
+  - {inputs: {technique: ace, psd_dbc: -32}, expected: 0.07}
+  - {inputs: {technique: ace, psd_dbc: -44}, expected: 0.22}
+  - {inputs: {technique: ace, psd_dbc: -47}, expected: 0.3}
+  - {inputs: {technique: ace, psd_dbc: -52}, expected: 0.45}
+  - {inputs: {technique: ace, psd_dbc: -57}, expected: 0.62}
+  - inputs: {technique: ace, claim: psd_floor_dbc}
+    expected: {min: -69.0, max: -65.0}
+    note: "the lowest PSD of the ACE curve of Fig. 8, -67 dBc on the grid (then the curve hooks back)"

@@ -1,0 +1,84 @@
+id: edfors1998
+title: Rank-p LMMSE channel estimation of OFDM by singular value decomposition
+literature: edfors1998
+evidence: [closed_form, curve]
+source:
+  kind: paper
+  reference: "O. Edfors, M. Sandell, J.-J. van de Beek, S. K. Wilson, P. O. Borjesson, OFDM channel estimation by singular value decomposition, Proc. IEEE VTC 1996, 923-927 (conference version of IEEE Trans. Commun. 46(7), 931-939, 1998)"
+  locator: "Figs. 4, 5 and 6, eqs. (5)-(11), Sec. III-A (beta = 17/9)"
+  file: synchronisation/1996_edfors_ofdm-channel-estimation-svd_vtc.pdf
+description: >
+  The rank-p estimator of comnum::dsp::estimation::LowRank on the correlations of
+  comnum::waveform::ofdm::estimation::RandomDelayProfile, N = 64 tones, a prefix of 4
+  samples, 16-QAM: the eigenvalues of the uniform and synchronized channels (Fig. 4),
+  the relative MSE of eq. (10) of the rank-5, 6 and 7 estimators on the synchronized
+  channel and their floors of eq. (11) (Fig. 5), and the rank-8 estimator with the
+  designs and channels crossed (Fig. 6), the design SNR equal to the channel SNR. The
+  synchronized channel has M = 5 impulses (not given by the paper).
+run:
+  test: validation/tests/synchronisation/edfors1998.rs::edfors_1996_figs_4_to_6
+tier: ci
+duration: "under a second"
+tolerance: {factor: 1.12}
+why: "Figs. 5 and 6 are scans read on their log grid, 0.03 to 0.05 decade"
+findings:
+  - "Fig. 5 within 5.1 % and its floors within 2 % (3.67e-3, 3.18e-4, 1.66e-5 against 3.7e-3, 3.2e-4, 1.7e-5) with M = 5 impulses in the synchronized channel; the paper gives tau_rms = 1 sample but not M, and the floors fix it: M = 4 gives 3.17e-3 at rank 5, M = 10 gives 4.89e-3"
+  - "Fig. 6 within 5.9 % for the four pairs of design and channel, the mismatch term of eq. (10) included: an estimator designed for the uniform channel loses less on the synchronized one than the reverse, as Sec. III-C states"
+  - "Fig. 4 within 16 % (0.1 decade): the uniform channel needs no M; at k = 0 and 1 the synchronized curve is on the frame and crosses the uniform one, not compared"
+  - "the eigenvectors of zero eigenvalues may be returned empty by the SVD of comnum_math: the error left beyond rank p is the trace of the true correlation minus its energy on the kept eigenvectors"
+cases:
+  - inputs: {quantity: beta}
+    expected: 1.8888888888888888
+    tolerance: {atol: 1.0e-12}
+    why: "beta = 17/9, Sec. III-A, exact"
+  - {inputs: {figure: 4, channel: uniform, k: 0}, expected: 2.70e-1, tolerance: {factor: 1.26}, why: "Fig. 4 read to 0.1 decade"}
+  - {inputs: {figure: 4, channel: uniform, k: 1}, expected: 2.40e-1, tolerance: {factor: 1.26}, why: "Fig. 4 read to 0.1 decade"}
+  - {inputs: {figure: 4, channel: uniform, k: 2}, expected: 2.70e-1, tolerance: {factor: 1.26}, why: "Fig. 4 read to 0.1 decade"}
+  - {inputs: {figure: 4, channel: uniform, k: 3}, expected: 2.00e-1, tolerance: {factor: 1.26}, why: "Fig. 4 read to 0.1 decade"}
+  - {inputs: {figure: 4, channel: uniform, k: 4}, expected: 7.80e-2, tolerance: {factor: 1.26}, why: "Fig. 4 read to 0.1 decade"}
+  - {inputs: {figure: 4, channel: uniform, k: 5}, expected: 1.20e-2, tolerance: {factor: 1.26}, why: "Fig. 4 read to 0.1 decade"}
+  - {inputs: {figure: 4, channel: uniform, k: 6}, expected: 1.00e-3, tolerance: {factor: 1.26}, why: "Fig. 4 read to 0.1 decade"}
+  - {inputs: {figure: 4, channel: uniform, k: 7}, expected: 5.00e-5, tolerance: {factor: 1.26}, why: "Fig. 4 read to 0.1 decade"}
+  - {inputs: {figure: 4, channel: uniform, k: 8}, expected: 2.00e-6, tolerance: {factor: 1.26}, why: "Fig. 4 read to 0.1 decade"}
+  - {inputs: {figure: 4, channel: synchronized, k: 2}, expected: 8.70e-2, tolerance: {factor: 1.26}, why: "Fig. 4 read to 0.1 decade"}
+  - {inputs: {figure: 4, channel: synchronized, k: 3}, expected: 3.10e-2, tolerance: {factor: 1.26}, why: "Fig. 4 read to 0.1 decade"}
+  - {inputs: {figure: 4, channel: synchronized, k: 4}, expected: 1.50e-2, tolerance: {factor: 1.26}, why: "Fig. 4 read to 0.1 decade"}
+  - {inputs: {figure: 4, channel: synchronized, k: 5}, expected: 3.40e-3, tolerance: {factor: 1.26}, why: "Fig. 4 read to 0.1 decade"}
+  - {inputs: {figure: 4, channel: synchronized, k: 6}, expected: 3.50e-4, tolerance: {factor: 1.26}, why: "Fig. 4 read to 0.1 decade"}
+  - {inputs: {figure: 5, rank: 5, snr_db: 0.0}, expected: 1.00e-1}
+  - {inputs: {figure: 5, rank: 5, snr_db: 10.0}, expected: 1.70e-2}
+  - {inputs: {figure: 5, rank: 5, snr_db: 15.0}, expected: 8.20e-3}
+  - {inputs: {figure: 5, rank: 5, snr_db: 20.0}, expected: 5.10e-3}
+  - {inputs: {figure: 5, rank: 5, snr_db: 25.0}, expected: 4.20e-3}
+  - {inputs: {figure: 5, rank: 5, snr_db: 29.6}, expected: 3.70e-3}
+  - {inputs: {figure: 5, rank: 5, quantity: floor}, expected: 3.70e-3}
+  - {inputs: {figure: 5, rank: 6, snr_db: 0.0}, expected: 1.00e-1}
+  - {inputs: {figure: 5, rank: 6, snr_db: 10.0}, expected: 1.50e-2}
+  - {inputs: {figure: 5, rank: 6, snr_db: 15.0}, expected: 5.60e-3}
+  - {inputs: {figure: 5, rank: 6, snr_db: 20.0}, expected: 2.00e-3}
+  - {inputs: {figure: 5, rank: 6, snr_db: 25.0}, expected: 9.00e-4}
+  - {inputs: {figure: 5, rank: 6, snr_db: 29.6}, expected: 5.20e-4}
+  - {inputs: {figure: 5, rank: 6, quantity: floor}, expected: 3.20e-4}
+  - {inputs: {figure: 5, rank: 7, snr_db: 0.0}, expected: 1.00e-1}
+  - {inputs: {figure: 5, rank: 7, snr_db: 10.0}, expected: 1.50e-2}
+  - {inputs: {figure: 5, rank: 7, snr_db: 15.0}, expected: 5.60e-3}
+  - {inputs: {figure: 5, rank: 7, snr_db: 20.0}, expected: 2.00e-3}
+  - {inputs: {figure: 5, rank: 7, snr_db: 25.0}, expected: 6.50e-4}
+  - {inputs: {figure: 5, rank: 7, snr_db: 29.6}, expected: 2.40e-4}
+  - {inputs: {figure: 5, rank: 7, quantity: floor}, expected: 1.70e-5}
+  - {inputs: {figure: 6, design: synchronized, channel: uniform, snr_db: 0.3}, expected: 2.60e-1, tolerance: {factor: 1.15}, why: "Fig. 6 read to 0.05 decade"}
+  - {inputs: {figure: 6, design: synchronized, channel: uniform, snr_db: 10.6}, expected: 2.90e-2, tolerance: {factor: 1.15}, why: "Fig. 6 read to 0.05 decade"}
+  - {inputs: {figure: 6, design: synchronized, channel: uniform, snr_db: 19.5}, expected: 3.60e-3, tolerance: {factor: 1.15}, why: "Fig. 6 read to 0.05 decade"}
+  - {inputs: {figure: 6, design: synchronized, channel: uniform, snr_db: 29.7}, expected: 3.10e-4, tolerance: {factor: 1.15}, why: "Fig. 6 read to 0.05 decade"}
+  - {inputs: {figure: 6, design: uniform, channel: synchronized, snr_db: 0.3}, expected: 1.80e-1, tolerance: {factor: 1.15}, why: "Fig. 6 read to 0.05 decade"}
+  - {inputs: {figure: 6, design: uniform, channel: synchronized, snr_db: 10.6}, expected: 2.10e-2, tolerance: {factor: 1.15}, why: "Fig. 6 read to 0.05 decade"}
+  - {inputs: {figure: 6, design: uniform, channel: synchronized, snr_db: 19.5}, expected: 3.00e-3, tolerance: {factor: 1.15}, why: "Fig. 6 read to 0.05 decade"}
+  - {inputs: {figure: 6, design: uniform, channel: synchronized, snr_db: 29.7}, expected: 3.10e-4, tolerance: {factor: 1.15}, why: "Fig. 6 read to 0.05 decade"}
+  - {inputs: {figure: 6, design: uniform, channel: uniform, snr_db: 0.3}, expected: 1.30e-1, tolerance: {factor: 1.15}, why: "Fig. 6 read to 0.05 decade"}
+  - {inputs: {figure: 6, design: uniform, channel: uniform, snr_db: 10.6}, expected: 1.60e-2, tolerance: {factor: 1.15}, why: "Fig. 6 read to 0.05 decade"}
+  - {inputs: {figure: 6, design: uniform, channel: uniform, snr_db: 19.5}, expected: 2.20e-3, tolerance: {factor: 1.15}, why: "Fig. 6 read to 0.05 decade"}
+  - {inputs: {figure: 6, design: uniform, channel: uniform, snr_db: 29.7}, expected: 2.40e-4, tolerance: {factor: 1.15}, why: "Fig. 6 read to 0.05 decade"}
+  - {inputs: {figure: 6, design: synchronized, channel: synchronized, snr_db: 0.3}, expected: 1.00e-1, tolerance: {factor: 1.15}, why: "Fig. 6 read to 0.05 decade"}
+  - {inputs: {figure: 6, design: synchronized, channel: synchronized, snr_db: 10.6}, expected: 1.40e-2, tolerance: {factor: 1.15}, why: "Fig. 6 read to 0.05 decade"}
+  - {inputs: {figure: 6, design: synchronized, channel: synchronized, snr_db: 19.5}, expected: 2.20e-3, tolerance: {factor: 1.15}, why: "Fig. 6 read to 0.05 decade"}
+  - {inputs: {figure: 6, design: synchronized, channel: synchronized, snr_db: 29.7}, expected: 2.40e-4, tolerance: {factor: 1.15}, why: "Fig. 6 read to 0.05 decade"}

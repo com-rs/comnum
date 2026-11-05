@@ -1,0 +1,35 @@
+id: dvbs_table3
+title: The Eb/N0 of DVB-S for a BER of 2e-4 after the Viterbi decoder
+literature: dvbs
+evidence: [table]
+source:
+  kind: standard
+  reference: "ETSI EN 300 421 V1.1.2, Digital Video Broadcasting (DVB); Framing structure, channel coding and modulation for 11/12 GHz satellite services, 1997"
+  locator: "Table 3 (IF-loop performance): the required Eb/N0 per useful bit for BER = 2e-4 after Viterbi, 0.8 dB of modem implementation margin included (NOTE 1)"
+  file: standards/etsi_en-300-421_v1.1.2_dvb-s.pdf
+description: >
+  Bursts of 200 random transport packets through comnum::systems::dvbs::Dvbs (energy
+  dispersal, RS(204, 188), the convolutional interleaver I = 12, M = 17, the inner code
+  (171, 133) punctured by Table 2, the Gray QPSK of Figure 5), white Gaussian noise,
+  exact LLRs and soft Viterbi decoding; the BER of the bytes entering the inner coder.
+  The Eb/N0 per useful bit at a BER of 2e-4, interpolated between points 0.1 dB apart
+  with 10^6 bits at least per point, against Table 3 minus its 0.8 dB margin.
+run:
+  test: validation/tests/systems/dvbs.rs::the_required_ebn0_follows_table_3_of_en_300_421
+tier: campaign
+duration: "18 s on an Apple M6 (release)"
+tolerance: {atol: 0.3}
+why: >
+  Table 3 is printed to 0.1 dB and states a requirement: an ideal modem with a soft
+  Viterbi decoder lies at or a little below Table 3 minus its 0.8 dB margin; the
+  Monte Carlo error of a crossing with 10^6 bits is about 0.03 dB. 0.3 dB is the
+  agreement obtained, not a precision of the standard
+findings:
+  - "the BER of 2e-4 after the Viterbi decoder is reached at 3.60, 4.04, 4.50, 5.00 and 5.38 dB from 1/2 to 7/8, 0.10 to 0.22 dB below Table 3 minus its 0.8 dB margin (3.7, 4.2, 4.7, 5.2, 5.6 dB): the ideal modem of the standard, with the order of the rates and their steps (0.4 to 0.5 dB) reproduced"
+  - "NOTE 1 can be read two ways: Eb per useful bit (the 0.36 dB of the outer code counted by that reference, the card) or a further 0.36 dB to subtract (3.34 to 5.24 dB); the measured values lie between, 0.17 dB below the first reading and 0.19 dB above the second on average, so the simulation does not settle it. Sec. 3.1 defines Eb/No as the ratio to \"twice the noise power spectral density\", which read literally would shift every value by 3 dB: the usual Eb/N0 is meant"
+cases:
+  - {inputs: {rate: "1/2"}, expected: 3.7}
+  - {inputs: {rate: "2/3"}, expected: 4.2}
+  - {inputs: {rate: "3/4"}, expected: 4.7}
+  - {inputs: {rate: "5/6"}, expected: 5.2}
+  - {inputs: {rate: "7/8"}, expected: 5.6}

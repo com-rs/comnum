@@ -1,0 +1,507 @@
+{
+ "dvbs2": [
+  {
+   "frame": "normal",
+   "gold_code": 0,
+   "k_bch": 16008,
+   "modulation": "QPSK",
+   "pilots": false,
+   "rate": "1/4",
+   "symbols": 32490
+  },
+  {
+   "frame": "normal",
+   "gold_code": 0,
+   "k_bch": 21408,
+   "modulation": "QPSK",
+   "pilots": false,
+   "rate": "1/3",
+   "symbols": 32490
+  },
+  {
+   "frame": "normal",
+   "gold_code": 0,
+   "k_bch": 25728,
+   "modulation": "QPSK",
+   "pilots": false,
+   "rate": "2/5",
+   "symbols": 32490
+  },
+  {
+   "frame": "normal",
+   "gold_code": 0,
+   "k_bch": 32208,
+   "modulation": "QPSK",
+   "pilots": false,
+   "rate": "1/2",
+   "symbols": 32490
+  },
+  {
+   "frame": "normal",
+   "gold_code": 0,
+   "k_bch": 38688,
+   "modulation": "QPSK",
+   "pilots": false,
+   "rate": "3/5",
+   "symbols": 32490
+  },
+  {
+   "frame": "normal",
+   "gold_code": 0,
+   "k_bch": 43040,
+   "modulation": "QPSK",
+   "pilots": false,
+   "rate": "2/3",
+   "symbols": 32490
+  },
+  {
+   "frame": "normal",
+   "gold_code": 0,
+   "k_bch": 48408,
+   "modulation": "QPSK",
+   "pilots": false,
+   "rate": "3/4",
+   "symbols": 32490
+  },
+  {
+   "frame": "normal",
+   "gold_code": 0,
+   "k_bch": 51648,
+   "modulation": "QPSK",
+   "pilots": false,
+   "rate": "4/5",
+   "symbols": 32490
+  },
+  {
+   "frame": "normal",
+   "gold_code": 0,
+   "k_bch": 53840,
+   "modulation": "QPSK",
+   "pilots": false,
+   "rate": "5/6",
+   "symbols": 32490
+  },
+  {
+   "frame": "normal",
+   "gold_code": 0,
+   "k_bch": 57472,
+   "modulation": "QPSK",
+   "pilots": false,
+   "rate": "8/9",
+   "symbols": 32490
+  },
+  {
+   "frame": "normal",
+   "gold_code": 0,
+   "k_bch": 58192,
+   "modulation": "QPSK",
+   "pilots": false,
+   "rate": "9/10",
+   "symbols": 32490
+  },
+  {
+   "frame": "normal",
+   "gold_code": 0,
+   "k_bch": 38688,
+   "modulation": "8PSK",
+   "pilots": false,
+   "rate": "3/5",
+   "symbols": 21690
+  },
+  {
+   "frame": "normal",
+   "gold_code": 0,
+   "k_bch": 43040,
+   "modulation": "8PSK",
+   "pilots": false,
+   "rate": "2/3",
+   "symbols": 21690
+  },
+  {
+   "frame": "normal",
+   "gold_code": 0,
+   "k_bch": 48408,
+   "modulation": "8PSK",
+   "pilots": false,
+   "rate": "3/4",
+   "symbols": 21690
+  },
+  {
+   "frame": "normal",
+   "gold_code": 0,
+   "k_bch": 53840,
+   "modulation": "8PSK",
+   "pilots": false,
+   "rate": "5/6",
+   "symbols": 21690
+  },
+  {
+   "frame": "normal",
+   "gold_code": 0,
+   "k_bch": 57472,
+   "modulation": "8PSK",
+   "pilots": false,
+   "rate": "8/9",
+   "symbols": 21690
+  },
+  {
+   "frame": "normal",
+   "gold_code": 0,
+   "k_bch": 58192,
+   "modulation": "8PSK",
+   "pilots": false,
+   "rate": "9/10",
+   "symbols": 21690
+  },
+  {
+   "frame": "normal",
+   "gold_code": 0,
+   "k_bch": 43040,
+   "modulation": "16APSK",
+   "pilots": false,
+   "rate": "2/3",
+   "symbols": 16290
+  },
+  {
+   "frame": "normal",
+   "gold_code": 0,
+   "k_bch": 48408,
+   "modulation": "16APSK",
+   "pilots": false,
+   "rate": "3/4",
+   "symbols": 16290
+  },
+  {
+   "frame": "normal",
+   "gold_code": 0,
+   "k_bch": 51648,
+   "modulation": "16APSK",
+   "pilots": false,
+   "rate": "4/5",
+   "symbols": 16290
+  },
+  {
+   "frame": "normal",
+   "gold_code": 0,
+   "k_bch": 53840,
+   "modulation": "16APSK",
+   "pilots": false,
+   "rate": "5/6",
+   "symbols": 16290
+  },
+  {
+   "frame": "normal",
+   "gold_code": 0,
+   "k_bch": 57472,
+   "modulation": "16APSK",
+   "pilots": false,
+   "rate": "8/9",
+   "symbols": 16290
+  },
+  {
+   "frame": "normal",
+   "gold_code": 0,
+   "k_bch": 58192,
+   "modulation": "16APSK",
+   "pilots": false,
+   "rate": "9/10",
+   "symbols": 16290
+  },
+  {
+   "frame": "normal",
+   "gold_code": 0,
+   "k_bch": 48408,
+   "modulation": "32APSK",
+   "pilots": false,
+   "rate": "3/4",
+   "symbols": 13050
+  },
+  {
+   "frame": "normal",
+   "gold_code": 0,
+   "k_bch": 51648,
+   "modulation": "32APSK",
+   "pilots": false,
+   "rate": "4/5",
+   "symbols": 13050
+  },
+  {
+   "frame": "normal",
+   "gold_code": 0,
+   "k_bch": 53840,
+   "modulation": "32APSK",
+   "pilots": false,
+   "rate": "5/6",
+   "symbols": 13050
+  },
+  {
+   "frame": "normal",
+   "gold_code": 0,
+   "k_bch": 57472,
+   "modulation": "32APSK",
+   "pilots": false,
+   "rate": "8/9",
+   "symbols": 13050
+  },
+  {
+   "frame": "normal",
+   "gold_code": 0,
+   "k_bch": 58192,
+   "modulation": "32APSK",
+   "pilots": false,
+   "rate": "9/10",
+   "symbols": 13050
+  },
+  {
+   "frame": "short",
+   "gold_code": 0,
+   "k_bch": 3072,
+   "modulation": "QPSK",
+   "pilots": true,
+   "rate": "1/4",
+   "symbols": 8370
+  },
+  {
+   "frame": "short",
+   "gold_code": 0,
+   "k_bch": 5232,
+   "modulation": "QPSK",
+   "pilots": true,
+   "rate": "1/3",
+   "symbols": 8370
+  },
+  {
+   "frame": "short",
+   "gold_code": 0,
+   "k_bch": 6312,
+   "modulation": "QPSK",
+   "pilots": true,
+   "rate": "2/5",
+   "symbols": 8370
+  },
+  {
+   "frame": "short",
+   "gold_code": 0,
+   "k_bch": 7032,
+   "modulation": "QPSK",
+   "pilots": true,
+   "rate": "1/2",
+   "symbols": 8370
+  },
+  {
+   "frame": "short",
+   "gold_code": 0,
+   "k_bch": 9552,
+   "modulation": "QPSK",
+   "pilots": true,
+   "rate": "3/5",
+   "symbols": 8370
+  },
+  {
+   "frame": "short",
+   "gold_code": 0,
+   "k_bch": 10632,
+   "modulation": "QPSK",
+   "pilots": true,
+   "rate": "2/3",
+   "symbols": 8370
+  },
+  {
+   "frame": "short",
+   "gold_code": 0,
+   "k_bch": 11712,
+   "modulation": "QPSK",
+   "pilots": true,
+   "rate": "3/4",
+   "symbols": 8370
+  },
+  {
+   "frame": "short",
+   "gold_code": 0,
+   "k_bch": 12432,
+   "modulation": "QPSK",
+   "pilots": true,
+   "rate": "4/5",
+   "symbols": 8370
+  },
+  {
+   "frame": "short",
+   "gold_code": 0,
+   "k_bch": 13152,
+   "modulation": "QPSK",
+   "pilots": true,
+   "rate": "5/6",
+   "symbols": 8370
+  },
+  {
+   "frame": "short",
+   "gold_code": 0,
+   "k_bch": 14232,
+   "modulation": "QPSK",
+   "pilots": true,
+   "rate": "8/9",
+   "symbols": 8370
+  },
+  {
+   "frame": "short",
+   "gold_code": 0,
+   "k_bch": 9552,
+   "modulation": "8PSK",
+   "pilots": true,
+   "rate": "3/5",
+   "symbols": 5598
+  },
+  {
+   "frame": "short",
+   "gold_code": 0,
+   "k_bch": 10632,
+   "modulation": "8PSK",
+   "pilots": true,
+   "rate": "2/3",
+   "symbols": 5598
+  },
+  {
+   "frame": "short",
+   "gold_code": 0,
+   "k_bch": 11712,
+   "modulation": "8PSK",
+   "pilots": true,
+   "rate": "3/4",
+   "symbols": 5598
+  },
+  {
+   "frame": "short",
+   "gold_code": 0,
+   "k_bch": 13152,
+   "modulation": "8PSK",
+   "pilots": true,
+   "rate": "5/6",
+   "symbols": 5598
+  },
+  {
+   "frame": "short",
+   "gold_code": 0,
+   "k_bch": 14232,
+   "modulation": "8PSK",
+   "pilots": true,
+   "rate": "8/9",
+   "symbols": 5598
+  },
+  {
+   "frame": "short",
+   "gold_code": 0,
+   "k_bch": 10632,
+   "modulation": "16APSK",
+   "pilots": true,
+   "rate": "2/3",
+   "symbols": 4212
+  },
+  {
+   "frame": "short",
+   "gold_code": 0,
+   "k_bch": 11712,
+   "modulation": "16APSK",
+   "pilots": true,
+   "rate": "3/4",
+   "symbols": 4212
+  },
+  {
+   "frame": "short",
+   "gold_code": 0,
+   "k_bch": 12432,
+   "modulation": "16APSK",
+   "pilots": true,
+   "rate": "4/5",
+   "symbols": 4212
+  },
+  {
+   "frame": "short",
+   "gold_code": 0,
+   "k_bch": 13152,
+   "modulation": "16APSK",
+   "pilots": true,
+   "rate": "5/6",
+   "symbols": 4212
+  },
+  {
+   "frame": "short",
+   "gold_code": 0,
+   "k_bch": 14232,
+   "modulation": "16APSK",
+   "pilots": true,
+   "rate": "8/9",
+   "symbols": 4212
+  },
+  {
+   "frame": "short",
+   "gold_code": 0,
+   "k_bch": 11712,
+   "modulation": "32APSK",
+   "pilots": true,
+   "rate": "3/4",
+   "symbols": 3402
+  },
+  {
+   "frame": "short",
+   "gold_code": 0,
+   "k_bch": 12432,
+   "modulation": "32APSK",
+   "pilots": true,
+   "rate": "4/5",
+   "symbols": 3402
+  },
+  {
+   "frame": "short",
+   "gold_code": 0,
+   "k_bch": 13152,
+   "modulation": "32APSK",
+   "pilots": true,
+   "rate": "5/6",
+   "symbols": 3402
+  },
+  {
+   "frame": "short",
+   "gold_code": 0,
+   "k_bch": 14232,
+   "modulation": "32APSK",
+   "pilots": true,
+   "rate": "8/9",
+   "symbols": 3402
+  },
+  {
+   "frame": "normal",
+   "gold_code": 1,
+   "k_bch": 16008,
+   "modulation": "QPSK",
+   "pilots": true,
+   "rate": "1/4",
+   "symbols": 33282
+  },
+  {
+   "frame": "normal",
+   "gold_code": 17,
+   "k_bch": 38688,
+   "modulation": "8PSK",
+   "pilots": true,
+   "rate": "3/5",
+   "symbols": 22194
+  },
+  {
+   "frame": "normal",
+   "gold_code": 262141,
+   "k_bch": 58192,
+   "modulation": "32APSK",
+   "pilots": true,
+   "rate": "9/10",
+   "symbols": 13338
+  }
+ ],
+ "flowgraph": "examples/dtv/dvbs2_tx.grc: BBHEADER (transport stream, roll-off 0.20), BB scrambler, BCH, LDPC, bit interleaver, modulator, physical layer (PLHEADER, pilots, scrambling); the first BBFRAME (scrambled) and the first PLFRAME",
+ "license": "GPL-3.0-or-later (the outputs, not the code)",
+ "numpy": "2.5.4",
+ "python": "3.12.16",
+ "repository": "https://github.com/gnuradio/gnuradio",
+ "seed": 2026,
+ "tool": "GNU Radio gr-dtv",
+ "version": "3.10.12.0"
+}

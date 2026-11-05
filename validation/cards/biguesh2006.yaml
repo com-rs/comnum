@@ -1,0 +1,388 @@
+id: biguesh2006
+title: Training-based MIMO channel estimation, LS, scaled LS, LMMSE and relaxed MMSE
+literature: biguesh2006
+evidence: [closed_form, curve]
+source:
+  kind: paper
+  reference: "M. Biguesh, A. B. Gershman, Training-based MIMO channel estimation: a study of estimator tradeoffs and optimal training signals, IEEE Trans. Signal Process. 54(3), 884-893, 2006"
+  locator: "Figs. 1-5, eqs. (12), (20), (28), (41), (49), (59)"
+  file: mimo/2006_biguesh_training-mimo-channel-estimation_tsp.pdf
+description: >
+  The estimators of comnum::mimo::estimation on S = H P + V with N = t training symbols,
+  unit noise variance, rows of H independent of covariance [eps^|n-m|] (R_H = r
+  [eps^|n-m|], eq. (60)), the abscissa P/sigma^2 in dB, the MSE normalised by r t, 5000
+  channels per point: LS with the DFT training of eq. (10) (Fig. 1, r = 3), SLS and
+  LS-SLS (Fig. 2, r = 3), the LMMSE with orthogonal and water-filled training (Fig. 3, r
+  = 3, eps = 0.4 and 0.8), LS, SLS, RMMSE and LMMSE at eps = 0.8 for t = r = 2 and 8
+  (Fig. 4), the BLUE of K = 1, 2, 4 LS estimates (eq. (59), r = 2, t = 4). Each point is
+  compared three ways: the Monte Carlo against the figure, the closed form of
+  Training::mse against the paper's equation, and the Monte Carlo against the closed
+  form. eps is not given for Figs. 1, 2 and 5: 0.
+run:
+  test: validation/tests/mimo/biguesh2006.rs::biguesh_2006_figs_1_to_5
+tier: ci
+duration: "about a second (debug)"
+tolerance: {factor: 1.12}
+why: "the figures are 600-dpi scans read on their log grid, 0.02 decade for an isolated marker and 0.05 where markers merge, plus the Monte Carlo (under 2 %)"
+findings:
+  - "121 readings of Figs. 1-4 within 7.4 % of the Monte Carlo (LS within 4.7 %, SLS and RMMSE 7.4 %, LS-SLS 4.0 %, LMMSE 6.6 %); the Monte Carlo within 1.9 % of Training::mse at 117 points; Training::mse equal to eqs. (12), (20), (28), (41), (49) and (59) evaluated independently on the card (1e-9)"
+  - "the abscissa P/sigma^2 is in dB: the paper prints no unit, and Fig. 1 follows eq. (12) only in dB"
+  - "LS-SLS (eq. (17)) does not depend on eps within 1 % (1.464 at 1 dB, t = 5, eps = 0, against 1.457 with eps = 0.8; read 1.48): eps = 0 for Figs. 1, 2 and 5, which do not give it"
+  - "Fig. 4, t = r = 2, left out at low SNR: SLS and RMMSE read 0.59 at 3 dB and 0.38 at 6 dB against 0.501 and 0.333 by the Monte Carlo and 0.501 and 0.334 by eq. (20) (+18 % and +14 %), the LMMSE 0.45 at 3 dB against 0.409 and 0.405 by eq. (28) (+11 %); the same estimators at t = 2 in Fig. 2 and at t = r = 8 follow the equations, so the figure, not the estimator, departs from the paper's closed forms (not explained)"
+  - "Fig. 5 is not compared with its readings: K = 1 (plain LS) reads 2.45 at 3 dB against 2.00 by eq. (12) and by Fig. 1, and the ratios between the curves are about 4.6 and 2.6 instead of the 2 and 2 of eq. (59) with equal powers; the per-period powers and the meaning of the abscissa are not given. Eq. (59) is checked instead, by Monte Carlo within 1 % for K = 1, 2, 4"
+cases:
+  - {inputs: {figure: 1, estimator: ls, t: 1, r: 3, eps: 0.0, training: orthogonal, snr_db: 1.0, quantity: figure}, expected: 7.800e-01}
+  - {inputs: {figure: 1, estimator: ls, t: 1, r: 3, eps: 0.0, training: orthogonal, snr_db: 1.0, quantity: closed_form}, expected: 0.794328234724, tolerance: {rtol: 1.0e-9}, why: "the paper's equation evaluated on the card"}
+  - {inputs: {figure: 1, estimator: ls, t: 1, r: 3, eps: 0.0, training: orthogonal, snr_db: 1.0, quantity: monte_carlo_over_closed_form}, expected: 1.0, tolerance: {rtol: 0.04}, why: "5000 channels: a relative standard error under 0.8 %"}
+  - {inputs: {figure: 1, estimator: ls, t: 2, r: 3, eps: 0.0, training: orthogonal, snr_db: 1.0, quantity: figure}, expected: 1.600e+00}
+  - {inputs: {figure: 1, estimator: ls, t: 2, r: 3, eps: 0.0, training: orthogonal, snr_db: 1.0, quantity: closed_form}, expected: 1.58865646945, tolerance: {rtol: 1.0e-9}, why: "the paper's equation evaluated on the card"}
+  - {inputs: {figure: 1, estimator: ls, t: 2, r: 3, eps: 0.0, training: orthogonal, snr_db: 1.0, quantity: monte_carlo_over_closed_form}, expected: 1.0, tolerance: {rtol: 0.04}, why: "5000 channels: a relative standard error under 0.8 %"}
+  - {inputs: {figure: 1, estimator: ls, t: 3, r: 3, eps: 0.0, training: orthogonal, snr_db: 1.0, quantity: figure}, expected: 2.320e+00}
+  - {inputs: {figure: 1, estimator: ls, t: 3, r: 3, eps: 0.0, training: orthogonal, snr_db: 1.0, quantity: closed_form}, expected: 2.38298470417, tolerance: {rtol: 1.0e-9}, why: "the paper's equation evaluated on the card"}
+  - {inputs: {figure: 1, estimator: ls, t: 3, r: 3, eps: 0.0, training: orthogonal, snr_db: 1.0, quantity: monte_carlo_over_closed_form}, expected: 1.0, tolerance: {rtol: 0.04}, why: "5000 channels: a relative standard error under 0.8 %"}
+  - {inputs: {figure: 1, estimator: ls, t: 4, r: 3, eps: 0.0, training: orthogonal, snr_db: 1.0, quantity: figure}, expected: 3.230e+00}
+  - {inputs: {figure: 1, estimator: ls, t: 4, r: 3, eps: 0.0, training: orthogonal, snr_db: 1.0, quantity: closed_form}, expected: 3.1773129389, tolerance: {rtol: 1.0e-9}, why: "the paper's equation evaluated on the card"}
+  - {inputs: {figure: 1, estimator: ls, t: 4, r: 3, eps: 0.0, training: orthogonal, snr_db: 1.0, quantity: monte_carlo_over_closed_form}, expected: 1.0, tolerance: {rtol: 0.04}, why: "5000 channels: a relative standard error under 0.8 %"}
+  - {inputs: {figure: 1, estimator: ls, t: 5, r: 3, eps: 0.0, training: orthogonal, snr_db: 1.0, quantity: figure}, expected: 4.020e+00}
+  - {inputs: {figure: 1, estimator: ls, t: 5, r: 3, eps: 0.0, training: orthogonal, snr_db: 1.0, quantity: closed_form}, expected: 3.97164117362, tolerance: {rtol: 1.0e-9}, why: "the paper's equation evaluated on the card"}
+  - {inputs: {figure: 1, estimator: ls, t: 5, r: 3, eps: 0.0, training: orthogonal, snr_db: 1.0, quantity: monte_carlo_over_closed_form}, expected: 1.0, tolerance: {rtol: 0.04}, why: "5000 channels: a relative standard error under 0.8 %"}
+  - {inputs: {figure: 1, estimator: ls, t: 1, r: 3, eps: 0.0, training: orthogonal, snr_db: 5.0, quantity: figure}, expected: 3.100e-01}
+  - {inputs: {figure: 1, estimator: ls, t: 1, r: 3, eps: 0.0, training: orthogonal, snr_db: 5.0, quantity: closed_form}, expected: 0.316227766017, tolerance: {rtol: 1.0e-9}, why: "the paper's equation evaluated on the card"}
+  - {inputs: {figure: 1, estimator: ls, t: 1, r: 3, eps: 0.0, training: orthogonal, snr_db: 5.0, quantity: monte_carlo_over_closed_form}, expected: 1.0, tolerance: {rtol: 0.04}, why: "5000 channels: a relative standard error under 0.8 %"}
+  - {inputs: {figure: 1, estimator: ls, t: 2, r: 3, eps: 0.0, training: orthogonal, snr_db: 5.0, quantity: figure}, expected: 6.300e-01}
+  - {inputs: {figure: 1, estimator: ls, t: 2, r: 3, eps: 0.0, training: orthogonal, snr_db: 5.0, quantity: closed_form}, expected: 0.632455532034, tolerance: {rtol: 1.0e-9}, why: "the paper's equation evaluated on the card"}
+  - {inputs: {figure: 1, estimator: ls, t: 2, r: 3, eps: 0.0, training: orthogonal, snr_db: 5.0, quantity: monte_carlo_over_closed_form}, expected: 1.0, tolerance: {rtol: 0.04}, why: "5000 channels: a relative standard error under 0.8 %"}
+  - {inputs: {figure: 1, estimator: ls, t: 3, r: 3, eps: 0.0, training: orthogonal, snr_db: 5.0, quantity: figure}, expected: 9.300e-01}
+  - {inputs: {figure: 1, estimator: ls, t: 3, r: 3, eps: 0.0, training: orthogonal, snr_db: 5.0, quantity: closed_form}, expected: 0.948683298051, tolerance: {rtol: 1.0e-9}, why: "the paper's equation evaluated on the card"}
+  - {inputs: {figure: 1, estimator: ls, t: 3, r: 3, eps: 0.0, training: orthogonal, snr_db: 5.0, quantity: monte_carlo_over_closed_form}, expected: 1.0, tolerance: {rtol: 0.04}, why: "5000 channels: a relative standard error under 0.8 %"}
+  - {inputs: {figure: 1, estimator: ls, t: 4, r: 3, eps: 0.0, training: orthogonal, snr_db: 5.0, quantity: figure}, expected: 1.280e+00}
+  - {inputs: {figure: 1, estimator: ls, t: 4, r: 3, eps: 0.0, training: orthogonal, snr_db: 5.0, quantity: closed_form}, expected: 1.26491106407, tolerance: {rtol: 1.0e-9}, why: "the paper's equation evaluated on the card"}
+  - {inputs: {figure: 1, estimator: ls, t: 4, r: 3, eps: 0.0, training: orthogonal, snr_db: 5.0, quantity: monte_carlo_over_closed_form}, expected: 1.0, tolerance: {rtol: 0.04}, why: "5000 channels: a relative standard error under 0.8 %"}
+  - {inputs: {figure: 1, estimator: ls, t: 5, r: 3, eps: 0.0, training: orthogonal, snr_db: 5.0, quantity: figure}, expected: 1.590e+00}
+  - {inputs: {figure: 1, estimator: ls, t: 5, r: 3, eps: 0.0, training: orthogonal, snr_db: 5.0, quantity: closed_form}, expected: 1.58113883008, tolerance: {rtol: 1.0e-9}, why: "the paper's equation evaluated on the card"}
+  - {inputs: {figure: 1, estimator: ls, t: 5, r: 3, eps: 0.0, training: orthogonal, snr_db: 5.0, quantity: monte_carlo_over_closed_form}, expected: 1.0, tolerance: {rtol: 0.04}, why: "5000 channels: a relative standard error under 0.8 %"}
+  - {inputs: {figure: 1, estimator: ls, t: 1, r: 3, eps: 0.0, training: orthogonal, snr_db: 10.0, quantity: figure}, expected: 9.800e-02}
+  - {inputs: {figure: 1, estimator: ls, t: 1, r: 3, eps: 0.0, training: orthogonal, snr_db: 10.0, quantity: closed_form}, expected: 0.1, tolerance: {rtol: 1.0e-9}, why: "the paper's equation evaluated on the card"}
+  - {inputs: {figure: 1, estimator: ls, t: 1, r: 3, eps: 0.0, training: orthogonal, snr_db: 10.0, quantity: monte_carlo_over_closed_form}, expected: 1.0, tolerance: {rtol: 0.04}, why: "5000 channels: a relative standard error under 0.8 %"}
+  - {inputs: {figure: 1, estimator: ls, t: 2, r: 3, eps: 0.0, training: orthogonal, snr_db: 10.0, quantity: figure}, expected: 2.000e-01}
+  - {inputs: {figure: 1, estimator: ls, t: 2, r: 3, eps: 0.0, training: orthogonal, snr_db: 10.0, quantity: closed_form}, expected: 0.2, tolerance: {rtol: 1.0e-9}, why: "the paper's equation evaluated on the card"}
+  - {inputs: {figure: 1, estimator: ls, t: 2, r: 3, eps: 0.0, training: orthogonal, snr_db: 10.0, quantity: monte_carlo_over_closed_form}, expected: 1.0, tolerance: {rtol: 0.04}, why: "5000 channels: a relative standard error under 0.8 %"}
+  - {inputs: {figure: 1, estimator: ls, t: 3, r: 3, eps: 0.0, training: orthogonal, snr_db: 10.0, quantity: figure}, expected: 2.900e-01}
+  - {inputs: {figure: 1, estimator: ls, t: 3, r: 3, eps: 0.0, training: orthogonal, snr_db: 10.0, quantity: closed_form}, expected: 0.3, tolerance: {rtol: 1.0e-9}, why: "the paper's equation evaluated on the card"}
+  - {inputs: {figure: 1, estimator: ls, t: 3, r: 3, eps: 0.0, training: orthogonal, snr_db: 10.0, quantity: monte_carlo_over_closed_form}, expected: 1.0, tolerance: {rtol: 0.04}, why: "5000 channels: a relative standard error under 0.8 %"}
+  - {inputs: {figure: 1, estimator: ls, t: 4, r: 3, eps: 0.0, training: orthogonal, snr_db: 10.0, quantity: figure}, expected: 4.040e-01}
+  - {inputs: {figure: 1, estimator: ls, t: 4, r: 3, eps: 0.0, training: orthogonal, snr_db: 10.0, quantity: closed_form}, expected: 0.4, tolerance: {rtol: 1.0e-9}, why: "the paper's equation evaluated on the card"}
+  - {inputs: {figure: 1, estimator: ls, t: 4, r: 3, eps: 0.0, training: orthogonal, snr_db: 10.0, quantity: monte_carlo_over_closed_form}, expected: 1.0, tolerance: {rtol: 0.04}, why: "5000 channels: a relative standard error under 0.8 %"}
+  - {inputs: {figure: 1, estimator: ls, t: 5, r: 3, eps: 0.0, training: orthogonal, snr_db: 10.0, quantity: figure}, expected: 5.040e-01}
+  - {inputs: {figure: 1, estimator: ls, t: 5, r: 3, eps: 0.0, training: orthogonal, snr_db: 10.0, quantity: closed_form}, expected: 0.5, tolerance: {rtol: 1.0e-9}, why: "the paper's equation evaluated on the card"}
+  - {inputs: {figure: 1, estimator: ls, t: 5, r: 3, eps: 0.0, training: orthogonal, snr_db: 10.0, quantity: monte_carlo_over_closed_form}, expected: 1.0, tolerance: {rtol: 0.04}, why: "5000 channels: a relative standard error under 0.8 %"}
+  - {inputs: {figure: 1, estimator: ls, t: 1, r: 3, eps: 0.0, training: orthogonal, snr_db: 15.0, quantity: figure}, expected: 3.100e-02}
+  - {inputs: {figure: 1, estimator: ls, t: 1, r: 3, eps: 0.0, training: orthogonal, snr_db: 15.0, quantity: closed_form}, expected: 0.0316227766017, tolerance: {rtol: 1.0e-9}, why: "the paper's equation evaluated on the card"}
+  - {inputs: {figure: 1, estimator: ls, t: 1, r: 3, eps: 0.0, training: orthogonal, snr_db: 15.0, quantity: monte_carlo_over_closed_form}, expected: 1.0, tolerance: {rtol: 0.04}, why: "5000 channels: a relative standard error under 0.8 %"}
+  - {inputs: {figure: 1, estimator: ls, t: 2, r: 3, eps: 0.0, training: orthogonal, snr_db: 15.0, quantity: figure}, expected: 6.400e-02}
+  - {inputs: {figure: 1, estimator: ls, t: 2, r: 3, eps: 0.0, training: orthogonal, snr_db: 15.0, quantity: closed_form}, expected: 0.0632455532034, tolerance: {rtol: 1.0e-9}, why: "the paper's equation evaluated on the card"}
+  - {inputs: {figure: 1, estimator: ls, t: 2, r: 3, eps: 0.0, training: orthogonal, snr_db: 15.0, quantity: monte_carlo_over_closed_form}, expected: 1.0, tolerance: {rtol: 0.04}, why: "5000 channels: a relative standard error under 0.8 %"}
+  - {inputs: {figure: 1, estimator: ls, t: 3, r: 3, eps: 0.0, training: orthogonal, snr_db: 15.0, quantity: figure}, expected: 9.200e-02}
+  - {inputs: {figure: 1, estimator: ls, t: 3, r: 3, eps: 0.0, training: orthogonal, snr_db: 15.0, quantity: closed_form}, expected: 0.0948683298051, tolerance: {rtol: 1.0e-9}, why: "the paper's equation evaluated on the card"}
+  - {inputs: {figure: 1, estimator: ls, t: 3, r: 3, eps: 0.0, training: orthogonal, snr_db: 15.0, quantity: monte_carlo_over_closed_form}, expected: 1.0, tolerance: {rtol: 0.04}, why: "5000 channels: a relative standard error under 0.8 %"}
+  - {inputs: {figure: 1, estimator: ls, t: 4, r: 3, eps: 0.0, training: orthogonal, snr_db: 15.0, quantity: figure}, expected: 1.300e-01}
+  - {inputs: {figure: 1, estimator: ls, t: 4, r: 3, eps: 0.0, training: orthogonal, snr_db: 15.0, quantity: closed_form}, expected: 0.126491106407, tolerance: {rtol: 1.0e-9}, why: "the paper's equation evaluated on the card"}
+  - {inputs: {figure: 1, estimator: ls, t: 4, r: 3, eps: 0.0, training: orthogonal, snr_db: 15.0, quantity: monte_carlo_over_closed_form}, expected: 1.0, tolerance: {rtol: 0.04}, why: "5000 channels: a relative standard error under 0.8 %"}
+  - {inputs: {figure: 1, estimator: ls, t: 5, r: 3, eps: 0.0, training: orthogonal, snr_db: 15.0, quantity: figure}, expected: 1.590e-01}
+  - {inputs: {figure: 1, estimator: ls, t: 5, r: 3, eps: 0.0, training: orthogonal, snr_db: 15.0, quantity: closed_form}, expected: 0.158113883008, tolerance: {rtol: 1.0e-9}, why: "the paper's equation evaluated on the card"}
+  - {inputs: {figure: 1, estimator: ls, t: 5, r: 3, eps: 0.0, training: orthogonal, snr_db: 15.0, quantity: monte_carlo_over_closed_form}, expected: 1.0, tolerance: {rtol: 0.04}, why: "5000 channels: a relative standard error under 0.8 %"}
+  - {inputs: {figure: 1, estimator: ls, t: 1, r: 3, eps: 0.0, training: orthogonal, snr_db: 19.0, quantity: figure}, expected: 1.220e-02}
+  - {inputs: {figure: 1, estimator: ls, t: 1, r: 3, eps: 0.0, training: orthogonal, snr_db: 19.0, quantity: closed_form}, expected: 0.0125892541179, tolerance: {rtol: 1.0e-9}, why: "the paper's equation evaluated on the card"}
+  - {inputs: {figure: 1, estimator: ls, t: 1, r: 3, eps: 0.0, training: orthogonal, snr_db: 19.0, quantity: monte_carlo_over_closed_form}, expected: 1.0, tolerance: {rtol: 0.04}, why: "5000 channels: a relative standard error under 0.8 %"}
+  - {inputs: {figure: 1, estimator: ls, t: 2, r: 3, eps: 0.0, training: orthogonal, snr_db: 19.0, quantity: figure}, expected: 2.500e-02}
+  - {inputs: {figure: 1, estimator: ls, t: 2, r: 3, eps: 0.0, training: orthogonal, snr_db: 19.0, quantity: closed_form}, expected: 0.0251785082359, tolerance: {rtol: 1.0e-9}, why: "the paper's equation evaluated on the card"}
+  - {inputs: {figure: 1, estimator: ls, t: 2, r: 3, eps: 0.0, training: orthogonal, snr_db: 19.0, quantity: monte_carlo_over_closed_form}, expected: 1.0, tolerance: {rtol: 0.04}, why: "5000 channels: a relative standard error under 0.8 %"}
+  - {inputs: {figure: 1, estimator: ls, t: 3, r: 3, eps: 0.0, training: orthogonal, snr_db: 19.0, quantity: figure}, expected: 3.700e-02}
+  - {inputs: {figure: 1, estimator: ls, t: 3, r: 3, eps: 0.0, training: orthogonal, snr_db: 19.0, quantity: closed_form}, expected: 0.0377677623538, tolerance: {rtol: 1.0e-9}, why: "the paper's equation evaluated on the card"}
+  - {inputs: {figure: 1, estimator: ls, t: 3, r: 3, eps: 0.0, training: orthogonal, snr_db: 19.0, quantity: monte_carlo_over_closed_form}, expected: 1.0, tolerance: {rtol: 0.04}, why: "5000 channels: a relative standard error under 0.8 %"}
+  - {inputs: {figure: 1, estimator: ls, t: 4, r: 3, eps: 0.0, training: orthogonal, snr_db: 19.0, quantity: figure}, expected: 5.100e-02}
+  - {inputs: {figure: 1, estimator: ls, t: 4, r: 3, eps: 0.0, training: orthogonal, snr_db: 19.0, quantity: closed_form}, expected: 0.0503570164718, tolerance: {rtol: 1.0e-9}, why: "the paper's equation evaluated on the card"}
+  - {inputs: {figure: 1, estimator: ls, t: 4, r: 3, eps: 0.0, training: orthogonal, snr_db: 19.0, quantity: monte_carlo_over_closed_form}, expected: 1.0, tolerance: {rtol: 0.04}, why: "5000 channels: a relative standard error under 0.8 %"}
+  - {inputs: {figure: 1, estimator: ls, t: 5, r: 3, eps: 0.0, training: orthogonal, snr_db: 19.0, quantity: figure}, expected: 6.400e-02}
+  - {inputs: {figure: 1, estimator: ls, t: 5, r: 3, eps: 0.0, training: orthogonal, snr_db: 19.0, quantity: closed_form}, expected: 0.0629462705897, tolerance: {rtol: 1.0e-9}, why: "the paper's equation evaluated on the card"}
+  - {inputs: {figure: 1, estimator: ls, t: 5, r: 3, eps: 0.0, training: orthogonal, snr_db: 19.0, quantity: monte_carlo_over_closed_form}, expected: 1.0, tolerance: {rtol: 0.04}, why: "5000 channels: a relative standard error under 0.8 %"}
+  - {inputs: {figure: 2, estimator: sls, t: 1, r: 3, eps: 0.0, training: orthogonal, snr_db: 10.0, quantity: figure}, expected: 9.000e-02}
+  - {inputs: {figure: 2, estimator: sls, t: 1, r: 3, eps: 0.0, training: orthogonal, snr_db: 10.0, quantity: closed_form}, expected: 0.0909090909091, tolerance: {rtol: 1.0e-9}, why: "the paper's equation evaluated on the card"}
+  - {inputs: {figure: 2, estimator: sls, t: 1, r: 3, eps: 0.0, training: orthogonal, snr_db: 10.0, quantity: monte_carlo_over_closed_form}, expected: 1.0, tolerance: {rtol: 0.04}, why: "5000 channels: a relative standard error under 0.8 %"}
+  - {inputs: {figure: 2, estimator: ls_sls, t: 1, r: 3, eps: 0.0, training: orthogonal, snr_db: 10.0, quantity: figure}, expected: 9.000e-02}
+  - {inputs: {figure: 2, estimator: sls, t: 2, r: 3, eps: 0.0, training: orthogonal, snr_db: 10.0, quantity: figure}, expected: 1.640e-01}
+  - {inputs: {figure: 2, estimator: sls, t: 2, r: 3, eps: 0.0, training: orthogonal, snr_db: 10.0, quantity: closed_form}, expected: 0.166666666667, tolerance: {rtol: 1.0e-9}, why: "the paper's equation evaluated on the card"}
+  - {inputs: {figure: 2, estimator: sls, t: 2, r: 3, eps: 0.0, training: orthogonal, snr_db: 10.0, quantity: monte_carlo_over_closed_form}, expected: 1.0, tolerance: {rtol: 0.04}, why: "5000 channels: a relative standard error under 0.8 %"}
+  - {inputs: {figure: 2, estimator: ls_sls, t: 2, r: 3, eps: 0.0, training: orthogonal, snr_db: 10.0, quantity: figure}, expected: 1.640e-01}
+  - {inputs: {figure: 2, estimator: sls, t: 3, r: 3, eps: 0.0, training: orthogonal, snr_db: 10.0, quantity: figure}, expected: 2.290e-01}
+  - {inputs: {figure: 2, estimator: sls, t: 3, r: 3, eps: 0.0, training: orthogonal, snr_db: 10.0, quantity: closed_form}, expected: 0.230769230769, tolerance: {rtol: 1.0e-9}, why: "the paper's equation evaluated on the card"}
+  - {inputs: {figure: 2, estimator: sls, t: 3, r: 3, eps: 0.0, training: orthogonal, snr_db: 10.0, quantity: monte_carlo_over_closed_form}, expected: 1.0, tolerance: {rtol: 0.04}, why: "5000 channels: a relative standard error under 0.8 %"}
+  - {inputs: {figure: 2, estimator: ls_sls, t: 3, r: 3, eps: 0.0, training: orthogonal, snr_db: 10.0, quantity: figure}, expected: 2.290e-01}
+  - {inputs: {figure: 2, estimator: sls, t: 4, r: 3, eps: 0.0, training: orthogonal, snr_db: 10.0, quantity: figure}, expected: 2.870e-01}
+  - {inputs: {figure: 2, estimator: sls, t: 4, r: 3, eps: 0.0, training: orthogonal, snr_db: 10.0, quantity: closed_form}, expected: 0.285714285714, tolerance: {rtol: 1.0e-9}, why: "the paper's equation evaluated on the card"}
+  - {inputs: {figure: 2, estimator: sls, t: 4, r: 3, eps: 0.0, training: orthogonal, snr_db: 10.0, quantity: monte_carlo_over_closed_form}, expected: 1.0, tolerance: {rtol: 0.04}, why: "5000 channels: a relative standard error under 0.8 %"}
+  - {inputs: {figure: 2, estimator: ls_sls, t: 4, r: 3, eps: 0.0, training: orthogonal, snr_db: 10.0, quantity: figure}, expected: 2.870e-01}
+  - {inputs: {figure: 2, estimator: sls, t: 5, r: 3, eps: 0.0, training: orthogonal, snr_db: 10.0, quantity: figure}, expected: 3.440e-01}
+  - {inputs: {figure: 2, estimator: sls, t: 5, r: 3, eps: 0.0, training: orthogonal, snr_db: 10.0, quantity: closed_form}, expected: 0.333333333333, tolerance: {rtol: 1.0e-9}, why: "the paper's equation evaluated on the card"}
+  - {inputs: {figure: 2, estimator: sls, t: 5, r: 3, eps: 0.0, training: orthogonal, snr_db: 10.0, quantity: monte_carlo_over_closed_form}, expected: 1.0, tolerance: {rtol: 0.04}, why: "5000 channels: a relative standard error under 0.8 %"}
+  - {inputs: {figure: 2, estimator: ls_sls, t: 5, r: 3, eps: 0.0, training: orthogonal, snr_db: 10.0, quantity: figure}, expected: 3.440e-01}
+  - {inputs: {figure: 2, estimator: sls, t: 1, r: 3, eps: 0.0, training: orthogonal, snr_db: 19.0, quantity: figure}, expected: 1.220e-02}
+  - {inputs: {figure: 2, estimator: sls, t: 1, r: 3, eps: 0.0, training: orthogonal, snr_db: 19.0, quantity: closed_form}, expected: 0.0124327352544, tolerance: {rtol: 1.0e-9}, why: "the paper's equation evaluated on the card"}
+  - {inputs: {figure: 2, estimator: sls, t: 1, r: 3, eps: 0.0, training: orthogonal, snr_db: 19.0, quantity: monte_carlo_over_closed_form}, expected: 1.0, tolerance: {rtol: 0.04}, why: "5000 channels: a relative standard error under 0.8 %"}
+  - {inputs: {figure: 2, estimator: ls_sls, t: 1, r: 3, eps: 0.0, training: orthogonal, snr_db: 19.0, quantity: figure}, expected: 1.220e-02}
+  - {inputs: {figure: 2, estimator: sls, t: 2, r: 3, eps: 0.0, training: orthogonal, snr_db: 19.0, quantity: figure}, expected: 2.400e-02}
+  - {inputs: {figure: 2, estimator: sls, t: 2, r: 3, eps: 0.0, training: orthogonal, snr_db: 19.0, quantity: closed_form}, expected: 0.0245601210263, tolerance: {rtol: 1.0e-9}, why: "the paper's equation evaluated on the card"}
+  - {inputs: {figure: 2, estimator: sls, t: 2, r: 3, eps: 0.0, training: orthogonal, snr_db: 19.0, quantity: monte_carlo_over_closed_form}, expected: 1.0, tolerance: {rtol: 0.04}, why: "5000 channels: a relative standard error under 0.8 %"}
+  - {inputs: {figure: 2, estimator: ls_sls, t: 2, r: 3, eps: 0.0, training: orthogonal, snr_db: 19.0, quantity: figure}, expected: 2.400e-02}
+  - {inputs: {figure: 2, estimator: sls, t: 3, r: 3, eps: 0.0, training: orthogonal, snr_db: 19.0, quantity: figure}, expected: 3.570e-02}
+  - {inputs: {figure: 2, estimator: sls, t: 3, r: 3, eps: 0.0, training: orthogonal, snr_db: 19.0, quantity: closed_form}, expected: 0.0363932699819, tolerance: {rtol: 1.0e-9}, why: "the paper's equation evaluated on the card"}
+  - {inputs: {figure: 2, estimator: sls, t: 3, r: 3, eps: 0.0, training: orthogonal, snr_db: 19.0, quantity: monte_carlo_over_closed_form}, expected: 1.0, tolerance: {rtol: 0.04}, why: "5000 channels: a relative standard error under 0.8 %"}
+  - {inputs: {figure: 2, estimator: ls_sls, t: 3, r: 3, eps: 0.0, training: orthogonal, snr_db: 19.0, quantity: figure}, expected: 3.570e-02}
+  - {inputs: {figure: 2, estimator: sls, t: 4, r: 3, eps: 0.0, training: orthogonal, snr_db: 19.0, quantity: figure}, expected: 4.750e-02}
+  - {inputs: {figure: 2, estimator: sls, t: 4, r: 3, eps: 0.0, training: orthogonal, snr_db: 19.0, quantity: closed_form}, expected: 0.0479427620153, tolerance: {rtol: 1.0e-9}, why: "the paper's equation evaluated on the card"}
+  - {inputs: {figure: 2, estimator: sls, t: 4, r: 3, eps: 0.0, training: orthogonal, snr_db: 19.0, quantity: monte_carlo_over_closed_form}, expected: 1.0, tolerance: {rtol: 0.04}, why: "5000 channels: a relative standard error under 0.8 %"}
+  - {inputs: {figure: 2, estimator: ls_sls, t: 4, r: 3, eps: 0.0, training: orthogonal, snr_db: 19.0, quantity: figure}, expected: 4.750e-02}
+  - {inputs: {figure: 2, estimator: sls, t: 5, r: 3, eps: 0.0, training: orthogonal, snr_db: 19.0, quantity: figure}, expected: 6.000e-02}
+  - {inputs: {figure: 2, estimator: sls, t: 5, r: 3, eps: 0.0, training: orthogonal, snr_db: 19.0, quantity: closed_form}, expected: 0.0592186757989, tolerance: {rtol: 1.0e-9}, why: "the paper's equation evaluated on the card"}
+  - {inputs: {figure: 2, estimator: sls, t: 5, r: 3, eps: 0.0, training: orthogonal, snr_db: 19.0, quantity: monte_carlo_over_closed_form}, expected: 1.0, tolerance: {rtol: 0.04}, why: "5000 channels: a relative standard error under 0.8 %"}
+  - {inputs: {figure: 2, estimator: ls_sls, t: 5, r: 3, eps: 0.0, training: orthogonal, snr_db: 19.0, quantity: figure}, expected: 6.000e-02}
+  - {inputs: {figure: 2, estimator: sls, t: 1, r: 3, eps: 0.0, training: orthogonal, snr_db: 1.0, quantity: figure}, expected: 4.400e-01}
+  - {inputs: {figure: 2, estimator: sls, t: 1, r: 3, eps: 0.0, training: orthogonal, snr_db: 1.0, quantity: closed_form}, expected: 0.442688366238, tolerance: {rtol: 1.0e-9}, why: "the paper's equation evaluated on the card"}
+  - {inputs: {figure: 2, estimator: sls, t: 1, r: 3, eps: 0.0, training: orthogonal, snr_db: 1.0, quantity: monte_carlo_over_closed_form}, expected: 1.0, tolerance: {rtol: 0.04}, why: "5000 channels: a relative standard error under 0.8 %"}
+  - {inputs: {figure: 2, estimator: sls, t: 2, r: 3, eps: 0.0, training: orthogonal, snr_db: 1.0, quantity: figure}, expected: 6.000e-01}
+  - {inputs: {figure: 2, estimator: sls, t: 2, r: 3, eps: 0.0, training: orthogonal, snr_db: 1.0, quantity: closed_form}, expected: 0.613699225138, tolerance: {rtol: 1.0e-9}, why: "the paper's equation evaluated on the card"}
+  - {inputs: {figure: 2, estimator: sls, t: 2, r: 3, eps: 0.0, training: orthogonal, snr_db: 1.0, quantity: monte_carlo_over_closed_form}, expected: 1.0, tolerance: {rtol: 0.04}, why: "5000 channels: a relative standard error under 0.8 %"}
+  - {inputs: {figure: 2, estimator: ls_sls, t: 3, r: 3, eps: 0.0, training: orthogonal, snr_db: 1.0, quantity: figure}, expected: 1.010e+00}
+  - {inputs: {figure: 2, estimator: ls_sls, t: 4, r: 3, eps: 0.0, training: orthogonal, snr_db: 1.0, quantity: figure}, expected: 1.230e+00}
+  - {inputs: {figure: 2, estimator: ls_sls, t: 5, r: 3, eps: 0.0, training: orthogonal, snr_db: 1.0, quantity: figure}, expected: 1.480e+00}
+  - {inputs: {figure: 2, estimator: ls_sls, t: 5, r: 3, eps: 0.0, training: orthogonal, snr_db: 2.0, quantity: figure}, expected: 1.250e+00}
+  - {inputs: {figure: 2, estimator: ls_sls, t: 5, r: 3, eps: 0.0, training: orthogonal, snr_db: 3.0, quantity: figure}, expected: 1.060e+00}
+  - {inputs: {figure: 2, estimator: ls_sls, t: 5, r: 3, eps: 0.0, training: orthogonal, snr_db: 4.0, quantity: figure}, expected: 9.100e-01}
+  - {inputs: {figure: 2, estimator: ls_sls, t: 5, r: 3, eps: 0.0, training: orthogonal, snr_db: 5.0, quantity: figure}, expected: 7.800e-01}
+  - {inputs: {figure: 2, estimator: ls_sls, t: 5, r: 3, eps: 0.0, training: orthogonal, snr_db: 6.0, quantity: figure}, expected: 6.600e-01}
+  - {inputs: {figure: 3, estimator: mmse, t: 1, r: 3, eps: 0.4, training: orthogonal, snr_db: 3.0, quantity: figure}, expected: 3.200e-01}
+  - {inputs: {figure: 3, estimator: mmse, t: 1, r: 3, eps: 0.4, training: orthogonal, snr_db: 3.0, quantity: closed_form}, expected: 0.333860575417, tolerance: {rtol: 1.0e-9}, why: "the paper's equation evaluated on the card"}
+  - {inputs: {figure: 3, estimator: mmse, t: 1, r: 3, eps: 0.4, training: orthogonal, snr_db: 3.0, quantity: monte_carlo_over_closed_form}, expected: 1.0, tolerance: {rtol: 0.04}, why: "5000 channels: a relative standard error under 0.8 %"}
+  - {inputs: {figure: 3, estimator: mmse, t: 1, r: 3, eps: 0.4, training: optimal, snr_db: 3.0, quantity: figure}, expected: 3.200e-01}
+  - {inputs: {figure: 3, estimator: mmse, t: 1, r: 3, eps: 0.4, training: optimal, snr_db: 3.0, quantity: closed_form}, expected: 0.333860575417, tolerance: {rtol: 1.0e-9}, why: "the paper's equation evaluated on the card"}
+  - {inputs: {figure: 3, estimator: mmse, t: 1, r: 3, eps: 0.4, training: optimal, snr_db: 3.0, quantity: monte_carlo_over_closed_form}, expected: 1.0, tolerance: {rtol: 0.04}, why: "5000 channels: a relative standard error under 0.8 %"}
+  - {inputs: {figure: 3, estimator: mmse, t: 1, r: 3, eps: 0.4, training: orthogonal, snr_db: 10.0, quantity: figure}, expected: 8.800e-02}
+  - {inputs: {figure: 3, estimator: mmse, t: 1, r: 3, eps: 0.4, training: orthogonal, snr_db: 10.0, quantity: closed_form}, expected: 0.0909090909091, tolerance: {rtol: 1.0e-9}, why: "the paper's equation evaluated on the card"}
+  - {inputs: {figure: 3, estimator: mmse, t: 1, r: 3, eps: 0.4, training: orthogonal, snr_db: 10.0, quantity: monte_carlo_over_closed_form}, expected: 1.0, tolerance: {rtol: 0.04}, why: "5000 channels: a relative standard error under 0.8 %"}
+  - {inputs: {figure: 3, estimator: mmse, t: 1, r: 3, eps: 0.4, training: optimal, snr_db: 10.0, quantity: figure}, expected: 8.800e-02}
+  - {inputs: {figure: 3, estimator: mmse, t: 1, r: 3, eps: 0.4, training: optimal, snr_db: 10.0, quantity: closed_form}, expected: 0.0909090909091, tolerance: {rtol: 1.0e-9}, why: "the paper's equation evaluated on the card"}
+  - {inputs: {figure: 3, estimator: mmse, t: 1, r: 3, eps: 0.4, training: optimal, snr_db: 10.0, quantity: monte_carlo_over_closed_form}, expected: 1.0, tolerance: {rtol: 0.04}, why: "5000 channels: a relative standard error under 0.8 %"}
+  - {inputs: {figure: 3, estimator: mmse, t: 1, r: 3, eps: 0.4, training: orthogonal, snr_db: 19.0, quantity: figure}, expected: 1.200e-02}
+  - {inputs: {figure: 3, estimator: mmse, t: 1, r: 3, eps: 0.4, training: orthogonal, snr_db: 19.0, quantity: closed_form}, expected: 0.0124327352544, tolerance: {rtol: 1.0e-9}, why: "the paper's equation evaluated on the card"}
+  - {inputs: {figure: 3, estimator: mmse, t: 1, r: 3, eps: 0.4, training: orthogonal, snr_db: 19.0, quantity: monte_carlo_over_closed_form}, expected: 1.0, tolerance: {rtol: 0.04}, why: "5000 channels: a relative standard error under 0.8 %"}
+  - {inputs: {figure: 3, estimator: mmse, t: 1, r: 3, eps: 0.4, training: optimal, snr_db: 19.0, quantity: figure}, expected: 1.200e-02}
+  - {inputs: {figure: 3, estimator: mmse, t: 1, r: 3, eps: 0.4, training: optimal, snr_db: 19.0, quantity: closed_form}, expected: 0.0124327352544, tolerance: {rtol: 1.0e-9}, why: "the paper's equation evaluated on the card"}
+  - {inputs: {figure: 3, estimator: mmse, t: 1, r: 3, eps: 0.4, training: optimal, snr_db: 19.0, quantity: monte_carlo_over_closed_form}, expected: 1.0, tolerance: {rtol: 0.04}, why: "5000 channels: a relative standard error under 0.8 %"}
+  - {inputs: {figure: 3, estimator: mmse, t: 2, r: 3, eps: 0.4, training: orthogonal, snr_db: 10.0, quantity: figure}, expected: 1.620e-01}
+  - {inputs: {figure: 3, estimator: mmse, t: 2, r: 3, eps: 0.4, training: orthogonal, snr_db: 10.0, quantity: closed_form}, expected: 0.1625, tolerance: {rtol: 1.0e-9}, why: "the paper's equation evaluated on the card"}
+  - {inputs: {figure: 3, estimator: mmse, t: 2, r: 3, eps: 0.4, training: orthogonal, snr_db: 10.0, quantity: monte_carlo_over_closed_form}, expected: 1.0, tolerance: {rtol: 0.04}, why: "5000 channels: a relative standard error under 0.8 %"}
+  - {inputs: {figure: 3, estimator: mmse, t: 2, r: 3, eps: 0.4, training: optimal, snr_db: 10.0, quantity: figure}, expected: 1.620e-01}
+  - {inputs: {figure: 3, estimator: mmse, t: 2, r: 3, eps: 0.4, training: optimal, snr_db: 10.0, quantity: closed_form}, expected: 0.161538461538, tolerance: {rtol: 1.0e-9}, why: "the paper's equation evaluated on the card"}
+  - {inputs: {figure: 3, estimator: mmse, t: 2, r: 3, eps: 0.4, training: optimal, snr_db: 10.0, quantity: monte_carlo_over_closed_form}, expected: 1.0, tolerance: {rtol: 0.04}, why: "5000 channels: a relative standard error under 0.8 %"}
+  - {inputs: {figure: 3, estimator: mmse, t: 2, r: 3, eps: 0.4, training: orthogonal, snr_db: 19.0, quantity: figure}, expected: 2.450e-02}
+  - {inputs: {figure: 3, estimator: mmse, t: 2, r: 3, eps: 0.4, training: orthogonal, snr_db: 19.0, quantity: closed_form}, expected: 0.0244490739378, tolerance: {rtol: 1.0e-9}, why: "the paper's equation evaluated on the card"}
+  - {inputs: {figure: 3, estimator: mmse, t: 2, r: 3, eps: 0.4, training: orthogonal, snr_db: 19.0, quantity: monte_carlo_over_closed_form}, expected: 1.0, tolerance: {rtol: 0.04}, why: "5000 channels: a relative standard error under 0.8 %"}
+  - {inputs: {figure: 3, estimator: mmse, t: 2, r: 3, eps: 0.4, training: optimal, snr_db: 19.0, quantity: figure}, expected: 2.450e-02}
+  - {inputs: {figure: 3, estimator: mmse, t: 2, r: 3, eps: 0.4, training: optimal, snr_db: 19.0, quantity: closed_form}, expected: 0.0244457608653, tolerance: {rtol: 1.0e-9}, why: "the paper's equation evaluated on the card"}
+  - {inputs: {figure: 3, estimator: mmse, t: 2, r: 3, eps: 0.4, training: optimal, snr_db: 19.0, quantity: monte_carlo_over_closed_form}, expected: 1.0, tolerance: {rtol: 0.04}, why: "5000 channels: a relative standard error under 0.8 %"}
+  - {inputs: {figure: 3, estimator: mmse, t: 3, r: 3, eps: 0.4, training: orthogonal, snr_db: 10.0, quantity: figure}, expected: 2.170e-01}
+  - {inputs: {figure: 3, estimator: mmse, t: 3, r: 3, eps: 0.4, training: orthogonal, snr_db: 10.0, quantity: closed_form}, expected: 0.221212727637, tolerance: {rtol: 1.0e-9}, why: "the paper's equation evaluated on the card"}
+  - {inputs: {figure: 3, estimator: mmse, t: 3, r: 3, eps: 0.4, training: orthogonal, snr_db: 10.0, quantity: monte_carlo_over_closed_form}, expected: 1.0, tolerance: {rtol: 0.04}, why: "5000 channels: a relative standard error under 0.8 %"}
+  - {inputs: {figure: 3, estimator: mmse, t: 3, r: 3, eps: 0.4, training: optimal, snr_db: 10.0, quantity: figure}, expected: 2.170e-01}
+  - {inputs: {figure: 3, estimator: mmse, t: 3, r: 3, eps: 0.4, training: optimal, snr_db: 10.0, quantity: closed_form}, expected: 0.217993079585, tolerance: {rtol: 1.0e-9}, why: "the paper's equation evaluated on the card"}
+  - {inputs: {figure: 3, estimator: mmse, t: 3, r: 3, eps: 0.4, training: optimal, snr_db: 10.0, quantity: monte_carlo_over_closed_form}, expected: 1.0, tolerance: {rtol: 0.04}, why: "5000 channels: a relative standard error under 0.8 %"}
+  - {inputs: {figure: 3, estimator: mmse, t: 3, r: 3, eps: 0.4, training: orthogonal, snr_db: 19.0, quantity: figure}, expected: 3.550e-02}
+  - {inputs: {figure: 3, estimator: mmse, t: 3, r: 3, eps: 0.4, training: orthogonal, snr_db: 19.0, quantity: closed_form}, expected: 0.0360744911656, tolerance: {rtol: 1.0e-9}, why: "the paper's equation evaluated on the card"}
+  - {inputs: {figure: 3, estimator: mmse, t: 3, r: 3, eps: 0.4, training: orthogonal, snr_db: 19.0, quantity: monte_carlo_over_closed_form}, expected: 1.0, tolerance: {rtol: 0.04}, why: "5000 channels: a relative standard error under 0.8 %"}
+  - {inputs: {figure: 3, estimator: mmse, t: 3, r: 3, eps: 0.4, training: optimal, snr_db: 19.0, quantity: figure}, expected: 3.550e-02}
+  - {inputs: {figure: 3, estimator: mmse, t: 3, r: 3, eps: 0.4, training: optimal, snr_db: 19.0, quantity: closed_form}, expected: 0.0360599771605, tolerance: {rtol: 1.0e-9}, why: "the paper's equation evaluated on the card"}
+  - {inputs: {figure: 3, estimator: mmse, t: 3, r: 3, eps: 0.4, training: optimal, snr_db: 19.0, quantity: monte_carlo_over_closed_form}, expected: 1.0, tolerance: {rtol: 0.04}, why: "5000 channels: a relative standard error under 0.8 %"}
+  - {inputs: {figure: 3, estimator: mmse, t: 5, r: 3, eps: 0.4, training: orthogonal, snr_db: 3.0, quantity: figure}, expected: 6.700e-01}
+  - {inputs: {figure: 3, estimator: mmse, t: 5, r: 3, eps: 0.4, training: orthogonal, snr_db: 3.0, quantity: closed_form}, expected: 0.675464882538, tolerance: {rtol: 1.0e-9}, why: "the paper's equation evaluated on the card"}
+  - {inputs: {figure: 3, estimator: mmse, t: 5, r: 3, eps: 0.4, training: orthogonal, snr_db: 3.0, quantity: monte_carlo_over_closed_form}, expected: 1.0, tolerance: {rtol: 0.04}, why: "5000 channels: a relative standard error under 0.8 %"}
+  - {inputs: {figure: 3, estimator: mmse, t: 5, r: 3, eps: 0.4, training: orthogonal, snr_db: 10.0, quantity: figure}, expected: 3.100e-01}
+  - {inputs: {figure: 3, estimator: mmse, t: 5, r: 3, eps: 0.4, training: orthogonal, snr_db: 10.0, quantity: closed_form}, expected: 0.313178266168, tolerance: {rtol: 1.0e-9}, why: "the paper's equation evaluated on the card"}
+  - {inputs: {figure: 3, estimator: mmse, t: 5, r: 3, eps: 0.4, training: orthogonal, snr_db: 10.0, quantity: monte_carlo_over_closed_form}, expected: 1.0, tolerance: {rtol: 0.04}, why: "5000 channels: a relative standard error under 0.8 %"}
+  - {inputs: {figure: 3, estimator: mmse, t: 5, r: 3, eps: 0.4, training: optimal, snr_db: 10.0, quantity: figure}, expected: 3.100e-01}
+  - {inputs: {figure: 3, estimator: mmse, t: 5, r: 3, eps: 0.4, training: optimal, snr_db: 10.0, quantity: closed_form}, expected: 0.302593659942, tolerance: {rtol: 1.0e-9}, why: "the paper's equation evaluated on the card"}
+  - {inputs: {figure: 3, estimator: mmse, t: 5, r: 3, eps: 0.4, training: optimal, snr_db: 10.0, quantity: monte_carlo_over_closed_form}, expected: 1.0, tolerance: {rtol: 0.04}, why: "5000 channels: a relative standard error under 0.8 %"}
+  - {inputs: {figure: 3, estimator: mmse, t: 5, r: 3, eps: 0.4, training: orthogonal, snr_db: 19.0, quantity: figure}, expected: 5.900e-02}
+  - {inputs: {figure: 3, estimator: mmse, t: 5, r: 3, eps: 0.4, training: orthogonal, snr_db: 19.0, quantity: closed_form}, expected: 0.0582417806468, tolerance: {rtol: 1.0e-9}, why: "the paper's equation evaluated on the card"}
+  - {inputs: {figure: 3, estimator: mmse, t: 5, r: 3, eps: 0.4, training: orthogonal, snr_db: 19.0, quantity: monte_carlo_over_closed_form}, expected: 1.0, tolerance: {rtol: 0.04}, why: "5000 channels: a relative standard error under 0.8 %"}
+  - {inputs: {figure: 3, estimator: mmse, t: 5, r: 3, eps: 0.4, training: optimal, snr_db: 19.0, quantity: figure}, expected: 5.900e-02}
+  - {inputs: {figure: 3, estimator: mmse, t: 5, r: 3, eps: 0.4, training: optimal, snr_db: 19.0, quantity: closed_form}, expected: 0.0581688675523, tolerance: {rtol: 1.0e-9}, why: "the paper's equation evaluated on the card"}
+  - {inputs: {figure: 3, estimator: mmse, t: 5, r: 3, eps: 0.4, training: optimal, snr_db: 19.0, quantity: monte_carlo_over_closed_form}, expected: 1.0, tolerance: {rtol: 0.04}, why: "5000 channels: a relative standard error under 0.8 %"}
+  - {inputs: {figure: 3, estimator: mmse, t: 1, r: 3, eps: 0.8, training: orthogonal, snr_db: 8.0, quantity: figure}, expected: 1.390e-01}
+  - {inputs: {figure: 3, estimator: mmse, t: 1, r: 3, eps: 0.8, training: orthogonal, snr_db: 8.0, quantity: closed_form}, expected: 0.136806888603, tolerance: {rtol: 1.0e-9}, why: "the paper's equation evaluated on the card"}
+  - {inputs: {figure: 3, estimator: mmse, t: 1, r: 3, eps: 0.8, training: orthogonal, snr_db: 8.0, quantity: monte_carlo_over_closed_form}, expected: 1.0, tolerance: {rtol: 0.04}, why: "5000 channels: a relative standard error under 0.8 %"}
+  - {inputs: {figure: 3, estimator: mmse, t: 1, r: 3, eps: 0.8, training: optimal, snr_db: 8.0, quantity: figure}, expected: 1.390e-01}
+  - {inputs: {figure: 3, estimator: mmse, t: 1, r: 3, eps: 0.8, training: optimal, snr_db: 8.0, quantity: closed_form}, expected: 0.136806888603, tolerance: {rtol: 1.0e-9}, why: "the paper's equation evaluated on the card"}
+  - {inputs: {figure: 3, estimator: mmse, t: 1, r: 3, eps: 0.8, training: optimal, snr_db: 8.0, quantity: monte_carlo_over_closed_form}, expected: 1.0, tolerance: {rtol: 0.04}, why: "5000 channels: a relative standard error under 0.8 %"}
+  - {inputs: {figure: 3, estimator: mmse, t: 1, r: 3, eps: 0.8, training: orthogonal, snr_db: 10.0, quantity: figure}, expected: 9.200e-02}
+  - {inputs: {figure: 3, estimator: mmse, t: 1, r: 3, eps: 0.8, training: orthogonal, snr_db: 10.0, quantity: closed_form}, expected: 0.0909090909091, tolerance: {rtol: 1.0e-9}, why: "the paper's equation evaluated on the card"}
+  - {inputs: {figure: 3, estimator: mmse, t: 1, r: 3, eps: 0.8, training: orthogonal, snr_db: 10.0, quantity: monte_carlo_over_closed_form}, expected: 1.0, tolerance: {rtol: 0.04}, why: "5000 channels: a relative standard error under 0.8 %"}
+  - {inputs: {figure: 3, estimator: mmse, t: 1, r: 3, eps: 0.8, training: optimal, snr_db: 10.0, quantity: figure}, expected: 9.200e-02}
+  - {inputs: {figure: 3, estimator: mmse, t: 1, r: 3, eps: 0.8, training: optimal, snr_db: 10.0, quantity: closed_form}, expected: 0.0909090909091, tolerance: {rtol: 1.0e-9}, why: "the paper's equation evaluated on the card"}
+  - {inputs: {figure: 3, estimator: mmse, t: 1, r: 3, eps: 0.8, training: optimal, snr_db: 10.0, quantity: monte_carlo_over_closed_form}, expected: 1.0, tolerance: {rtol: 0.04}, why: "5000 channels: a relative standard error under 0.8 %"}
+  - {inputs: {figure: 3, estimator: mmse, t: 1, r: 3, eps: 0.8, training: orthogonal, snr_db: 19.0, quantity: figure}, expected: 1.240e-02}
+  - {inputs: {figure: 3, estimator: mmse, t: 1, r: 3, eps: 0.8, training: orthogonal, snr_db: 19.0, quantity: closed_form}, expected: 0.0124327352544, tolerance: {rtol: 1.0e-9}, why: "the paper's equation evaluated on the card"}
+  - {inputs: {figure: 3, estimator: mmse, t: 1, r: 3, eps: 0.8, training: orthogonal, snr_db: 19.0, quantity: monte_carlo_over_closed_form}, expected: 1.0, tolerance: {rtol: 0.04}, why: "5000 channels: a relative standard error under 0.8 %"}
+  - {inputs: {figure: 3, estimator: mmse, t: 1, r: 3, eps: 0.8, training: optimal, snr_db: 19.0, quantity: figure}, expected: 1.240e-02}
+  - {inputs: {figure: 3, estimator: mmse, t: 1, r: 3, eps: 0.8, training: optimal, snr_db: 19.0, quantity: closed_form}, expected: 0.0124327352544, tolerance: {rtol: 1.0e-9}, why: "the paper's equation evaluated on the card"}
+  - {inputs: {figure: 3, estimator: mmse, t: 1, r: 3, eps: 0.8, training: optimal, snr_db: 19.0, quantity: monte_carlo_over_closed_form}, expected: 1.0, tolerance: {rtol: 0.04}, why: "5000 channels: a relative standard error under 0.8 %"}
+  - {inputs: {figure: 3, estimator: mmse, t: 2, r: 3, eps: 0.8, training: orthogonal, snr_db: 3.0, quantity: figure}, expected: 4.200e-01}
+  - {inputs: {figure: 3, estimator: mmse, t: 2, r: 3, eps: 0.8, training: orthogonal, snr_db: 3.0, quantity: closed_form}, expected: 0.405285045091, tolerance: {rtol: 1.0e-9}, why: "the paper's equation evaluated on the card"}
+  - {inputs: {figure: 3, estimator: mmse, t: 2, r: 3, eps: 0.8, training: orthogonal, snr_db: 3.0, quantity: monte_carlo_over_closed_form}, expected: 1.0, tolerance: {rtol: 0.04}, why: "5000 channels: a relative standard error under 0.8 %"}
+  - {inputs: {figure: 3, estimator: mmse, t: 2, r: 3, eps: 0.8, training: optimal, snr_db: 3.0, quantity: figure}, expected: 3.000e-01}
+  - {inputs: {figure: 3, estimator: mmse, t: 2, r: 3, eps: 0.8, training: optimal, snr_db: 3.0, quantity: closed_form}, expected: 0.296015562607, tolerance: {rtol: 1.0e-9}, why: "the paper's equation evaluated on the card"}
+  - {inputs: {figure: 3, estimator: mmse, t: 2, r: 3, eps: 0.8, training: optimal, snr_db: 3.0, quantity: monte_carlo_over_closed_form}, expected: 1.0, tolerance: {rtol: 0.04}, why: "5000 channels: a relative standard error under 0.8 %"}
+  - {inputs: {figure: 3, estimator: mmse, t: 2, r: 3, eps: 0.8, training: orthogonal, snr_db: 19.0, quantity: figure}, expected: 2.360e-02}
+  - {inputs: {figure: 3, estimator: mmse, t: 2, r: 3, eps: 0.8, training: orthogonal, snr_db: 19.0, quantity: closed_form}, expected: 0.0235971611577, tolerance: {rtol: 1.0e-9}, why: "the paper's equation evaluated on the card"}
+  - {inputs: {figure: 3, estimator: mmse, t: 2, r: 3, eps: 0.8, training: orthogonal, snr_db: 19.0, quantity: monte_carlo_over_closed_form}, expected: 1.0, tolerance: {rtol: 0.04}, why: "5000 channels: a relative standard error under 0.8 %"}
+  - {inputs: {figure: 3, estimator: mmse, t: 2, r: 3, eps: 0.8, training: optimal, snr_db: 19.0, quantity: figure}, expected: 2.360e-02}
+  - {inputs: {figure: 3, estimator: mmse, t: 2, r: 3, eps: 0.8, training: optimal, snr_db: 19.0, quantity: closed_form}, expected: 0.0235326290826, tolerance: {rtol: 1.0e-9}, why: "the paper's equation evaluated on the card"}
+  - {inputs: {figure: 3, estimator: mmse, t: 2, r: 3, eps: 0.8, training: optimal, snr_db: 19.0, quantity: monte_carlo_over_closed_form}, expected: 1.0, tolerance: {rtol: 0.04}, why: "5000 channels: a relative standard error under 0.8 %"}
+  - {inputs: {figure: 3, estimator: mmse, t: 3, r: 3, eps: 0.8, training: orthogonal, snr_db: 3.0, quantity: figure}, expected: 4.200e-01}
+  - {inputs: {figure: 3, estimator: mmse, t: 3, r: 3, eps: 0.8, training: orthogonal, snr_db: 3.0, quantity: closed_form}, expected: 0.453454843919, tolerance: {rtol: 1.0e-9}, why: "the paper's equation evaluated on the card"}
+  - {inputs: {figure: 3, estimator: mmse, t: 3, r: 3, eps: 0.8, training: orthogonal, snr_db: 3.0, quantity: monte_carlo_over_closed_form}, expected: 1.0, tolerance: {rtol: 0.04}, why: "5000 channels: a relative standard error under 0.8 %"}
+  - {inputs: {figure: 3, estimator: mmse, t: 3, r: 3, eps: 0.8, training: optimal, snr_db: 3.0, quantity: figure}, expected: 3.000e-01}
+  - {inputs: {figure: 3, estimator: mmse, t: 3, r: 3, eps: 0.8, training: optimal, snr_db: 3.0, quantity: closed_form}, expected: 0.307205727548, tolerance: {rtol: 1.0e-9}, why: "the paper's equation evaluated on the card"}
+  - {inputs: {figure: 3, estimator: mmse, t: 3, r: 3, eps: 0.8, training: optimal, snr_db: 3.0, quantity: monte_carlo_over_closed_form}, expected: 1.0, tolerance: {rtol: 0.04}, why: "5000 channels: a relative standard error under 0.8 %"}
+  - {inputs: {figure: 3, estimator: mmse, t: 3, r: 3, eps: 0.8, training: orthogonal, snr_db: 19.0, quantity: figure}, expected: 3.300e-02}
+  - {inputs: {figure: 3, estimator: mmse, t: 3, r: 3, eps: 0.8, training: orthogonal, snr_db: 19.0, quantity: closed_form}, expected: 0.0337724718429, tolerance: {rtol: 1.0e-9}, why: "the paper's equation evaluated on the card"}
+  - {inputs: {figure: 3, estimator: mmse, t: 3, r: 3, eps: 0.8, training: orthogonal, snr_db: 19.0, quantity: monte_carlo_over_closed_form}, expected: 1.0, tolerance: {rtol: 0.04}, why: "5000 channels: a relative standard error under 0.8 %"}
+  - {inputs: {figure: 3, estimator: mmse, t: 3, r: 3, eps: 0.8, training: optimal, snr_db: 19.0, quantity: figure}, expected: 3.300e-02}
+  - {inputs: {figure: 3, estimator: mmse, t: 3, r: 3, eps: 0.8, training: optimal, snr_db: 19.0, quantity: closed_form}, expected: 0.0335031067593, tolerance: {rtol: 1.0e-9}, why: "the paper's equation evaluated on the card"}
+  - {inputs: {figure: 3, estimator: mmse, t: 3, r: 3, eps: 0.8, training: optimal, snr_db: 19.0, quantity: monte_carlo_over_closed_form}, expected: 1.0, tolerance: {rtol: 0.04}, why: "5000 channels: a relative standard error under 0.8 %"}
+  - {inputs: {figure: 3, estimator: mmse, t: 5, r: 3, eps: 0.8, training: orthogonal, snr_db: 3.0, quantity: figure}, expected: 5.400e-01}
+  - {inputs: {figure: 3, estimator: mmse, t: 5, r: 3, eps: 0.8, training: orthogonal, snr_db: 3.0, quantity: closed_form}, expected: 0.522822120765, tolerance: {rtol: 1.0e-9}, why: "the paper's equation evaluated on the card"}
+  - {inputs: {figure: 3, estimator: mmse, t: 5, r: 3, eps: 0.8, training: orthogonal, snr_db: 3.0, quantity: monte_carlo_over_closed_form}, expected: 1.0, tolerance: {rtol: 0.04}, why: "5000 channels: a relative standard error under 0.8 %"}
+  - {inputs: {figure: 3, estimator: mmse, t: 5, r: 3, eps: 0.8, training: optimal, snr_db: 3.0, quantity: figure}, expected: 3.500e-01}
+  - {inputs: {figure: 3, estimator: mmse, t: 5, r: 3, eps: 0.8, training: optimal, snr_db: 3.0, quantity: closed_form}, expected: 0.341564132761, tolerance: {rtol: 1.0e-9}, why: "the paper's equation evaluated on the card"}
+  - {inputs: {figure: 3, estimator: mmse, t: 5, r: 3, eps: 0.8, training: optimal, snr_db: 3.0, quantity: monte_carlo_over_closed_form}, expected: 1.0, tolerance: {rtol: 0.04}, why: "5000 channels: a relative standard error under 0.8 %"}
+  - {inputs: {figure: 3, estimator: mmse, t: 5, r: 3, eps: 0.8, training: orthogonal, snr_db: 8.0, quantity: figure}, expected: 3.100e-01}
+  - {inputs: {figure: 3, estimator: mmse, t: 5, r: 3, eps: 0.8, training: orthogonal, snr_db: 8.0, quantity: closed_form}, expected: 0.300157080362, tolerance: {rtol: 1.0e-9}, why: "the paper's equation evaluated on the card"}
+  - {inputs: {figure: 3, estimator: mmse, t: 5, r: 3, eps: 0.8, training: orthogonal, snr_db: 8.0, quantity: monte_carlo_over_closed_form}, expected: 1.0, tolerance: {rtol: 0.04}, why: "5000 channels: a relative standard error under 0.8 %"}
+  - {inputs: {figure: 3, estimator: mmse, t: 5, r: 3, eps: 0.8, training: orthogonal, snr_db: 10.0, quantity: figure}, expected: 2.400e-01}
+  - {inputs: {figure: 3, estimator: mmse, t: 5, r: 3, eps: 0.8, training: orthogonal, snr_db: 10.0, quantity: closed_form}, expected: 0.230314559019, tolerance: {rtol: 1.0e-9}, why: "the paper's equation evaluated on the card"}
+  - {inputs: {figure: 3, estimator: mmse, t: 5, r: 3, eps: 0.8, training: orthogonal, snr_db: 10.0, quantity: monte_carlo_over_closed_form}, expected: 1.0, tolerance: {rtol: 0.04}, why: "5000 channels: a relative standard error under 0.8 %"}
+  - {inputs: {figure: 3, estimator: mmse, t: 5, r: 3, eps: 0.8, training: orthogonal, snr_db: 19.0, quantity: figure}, expected: 5.200e-02}
+  - {inputs: {figure: 3, estimator: mmse, t: 5, r: 3, eps: 0.8, training: orthogonal, snr_db: 19.0, quantity: closed_form}, expected: 0.0518066352734, tolerance: {rtol: 1.0e-9}, why: "the paper's equation evaluated on the card"}
+  - {inputs: {figure: 3, estimator: mmse, t: 5, r: 3, eps: 0.8, training: orthogonal, snr_db: 19.0, quantity: monte_carlo_over_closed_form}, expected: 1.0, tolerance: {rtol: 0.04}, why: "5000 channels: a relative standard error under 0.8 %"}
+  - {inputs: {figure: 3, estimator: mmse, t: 5, r: 3, eps: 0.8, training: optimal, snr_db: 19.0, quantity: figure}, expected: 5.200e-02}
+  - {inputs: {figure: 3, estimator: mmse, t: 5, r: 3, eps: 0.8, training: optimal, snr_db: 19.0, quantity: closed_form}, expected: 0.050681644966, tolerance: {rtol: 1.0e-9}, why: "the paper's equation evaluated on the card"}
+  - {inputs: {figure: 3, estimator: mmse, t: 5, r: 3, eps: 0.8, training: optimal, snr_db: 19.0, quantity: monte_carlo_over_closed_form}, expected: 1.0, tolerance: {rtol: 0.04}, why: "5000 channels: a relative standard error under 0.8 %"}
+  - {inputs: {figure: 4, estimator: ls, t: 8, r: 8, eps: 0.8, training: orthogonal, snr_db: 3.0, quantity: figure}, expected: 4.000e+00}
+  - {inputs: {figure: 4, estimator: ls, t: 8, r: 8, eps: 0.8, training: orthogonal, snr_db: 3.0, quantity: closed_form}, expected: 4.00949786902, tolerance: {rtol: 1.0e-9}, why: "the paper's equation evaluated on the card"}
+  - {inputs: {figure: 4, estimator: ls, t: 8, r: 8, eps: 0.8, training: orthogonal, snr_db: 3.0, quantity: monte_carlo_over_closed_form}, expected: 1.0, tolerance: {rtol: 0.04}, why: "5000 channels: a relative standard error under 0.8 %"}
+  - {inputs: {figure: 4, estimator: ls, t: 8, r: 8, eps: 0.8, training: orthogonal, snr_db: 6.0, quantity: figure}, expected: 2.000e+00}
+  - {inputs: {figure: 4, estimator: ls, t: 8, r: 8, eps: 0.8, training: orthogonal, snr_db: 6.0, quantity: closed_form}, expected: 2.00950914521, tolerance: {rtol: 1.0e-9}, why: "the paper's equation evaluated on the card"}
+  - {inputs: {figure: 4, estimator: ls, t: 8, r: 8, eps: 0.8, training: orthogonal, snr_db: 6.0, quantity: monte_carlo_over_closed_form}, expected: 1.0, tolerance: {rtol: 0.04}, why: "5000 channels: a relative standard error under 0.8 %"}
+  - {inputs: {figure: 4, estimator: ls, t: 8, r: 8, eps: 0.8, training: orthogonal, snr_db: 10.0, quantity: figure}, expected: 7.900e-01}
+  - {inputs: {figure: 4, estimator: ls, t: 8, r: 8, eps: 0.8, training: orthogonal, snr_db: 10.0, quantity: closed_form}, expected: 0.8, tolerance: {rtol: 1.0e-9}, why: "the paper's equation evaluated on the card"}
+  - {inputs: {figure: 4, estimator: ls, t: 8, r: 8, eps: 0.8, training: orthogonal, snr_db: 10.0, quantity: monte_carlo_over_closed_form}, expected: 1.0, tolerance: {rtol: 0.04}, why: "5000 channels: a relative standard error under 0.8 %"}
+  - {inputs: {figure: 4, estimator: ls, t: 8, r: 8, eps: 0.8, training: orthogonal, snr_db: 19.0, quantity: figure}, expected: 1.000e-01}
+  - {inputs: {figure: 4, estimator: ls, t: 8, r: 8, eps: 0.8, training: orthogonal, snr_db: 19.0, quantity: closed_form}, expected: 0.100714032944, tolerance: {rtol: 1.0e-9}, why: "the paper's equation evaluated on the card"}
+  - {inputs: {figure: 4, estimator: ls, t: 8, r: 8, eps: 0.8, training: orthogonal, snr_db: 19.0, quantity: monte_carlo_over_closed_form}, expected: 1.0, tolerance: {rtol: 0.04}, why: "5000 channels: a relative standard error under 0.8 %"}
+  - {inputs: {figure: 4, estimator: sls, t: 8, r: 8, eps: 0.8, training: orthogonal, snr_db: 3.0, quantity: figure}, expected: 8.200e-01}
+  - {inputs: {figure: 4, estimator: sls, t: 8, r: 8, eps: 0.8, training: orthogonal, snr_db: 3.0, quantity: closed_form}, expected: 0.800379194453, tolerance: {rtol: 1.0e-9}, why: "the paper's equation evaluated on the card"}
+  - {inputs: {figure: 4, estimator: sls, t: 8, r: 8, eps: 0.8, training: orthogonal, snr_db: 3.0, quantity: monte_carlo_over_closed_form}, expected: 1.0, tolerance: {rtol: 0.04}, why: "5000 channels: a relative standard error under 0.8 %"}
+  - {inputs: {figure: 4, estimator: sls, t: 8, r: 8, eps: 0.8, training: orthogonal, snr_db: 6.0, quantity: figure}, expected: 6.800e-01}
+  - {inputs: {figure: 4, estimator: sls, t: 8, r: 8, eps: 0.8, training: orthogonal, snr_db: 6.0, quantity: closed_form}, expected: 0.667719899907, tolerance: {rtol: 1.0e-9}, why: "the paper's equation evaluated on the card"}
+  - {inputs: {figure: 4, estimator: sls, t: 8, r: 8, eps: 0.8, training: orthogonal, snr_db: 6.0, quantity: monte_carlo_over_closed_form}, expected: 1.0, tolerance: {rtol: 0.04}, why: "5000 channels: a relative standard error under 0.8 %"}
+  - {inputs: {figure: 4, estimator: sls, t: 8, r: 8, eps: 0.8, training: orthogonal, snr_db: 10.0, quantity: figure}, expected: 4.500e-01}
+  - {inputs: {figure: 4, estimator: sls, t: 8, r: 8, eps: 0.8, training: orthogonal, snr_db: 10.0, quantity: closed_form}, expected: 0.444444444444, tolerance: {rtol: 1.0e-9}, why: "the paper's equation evaluated on the card"}
+  - {inputs: {figure: 4, estimator: sls, t: 8, r: 8, eps: 0.8, training: orthogonal, snr_db: 10.0, quantity: monte_carlo_over_closed_form}, expected: 1.0, tolerance: {rtol: 0.04}, why: "5000 channels: a relative standard error under 0.8 %"}
+  - {inputs: {figure: 4, estimator: sls, t: 8, r: 8, eps: 0.8, training: orthogonal, snr_db: 19.0, quantity: figure}, expected: 9.100e-02}
+  - {inputs: {figure: 4, estimator: sls, t: 8, r: 8, eps: 0.8, training: orthogonal, snr_db: 19.0, quantity: closed_form}, expected: 0.0914988179756, tolerance: {rtol: 1.0e-9}, why: "the paper's equation evaluated on the card"}
+  - {inputs: {figure: 4, estimator: sls, t: 8, r: 8, eps: 0.8, training: orthogonal, snr_db: 19.0, quantity: monte_carlo_over_closed_form}, expected: 1.0, tolerance: {rtol: 0.04}, why: "5000 channels: a relative standard error under 0.8 %"}
+  - {inputs: {figure: 4, estimator: rmmse, t: 8, r: 8, eps: 0.8, training: orthogonal, snr_db: 3.0, quantity: figure}, expected: 8.200e-01}
+  - {inputs: {figure: 4, estimator: rmmse, t: 8, r: 8, eps: 0.8, training: orthogonal, snr_db: 3.0, quantity: closed_form}, expected: 0.800379194453, tolerance: {rtol: 1.0e-9}, why: "the paper's equation evaluated on the card"}
+  - {inputs: {figure: 4, estimator: rmmse, t: 8, r: 8, eps: 0.8, training: orthogonal, snr_db: 3.0, quantity: monte_carlo_over_closed_form}, expected: 1.0, tolerance: {rtol: 0.04}, why: "5000 channels: a relative standard error under 0.8 %"}
+  - {inputs: {figure: 4, estimator: rmmse, t: 8, r: 8, eps: 0.8, training: orthogonal, snr_db: 6.0, quantity: figure}, expected: 6.800e-01}
+  - {inputs: {figure: 4, estimator: rmmse, t: 8, r: 8, eps: 0.8, training: orthogonal, snr_db: 6.0, quantity: closed_form}, expected: 0.667719899907, tolerance: {rtol: 1.0e-9}, why: "the paper's equation evaluated on the card"}
+  - {inputs: {figure: 4, estimator: rmmse, t: 8, r: 8, eps: 0.8, training: orthogonal, snr_db: 6.0, quantity: monte_carlo_over_closed_form}, expected: 1.0, tolerance: {rtol: 0.04}, why: "5000 channels: a relative standard error under 0.8 %"}
+  - {inputs: {figure: 4, estimator: rmmse, t: 8, r: 8, eps: 0.8, training: orthogonal, snr_db: 10.0, quantity: figure}, expected: 4.500e-01}
+  - {inputs: {figure: 4, estimator: rmmse, t: 8, r: 8, eps: 0.8, training: orthogonal, snr_db: 10.0, quantity: closed_form}, expected: 0.444444444444, tolerance: {rtol: 1.0e-9}, why: "the paper's equation evaluated on the card"}
+  - {inputs: {figure: 4, estimator: rmmse, t: 8, r: 8, eps: 0.8, training: orthogonal, snr_db: 10.0, quantity: monte_carlo_over_closed_form}, expected: 1.0, tolerance: {rtol: 0.04}, why: "5000 channels: a relative standard error under 0.8 %"}
+  - {inputs: {figure: 4, estimator: rmmse, t: 8, r: 8, eps: 0.8, training: orthogonal, snr_db: 19.0, quantity: figure}, expected: 9.100e-02}
+  - {inputs: {figure: 4, estimator: rmmse, t: 8, r: 8, eps: 0.8, training: orthogonal, snr_db: 19.0, quantity: closed_form}, expected: 0.0914988179756, tolerance: {rtol: 1.0e-9}, why: "the paper's equation evaluated on the card"}
+  - {inputs: {figure: 4, estimator: rmmse, t: 8, r: 8, eps: 0.8, training: orthogonal, snr_db: 19.0, quantity: monte_carlo_over_closed_form}, expected: 1.0, tolerance: {rtol: 0.04}, why: "5000 channels: a relative standard error under 0.8 %"}
+  - {inputs: {figure: 4, estimator: mmse, t: 8, r: 8, eps: 0.8, training: orthogonal, snr_db: 3.0, quantity: figure}, expected: 6.000e-01}
+  - {inputs: {figure: 4, estimator: mmse, t: 8, r: 8, eps: 0.8, training: orthogonal, snr_db: 3.0, quantity: closed_form}, expected: 0.59429941371, tolerance: {rtol: 1.0e-9}, why: "the paper's equation evaluated on the card"}
+  - {inputs: {figure: 4, estimator: mmse, t: 8, r: 8, eps: 0.8, training: orthogonal, snr_db: 3.0, quantity: monte_carlo_over_closed_form}, expected: 1.0, tolerance: {rtol: 0.04}, why: "5000 channels: a relative standard error under 0.8 %"}
+  - {inputs: {figure: 4, estimator: mmse, t: 8, r: 8, eps: 0.8, training: orthogonal, snr_db: 6.0, quantity: figure}, expected: 4.700e-01}
+  - {inputs: {figure: 4, estimator: mmse, t: 8, r: 8, eps: 0.8, training: orthogonal, snr_db: 6.0, quantity: closed_form}, expected: 0.453382145, tolerance: {rtol: 1.0e-9}, why: "the paper's equation evaluated on the card"}
+  - {inputs: {figure: 4, estimator: mmse, t: 8, r: 8, eps: 0.8, training: orthogonal, snr_db: 6.0, quantity: monte_carlo_over_closed_form}, expected: 1.0, tolerance: {rtol: 0.04}, why: "5000 channels: a relative standard error under 0.8 %"}
+  - {inputs: {figure: 4, estimator: mmse, t: 8, r: 8, eps: 0.8, training: orthogonal, snr_db: 10.0, quantity: figure}, expected: 2.900e-01}
+  - {inputs: {figure: 4, estimator: mmse, t: 8, r: 8, eps: 0.8, training: orthogonal, snr_db: 10.0, quantity: closed_form}, expected: 0.288938548202, tolerance: {rtol: 1.0e-9}, why: "the paper's equation evaluated on the card"}
+  - {inputs: {figure: 4, estimator: mmse, t: 8, r: 8, eps: 0.8, training: orthogonal, snr_db: 10.0, quantity: monte_carlo_over_closed_form}, expected: 1.0, tolerance: {rtol: 0.04}, why: "5000 channels: a relative standard error under 0.8 %"}
+  - {inputs: {figure: 4, estimator: mmse, t: 8, r: 8, eps: 0.8, training: orthogonal, snr_db: 19.0, quantity: figure}, expected: 7.400e-02}
+  - {inputs: {figure: 4, estimator: mmse, t: 8, r: 8, eps: 0.8, training: orthogonal, snr_db: 19.0, quantity: closed_form}, expected: 0.0746869509022, tolerance: {rtol: 1.0e-9}, why: "the paper's equation evaluated on the card"}
+  - {inputs: {figure: 4, estimator: mmse, t: 8, r: 8, eps: 0.8, training: orthogonal, snr_db: 19.0, quantity: monte_carlo_over_closed_form}, expected: 1.0, tolerance: {rtol: 0.04}, why: "5000 channels: a relative standard error under 0.8 %"}
+  - {inputs: {figure: 4, estimator: ls, t: 2, r: 2, eps: 0.8, training: orthogonal, snr_db: 3.0, quantity: figure}, expected: 9.800e-01}
+  - {inputs: {figure: 4, estimator: ls, t: 2, r: 2, eps: 0.8, training: orthogonal, snr_db: 3.0, quantity: closed_form}, expected: 1.00237446725, tolerance: {rtol: 1.0e-9}, why: "the paper's equation evaluated on the card"}
+  - {inputs: {figure: 4, estimator: ls, t: 2, r: 2, eps: 0.8, training: orthogonal, snr_db: 3.0, quantity: monte_carlo_over_closed_form}, expected: 1.0, tolerance: {rtol: 0.04}, why: "5000 channels: a relative standard error under 0.8 %"}
+  - {inputs: {figure: 4, estimator: ls, t: 2, r: 2, eps: 0.8, training: orthogonal, snr_db: 6.0, quantity: figure}, expected: 4.850e-01}
+  - {inputs: {figure: 4, estimator: ls, t: 2, r: 2, eps: 0.8, training: orthogonal, snr_db: 6.0, quantity: closed_form}, expected: 0.502377286302, tolerance: {rtol: 1.0e-9}, why: "the paper's equation evaluated on the card"}
+  - {inputs: {figure: 4, estimator: ls, t: 2, r: 2, eps: 0.8, training: orthogonal, snr_db: 6.0, quantity: monte_carlo_over_closed_form}, expected: 1.0, tolerance: {rtol: 0.04}, why: "5000 channels: a relative standard error under 0.8 %"}
+  - {inputs: {figure: 4, estimator: ls, t: 2, r: 2, eps: 0.8, training: orthogonal, snr_db: 10.0, quantity: figure}, expected: 2.000e-01}
+  - {inputs: {figure: 4, estimator: ls, t: 2, r: 2, eps: 0.8, training: orthogonal, snr_db: 10.0, quantity: closed_form}, expected: 0.2, tolerance: {rtol: 1.0e-9}, why: "the paper's equation evaluated on the card"}
+  - {inputs: {figure: 4, estimator: ls, t: 2, r: 2, eps: 0.8, training: orthogonal, snr_db: 10.0, quantity: monte_carlo_over_closed_form}, expected: 1.0, tolerance: {rtol: 0.04}, why: "5000 channels: a relative standard error under 0.8 %"}
+  - {inputs: {figure: 4, estimator: ls, t: 2, r: 2, eps: 0.8, training: orthogonal, snr_db: 19.0, quantity: figure}, expected: 2.400e-02}
+  - {inputs: {figure: 4, estimator: ls, t: 2, r: 2, eps: 0.8, training: orthogonal, snr_db: 19.0, quantity: closed_form}, expected: 0.0251785082359, tolerance: {rtol: 1.0e-9}, why: "the paper's equation evaluated on the card"}
+  - {inputs: {figure: 4, estimator: ls, t: 2, r: 2, eps: 0.8, training: orthogonal, snr_db: 19.0, quantity: monte_carlo_over_closed_form}, expected: 1.0, tolerance: {rtol: 0.04}, why: "5000 channels: a relative standard error under 0.8 %"}
+  - {inputs: {figure: 4, estimator: sls, t: 2, r: 2, eps: 0.8, training: orthogonal, snr_db: 3.0, quantity: closed_form}, expected: 0.500592912888, tolerance: {rtol: 1.0e-9}, why: "the paper's equation evaluated on the card"}
+  - {inputs: {figure: 4, estimator: sls, t: 2, r: 2, eps: 0.8, training: orthogonal, snr_db: 3.0, quantity: monte_carlo_over_closed_form}, expected: 1.0, tolerance: {rtol: 0.04}, why: "5000 channels: a relative standard error under 0.8 %"}
+  - {inputs: {figure: 4, estimator: sls, t: 2, r: 2, eps: 0.8, training: orthogonal, snr_db: 6.0, quantity: closed_form}, expected: 0.334388233157, tolerance: {rtol: 1.0e-9}, why: "the paper's equation evaluated on the card"}
+  - {inputs: {figure: 4, estimator: sls, t: 2, r: 2, eps: 0.8, training: orthogonal, snr_db: 6.0, quantity: monte_carlo_over_closed_form}, expected: 1.0, tolerance: {rtol: 0.04}, why: "5000 channels: a relative standard error under 0.8 %"}
+  - {inputs: {figure: 4, estimator: sls, t: 2, r: 2, eps: 0.8, training: orthogonal, snr_db: 10.0, quantity: figure}, expected: 1.800e-01}
+  - {inputs: {figure: 4, estimator: sls, t: 2, r: 2, eps: 0.8, training: orthogonal, snr_db: 10.0, quantity: closed_form}, expected: 0.166666666667, tolerance: {rtol: 1.0e-9}, why: "the paper's equation evaluated on the card"}
+  - {inputs: {figure: 4, estimator: sls, t: 2, r: 2, eps: 0.8, training: orthogonal, snr_db: 10.0, quantity: monte_carlo_over_closed_form}, expected: 1.0, tolerance: {rtol: 0.04}, why: "5000 channels: a relative standard error under 0.8 %"}
+  - {inputs: {figure: 4, estimator: sls, t: 2, r: 2, eps: 0.8, training: orthogonal, snr_db: 19.0, quantity: figure}, expected: 2.400e-02}
+  - {inputs: {figure: 4, estimator: sls, t: 2, r: 2, eps: 0.8, training: orthogonal, snr_db: 19.0, quantity: closed_form}, expected: 0.0245601210263, tolerance: {rtol: 1.0e-9}, why: "the paper's equation evaluated on the card"}
+  - {inputs: {figure: 4, estimator: sls, t: 2, r: 2, eps: 0.8, training: orthogonal, snr_db: 19.0, quantity: monte_carlo_over_closed_form}, expected: 1.0, tolerance: {rtol: 0.04}, why: "5000 channels: a relative standard error under 0.8 %"}
+  - {inputs: {figure: 4, estimator: rmmse, t: 2, r: 2, eps: 0.8, training: orthogonal, snr_db: 3.0, quantity: closed_form}, expected: 0.500592912888, tolerance: {rtol: 1.0e-9}, why: "the paper's equation evaluated on the card"}
+  - {inputs: {figure: 4, estimator: rmmse, t: 2, r: 2, eps: 0.8, training: orthogonal, snr_db: 3.0, quantity: monte_carlo_over_closed_form}, expected: 1.0, tolerance: {rtol: 0.04}, why: "5000 channels: a relative standard error under 0.8 %"}
+  - {inputs: {figure: 4, estimator: rmmse, t: 2, r: 2, eps: 0.8, training: orthogonal, snr_db: 6.0, quantity: closed_form}, expected: 0.334388233157, tolerance: {rtol: 1.0e-9}, why: "the paper's equation evaluated on the card"}
+  - {inputs: {figure: 4, estimator: rmmse, t: 2, r: 2, eps: 0.8, training: orthogonal, snr_db: 6.0, quantity: monte_carlo_over_closed_form}, expected: 1.0, tolerance: {rtol: 0.04}, why: "5000 channels: a relative standard error under 0.8 %"}
+  - {inputs: {figure: 4, estimator: rmmse, t: 2, r: 2, eps: 0.8, training: orthogonal, snr_db: 10.0, quantity: figure}, expected: 1.800e-01}
+  - {inputs: {figure: 4, estimator: rmmse, t: 2, r: 2, eps: 0.8, training: orthogonal, snr_db: 10.0, quantity: closed_form}, expected: 0.166666666667, tolerance: {rtol: 1.0e-9}, why: "the paper's equation evaluated on the card"}
+  - {inputs: {figure: 4, estimator: rmmse, t: 2, r: 2, eps: 0.8, training: orthogonal, snr_db: 10.0, quantity: monte_carlo_over_closed_form}, expected: 1.0, tolerance: {rtol: 0.04}, why: "5000 channels: a relative standard error under 0.8 %"}
+  - {inputs: {figure: 4, estimator: rmmse, t: 2, r: 2, eps: 0.8, training: orthogonal, snr_db: 19.0, quantity: figure}, expected: 2.400e-02}
+  - {inputs: {figure: 4, estimator: rmmse, t: 2, r: 2, eps: 0.8, training: orthogonal, snr_db: 19.0, quantity: closed_form}, expected: 0.0245601210263, tolerance: {rtol: 1.0e-9}, why: "the paper's equation evaluated on the card"}
+  - {inputs: {figure: 4, estimator: rmmse, t: 2, r: 2, eps: 0.8, training: orthogonal, snr_db: 19.0, quantity: monte_carlo_over_closed_form}, expected: 1.0, tolerance: {rtol: 0.04}, why: "5000 channels: a relative standard error under 0.8 %"}
+  - {inputs: {figure: 4, estimator: mmse, t: 2, r: 2, eps: 0.8, training: orthogonal, snr_db: 3.0, quantity: closed_form}, expected: 0.405285045091, tolerance: {rtol: 1.0e-9}, why: "the paper's equation evaluated on the card"}
+  - {inputs: {figure: 4, estimator: mmse, t: 2, r: 2, eps: 0.8, training: orthogonal, snr_db: 3.0, quantity: monte_carlo_over_closed_form}, expected: 1.0, tolerance: {rtol: 0.04}, why: "5000 channels: a relative standard error under 0.8 %"}
+  - {inputs: {figure: 4, estimator: mmse, t: 2, r: 2, eps: 0.8, training: orthogonal, snr_db: 6.0, quantity: figure}, expected: 2.900e-01}
+  - {inputs: {figure: 4, estimator: mmse, t: 2, r: 2, eps: 0.8, training: orthogonal, snr_db: 6.0, quantity: closed_form}, expected: 0.267904713159, tolerance: {rtol: 1.0e-9}, why: "the paper's equation evaluated on the card"}
+  - {inputs: {figure: 4, estimator: mmse, t: 2, r: 2, eps: 0.8, training: orthogonal, snr_db: 6.0, quantity: monte_carlo_over_closed_form}, expected: 1.0, tolerance: {rtol: 0.04}, why: "5000 channels: a relative standard error under 0.8 %"}
+  - {inputs: {figure: 4, estimator: mmse, t: 2, r: 2, eps: 0.8, training: orthogonal, snr_db: 10.0, quantity: figure}, expected: 1.430e-01}
+  - {inputs: {figure: 4, estimator: mmse, t: 2, r: 2, eps: 0.8, training: orthogonal, snr_db: 10.0, quantity: closed_form}, expected: 0.14, tolerance: {rtol: 1.0e-9}, why: "the paper's equation evaluated on the card"}
+  - {inputs: {figure: 4, estimator: mmse, t: 2, r: 2, eps: 0.8, training: orthogonal, snr_db: 10.0, quantity: monte_carlo_over_closed_form}, expected: 1.0, tolerance: {rtol: 0.04}, why: "5000 channels: a relative standard error under 0.8 %"}
+  - {inputs: {figure: 4, estimator: mmse, t: 2, r: 2, eps: 0.8, training: orthogonal, snr_db: 19.0, quantity: figure}, expected: 2.400e-02}
+  - {inputs: {figure: 4, estimator: mmse, t: 2, r: 2, eps: 0.8, training: orthogonal, snr_db: 19.0, quantity: closed_form}, expected: 0.0235971611577, tolerance: {rtol: 1.0e-9}, why: "the paper's equation evaluated on the card"}
+  - {inputs: {figure: 4, estimator: mmse, t: 2, r: 2, eps: 0.8, training: orthogonal, snr_db: 19.0, quantity: monte_carlo_over_closed_form}, expected: 1.0, tolerance: {rtol: 0.04}, why: "5000 channels: a relative standard error under 0.8 %"}
+  - {inputs: {figure: 5, estimator: blue, t: 4, r: 2, eps: 0.0, training: orthogonal, snr_db: 3.0, periods: 1, quantity: closed_form}, expected: 2.00474893451, tolerance: {rtol: 1.0e-9}, why: "the paper's equation evaluated on the card"}
+  - {inputs: {figure: 5, estimator: blue, t: 4, r: 2, eps: 0.0, training: orthogonal, snr_db: 3.0, periods: 1, quantity: monte_carlo_over_closed_form}, expected: 1.0, tolerance: {rtol: 0.04}, why: "5000 channels: a relative standard error under 0.8 %"}
+  - {inputs: {figure: 5, estimator: blue, t: 4, r: 2, eps: 0.0, training: orthogonal, snr_db: 10.0, periods: 1, quantity: closed_form}, expected: 0.4, tolerance: {rtol: 1.0e-9}, why: "the paper's equation evaluated on the card"}
+  - {inputs: {figure: 5, estimator: blue, t: 4, r: 2, eps: 0.0, training: orthogonal, snr_db: 10.0, periods: 1, quantity: monte_carlo_over_closed_form}, expected: 1.0, tolerance: {rtol: 0.04}, why: "5000 channels: a relative standard error under 0.8 %"}
+  - {inputs: {figure: 5, estimator: blue, t: 4, r: 2, eps: 0.0, training: orthogonal, snr_db: 19.0, periods: 1, quantity: closed_form}, expected: 0.0503570164718, tolerance: {rtol: 1.0e-9}, why: "the paper's equation evaluated on the card"}
+  - {inputs: {figure: 5, estimator: blue, t: 4, r: 2, eps: 0.0, training: orthogonal, snr_db: 19.0, periods: 1, quantity: monte_carlo_over_closed_form}, expected: 1.0, tolerance: {rtol: 0.04}, why: "5000 channels: a relative standard error under 0.8 %"}
+  - {inputs: {figure: 5, estimator: blue, t: 4, r: 2, eps: 0.0, training: orthogonal, snr_db: 3.0, periods: 2, quantity: closed_form}, expected: 1.00237446725, tolerance: {rtol: 1.0e-9}, why: "the paper's equation evaluated on the card"}
+  - {inputs: {figure: 5, estimator: blue, t: 4, r: 2, eps: 0.0, training: orthogonal, snr_db: 3.0, periods: 2, quantity: monte_carlo_over_closed_form}, expected: 1.0, tolerance: {rtol: 0.04}, why: "5000 channels: a relative standard error under 0.8 %"}
+  - {inputs: {figure: 5, estimator: blue, t: 4, r: 2, eps: 0.0, training: orthogonal, snr_db: 10.0, periods: 2, quantity: closed_form}, expected: 0.2, tolerance: {rtol: 1.0e-9}, why: "the paper's equation evaluated on the card"}
+  - {inputs: {figure: 5, estimator: blue, t: 4, r: 2, eps: 0.0, training: orthogonal, snr_db: 10.0, periods: 2, quantity: monte_carlo_over_closed_form}, expected: 1.0, tolerance: {rtol: 0.04}, why: "5000 channels: a relative standard error under 0.8 %"}
+  - {inputs: {figure: 5, estimator: blue, t: 4, r: 2, eps: 0.0, training: orthogonal, snr_db: 19.0, periods: 2, quantity: closed_form}, expected: 0.0251785082359, tolerance: {rtol: 1.0e-9}, why: "the paper's equation evaluated on the card"}
+  - {inputs: {figure: 5, estimator: blue, t: 4, r: 2, eps: 0.0, training: orthogonal, snr_db: 19.0, periods: 2, quantity: monte_carlo_over_closed_form}, expected: 1.0, tolerance: {rtol: 0.04}, why: "5000 channels: a relative standard error under 0.8 %"}
+  - {inputs: {figure: 5, estimator: blue, t: 4, r: 2, eps: 0.0, training: orthogonal, snr_db: 3.0, periods: 4, quantity: closed_form}, expected: 0.501187233627, tolerance: {rtol: 1.0e-9}, why: "the paper's equation evaluated on the card"}
+  - {inputs: {figure: 5, estimator: blue, t: 4, r: 2, eps: 0.0, training: orthogonal, snr_db: 3.0, periods: 4, quantity: monte_carlo_over_closed_form}, expected: 1.0, tolerance: {rtol: 0.04}, why: "5000 channels: a relative standard error under 0.8 %"}
+  - {inputs: {figure: 5, estimator: blue, t: 4, r: 2, eps: 0.0, training: orthogonal, snr_db: 10.0, periods: 4, quantity: closed_form}, expected: 0.1, tolerance: {rtol: 1.0e-9}, why: "the paper's equation evaluated on the card"}
+  - {inputs: {figure: 5, estimator: blue, t: 4, r: 2, eps: 0.0, training: orthogonal, snr_db: 10.0, periods: 4, quantity: monte_carlo_over_closed_form}, expected: 1.0, tolerance: {rtol: 0.04}, why: "5000 channels: a relative standard error under 0.8 %"}
+  - {inputs: {figure: 5, estimator: blue, t: 4, r: 2, eps: 0.0, training: orthogonal, snr_db: 19.0, periods: 4, quantity: closed_form}, expected: 0.0125892541179, tolerance: {rtol: 1.0e-9}, why: "the paper's equation evaluated on the card"}
+  - {inputs: {figure: 5, estimator: blue, t: 4, r: 2, eps: 0.0, training: orthogonal, snr_db: 19.0, periods: 4, quantity: monte_carlo_over_closed_form}, expected: 1.0, tolerance: {rtol: 0.04}, why: "5000 channels: a relative standard error under 0.8 %"}

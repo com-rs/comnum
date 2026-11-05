@@ -1,0 +1,44 @@
+{
+ "data": {
+  "13064": {
+   "coded": {
+    "__npz__": "data.13064.coded"
+   },
+   "scrambled": {
+    "__npz__": "data.13064.scrambled"
+   },
+   "tb": {
+    "__npz__": "data.13064.tb"
+   }
+  },
+  "45096": {
+   "coded": {
+    "__npz__": "data.45096.coded"
+   },
+   "scrambled": {
+    "__npz__": "data.45096.scrambled"
+   },
+   "tb": {
+    "__npz__": "data.45096.tb"
+   }
+  },
+  "480": {
+   "coded": {
+    "__npz__": "data.480.coded"
+   },
+   "scrambled": {
+    "__npz__": "data.480.scrambled"
+   },
+   "tb": {
+    "__npz__": "data.480.tb"
+   }
+  }
+ },
+ "name": "sionna_nr_pdsch",
+ "npz": "sionna_nr_pdsch.npz",
+ "numpy": "2.5.4",
+ "python": "3.12.15",
+ "recorded": "2026-11-02",
+ "tool": "Sionna",
+ "version": "2.2.0"
+}
