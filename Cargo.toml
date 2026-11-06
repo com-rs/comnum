@@ -44,7 +44,7 @@ default-members = [
 ]
 
 [workspace.package]
-version = "0.2.0"
+version = "0.3.0"
 edition = "2024"
 rust-version = "1.85"          # MSRV, tested in CI
 license = "MIT OR Apache-2.0"
@@ -57,20 +57,20 @@ categories = ["science", "simulation"]
 
 [workspace.dependencies]
 # the crates of the workspace (one version, released together)
-comnum-core = { path = "crates/comnum-core", version = "0.2.0" }
-comnum-math = { path = "crates/comnum-math", version = "0.2.0" }
-comnum-dsp = { path = "crates/comnum-dsp", version = "0.2.0" }
-comnum-fec = { path = "crates/comnum-fec", version = "0.2.0" }
-comnum-mapping = { path = "crates/comnum-mapping", version = "0.2.0" }
-comnum-waveform = { path = "crates/comnum-waveform", version = "0.2.0" }
-comnum-mimo = { path = "crates/comnum-mimo", version = "0.2.0" }
-comnum-channel = { path = "crates/comnum-channel", version = "0.2.0" }
-comnum-hardware = { path = "crates/comnum-hardware", version = "0.2.0" }
-comnum-metrics = { path = "crates/comnum-metrics", version = "0.2.0" }
-comnum-sim = { path = "crates/comnum-sim", version = "0.2.0" }
-comnum-spec = { path = "crates/comnum-spec", version = "0.2.0" }
-comnum-systems = { path = "crates/comnum-systems", version = "0.2.0" }
-comnum = { path = "crates/comnum", version = "0.2.0", default-features = false }
+comnum-core = { path = "crates/comnum-core", version = "0.3.0" }
+comnum-math = { path = "crates/comnum-math", version = "0.3.0" }
+comnum-dsp = { path = "crates/comnum-dsp", version = "0.3.0" }
+comnum-fec = { path = "crates/comnum-fec", version = "0.3.0" }
+comnum-mapping = { path = "crates/comnum-mapping", version = "0.3.0" }
+comnum-waveform = { path = "crates/comnum-waveform", version = "0.3.0" }
+comnum-mimo = { path = "crates/comnum-mimo", version = "0.3.0" }
+comnum-channel = { path = "crates/comnum-channel", version = "0.3.0" }
+comnum-hardware = { path = "crates/comnum-hardware", version = "0.3.0" }
+comnum-metrics = { path = "crates/comnum-metrics", version = "0.3.0" }
+comnum-sim = { path = "crates/comnum-sim", version = "0.3.0" }
+comnum-spec = { path = "crates/comnum-spec", version = "0.3.0" }
+comnum-systems = { path = "crates/comnum-systems", version = "0.3.0" }
+comnum = { path = "crates/comnum", version = "0.3.0", default-features = false }
 # third-party
 num-complex = "0.4"
 ndarray = "0.16"

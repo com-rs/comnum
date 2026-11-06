@@ -1,0 +1,43 @@
+id: savory2010_eqs6_8
+title: Gram-Schmidt and Löwdin orthonormalisation of the quadrature imbalance
+literature: savory2010
+evidence: [closed_form]
+source:
+  kind: paper
+  reference: "S. J. Savory, Digital coherent optical receivers: algorithms and subsystems, IEEE J. Sel. Topics Quantum Electron. 16(5), 1164-1179, 2010"
+  locator: "Sec. II-B, eqs. (6)-(8) and Fig. 3 (Löwdin turns both vectors by theta)"
+  file: fiber/2010_savory_digital-coherent-optical-receivers_jstqe.pdf
+description: >
+  The parts of 1e5 16-QAM symbols mixed by M = [[cos theta, sin theta], [sin theta,
+  cos theta]] (a phase error 2 theta between the arms of the hybrid), theta = 0.05 to
+  0.3 rad: their correlation (comnum::dsp::compensation::iq::iq_correlation) against
+  sin 2 theta (eq. (6)), the phase of the Gram-Schmidt output (gram_schmidt, eq. (7))
+  against the symbols, -theta, and the phase and RMS error of the Löwdin output (lowdin,
+  eq. (8)) against the symbols, 0.
+run:
+  test: validation/tests/fiber/savory2010.rs::savory_2010_eqs_6_to_8_orthonormalisation
+tier: ci
+duration: "under 1 s"
+tolerance: {atol: 0.01}
+why: >
+  the moments are sample means of 1e5 symbols of independent parts: their correlation
+  and powers deviate by about 0.003 from the expectation
+findings:
+  - "eq. (7): the second output is divided by alpha = cos 2 theta (the text says multiplied); Gram-Schmidt leaves the signal turned by theta, Löwdin turns it back (Fig. 3)"
+cases:
+  - {inputs: {quantity: correlation, theta: 0.05}, expected: 0.099833}
+  - {inputs: {quantity: gram_schmidt_phase, theta: 0.05}, expected: -0.05}
+  - {inputs: {quantity: lowdin_phase, theta: 0.05}, expected: 0.0}
+  - {inputs: {quantity: lowdin_rms_error, theta: 0.05}, expected: {max: 0.01}}
+  - {inputs: {quantity: correlation, theta: 0.1}, expected: 0.198669}
+  - {inputs: {quantity: gram_schmidt_phase, theta: 0.1}, expected: -0.1}
+  - {inputs: {quantity: lowdin_phase, theta: 0.1}, expected: 0.0}
+  - {inputs: {quantity: lowdin_rms_error, theta: 0.1}, expected: {max: 0.01}}
+  - {inputs: {quantity: correlation, theta: 0.2}, expected: 0.389418}
+  - {inputs: {quantity: gram_schmidt_phase, theta: 0.2}, expected: -0.2}
+  - {inputs: {quantity: lowdin_phase, theta: 0.2}, expected: 0.0}
+  - {inputs: {quantity: lowdin_rms_error, theta: 0.2}, expected: {max: 0.01}}
+  - {inputs: {quantity: correlation, theta: 0.3}, expected: 0.564642}
+  - {inputs: {quantity: gram_schmidt_phase, theta: 0.3}, expected: -0.3}
+  - {inputs: {quantity: lowdin_phase, theta: 0.3}, expected: 0.0}
+  - {inputs: {quantity: lowdin_rms_error, theta: 0.3}, expected: {max: 0.01}}

@@ -97,6 +97,30 @@ pub fn max_doppler_hz(speed_mps: f64, fc_hz: f64) -> f64 {
     speed_mps * fc_hz / SPEED_OF_LIGHT
 }
 
+/// The level-crossing rate (crossings per second, in one direction) of a Rayleigh fading
+/// envelope with the Clarke/Jakes spectrum of maximum Doppler shift `doppler_hz`, at the
+/// level $\rho$ = `rho` relative to its RMS value (Zheng & Xiao 2003, eq. (19a)):
+/// $$L = \sqrt{2\pi}\, f_{D}\, \rho\, e^{-\rho^{2}}.$$
+///
+/// # Examples
+/// ```
+/// use comnum_channel::multipath::rayleigh_level_crossing_rate;
+/// // the largest rate, at rho = 1/sqrt(2): sqrt(pi) e^{-1/2} f_D
+/// let l = rayleigh_level_crossing_rate(0.5f64.sqrt(), 1.0);
+/// assert!((l - std::f64::consts::PI.sqrt() * (-0.5f64).exp()).abs() < 1e-15);
+/// ```
+pub fn rayleigh_level_crossing_rate(rho: f64, doppler_hz: f64) -> f64 {
+    (2.0 * std::f64::consts::PI).sqrt() * doppler_hz * rho * (-rho * rho).exp()
+}
+
+/// The average fade duration (s) of a Rayleigh fading envelope below the level $\rho$ =
+/// `rho` relative to its RMS value, maximum Doppler shift `doppler_hz` (Zheng & Xiao 2003,
+/// eq. (19b)): the probability of the fade $1 - e^{-\rho^{2}}$ over the level-crossing rate,
+/// $$T = \frac{e^{\rho^{2}} - 1}{\rho f_{D}\sqrt{2\pi}}.$$
+pub fn rayleigh_average_fade_duration(rho: f64, doppler_hz: f64) -> f64 {
+    ((rho * rho).exp() - 1.0) / (rho * doppler_hz * (2.0 * std::f64::consts::PI).sqrt())
+}
+
 /// The Doppler shift of the specular component of a Ricean tap relative to the maximum
 /// Doppler shift, $f_{S} / f_{D} = 0.7$ (TR 38.901 §7.7.2, for TDL-D and TDL-E).
 pub const LOS_DOPPLER_RATIO: f64 = 0.7;

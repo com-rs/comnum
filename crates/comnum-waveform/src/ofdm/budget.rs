@@ -117,6 +117,33 @@ pub fn doppler_noise_power(fd_tu: f64) -> f64 {
     PI * PI / 6.0 * fd_tu * fd_tu
 }
 
+/// The signal-to-interference ratio of CP-OFDM under Jakes' fading of maximum Doppler
+/// `fd_tu` (normalised to the subcarrier spacing, $f_{D} T_{u}$), the prefix covering the
+/// delay spread (no ISI), exact (Robertson & Kaiser 1999; Nissel, Schwarz & Rupp, *IEEE J.
+/// Sel. Areas Commun.* 35(8), 2017, eq. (42)):
+///
+/// $$
+/// \mathrm{SIR} = \frac{{}_{1}F_{2}\left(\tfrac{1}{2}; \tfrac{3}{2}, 2; -(\pi f_{D} T_{u})^{2}\right)}
+/// {1 - {}_{1}F_{2}\left(\tfrac{1}{2}; \tfrac{3}{2}, 2; -(\pi f_{D} T_{u})^{2}\right)},
+/// $$
+///
+/// the numerator the power kept on the subcarrier, the denominator the ICI, of a channel
+/// of unit power. [`doppler_noise_power`] is its small-Doppler limit, $1/\mathrm{SIR}
+/// \to \frac{\pi^{2}}{6}(f_{D} T_{u})^{2}$. With the prefix just covering the delay spread
+/// $\tau_{\max}$, $\kappa = T_{\mathrm{cp}}/T_{u}$, $f_{D} T_{u} = f_{D} \tau_{\max}/\kappa$.
+///
+/// # Examples
+/// ```
+/// use comnum_waveform::ofdm::budget::{doppler_noise_power, jakes_ici_sir};
+/// let fd_tu = 0.01;
+/// assert!((1.0 / jakes_ici_sir(fd_tu) / doppler_noise_power(fd_tu) - 1.0).abs() < 1e-3);
+/// ```
+pub fn jakes_ici_sir(fd_tu: f64) -> f64 {
+    let x = PI * fd_tu;
+    let f = comnum_math::hyp1f2(0.5, 1.5, 2.0, -x * x);
+    f / (1.0 - f)
+}
+
 /// The largest carrier frequency offset (in subcarrier spacings) for a loss of
 /// `loss_db` (dB) at the SNR `snr_lin` (linear, per subcarrier), eq. (43):
 /// [`cfo_noise_power`] equal to the [`noise_budget`].

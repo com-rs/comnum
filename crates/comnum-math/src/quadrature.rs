@@ -160,6 +160,25 @@ pub fn gauss_legendre(n: usize) -> (Vec<f64>, Vec<f64>) {
     (x, w)
 }
 
+/// The nodes $x_{k} = \cos\frac{(2k - 1)\pi}{2n}$ and the equal weights $\pi/n$ of the
+/// $n$-point Gauss–Chebyshev rule of the first kind:
+/// $\int_{-1}^{1} \frac{f(x)}{\sqrt{1 - x^{2}}}\,dx \approx \frac{\pi}{n}\sum_{k=1}^{n} f(x_{k})$,
+/// exact for polynomials of degree $2n - 1$. A smooth integrand $g$ on $[-1, 1]$ is
+/// integrated as $f(x) = g(x)\sqrt{1 - x^{2}}$ (the form of Ding et al. 2014, eq. (4)).
+///
+/// # Examples
+/// ```
+/// use comnum_math::gauss_chebyshev;
+/// let (x, w) = gauss_chebyshev(8);
+/// // the integral of x^2 / sqrt(1 - x^2) on [-1, 1] is pi/2
+/// let i: f64 = x.iter().zip(&w).map(|(x, w)| w * x * x).sum();
+/// assert!((i - std::f64::consts::FRAC_PI_2).abs() < 1e-14);
+/// ```
+pub fn gauss_chebyshev(n: usize) -> (Vec<f64>, Vec<f64>) {
+    let x = (1..=n).map(|k| ((2 * k - 1) as f64 * std::f64::consts::PI / (2 * n) as f64).cos()).collect();
+    (x, vec![std::f64::consts::PI / n as f64; n])
+}
+
 /// Quadrature nodes `(w, weight)` of Gaussian noise, `E f(W) ≈ Σ weight f(w)`, from the
 /// `n`-point [`gauss_hermite`] rule: `W ~ CN(0, σ²)` by the product rule on the two
 /// dimensions (`complex`), or `W ~ N(0, σ²)` on the real axis. The nodes of negligible

@@ -12,6 +12,7 @@
 //! | [`message_passing`] | LAMA (complex Bayesian AMP) and OAMP for large systems, their state evolution and the recovery thresholds of LAMA |
 //! | [`receiver`] | the receiver of a link: a detector of [`detection`] by name, applied channel use after channel use (spatial layers or Alamouti blocks), with soft outputs |
 //! | [`stbc`] | orthogonal space-time block codes: Alamouti, the rate-3/4 codes for 3 and 4 antennas; linear decoding |
+//! | [`noma`] | downlink NOMA with users dropped at random in a disc: the gain distribution, the SIC thresholds, the exact and high-SNR outage probabilities (Ding, Yang, Fan & Poor 2014) |
 //! | [`precoding`] | SVD (eigenmode) transmission with water-filling, ZF and regularised ZF precoders |
 //! | [`estimation`] | training-based channel estimation on $S = H P + V$: LS, scaled LS, LMMSE and relaxed MMSE, their MSEs, the orthogonal and MMSE-optimal training, the BLUE combination of training periods (Biguesh and Gershman 2006) |
 //! | [`massive`] | the uplink of multi-user massive MIMO: perfect or estimated CSI, the closed-form lower bounds on the rates of MR and ZF receivers (Ngo, Larsson and Marzetta 2013) |
@@ -24,6 +25,7 @@ pub mod detection;
 pub mod estimation;
 pub mod massive;
 pub mod message_passing;
+pub mod noma;
 pub mod precoding;
 pub mod receiver;
 pub mod stbc;

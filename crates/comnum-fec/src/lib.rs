@@ -23,6 +23,7 @@
 //! | [`ccsds`] | the codes of CCSDS 131.0-B (TM synchronization and channel coding): Reed–Solomon in the dual basis with interleaving and virtual fill, the (8160, 7136) and AR4JA LDPC codes, the 16-state turbo codes |
 //! | [`nr`] | the codes of 5G NR (TS 38.212): the LDPC code of the data channels and the polar code of the control channels, with their rate matching |
 //! | [`density_evolution`] | density evolution of regular LDPC ensembles: Gallager's hard-decision algorithms A, B and E on the BSC, discretized belief propagation on the BSC and the binary-input AWGN channel, thresholds (Richardson & Urbanke 2001) |
+//! | [`exit`] | EXIT charts: the J function, the mutual information of LLRs, transfer curves of recursive constituent codes under BCJR, the pinch-off of a parallel concatenation (ten Brink 2001) |
 //! | [`bounds`] | the capacity of the binary-input AWGN channel and the normal approximation of the error probability at finite length |
 //! | [`block`] | the [`BlockCode`](block::BlockCode) interface and the soft output [`SoftDecode`](block::SoftDecode) |
 
@@ -35,6 +36,7 @@ pub mod ccsds;
 pub mod conv;
 pub mod crc;
 pub mod density_evolution;
+pub mod exit;
 pub mod interleaving;
 pub mod ldpc;
 pub mod nr;

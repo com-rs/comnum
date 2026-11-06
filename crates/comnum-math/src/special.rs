@@ -1,7 +1,8 @@
 //! Special functions: the error function and its inverse, the Gaussian tail, the
 //! Fresnel integrals, Bessel functions, the gamma function and the regularized
 //! incomplete gamma function, the binomial law, the regularized incomplete beta function
-//! and its inverse, the exponential integral (all re-exported at the root).
+//! and its inverse, the exponential integral, the generalized hypergeometric function
+//! $_{1}F_{2}$ and the Hermite polynomials (all re-exported at the root).
 //!
 //! The power series share one private summation (the terms until the last falls below
 //! $10^{-17}$ of the sum), the continued fractions one modified Lentz iteration (the
@@ -662,4 +663,51 @@ pub fn expint_e1(x: f64) -> f64 {
         };
         lentz(d, 1.0 / LENTZ_TINY, d, 10_000, term) * (-x).exp()
     }
+}
+/// The generalized hypergeometric function
+/// $_{1}F_{2}(a; b_{1}, b_{2}; z) = \sum_{k \ge 0} \frac{(a)_{k}}{(b_{1})_{k} (b_{2})_{k}}
+/// \frac{z^{k}}{k!}$ by its power series, which converges for every $z$ ($(x)_{k}$ the
+/// rising factorial; $b_{1}, b_{2}$ not zero or negative integers). The ICI of OFDM under
+/// Jakes' fading is $1 - {}_{1}F_{2}(\tfrac{1}{2}; \tfrac{3}{2}, 2; -(\pi f_{D} T_{u})^{2})$
+/// (Robertson & Kaiser 1999; Nissel, Schwarz & Rupp 2017, eq. (42)).
+///
+/// # Examples
+/// ```
+/// use comnum_math::hyp1f2;
+/// // 1F2(1/2; 3/2, 2; -x^2) = 1 - x^2/6 + x^4/60 - ...
+/// let x = 0.1;
+/// assert!((hyp1f2(0.5, 1.5, 2.0, -x * x) - (1.0 - x * x / 6.0 + x.powi(4) / 60.0)).abs() < 1e-8);
+/// // 0F1-like limit: 1F2(a; a, 1; z) = 0F1(; 1; z) = I0(2 sqrt z)
+/// assert!((hyp1f2(1.0, 1.0, 1.0, 1.0) - 2.279_585_302_336_067).abs() < 1e-12);
+/// ```
+pub fn hyp1f2(a: f64, b1: f64, b2: f64, z: f64) -> f64 {
+    let ratio = |k: usize| {
+        let j = (k - 1) as f64;
+        (a + j) / ((b1 + j) * (b2 + j)) * z / k as f64
+    };
+    series(1.0, 1.0, 10_000, ratio, |_| 1.0)
+}
+
+/// The physicists' Hermite polynomial $H_{n}(x)$, by the recurrence
+/// $H_{n+1}(x) = 2x H_{n}(x) - 2n H_{n-1}(x)$ from $H_{0} = 1$, $H_{1} = 2x$ (Abramowitz &
+/// Stegun, eq. 22.7.13); the Hermite prototype of FBMC is a sum of $H_{4i}$.
+///
+/// # Examples
+/// ```
+/// use comnum_math::hermite_h;
+/// assert_eq!(hermite_h(0, 0.3), 1.0);
+/// assert_eq!(hermite_h(2, 0.5), 4.0 * 0.25 - 2.0);
+/// assert!((hermite_h(4, 1.5) - (16.0 * 1.5f64.powi(4) - 48.0 * 1.5 * 1.5 + 12.0)).abs() < 1e-12);
+/// ```
+pub fn hermite_h(n: usize, x: f64) -> f64 {
+    let (mut h0, mut h1) = (1.0, 2.0 * x);
+    if n == 0 {
+        return h0;
+    }
+    for k in 1..n {
+        let h2 = 2.0 * x * h1 - 2.0 * k as f64 * h0;
+        h0 = h1;
+        h1 = h2;
+    }
+    h1
 }

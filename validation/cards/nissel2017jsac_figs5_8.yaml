@@ -1,0 +1,88 @@
+id: nissel2017jsac_figs5_8
+title: Optimal SIR of OFDM, FBMC-OQAM and FBMC-QAM over doubly-selective channels, Figs. 5-8
+literature: nissel2017jsac
+evidence: [curve, table]
+source:
+  kind: paper
+  reference: "R. Nissel, S. Schwarz, M. Rupp, Filter bank multicarrier modulation schemes for future mobile communications, IEEE J. Sel. Areas Commun. 35(8), 1768-1782, 2017"
+  locator: "Figs. 5-8, the curves of OFDM without prefix, FBMC-OQAM (Hermite, PHYDYAS) and FBMC-QAM (Fig. 8, TF = 2) read on the grid at 0, 100, 200 and 500 km/h, and the labels of the optimal spacings at 500 km/h"
+  file: multicarrier/2017_nissel_fbmc-schemes-future-mobile_jsac.pdf
+description: >
+  The SIR of eqs. (35) and (40) (comnum::waveform::sir::DoublySelective) from the sampled
+  pulses of comnum::waveform::{ofdm, fbmc} on a grid of at least 256 samples per T0 and
+  at most an eighth of the RMS delay spread, the Hermite
+  prototype of eqs. (10)-(11) truncated to 8 T0 and PHYDYAS (K = 4), the WSSUS channel of
+  the taps of the profile rounded to the grid with Jakes' Doppler (the sum of sinusoids of
+  the midpoint rule, exact); OFDM and FBMC-OQAM on their complete lattices by the Parseval
+  form (the interference is the channel power less the wanted coefficient's), FBMC-QAM as
+  the sum over 9 subcarriers and 2K + 1 symbols; the spacing F maximised by a golden-section search
+  on log F between the lower bound of the figure (5 kHz at 2.5 GHz, 100 kHz at 60 GHz) and
+  50 times it. At 0 km/h the bound is active (the dashed parts of the curves).
+run:
+  test: validation/tests/multicarrier/nissel2017jsac.rs::nissel_2017_jsac_figs_5_to_8_optimal_sir
+tier: campaign
+duration: "25 s"
+tolerance: {atol: 1.5}
+why: >
+  the curves are read on a grid of 10 dB (about 0.7 dB); the paper gives neither the number
+  of subcarriers and symbols, nor its sampling rate (the delays are rounded to the grid
+  here), nor the grid of its exhaustive search over F, nor the symbol at which the SIR is
+  evaluated
+findings:
+  - "with the spacing optimised, 36 of the 39 SIR points of Figs. 5-8 at 100 to 500 km/h are within 1 dB of the figures (OFDM 26.4-31.0 dB on Pedestrian A against 26.7-31.4; FBMC-OQAM Hermite 36.0-43.0 against 36.3-43.6, PHYDYAS 35.6-42.5 against 35.6-43.1; Vehicular A and TDL-A within 0.8 dB), and the optimal spacings within 12 % of the labels (Pedestrian A: OFDM 53.8 kHz for 55, Hermite 91.3 for 94, PHYDYAS 119.5 for 130)"
+  - "at 0 km/h the SIR is the delay-spread term alone, proportional to sigma_f^2 of the prototype: with the paper's own eqs. (13) and (17), Hermite sits (0.403/0.328)^2, 1.8 dB, below PHYDYAS, as computed (TDL-A: 39.9 against 41.7 dB; Vehicular A: 44.8 against 46.6 dB), where Fig. 7 reads Hermite at about 44 dB above PHYDYAS (41.5 dB) and Fig. 6 reads both at 45 dB: the dashed starts of the curves, or the figure, disagree with the localisation; not explained"
+  - "FBMC-QAM at TF = 2 (Fig. 8, every other subcarrier and half-symbol of the Hermite lattice, the interferers within 4 subcarriers and K symbols) is 1.0 to 2.7 dB below the figure (32.3, 31.0, 22.3 dB against 35.0, 31.5, 23.8 dB at 0, 100, 500 km/h) with Hermite and within 0.4 dB with PHYDYAS (25.6, 25.4, 18.2 against 26.7, 25.5, 17.8 dB): the paper notes that FBMC-QAM has no unique definition (Table I)"
+  - "the lower bound on F is active at 0 km/h for every scheme (the dashed parts), and for FBMC-QAM up to 100 km/h, as in Fig. 8"
+cases:
+  # Fig. 5, Pedestrian A, 2.5 GHz
+  - {inputs: {figure: 5, kmh: 0, scheme: ofdm, quantity: sir_db}, expected: 38.8, note: "F = 5 kHz, the bound", tolerance: {atol: 2.0}, why: "the dashed start of the curve at the bound on F, where the curves of the two prototypes cross"}
+  - {inputs: {figure: 5, kmh: 100, scheme: ofdm, quantity: sir_db}, expected: 31.4}
+  - {inputs: {figure: 5, kmh: 200, scheme: ofdm, quantity: sir_db}, expected: 29.6}
+  - {inputs: {figure: 5, kmh: 500, scheme: ofdm, quantity: sir_db}, expected: 26.7}
+  - {inputs: {figure: 5, kmh: 500, scheme: ofdm, quantity: spacing_khz}, expected: 55, tolerance: {rtol: 0.25}, why: "the SIR is flat around its optimum: the search lands within a quarter of the label"}
+  - {inputs: {figure: 5, kmh: 100, scheme: oqam_hermite, quantity: sir_db}, expected: 43.6}
+  - {inputs: {figure: 5, kmh: 200, scheme: oqam_hermite, quantity: sir_db}, expected: 40.5}
+  - {inputs: {figure: 5, kmh: 500, scheme: oqam_hermite, quantity: sir_db}, expected: 36.3}
+  - {inputs: {figure: 5, kmh: 500, scheme: oqam_hermite, quantity: spacing_khz}, expected: 94, tolerance: {rtol: 0.25}, why: "as above"}
+  - {inputs: {figure: 5, kmh: 100, scheme: oqam_phydyas, quantity: sir_db}, expected: 43.1}
+  - {inputs: {figure: 5, kmh: 200, scheme: oqam_phydyas, quantity: sir_db}, expected: 40.0}
+  - {inputs: {figure: 5, kmh: 500, scheme: oqam_phydyas, quantity: sir_db}, expected: 35.6}
+  - {inputs: {figure: 5, kmh: 500, scheme: oqam_phydyas, quantity: spacing_khz}, expected: 130, tolerance: {rtol: 0.25}, why: "as above"}
+  # Fig. 6, Vehicular A, 2.5 GHz
+  - {inputs: {figure: 6, kmh: 0, scheme: ofdm, quantity: sir_db}, expected: 25.9, note: "F = 5 kHz, the bound", tolerance: {atol: 2.0}, why: "the dashed start of the curve at the bound on F, where the curves of the two prototypes cross"}
+  - {inputs: {figure: 6, kmh: 100, scheme: ofdm, quantity: sir_db}, expected: 22.8}
+  - {inputs: {figure: 6, kmh: 500, scheme: ofdm, quantity: sir_db}, expected: 17.9}
+  - {inputs: {figure: 6, kmh: 500, scheme: ofdm, quantity: spacing_khz}, expected: 20, tolerance: {rtol: 0.25}, why: "as above"}
+  - {inputs: {figure: 6, kmh: 0, scheme: oqam_hermite, quantity: sir_db}, expected: 45.0, note: "F = 5 kHz, the bound", tolerance: {atol: 2.0}, why: "the dashed start of the curve at the bound on F, where the curves of the two prototypes cross"}
+  - {inputs: {figure: 6, kmh: 100, scheme: oqam_hermite, quantity: sir_db}, expected: 34.4}
+  - {inputs: {figure: 6, kmh: 500, scheme: oqam_hermite, quantity: sir_db}, expected: 27.0}
+  - {inputs: {figure: 6, kmh: 500, scheme: oqam_hermite, quantity: spacing_khz}, expected: 31, tolerance: {rtol: 0.25}, why: "as above"}
+  - {inputs: {figure: 6, kmh: 0, scheme: oqam_phydyas, quantity: sir_db}, expected: 45.0, note: "F = 5 kHz, the bound", tolerance: {atol: 2.0}, why: "the dashed start of the curve at the bound on F, where the curves of the two prototypes cross"}
+  - {inputs: {figure: 6, kmh: 100, scheme: oqam_phydyas, quantity: sir_db}, expected: 34.0}
+  - {inputs: {figure: 6, kmh: 500, scheme: oqam_phydyas, quantity: sir_db}, expected: 26.5}
+  - {inputs: {figure: 6, kmh: 500, scheme: oqam_phydyas, quantity: spacing_khz}, expected: 42, tolerance: {rtol: 0.25}, why: "as above"}
+  # Fig. 7, TDL-A 30 ns, 60 GHz
+  - {inputs: {figure: 7, kmh: 0, scheme: ofdm, quantity: sir_db}, expected: 23.6, note: "F = 100 kHz, the bound", tolerance: {atol: 2.0}, why: "the dashed start of the curve at the bound on F, where the curves of the two prototypes cross"}
+  - {inputs: {figure: 7, kmh: 100, scheme: ofdm, quantity: sir_db}, expected: 20.0}
+  - {inputs: {figure: 7, kmh: 500, scheme: ofdm, quantity: sir_db}, expected: 16.0}
+  - {inputs: {figure: 7, kmh: 500, scheme: ofdm, quantity: spacing_khz}, expected: 383, tolerance: {rtol: 0.25}, why: "as above"}
+  - {inputs: {figure: 7, kmh: 0, scheme: oqam_hermite, quantity: sir_db}, expected: 44.0, note: "F = 100 kHz, the bound", tolerance: {atol: 4.5}, why: "the ordering of the prototypes at 0 km/h contradicts the localisation of the paper (findings): the gap is not explained"}
+  - {inputs: {figure: 7, kmh: 100, scheme: oqam_hermite, quantity: sir_db}, expected: 31.4}
+  - {inputs: {figure: 7, kmh: 500, scheme: oqam_hermite, quantity: sir_db}, expected: 24.0}
+  - {inputs: {figure: 7, kmh: 500, scheme: oqam_hermite, quantity: spacing_khz}, expected: 547, tolerance: {rtol: 0.25}, why: "as above"}
+  - {inputs: {figure: 7, kmh: 0, scheme: oqam_phydyas, quantity: sir_db}, expected: 41.5, note: "F = 100 kHz, the bound", tolerance: {atol: 2.0}, why: "the dashed start of the curve at the bound on F, where the curves of the two prototypes cross"}
+  - {inputs: {figure: 7, kmh: 100, scheme: oqam_phydyas, quantity: sir_db}, expected: 31.0}
+  - {inputs: {figure: 7, kmh: 500, scheme: oqam_phydyas, quantity: sir_db}, expected: 23.5}
+  - {inputs: {figure: 7, kmh: 500, scheme: oqam_phydyas, quantity: spacing_khz}, expected: 755, tolerance: {rtol: 0.25}, why: "as above"}
+  # Fig. 8, TDL-B 900 ns, 60 GHz, TF = 2
+  - {inputs: {figure: 8, kmh: 0, scheme: qam_hermite, quantity: sir_db}, expected: 35.0, note: "F = 100 kHz, the bound", tolerance: {atol: 3.0}, why: "FBMC-QAM has no unique definition (Table I, footnote): the lattice and the truncation of the interferers are a choice (findings)"}
+  - {inputs: {figure: 8, kmh: 100, scheme: qam_hermite, quantity: sir_db}, expected: 31.5, tolerance: {atol: 3.0}, why: "FBMC-QAM has no unique definition (Table I, footnote): the lattice and the truncation of the interferers are a choice (findings)"}
+  - {inputs: {figure: 8, kmh: 500, scheme: qam_hermite, quantity: sir_db}, expected: 23.8, tolerance: {atol: 3.0}, why: "FBMC-QAM has no unique definition (Table I, footnote): the lattice and the truncation of the interferers are a choice (findings)"}
+  - {inputs: {figure: 8, kmh: 500, scheme: qam_hermite, quantity: spacing_khz}, expected: 183, tolerance: {rtol: 0.25}, why: "as above"}
+  - {inputs: {figure: 8, kmh: 0, scheme: qam_phydyas, quantity: sir_db}, expected: 26.7, note: "F = 100 kHz, the bound", tolerance: {atol: 2.0}, why: "the dashed start of the curve at the bound on F, where the curves of the two prototypes cross"}
+  - {inputs: {figure: 8, kmh: 100, scheme: qam_phydyas, quantity: sir_db}, expected: 25.5}
+  - {inputs: {figure: 8, kmh: 500, scheme: qam_phydyas, quantity: sir_db}, expected: 17.8}
+  - {inputs: {figure: 8, kmh: 500, scheme: qam_phydyas, quantity: spacing_khz}, expected: 194, tolerance: {rtol: 0.25}, why: "as above"}
+  - {inputs: {figure: 8, kmh: 0, scheme: oqam_hermite, quantity: sir_db}, expected: 13.3, note: "FBMC-OQAM at TF = 1 for comparison; F = 100 kHz, the bound", tolerance: {atol: 2.0}, why: "the dashed start of the curve at the bound on F, where the curves of the two prototypes cross"}
+  - {inputs: {figure: 8, kmh: 100, scheme: oqam_hermite, quantity: sir_db}, expected: 12.7}
+  - {inputs: {figure: 8, kmh: 500, scheme: oqam_hermite, quantity: sir_db}, expected: 9.7}

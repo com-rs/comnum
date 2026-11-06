@@ -3,6 +3,7 @@
 //! (`just card <id>` runs one).
 
 mod biguesh2006;
+mod ding2014;
 mod larsson2014;
 mod loyka2001;
 mod lu2014;

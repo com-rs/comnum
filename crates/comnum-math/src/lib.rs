@@ -78,11 +78,13 @@ pub mod stats;
 pub use bits::{bits_to_index, gray, gray_inverse, index_to_bits};
 pub use comnum_core::units::{amp2db, db2amp, db2lin, db2np, dbm2w, lin2db, np2db, w2dbm};
 pub use log_domain::{Jacobian, ln_1p_exp, log_sum_exp, log_sum_exp_iter, max_star};
-pub use quadrature::{gauss_hermite, gauss_legendre, gaussian_nodes, simpson, simpson_weight, try_simpson};
+pub use quadrature::{
+    gauss_chebyshev, gauss_hermite, gauss_legendre, gaussian_nodes, simpson, simpson_weight, try_simpson,
+};
 pub use search::{argmax, bisect, gcd, golden_max};
 pub use special::{
-    bessel_i0e, bessel_j0, bessel_k, beta_inc, beta_inv, erf, erfc, erfcinv, expint_e1, fresnel, gamma_p, ln_bessel_k,
-    ln_binomial_pmf, ln_gamma, normal_pdf, qfunc, qfuncinv,
+    bessel_i0e, bessel_j0, bessel_k, beta_inc, beta_inv, erf, erfc, erfcinv, expint_e1, fresnel, gamma_p, hermite_h,
+    hyp1f2, ln_bessel_k, ln_binomial_pmf, ln_gamma, normal_pdf, qfunc, qfuncinv,
 };
 
 pub use comnum_core::C64;

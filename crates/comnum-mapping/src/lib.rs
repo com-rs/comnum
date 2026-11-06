@@ -5,6 +5,7 @@
 //! | Module | Content |
 //! |---|---|
 //! | [`bicm`] | cutoff rates of coded modulation and bit-interleaved coded modulation, over AWGN and Rayleigh fading (Caire, Taricco & Biglieri 1998); their capacities are in [`theory`] |
+//! | [`link_adaptation`] | variable-rate variable-power MQAM over Rayleigh fading: capacity with water-filling in time, adaptive MQAM with continuous and discrete rates, region durations (Goldsmith & Chua 1997) |
 //! | [`constellation`] | PAM, QAM, PSK and OOK constellations with Gray (or set-partitioning) labelling, mapping of bits to symbols, hard decisions |
 //! | [`demapper`] | log-likelihood ratios (exact and max-log); the [`Map`](comnum_core::traits::Map) and [`Demap`](comnum_core::traits::Demap) traits |
 //! | [`differential`] | differential coding of M-PSK (DBPSK, DQPSK, D8PSK): encoding and decoding of phase indices, noncoherent detection, Gray-labelled [`Dpsk`](differential::Dpsk) |
@@ -28,5 +29,6 @@ pub mod constellation;
 pub mod demapper;
 pub mod differential;
 pub mod imperfect_csi;
+pub mod link_adaptation;
 pub mod source;
 pub mod theory;

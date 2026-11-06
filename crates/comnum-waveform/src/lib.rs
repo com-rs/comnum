@@ -12,6 +12,7 @@
 //! | [`ce_ofdm`] | constant-envelope OFDM (Thompson et al. 2008): modulator, phase demodulator (principal or unwrapped phase), and the error rates of its linear regime |
 //! | [`css`] | chirp spread spectrum (the frequency-shift chirp modulation of LoRa): modulator at any oversampling, noncoherent DFT receiver, exact error rates, cross-correlation, spectrum in Fresnel functions, same-SF interference (Chiani & Elzanaty 2019, Afisiadis et al. 2020) |
 //! | [`fbmc`] | filter-bank multicarrier with offset QAM (FBMC/OQAM): PHYDYAS prototype, polyphase modulator and demodulator, OQAM staggering, intrinsic interference |
+//! | [`sir`] | the signal-to-interference ratio of any multicarrier scheme with a one-tap equaliser over a doubly-selective WSSUS channel with Jakes' Doppler, in closed form from its pulses (Nissel, Schwarz & Rupp 2017) |
 //! | [`ufmc`] | universal filtered multicarrier: OFDM filtered per sub-band by Dolph–Chebyshev filters, no prefix, receiver on the even bins of a DFT of twice the size (Schaich & Wild 2014) |
 //! | [`cpm`] | continuous-phase modulation (CPFSK, MSK, GMSK, raised-cosine pulses): modulator with an exact phase state, coherent maximum-likelihood sequence detector, quadrature detector of MSK, differential detector, the MSK spectrum and the Gaussian pulse in closed form, minimum distance |
 //!
@@ -41,6 +42,7 @@ pub mod fbmc;
 pub mod ofdm;
 pub mod otfs;
 pub mod papr;
+pub mod sir;
 pub mod ufmc;
 
 use comnum_core::signal::{Signal, Symbols};

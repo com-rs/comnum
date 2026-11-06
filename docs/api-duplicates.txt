@@ -47,6 +47,7 @@ checksum                2  # Crc::checksum (the parity bits of a CRC) / ais::nme
 filter                  3  # fft::filter (circular, by a frequency response) / Fir::filter (linear FIR) / Ofdm::filter (keeps the active subcarriers)
 frame                   3  # Dvbs2Fec::frame (the frame size) / Dvbt::frame (the OFDM frame structure): accessors / hdlc::frame (the bits of an HDLC frame)
 frequency_correlation   2  # Tdl::frequency_correlation calls comnum_dsp::estimation::frequency_correlation
+pulse                   2  # Fbmc::pulse / Ofdm::pulse: the sampled pulse of a symbol of each modem (the columns of G for comnum_waveform::sir)
 from_bits               2  # BigUint::from_bits (an integer of its bits) / lte::mib::Mib::from_bits (the fields of a MIB): the inverse of to_bits
 identity                2  # linalg::identity (the identity matrix) / Puncturer::identity (the pattern that keeps every bit)
 inner_decode            2  # Dvbs::inner_decode / Dvbt::inner_decode: the same step (the bytes after the Viterbi decoder) of two standards
@@ -111,7 +112,7 @@ conditions              2
 config                  2
 dbp                     2
 decoder_mut             2
-delays                  4
+delays                  5  # DoublySelective::delays: the taps of the SIR model on its grid
 demap_bits              2
 demodulate              10  # ais::demodulate (the line levels of an AIS channel)
 describe                2
@@ -152,7 +153,7 @@ phase                   2
 phase_response          2
 position                2  # ais::message::Message::position (the position of a report) / fm::rds::Offset::position (the position of a block in a group)
 points                  3
-powers                  3
+powers                  4  # DoublySelective::powers: the tap powers of the SIR model
 propagate               3
 random                  3
 rate                   12

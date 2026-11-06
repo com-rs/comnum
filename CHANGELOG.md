@@ -6,7 +6,74 @@ and follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.3.0] — 2026-11-06
+
+Eight references reproduced and recorded as validation cards (Gardner 1986, Zheng & Xiao
+2003, Goldsmith & Chua 1997, Ding et al. 2014, ten Brink 2001, MacKay 1999, Savory 2010,
+Nissel, Schwarz & Rupp 2017), the JSON output and the guide of `comnum` for programs and
+agents, and the logarithmic step distributions of the split-step method. No existing
+result changes.
+
 ### Added
+
+- `comnum_waveform::sir`: the signal-to-interference ratio of any multicarrier scheme
+  with a one-tap equaliser over a doubly-selective WSSUS channel with Jakes' Doppler, in
+  closed form from its pulses (`DoublySelective::sir_qam`, `sir_oqam`; Nissel, Schwarz &
+  Rupp, *IEEE J. Sel. Areas Commun.* 35(8), 2017, eqs. (35)-(40)); `Ofdm::pulse` and
+  `Ofdm::window`; `ofdm::budget::jakes_ici_sir`, the exact ICI of CP-OFDM under Jakes'
+  fading (eq. (42)) whose small-Doppler limit is `doppler_noise_power`;
+  `fbmc::Prototype::Hermite` (Haas & Belfiore 1997, eqs. (10)-(11)) and
+  `Prototype::localisation` (eqs. (4)-(5)); `comnum_math::{hyp1f2, hermite_h}`. Cards
+  `nissel2017jsac_eq42` (CI: the CP-OFDM points of Figs. 5-8 at 500 km/h within 0.2 dB
+  and the labelled spacings to the kHz) and `nissel2017jsac_figs5_8` (campaign:
+  the SIR of OFDM, FBMC-OQAM and FBMC-QAM at the optimal spacing over four channels, 36 of 39 points at 100-500 km/h within 1 dB of Figs. 5-8). `nissel2017_fig4` gains the FBMC curve of Nissel & Rupp with the Hermite prototype (8.56e-3 against 8.5e-3 at 250 km/h).
+
+- `comnum_fec::exit`: EXIT charts of parallel concatenated codes (ten Brink, *IEEE
+  Trans. Commun.* 49(10), 2001): the J function and its inverse, the mutual information
+  of LLRs, the transfer curve of a recursive systematic code measured with the BCJR
+  (`ExitCurve`) and the pinch-off limit by bisection (`pinch_off_db`). Card
+  `tenbrink2001_pinch_off` (campaign): Table IV within 0.02 dB on the diagonal and the
+  pairs with C2, C2/C1 1.61 against 1.49 dB (the end of the chart is not given).
+
+- `comnum_fec::density_evolution::correction_effect_threshold`: the zero of the
+  correction effect of the simple decoder (MacKay, *IEEE Trans. Inf. Theory* 45(2), 1999,
+  eq. (57)). Card `mackay1999` (campaign): Fig. 6(b) within 1.6 %, the BP transitions of
+  Fig. 6, and the BER of the (504, 252) and (1008, 504) codes of Fig. 11 within a factor
+  1.4 with PEG codes.
+
+- `comnum_dsp::compensation::iq`: the quadrature imbalance of a coherent front end
+  removed by Gram-Schmidt (`gram_schmidt`) or Löwdin (`lowdin`) orthonormalisation,
+  and `iq_correlation` (Savory, *IEEE J. Sel. Topics Quantum Electron.* 16(5), 2010, eqs.
+  (6)-(8)). Card `savory2010_eqs6_8` (CI): the correlation sin 2 theta, Gram-Schmidt
+  leaving the signal turned by theta, Löwdin restoring it (Fig. 3).
+
+- `comnum_mimo::noma`: downlink NOMA with users dropped at random in a disc (Ding, Yang,
+  Fan & Poor, *IEEE Signal Process. Lett.* 21(12), 2014): the gain CDF (eq. (3)) and
+  its Gauss-Chebyshev form (4), the SIC thresholds, the exact outage of the ordered
+  users (eq. (9)) and its high-SNR form (11), the orthogonal random user; and
+  `comnum_math::gauss_chebyshev`. Card `ding2014_outage`: the table of Fig. 3 (eq. (11)
+  to four digits) and a Monte Carlo with SIC within 0.03 decade of Fig. 1(a).
+
+- `comnum_mapping::link_adaptation`: variable-rate variable-power MQAM over Rayleigh
+  fading (Goldsmith & Chua, *IEEE Trans. Commun.* 45(10), 1997): the BER bound (17) and
+  the power gap K, the capacity with water-filling in time (eq. (7)), continuous-rate
+  (eq. (25)) and discrete-rate (eqs. (31)-(32)) adaptive MQAM, the average fade region
+  durations (eqs. (34)-(35)) and the BER under an SNR estimation error (eq. (42)), in
+  closed form with exponential integrals. Card `goldsmith1997_adaptive_mqam` (CI): Table
+  II within 1.3 %, Figs. 3, 5 and 10 within their reading.
+
+- `comnum_channel::multipath::rayleigh_level_crossing_rate` and
+  `rayleigh_average_fade_duration` (Zheng & Xiao, *IEEE Trans. Commun.* 51(6), 2003, eq.
+  (19)). Card `zheng2003_statistics`: the sum-of-sinusoids fading of `Tdl` with 8
+  sinusoids has the correlations of Theorem 1 (within 0.02 of J0) and the level-crossing
+  rate and fade duration of eqs. (19) within 3.5 % from -20 to 0 dB (5 to 6 % at +5 dB,
+  within 0.8 % with 64 sinusoids).
+
+- `comnum_dsp::sync::timing::gardner_s_curve` and `gardner_gain`: the S-curve
+  $(4/T) G_{R} \sin(2\pi\tau/T)$ and the gain $8\pi G_{R}/T^{2}$ of Gardner's detector for a
+  raised-cosine pulse (Gardner, *IEEE Trans. Commun.* 34(5), 1986, eqs. (15) and (29)).
+  Card `gardner1986_scurve`: the Monte Carlo mean of `gardner_ted` within 0.003 of the
+  S-curve for roll-offs 0.35 to 1, and its independence from the carrier phase (eq. (33)).
 
 - `comnum_fec::density_evolution`: density evolution of regular LDPC ensembles
   (Richardson & Urbanke, *IEEE Trans. Inf. Theory* 47(2), 2001): Gallager's algorithms

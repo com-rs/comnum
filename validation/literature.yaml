@@ -39,6 +39,19 @@
   badge: green
   remarks:
     - "\"4-5 dB per extra bit\" at 1e-3 holds from 4- to 32-PAM; the step is 3.73 dB from 2 to 4 and above 5 dB beyond 32"
+- id: goldsmith1997
+  area: Foundations
+  ref: "A. J. Goldsmith, S.-G. Chua, Variable-rate variable-power MQAM for fading channels, TCOM 45(10), 1218-1230, 1997"
+  module: comnum_mapping::link_adaptation
+  tested: "Rayleigh fading in closed form: the capacity with water-filling in time (eq. (7)) within 0.05 of Fig. 3 from 5 to 25 dB; continuous-rate MQAM (eq. (25)) within 0.06 of the continuous curve of Fig. 5 at 1e-3; the five-region discrete rate {0, 2, 4, 16, 64} (eqs. (31)-(32)) within 0.07 of Fig. 5; Table II: gamma_K* = 1.2235 and 1.6843 against 1.224 and 1.684, the ten average fade region durations within 1.3 % (exact at 10 dB); Fig. 10 (eq. (42)) within 5 %"
+  tests:
+    - validation/tests/modulation/goldsmith1997.rs::goldsmith_chua_1997_figs_3_5_10_and_table_ii
+  badge: green
+  not_covered: "log-normal shadowing (Figs. 2 and 4), channel inversion (eqs. (9)-(14), (26)-(27)), the suboptimal policies of Figs. 8-9, the simulated BER of Figs. 6-7, the delay of Fig. 11"
+  remarks:
+    - "Fig. 3: the MQAM curves lie 0.1 to 0.15 bit/s/Hz below eq. (25) from 5 to 15 dB, where the continuous curve of Fig. 5, the same quantity at 1e-3, agrees with eq. (25)"
+    - "Table II at 20 dB recomputes 1 to 1.3 % off its printed values (the 10 dB column is exact)"
+    - "Fig. 6: the top tick of the BER axis reads 10^2 for 10^-2; after eq. (26) 'R/B < 4' is most likely M < 4"
 - id: chang2002
   area: Foundations
   ref: "M.-X. Chang, Y. T. Su, Performance analysis of equalized OFDM systems in Rayleigh fading, TWC 1(4), 2002"
@@ -207,6 +220,26 @@
     - "Table I prints 0.04 for the thresholds of Gallager A and B on the (3, 6) ensemble (identical for d_v = 3), 0.0395 by eq. (6): the only entries rounded up"
     - "Sec. III-A, Example 7: the raw error rate at sigma = 0.88 is given as about 13.0 %, Q(1/0.88) = 12.8 %"
     - "Example 12: the initial LLR density of the binary-input Laplace channel is printed mirrored (mass 1/2 at -2/lambda) with respect to Examples 10-11 and to the LLR of the input +1"
+- id: tenbrink2001
+  area: Coding and shaping
+  ref: "S. ten Brink, Convergence behavior of iteratively decoded parallel concatenated codes, IEEE Trans. Commun. 49(10), 1727-1737, 2001"
+  module: comnum_fec::exit
+  tested: "the pinch-off limits of rate-1/2 PCCs by EXIT charts measured with the BCJR of comnum_fec::conv (2e5 bits per point, alternate puncturing, tunnel open up to I = 0.97): Table IV, the diagonal C2 to C6 and the pairs with C2 within 0.02 dB (C3/C3 0.627 against 0.62), C6/C1 0.862 against 0.84, C2/C1 1.614 against 1.49; Table II, the (037, 021) turbo code 0.494 against 0.53 dB; the J function and its inverse"
+  tests:
+    - validation/tests/coding/tenbrink2001.rs::ten_brink_2001_pinch_off_limits
+  badge: orange
+  not_covered: "the bit error rates of the iterative decoder (Figs. 7-9), the decoding trajectories, the codes of memory 1 in the other pairs of Table IV, serial concatenation"
+  remarks:
+    - "the paper gives neither its puncturing pattern nor the end of the chart at which the tunnel must be open: with the memory-1 code C1, whose curve reaches 1 only at I_A = 1, the C2/C1 limit moves from 1.54 to 1.91 dB as that end goes from I = 0.90 to 0.99"
+- id: mackay1999
+  area: Coding and shaping
+  ref: "D. J. C. MacKay, Good error-correcting codes based on very sparse matrices, IEEE Trans. Inf. Theory 45(2), 399-431, 1999"
+  module: comnum_fec::density_evolution
+  tested: "Fig. 6(b): the zero of the correction effect of eq. (57) at t = 3 to 6 (rate 1/2) and t = 3 (rate 1/4) within 1.6 % of the dotted curves; Fig. 6: the BP transitions on the BSC by density evolution, 0.0768 (t = 4) and 0.0841 (t = 3), inside the brackets of the paper; Fig. 11: the BER of rate-1/2 codes of length 504 and 1008 (PEG, not construction 1A) within a factor 1.4 from 0.82 to 2.6 dB"
+  tests:
+    - validation/tests/coding/mackay1999.rs::mackay_1999_figs_6_and_11
+  badge: green
+  not_covered: "the constructions 1A to 2B themselves (PEG used instead), the Gallager codes over GF(q), the codes of Figs. 12-14 (other rates and lengths, the Gilbert-Elliott channel), the decoding-time statistics"
 - id: berrou1993
   area: Coding and shaping
   ref: "C. Berrou, A. Glavieux, P. Thitimajshima, Near Shannon limit error-correcting coding and decoding: turbo-codes, ICC 1993"
@@ -482,13 +515,30 @@
   area: Waveforms
   ref: "R. Nissel, M. Rupp, OFDM and FBMC-OQAM in doubly-selective channels: calculating the bit error probability, IEEE Commun. Lett. 21(6), 2017"
   module: comnum_waveform::{ofdm, fbmc}
-  tested: "eqs. (16)-(17) (the Rayleigh closed forms of comnum_mapping); Fig. 2 (FBMC in doubly-flat fading); Fig. 4 (OFDM and CP-OFDM over Vehicular A, 50-500 km/h, within 30 %)"
+  tested: "eqs. (16)-(17) (the Rayleigh closed forms of comnum_mapping); Fig. 2 (FBMC in doubly-flat fading); Fig. 4 (OFDM and CP-OFDM over Vehicular A, 50-500 km/h, within 30 %; FBMC with the Hermite prototype at 250 km/h, 8.56e-3 against 8.5e-3)"
   tests:
     - validation/tests/multicarrier/nissel2017.rs::nissel_2017_eqs_16_17_are_the_rayleigh_closed_forms
     - validation/tests/multicarrier/nissel2017.rs::nissel_2017_fig_2_fbmc_in_doubly_flat_fading
     - validation/tests/multicarrier/nissel2017.rs::nissel_2017_fig_4_vehicular_a
   badge: orange
-  not_covered: "the Hermite prototype (Haas & Belfiore 1997, not in references/): the FBMC curves of Figs. 3-4 are compared with PHYDYAS qualitatively; the BEP of Lemma 1"
+  not_covered: "the FBMC curves of Figs. 3-4 at the other velocities (the orderings with PHYDYAS only); the BEP of Lemma 1"
+- id: nissel2017jsac
+  area: Waveforms
+  ref: "R. Nissel, S. Schwarz, M. Rupp, Filter bank multicarrier modulation schemes for future mobile communications, IEEE J. Sel. Areas Commun. 35(8), 1768-1782, 2017"
+  module: comnum_waveform::{sir, fbmc, ofdm::budget}
+  tested: "eqs. (13) and (17), the localisation of the Hermite and PHYDYAS prototypes, to the printed digits; eq. (12), the orthogonality of the Hermite pulse at TF = 2; eq. (42) at the CP-OFDM points of Figs. 5-8: 500 km/h within 0.2 dB and the labelled spacings to the kHz (174, 28, 247, 232 kHz); Figs. 5-8, the SIR of OFDM, FBMC-OQAM (Hermite, PHYDYAS) and FBMC-QAM at the optimal spacing by eqs. (35) and (40): 36 of 39 points at 100-500 km/h within 1 dB, the spacings within 12 % of the labels; at 0 km/h the dashed starts within 2 dB except Hermite on TDL-A (39.9 against 44 dB, see remarks)"
+  tests:
+    - validation/tests/multicarrier/nissel2017jsac.rs::nissel_2017_jsac_eq_42_cp_ofdm_in_closed_form
+    - validation/tests/multicarrier/nissel2017jsac.rs::nissel_2017_jsac_figs_5_to_8_optimal_sir
+    - crates/comnum-waveform/src/fbmc/mod.rs::the_localisation_of_the_prototypes_is_that_of_nissel_2017
+    - crates/comnum-waveform/src/fbmc/mod.rs::the_hermite_pulse_is_orthogonal_at_tf_2_and_on_the_oqam_lattice
+  badge: orange
+  not_covered: "the exhaustive-search CP-OFDM curves with ISI (Figs. 6-7), WOLA and f-OFDM (Figs. 2, 9-11; not implemented), the time-frequency efficiency of eq. (43) and the two-numerology SIR of eq. (44), the coded FBMC-OQAM of eqs. (26)-(28), the measurements of Figs. 3 and 12, the DAC quantisation of Fig. 13"
+  remarks:
+    - "eq. (7) prints the support of the receive pulse as T0/2 <= t < T0/2 (empty): -T0/2 <= t < T0/2 is meant"
+    - "at 0 km/h the SIR is set by the delay spread alone and falls with sigma_f^2 of the prototype: by eqs. (13) and (17) Hermite is 1.8 dB below PHYDYAS, as computed, where Fig. 7 reads it 2.5 dB above (44 against 41.5 dB) and Fig. 6 reads both at 45 dB: not explained"
+    - "the 100 km/h CP-OFDM values read on Figs. 6-8 sit 0.7 to 1.8 dB above the 1/v^2 law of eq. (42) that the 500 km/h values follow: a reading error on the steep part of the curves"
+    - "the labelled spacings at 500 km/h are those of the exhaustive search, not of the rule of thumb (41): Pedestrian A, PHYDYAS, 130 kHz against 122 kHz by (41)"
 - id: hadani2017
   area: Waveforms
   ref: "R. Hadani et al., Orthogonal time frequency space modulation, WCNC 2017"
@@ -639,6 +689,18 @@
     - tests/oracle/test_sionna_tdl.py::test_tdl_profiles_are_those_of_sionna
   badge: green
   not_covered: "the demodulation requirements of clause 5 (a complete PDSCH link with HARQ is not yet compared); the correlation matrices of B.2.3 other than the identity (ULA Low)"
+- id: zheng2003
+  area: Wireless channels
+  ref: "Y. R. Zheng, C. Xiao, Simulation models with correct statistical properties for Rayleigh fading channels, TCOM 51(6), 920-928, 2003"
+  module: comnum_channel::multipath
+  tested: "the sum-of-sinusoids model of eq. (15) in Tdl with M = 8: Theorem 1 (eqs. (16a)-(16e)), the ensemble autocorrelations within 0.02 of J0(2 pi f_D tau) for f_D tau = 0 to 10 and the cross-correlation within 0.012 of zero (20 000 realisations); Theorem 3 (eqs. (19a)-(19b)), the level-crossing rate and the average fade duration within 3.5 % from -20 to 0 dB, 5.1 % and 5.8 % at +5 dB (finite M: 64 sinusoids within 0.8 %); the closed forms rayleigh_level_crossing_rate and rayleigh_average_fade_duration"
+  tests:
+    - validation/tests/wireless_channels/zheng2003.rs::zheng_xiao_2003_correlations_level_crossings_and_fades
+  badge: green
+  not_covered: "eq. (16f) and Fig. 6 (the squared envelope, see the remarks), the envelope and phase PDFs of Figs. 7-8 as histograms, model (20) with the shared phases of eq. (14), the Jakes and Pop-Beaulieu generators of eqs. (6)-(9)"
+  remarks:
+    - "eq. (16f) puts the finite-M autocorrelation of the squared envelope above its limit 4 + 4 J0^2, where the simulated curves of Fig. 6 lie below it"
+    - "eqs. (20b)-(20c) and (21): sqrt(2/M) is printed for 2/sqrt(M), which gives a power of 1 instead of the 2 of eq. (14)"
 - id: m1225
   area: Wireless channels
   ref: "ITU-R M.1225 (1997), evaluation of IMT-2000 radio technologies"
@@ -1010,6 +1072,18 @@
     - "eq. (19): alpha = l/N is a misprint for l/L"
     - "Table I is not self-consistent: 128 carriers of a 1024-point FFT at 44.1 kHz cannot span 17.5 kHz, and 70 Hz of Doppler over a 29 ms symbol decorrelates the channel within the symbol"
     - "with L = 8 the comb samples delays below 128 samples only, while channel 1 has a path at 137"
+- id: gardner1986
+  area: Receiver DSP
+  ref: "F. M. Gardner, A BPSK/QPSK timing-error detector for sampled receivers, TCOM 34(5), 423-429, 1986"
+  module: comnum_dsp::sync::timing
+  tested: "eqs. (11), (15), (29), (33): the mean of gardner_ted by Monte Carlo on raised-cosine BPSK (roll-off 0.35, 0.5, 1; offsets 0.1 and 0.25 symbol; 1e5 symbols) within 0.003 of the S-curve, the gain 8 pi G_R / T^2 of gardner_gain (0.6243 to 8/3 for roll-off 0.2 to 1), and the independence from the carrier phase, exact"
+  tests:
+    - validation/tests/synchronisation/gardner1986.rs::gardner_1986_s_curve_gain_and_phase_independence
+  badge: green
+  not_covered: "the paper prints no numerical figure (Figs. 2-3 are unscaled sketches) and no jitter analysis: the self-noise and the jitter of GardnerLoop are not compared"
+  remarks:
+    - "eq. (29) carries a minus sign that the sum (15) as printed does not give: U(tau) = +(4/T) G_R sin(2 pi tau / T)"
+    - "eq. (28): a j is missing before G_I- in the first line; eq. (2): (r - 5/4)T is most likely (r - 3/4)T"
 - id: schmidl1997
   area: Receiver DSP
   ref: "T. M. Schmidl, D. C. Cox, Robust frequency and timing synchronization for OFDM, TCOM 45(12), 1997"
@@ -1358,6 +1432,19 @@
   remarks:
     - "with estimated CSI the 1.5 dB of Fig. 4 is the limit of Proposition 5: 2 dB at M = 400 for the drop of the test, 1.55 dB at M = 102400"
   not_covered: "the MMSE bounds (Propositions 4, 8), the multi-cell results (Sec. IV-C, Fig. 8), the energy efficiency (Figs. 6-7)"
+- id: ding2014
+  area: MIMO
+  ref: "Z. Ding, Z. Yang, P. Fan, H. V. Poor, On the performance of non-orthogonal multiple access in 5G systems with randomly deployed users, IEEE SPL 21(12), 1501-1505, 2014 (arXiv:1406.1516)"
+  module: comnum_mimo::noma
+  tested: "the table of Fig. 3 (rho = 80 dB, alpha = 3, four cases): the anal. rows equal eq. (11) with N = 10 Gauss-Chebyshev nodes to their four digits, the simul. rows within 7.5 % of the exact eq. (9), the conventional row within 0.6 % of the orthogonal random user; Fig. 1(a): a Monte Carlo of the drops, ordering and SIC (1e6 drops per point) within 0.03 decade of the 29 simulated points read from 10 to 35 dB"
+  tests:
+    - validation/tests/mimo/ding2014.rs::ding_2014_fig_3_table_and_fig_1a
+    - crates/comnum-mimo/src/noma.rs::the_gain_cdf_has_its_closed_form_for_alpha_2
+  badge: green
+  not_covered: "the ergodic sum rate of Fig. 2 (eqs. (13), (19)), Fig. 1(b), more than two users"
+  remarks:
+    - "the text calls the table of Fig. 3 'Table III'; eq. (23) reads log(rho log log M) for log(rho log M); Sec. V-2 gives -b_N/beta_N = c_N where the definitions give 1/c_N"
+    - "Fig. 2(b) follows Rayleigh fading without path loss, not the caption's 5 m and alpha = 2"
 - id: eun1997
   area: Hardware impairments
   ref: "C. Eun, E. J. Powers, A new Volterra predistorter based on the indirect learning architecture, TSP 45(1), 1997"
@@ -1398,13 +1485,15 @@
 - id: savory2010
   area: Receiver DSP
   ref: "S. J. Savory, Digital coherent optical receivers: algorithms and subsystems, JSTQE 16(5), 2010"
-  module: comnum_dsp::compensation::cd, comnum_mapping::theory
-  tested: "eq. (11): number, modulus and phases of the taps of the truncated impulse response (exact; the length kept odd); the OSNR of 28-GBd PDM-QPSK at a BER of 1e-3 (13.3 dB)"
+  module: comnum_dsp::compensation::cd, comnum_dsp::compensation::iq, comnum_mapping::theory
+  tested: "eq. (11): number, modulus and phases of the taps of the truncated impulse response (exact; the length kept odd); the OSNR of 28-GBd PDM-QPSK at a BER of 1e-3 (13.3 dB); eqs. (6)-(8) and Fig. 3: the correlation sin 2 theta of the arms of a hybrid with a phase error, Gram-Schmidt leaving the signal turned by theta, Löwdin restoring it (RMS error below 1e-3 on 1e5 16-QAM symbols)"
   tests:
     - validation/tests/fiber/savory2010.rs::savory_2010_eq_11
+    - validation/tests/fiber/savory2010.rs::savory_2010_eqs_6_to_8_orthonormalisation
   badge: orange
   not_covered: "the CMA singularity of Sec. VII (Fig. 7, control surfaces), the frequency estimators (56)-(57), the weighted Viterbi-Viterbi"
   remarks:
+    - "eq. (7): the second output of Gram-Schmidt is divided by alpha = cos 2 theta, not multiplied; eq. (30): the real and imaginary parts are swapped (tan 2 theta[k] = tan 2 theta[0] e^{-4 mu k}); eq. (58): the modulus inside the argmax is missing"
     - "eq. (11): with beta2 < 0, rho < 0, so 1/sqrt(rho) gives every tap a constant phase pi/4 away from the impulse response, and N = floor(|rho|) may be even"
 - id: faruk2017
   area: Receiver DSP

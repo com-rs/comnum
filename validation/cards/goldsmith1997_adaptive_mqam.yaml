@@ -1,0 +1,82 @@
+id: goldsmith1997_adaptive_mqam
+title: Capacity and adaptive MQAM in Rayleigh fading, region durations and estimation error
+literature: goldsmith1997
+evidence: [table, curve]
+source:
+  kind: paper
+  reference: "A. J. Goldsmith, S.-G. Chua, Variable-rate variable-power MQAM for fading channels, IEEE Trans. Commun. 45(10), 1218-1230, 1997"
+  locator: "Fig. 3 (eqs. (7), (25)), Fig. 5 (eqs. (31)-(32)), Table II (eqs. (34)-(35)), Fig. 10 (eq. (42)); figures read on the raster"
+  file: modulation/1997_goldsmith_variable-rate-variable-power-mqam_tcom.pdf
+description: >
+  The closed forms of comnum::mapping::link_adaptation over Rayleigh fading: the capacity
+  with water-filling in time and continuous-rate adaptive MQAM at 1e-3 and 1e-6 (Fig. 3),
+  the five-region discrete rate {0, 2, 4, 16, 64} and the continuous rate at 1e-3 (Fig. 5),
+  the threshold gamma_K* of eq. (32) and the average fade region durations at 10 and
+  20 dB with f_D = 100 Hz (Table II), and the BER under a constant SNR estimation error
+  (Fig. 10).
+run:
+  test: validation/tests/modulation/goldsmith1997.rs::goldsmith_chua_1997_figs_3_5_10_and_table_ii
+tier: ci
+duration: "under 1 ms"
+tolerance: {atol: 0.05}
+why: >
+  the curves are read on the raster to about 0.05 bit/s/Hz; Table II is printed to three
+  digits (1.5 % covers the 20 dB column, which recomputes 1.3 % off at most); gamma_K* is
+  printed to four digits
+findings:
+  - "Fig. 3: the MQAM curves lie 0.1 to 0.15 bit/s/Hz below eq. (25) from 5 to 15 dB, while the continuous curve of Fig. 5 (the same quantity at 1e-3) agrees with eq. (25) within 0.05"
+  - "Table II at 20 dB: regions 0 to 3 recompute 0.745, 0.304, 1.07 and 2.25 ms against 0.737, 0.301, 1.06 and 2.28 (1 to 1.3 %), not removed by moving gamma_K*; the 10 dB column is exact"
+  - "Fig. 6: the top tick of the BER axis reads 10^2 for 10^-2; after eq. (26), 'R/B < 4' is most likely M < 4"
+cases:
+  - {inputs: {figure: 3, curve: capacity, snr_db: 5.0}, expected: 1.88}
+  - {inputs: {figure: 3, curve: mqam, ber: 0.001, snr_db: 5.0}, expected: 0.82, tolerance: {atol: 0.17}, why: "Fig. 3 lies 0.1-0.15 bit/s/Hz below eq. (25) from 5 to 15 dB, where Fig. 5 (the same quantity) agrees with it"}
+  - {inputs: {figure: 3, curve: mqam, ber: 1.0e-6, snr_db: 5.0}, expected: 0.51, tolerance: {atol: 0.17}, why: "as at 1e-3"}
+  - {inputs: {figure: 3, curve: capacity, snr_db: 7.5}, expected: 2.38}
+  - {inputs: {figure: 3, curve: mqam, ber: 0.001, snr_db: 7.5}, expected: 1.18, tolerance: {atol: 0.17}, why: "Fig. 3 lies 0.1-0.15 bit/s/Hz below eq. (25) from 5 to 15 dB, where Fig. 5 (the same quantity) agrees with it"}
+  - {inputs: {figure: 3, curve: mqam, ber: 1.0e-6, snr_db: 7.5}, expected: 0.71, tolerance: {atol: 0.17}, why: "as at 1e-3"}
+  - {inputs: {figure: 3, curve: capacity, snr_db: 10.0}, expected: 2.98}
+  - {inputs: {figure: 3, curve: mqam, ber: 0.001, snr_db: 10.0}, expected: 1.64, tolerance: {atol: 0.17}, why: "Fig. 3 lies 0.1-0.15 bit/s/Hz below eq. (25) from 5 to 15 dB, where Fig. 5 (the same quantity) agrees with it"}
+  - {inputs: {figure: 3, curve: mqam, ber: 1.0e-6, snr_db: 10.0}, expected: 1.0, tolerance: {atol: 0.17}, why: "as at 1e-3"}
+  - {inputs: {figure: 3, curve: capacity, snr_db: 12.5}, expected: 3.67}
+  - {inputs: {figure: 3, curve: mqam, ber: 0.001, snr_db: 12.5}, expected: 2.17, tolerance: {atol: 0.17}, why: "Fig. 3 lies 0.1-0.15 bit/s/Hz below eq. (25) from 5 to 15 dB, where Fig. 5 (the same quantity) agrees with it"}
+  - {inputs: {figure: 3, curve: mqam, ber: 1.0e-6, snr_db: 12.5}, expected: 1.43, tolerance: {atol: 0.17}, why: "as at 1e-3"}
+  - {inputs: {figure: 3, curve: capacity, snr_db: 15.0}, expected: 4.37}
+  - {inputs: {figure: 3, curve: mqam, ber: 0.001, snr_db: 15.0}, expected: 2.79, tolerance: {atol: 0.17}, why: "Fig. 3 lies 0.1-0.15 bit/s/Hz below eq. (25) from 5 to 15 dB, where Fig. 5 (the same quantity) agrees with it"}
+  - {inputs: {figure: 3, curve: mqam, ber: 1.0e-6, snr_db: 15.0}, expected: 1.92, tolerance: {atol: 0.17}, why: "as at 1e-3"}
+  - {inputs: {figure: 3, curve: capacity, snr_db: 17.5}, expected: 5.14}
+  - {inputs: {figure: 3, curve: mqam, ber: 0.001, snr_db: 17.5}, expected: 3.47, tolerance: {atol: 0.17}, why: "Fig. 3 lies 0.1-0.15 bit/s/Hz below eq. (25) from 5 to 15 dB, where Fig. 5 (the same quantity) agrees with it"}
+  - {inputs: {figure: 3, curve: mqam, ber: 1.0e-6, snr_db: 17.5}, expected: 2.5, tolerance: {atol: 0.17}, why: "as at 1e-3"}
+  - {inputs: {figure: 3, curve: capacity, snr_db: 20.0}, expected: 5.9}
+  - {inputs: {figure: 3, curve: mqam, ber: 0.001, snr_db: 20.0}, expected: 4.18, tolerance: {atol: 0.17}, why: "Fig. 3 lies 0.1-0.15 bit/s/Hz below eq. (25) from 5 to 15 dB, where Fig. 5 (the same quantity) agrees with it"}
+  - {inputs: {figure: 3, curve: mqam, ber: 1.0e-6, snr_db: 20.0}, expected: 3.1, tolerance: {atol: 0.17}, why: "as at 1e-3"}
+  - {inputs: {figure: 3, curve: capacity, snr_db: 25.0}, expected: 7.46}
+  - {inputs: {figure: 3, curve: mqam, ber: 0.001, snr_db: 25.0}, expected: 5.7, tolerance: {atol: 0.17}, why: "Fig. 3 lies 0.1-0.15 bit/s/Hz below eq. (25) from 5 to 15 dB, where Fig. 5 (the same quantity) agrees with it"}
+  - {inputs: {figure: 3, curve: mqam, ber: 1.0e-6, snr_db: 25.0}, expected: 4.6, tolerance: {atol: 0.17}, why: "as at 1e-3"}
+  - {inputs: {figure: 5, curve: continuous, snr_db: 7.0}, expected: 1.2, tolerance: {atol: 0.08}, why: "the curve is read to 0.05 on a dense figure (0.06 off at 16 dB)"}
+  - {inputs: {figure: 5, curve: five_regions, snr_db: 7.0}, expected: 1.12, tolerance: {atol: 0.08}, why: "the curve is read to 0.05; the marker at 7 dB sits 0.07 below eqs. (31)-(32)"}
+  - {inputs: {figure: 5, curve: continuous, snr_db: 10.0}, expected: 1.75, tolerance: {atol: 0.08}, why: "the curve is read to 0.05 on a dense figure (0.06 off at 16 dB)"}
+  - {inputs: {figure: 5, curve: five_regions, snr_db: 10.0}, expected: 1.68, tolerance: {atol: 0.08}, why: "the curve is read to 0.05; the marker at 7 dB sits 0.07 below eqs. (31)-(32)"}
+  - {inputs: {figure: 5, curve: continuous, snr_db: 13.0}, expected: 2.35, tolerance: {atol: 0.08}, why: "the curve is read to 0.05 on a dense figure (0.06 off at 16 dB)"}
+  - {inputs: {figure: 5, curve: five_regions, snr_db: 13.0}, expected: 2.28, tolerance: {atol: 0.08}, why: "the curve is read to 0.05; the marker at 7 dB sits 0.07 below eqs. (31)-(32)"}
+  - {inputs: {figure: 5, curve: continuous, snr_db: 16.0}, expected: 3.05, tolerance: {atol: 0.08}, why: "the curve is read to 0.05 on a dense figure (0.06 off at 16 dB)"}
+  - {inputs: {figure: 5, curve: five_regions, snr_db: 16.0}, expected: 3.0, tolerance: {atol: 0.08}, why: "the curve is read to 0.05; the marker at 7 dB sits 0.07 below eqs. (31)-(32)"}
+  - {inputs: {figure: 5, curve: continuous, snr_db: 20.0}, expected: 4.2, tolerance: {atol: 0.08}, why: "the curve is read to 0.05 on a dense figure (0.06 off at 16 dB)"}
+  - {inputs: {figure: 5, curve: five_regions, snr_db: 20.0}, expected: 4.1, tolerance: {atol: 0.08}, why: "the curve is read to 0.05; the marker at 7 dB sits 0.07 below eqs. (31)-(32)"}
+  - {inputs: {figure: 5, curve: continuous, snr_db: 25.0}, expected: 5.75, tolerance: {atol: 0.08}, why: "the curve is read to 0.05 on a dense figure (0.06 off at 16 dB)"}
+  - {inputs: {figure: 5, curve: five_regions, snr_db: 25.0}, expected: 5.42, tolerance: {atol: 0.08}, why: "the curve is read to 0.05; the marker at 7 dB sits 0.07 below eqs. (31)-(32)"}
+  - {inputs: {table: II, quantity: gamma_k, snr_db: 10.0}, expected: 1.224, tolerance: {rtol: 0.002}}
+  - {inputs: {table: II, quantity: gamma_k, snr_db: 20.0}, expected: 1.684, tolerance: {rtol: 0.002}}
+  - {inputs: {table: II, region: 0, snr_db: 10.0}, expected: 2.23, tolerance: {rtol: 0.015}}
+  - {inputs: {table: II, region: 1, snr_db: 10.0}, expected: 0.83, tolerance: {rtol: 0.015}}
+  - {inputs: {table: II, region: 2, snr_db: 10.0}, expected: 3.0, tolerance: {rtol: 0.015}}
+  - {inputs: {table: II, region: 3, snr_db: 10.0}, expected: 2.83, tolerance: {rtol: 0.015}}
+  - {inputs: {table: II, region: 4, snr_db: 10.0}, expected: 1.43, tolerance: {rtol: 0.015}}
+  - {inputs: {table: II, region: 0, snr_db: 20.0}, expected: 0.737, tolerance: {rtol: 0.015}}
+  - {inputs: {table: II, region: 1, snr_db: 20.0}, expected: 0.301, tolerance: {rtol: 0.015}}
+  - {inputs: {table: II, region: 2, snr_db: 20.0}, expected: 1.06, tolerance: {rtol: 0.015}}
+  - {inputs: {table: II, region: 3, snr_db: 20.0}, expected: 2.28, tolerance: {rtol: 0.015}}
+  - {inputs: {table: II, region: 4, snr_db: 20.0}, expected: 3.84, tolerance: {rtol: 0.015}}
+  - {inputs: {figure: 10, eps_db: 1.0, ber0: 0.001}, expected: 3.00e-03, tolerance: {rtol: 0.1}, why: "read on the log grid to about 5 %"}
+  - {inputs: {figure: 10, eps_db: 5.0, ber0: 0.001}, expected: 3.60e-02, tolerance: {rtol: 0.1}, why: "read on the log grid to about 5 %"}
+  - {inputs: {figure: 10, eps_db: 0.5, ber0: 1e-06}, expected: 3.70e-06, tolerance: {rtol: 0.1}, why: "read on the log grid to about 5 %"}
+  - {inputs: {figure: 10, eps_db: 5.0, ber0: 1e-06}, expected: 4.00e-03, tolerance: {rtol: 0.1}, why: "read on the log grid to about 5 %"}

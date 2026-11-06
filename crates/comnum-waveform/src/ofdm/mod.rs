@@ -150,6 +150,30 @@ impl Ofdm {
         fft::centred_bin(i + skip, self.n_active, self.fft_len())
     }
 
+    /// The transmit pulse of the active subcarrier `i` of symbol `n`, prefix included, on
+    /// its support: `(first sample, values)`, $\frac{1}{\sqrt{LN}} e^{j 2\pi k (t -
+    /// L N_{\mathrm{cp}})/(LN)}$ for $t = 0, \dots, L(N + N_{\mathrm{cp}}) - 1$ (energy
+    /// $(N + N_{\mathrm{cp}})/N$); a column of the matrix $\mathbf{G}$ of Nissel, Schwarz &
+    /// Rupp 2017, eq. (20).
+    pub fn pulse(&self, i: usize, n: usize) -> (usize, Vec<C64>) {
+        let (len, cp) = (self.fft_len(), self.oversampling * self.n_cp);
+        let (bin, scale) = (self.bin(i) as f64, 1.0 / (len as f64).sqrt());
+        let values = (0..self.block_len())
+            .map(|t| comnum_math::cis(std::f64::consts::TAU * bin * (t as f64 - cp as f64) / len as f64) * scale)
+            .collect();
+        (n * self.block_len(), values)
+    }
+
+    /// The receive pulse (the window of the demodulator) of the active subcarrier `i` of
+    /// symbol `n`: the [`Ofdm::pulse`] without its prefix, of unit energy, on its support
+    /// `(first sample, values)`.
+    pub fn window(&self, i: usize, n: usize) -> (usize, Vec<C64>) {
+        let (start, mut values) = self.pulse(i, n);
+        let cp = self.oversampling * self.n_cp;
+        values.drain(..cp);
+        (start + cp, values)
+    }
+
     /// Whether an FFT bin carries an active subcarrier.
     pub fn is_active_bin(&self, bin: usize) -> bool {
         (0..self.n_active).any(|i| self.bin(i) == bin)

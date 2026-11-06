@@ -35,6 +35,55 @@ pub fn gardner_ted(x: &[C64; 3]) -> f64 {
     (x[1].conj() * (x[2] - x[0])).re
 }
 
+/// The S-curve of Gardner's detector (Gardner 1986, eqs. (15) and (29)): the mean of
+/// [`gardner_ted`] on a real raised-cosine signal of roll-off $\beta$ = `rolloff` and
+/// i.i.d. symbols $\pm 1$, sampled at $\tau + qT$ and $\tau + (q - \tfrac12)T$, with
+/// $\tau$ = `tau` in symbols:
+/// $$U(\tau) = \frac{4}{T} G_{R} \sin\frac{2\pi\tau}{T}, \qquad G_{R} = \int_{0}^{1/T} G(f)\, G\!\left(\frac1T - f\right) \sin(\pi f T)\, df,$$
+/// $G$ the raised-cosine spectrum of unit value at $f = 0$ (the pulse of peak $g(0) = 1$),
+/// $T = 1$. The integrand lives on the overlap $|f - \tfrac{1}{2T}| \le \tfrac{\beta}{2T}$
+/// and is integrated by Gauss–Legendre with 64 nodes. The paper prints eq. (29) with a
+/// minus sign; the sum (15) as printed gives the plus sign used here, the slope of
+/// [`gardner_ted`] at $\tau = 0$ being positive.
+///
+/// # Examples
+/// ```
+/// use comnum_dsp::sync::timing::{gardner_gain, gardner_s_curve};
+/// // full roll-off: G_R = 1/(3 pi), a gain of 8/3
+/// assert!((gardner_gain(1.0) - 8.0 / 3.0).abs() < 1e-12);
+/// assert!(gardner_s_curve(0.5, 0.0).abs() < 1e-15);
+/// ```
+pub fn gardner_s_curve(rolloff: f64, tau: f64) -> f64 {
+    4.0 * gardner_overlap(rolloff) * (2.0 * std::f64::consts::PI * tau).sin()
+}
+
+/// The gain of Gardner's detector at zero timing error, $dU/d\tau = 8\pi G_{R} / T^{2}$
+/// ([`gardner_s_curve`]; it vanishes as the roll-off goes to zero, Gardner 1986, after
+/// eq. (29)).
+pub fn gardner_gain(rolloff: f64) -> f64 {
+    8.0 * std::f64::consts::PI * gardner_overlap(rolloff)
+}
+
+/// $G_{R}$ of [`gardner_s_curve`] for the raised cosine of roll-off `rolloff` and $T = 1$.
+fn gardner_overlap(rolloff: f64) -> f64 {
+    let b = rolloff.clamp(0.0, 1.0);
+    if b == 0.0 {
+        return 0.0;
+    }
+    let (lo, hi) = ((1.0 - b) / 2.0, (1.0 + b) / 2.0);
+    let (x, w) = comnum_math::gauss_legendre(64);
+    x.iter()
+        .zip(&w)
+        .map(|(&x, &w)| {
+            let f = lo + (hi - lo) * (x + 1.0) / 2.0;
+            let g = |f: f64| crate::filter::raised_cosine_spectrum(f, 1.0, b);
+            w * g(f) * g(1.0 - f) * (std::f64::consts::PI * f).sin()
+        })
+        .sum::<f64>()
+        * (hi - lo)
+        / 2.0
+}
+
 /// Gardner timing error for Nyquist pulses (power version).
 pub fn gardner_ted_nyquist(x: &[C64; 3]) -> f64 {
     x[1].norm_sqr() * (x[0].norm_sqr() - x[2].norm_sqr())

@@ -1,0 +1,75 @@
+id: zheng2003_statistics
+title: Correlations, level-crossing rate and fade duration of the sum-of-sinusoids Rayleigh fading
+literature: zheng2003
+evidence: [closed_form]
+source:
+  kind: paper
+  reference: "Y. R. Zheng, C. Xiao, Simulation models with correct statistical properties for Rayleigh fading channels, IEEE Trans. Commun. 51(6), 920-928, 2003"
+  locator: "Theorem 1, eqs. (16a)-(16e); Theorem 3, eqs. (19a)-(19b); the model of eqs. (14)-(15), (21); M = 8 as in Figs. 1-10"
+  file: wireless-channels/2003_zheng_simulation-models-rayleigh-fading_tcom.pdf
+description: >
+  One tap of unit power of comnum::channel::multipath::Tdl with 8 sinusoids (the angles of
+  eq. (15), a new theta per realisation, independent phases on I and Q). The ensemble
+  correlations over 20 000 realisations at f_D tau = 0 to 10 against J0(2 pi f_D tau)
+  (eqs. (16a), (16e)) and zero (eq. (16c)); the level-crossing rate and the average fade
+  duration of the envelope, over 400 realisations of 200 Doppler periods sampled at
+  f_D T_s = 0.002, against eqs. (19a)-(19b) from -20 to +5 dB, and the closed forms of
+  comnum (rayleigh_level_crossing_rate, rayleigh_average_fade_duration) against the
+  values of eq. (19) computed outside comnum.
+run:
+  test: validation/tests/wireless_channels/zheng2003.rs::zheng_xiao_2003_correlations_level_crossings_and_fades
+tier: campaign
+duration: "about 10 s"
+tolerance: {atol: 0.03}
+why: >
+  the correlations are means of 20 000 products of unit variance (standard error about
+  0.007); the level-crossing counts are some 10^3 to 10^4 per level (a few per cent), and
+  eqs. (19) hold for M -> infinity (Theorem 3), the model having 8 sinusoids
+findings:
+  - "eq. (16f), the finite-M autocorrelation of the squared envelope, is above its limit 4 + 4 J0^2, where the simulated curves of Fig. 6 are below it: the finite-M term appears wrong (not checked here)"
+  - "with 8 sinusoids the level-crossing rate is within 2.1 % and the fade duration within 3.5 % of eqs. (19) from -20 to 0 dB, and 5.1 % and 5.8 % off at +5 dB, where 64 sinusoids are within 0.8 %: eqs. (19) are the limit M -> infinity (Theorem 3)"
+  - "eqs. (20b)-(20c) and (21) print sqrt(2/M) for 2/sqrt(M): as printed the power is 1, not 2"
+  - "comnum draws independent phases on the in-phase and quadrature sums with unit amplitudes, not the common phi and the amplitudes cos psi_n, sin psi_n of eq. (14): the second-order statistics are those of Theorem 1"
+cases:
+  - {inputs: {quantity: rcc, fd_tau: 0.0}, expected: 1.000000}
+  - {inputs: {quantity: rxx, fd_tau: 0.0}, expected: 1.000000}
+  - {inputs: {quantity: rcs, fd_tau: 0.0}, expected: 0.0}
+  - {inputs: {quantity: rcc, fd_tau: 0.25}, expected: 0.472001}
+  - {inputs: {quantity: rxx, fd_tau: 0.25}, expected: 0.472001}
+  - {inputs: {quantity: rcs, fd_tau: 0.25}, expected: 0.0}
+  - {inputs: {quantity: rcc, fd_tau: 0.5}, expected: -0.304242}
+  - {inputs: {quantity: rxx, fd_tau: 0.5}, expected: -0.304242}
+  - {inputs: {quantity: rcs, fd_tau: 0.5}, expected: 0.0}
+  - {inputs: {quantity: rcc, fd_tau: 1.0}, expected: 0.220277}
+  - {inputs: {quantity: rxx, fd_tau: 1.0}, expected: 0.220277}
+  - {inputs: {quantity: rcs, fd_tau: 1.0}, expected: 0.0}
+  - {inputs: {quantity: rcc, fd_tau: 2.0}, expected: 0.157507}
+  - {inputs: {quantity: rxx, fd_tau: 2.0}, expected: 0.157507}
+  - {inputs: {quantity: rcs, fd_tau: 2.0}, expected: 0.0}
+  - {inputs: {quantity: rcc, fd_tau: 5.0}, expected: 0.100251}
+  - {inputs: {quantity: rxx, fd_tau: 5.0}, expected: 0.100251}
+  - {inputs: {quantity: rcs, fd_tau: 5.0}, expected: 0.0}
+  - {inputs: {quantity: rcc, fd_tau: 10.0}, expected: 0.071033}
+  - {inputs: {quantity: rxx, fd_tau: 10.0}, expected: 0.071033}
+  - {inputs: {quantity: rcs, fd_tau: 10.0}, expected: 0.0}
+  - {inputs: {quantity: lcr, rho_db: -20.0}, expected: 0.248169, tolerance: {rtol: 0.05}}
+  - {inputs: {quantity: afd, rho_db: -20.0}, expected: 0.040094, tolerance: {rtol: 0.05}}
+  - {inputs: {quantity: lcr_closed_form, rho_db: -20.0}, expected: 0.248168691, tolerance: {rtol: 1.0e-8}}
+  - {inputs: {quantity: afd_closed_form, rho_db: -20.0}, expected: 0.040094366, tolerance: {rtol: 1.0e-8}}
+  - {inputs: {quantity: lcr, rho_db: -10.0}, expected: 0.717233, tolerance: {rtol: 0.05}}
+  - {inputs: {quantity: afd, rho_db: -10.0}, expected: 0.132680, tolerance: {rtol: 0.05}}
+  - {inputs: {quantity: lcr_closed_form, rho_db: -10.0}, expected: 0.717233368, tolerance: {rtol: 1.0e-8}}
+  - {inputs: {quantity: afd_closed_form, rho_db: -10.0}, expected: 0.132680082, tolerance: {rtol: 1.0e-8}}
+  - {inputs: {quantity: lcr, rho_db: -3.0}, expected: 1.075046, tolerance: {rtol: 0.05}}
+  - {inputs: {quantity: afd, rho_db: -3.0}, expected: 0.366672, tolerance: {rtol: 0.05}}
+  - {inputs: {quantity: lcr_closed_form, rho_db: -3.0}, expected: 1.075046091, tolerance: {rtol: 1.0e-8}}
+  - {inputs: {quantity: afd_closed_form, rho_db: -3.0}, expected: 0.366671727, tolerance: {rtol: 1.0e-8}}
+  - {inputs: {quantity: lcr, rho_db: 0.0}, expected: 0.922137, tolerance: {rtol: 0.05}}
+  - {inputs: {quantity: afd, rho_db: 0.0}, expected: 0.685495, tolerance: {rtol: 0.05}}
+  - {inputs: {quantity: lcr_closed_form, rho_db: 0.0}, expected: 0.922137009, tolerance: {rtol: 1.0e-8}}
+  - {inputs: {quantity: afd_closed_form, rho_db: 0.0}, expected: 0.685495271, tolerance: {rtol: 1.0e-8}}
+  - {inputs: {quantity: lcr, rho_db: 5.0}, expected: 0.188682, tolerance: {rtol: 0.08}, why: "eq. (19a) holds as M -> infinity: 8 sinusoids cross +5 dB 5 % less often (64 sinusoids: within 1 %, the next case)"}
+  - {inputs: {quantity: lcr, rho_db: 5.0, sinusoids: 64}, expected: 0.188682, tolerance: {rtol: 0.03}}
+  - {inputs: {quantity: afd, rho_db: 5.0}, expected: 5.075584, tolerance: {rtol: 0.08}, why: "as the level-crossing rate at +5 dB (finite M)"}
+  - {inputs: {quantity: lcr_closed_form, rho_db: 5.0}, expected: 0.188681881, tolerance: {rtol: 1.0e-8}}
+  - {inputs: {quantity: afd_closed_form, rho_db: 5.0}, expected: 5.075584246, tolerance: {rtol: 1.0e-8}}

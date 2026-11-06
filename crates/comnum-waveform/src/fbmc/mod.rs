@@ -36,6 +36,15 @@
 //! of the projections ([`oqam_destagger`]) are inside the traits, at
 //! [`Fbmc::sample_rate`].
 //!
+//! [`Prototype::Hermite`] is the pulse of Haas & Belfiore (1997) as Nissel, Schwarz & Rupp
+//! (2017) write it, eqs. (10)–(11): $p(t) = \frac{1}{\sqrt{T_{0}}} e^{-2\pi (t/T_{0})^{2}}
+//! \sum_{i \in \{0, 4, \dots, 20\}} a_{i} H_{i}(2\sqrt{\pi}\, t/T_{0})$, $T_{0} = M$
+//! samples, truncated to $K T_{0}$ (they take $K = 8$) and normalised; it is orthogonal
+//! for complex symbols at $T = T_{0}$, $F = 2/T_{0}$ (their eq. (12)) and real-orthogonal
+//! on the OQAM lattice. Its time–frequency localisation (their eqs. (4)–(5), (13), (17)),
+//! [`Prototype::localisation`], is $\sigma_{t}\sigma_{f} = 1.02/(4\pi)$ against
+//! $1.13/(4\pi)$ for PHYDYAS ($K = 4$).
+//!
 //! [`Prototype::Phydyas`] is the filter of the PHYDYAS project (Bellanger 2010),
 //! sampled from its frequency response $H_{0} = 1$, $H_{1}, \dots, H_{K-1}$:
 //! $h\[k\] = H_{0} + 2\sum_{i=1}^{K-1} (-1)^{i} H_{i} \cos\left(\frac{2\pi i (k+1)}{KM}\right)$,
@@ -72,6 +81,10 @@
 //! 4. R. Nissel and M. Rupp, "OFDM and FBMC-OQAM in doubly-selective channels:
 //!    calculating the bit error probability," *IEEE Commun. Lett.*, 21(6), 1297–1300,
 //!    2017.
+//! 5. R. Nissel, S. Schwarz and M. Rupp, "Filter bank multicarrier modulation schemes for
+//!    future mobile communications," *IEEE J. Sel. Areas Commun.*, 35(8), 1768–1782, 2017.
+//! 6. R. Haas and J.-C. Belfiore, "A time-frequency well-localized pulse for multiple
+//!    carrier transmission," *Wireless Personal Commun.*, 5(1), 1–18, 1997.
 
 use crate::{check_input, check_rate};
 use comnum_core::signal::{Signal, Symbols};
@@ -92,7 +105,14 @@ fn oqam_phase(q: usize) -> C64 {
 pub enum Prototype {
     /// The PHYDYAS filter of Bellanger (overlapping factors 2, 3 and 4).
     Phydyas,
+    /// The Hermite pulse of Haas & Belfiore (any overlapping factor, the truncation
+    /// length; Nissel et al. 2017 take 8).
+    Hermite,
 }
+
+/// The coefficients $a_{0}, a_{4}, \dots, a_{20}$ of the Hermite pulse (Nissel, Schwarz &
+/// Rupp 2017, eq. (11)).
+const HERMITE_COEFFICIENTS: [f64; 6] = [1.412_692_577, -3.0145e-3, -8.8041e-6, -2.2611e-9, -4.4570e-15, 1.8633e-16];
 
 impl Prototype {
     /// The $KM - 1$ taps of unit energy for `subcarriers` $M$ and overlapping factor
@@ -101,6 +121,25 @@ impl Prototype {
     /// # Errors
     /// [`Error::Config`] for an overlapping factor the prototype does not define.
     pub fn taps(self, subcarriers: usize, overlap: usize) -> Result<Vec<f64>> {
+        if self == Prototype::Hermite {
+            ensure(overlap >= 1, || "the Hermite pulse needs an overlapping factor of at least 1".into())?;
+            let t0 = subcarriers as f64;
+            let centre = (overlap * subcarriers) as f64 / 2.0 - 1.0;
+            let mut h: Vec<f64> = (0..overlap * subcarriers - 1)
+                .map(|k| {
+                    let t = (k as f64 - centre) / t0;
+                    let x = 2.0 * std::f64::consts::PI.sqrt() * t;
+                    let poly: f64 = HERMITE_COEFFICIENTS
+                        .iter()
+                        .enumerate()
+                        .map(|(i, a)| a * comnum_math::hermite_h(4 * i, x))
+                        .sum();
+                    (-std::f64::consts::TAU * t * t).exp() * poly
+                })
+                .collect();
+            normalize_energy(&mut h);
+            return Ok(h);
+        }
         let freq: &[f64] = match (self, overlap) {
             (Prototype::Phydyas, 2) => &[1.0, std::f64::consts::FRAC_1_SQRT_2],
             (Prototype::Phydyas, 3) => &[1.0, 0.911_437_83, 0.411_437_83],
@@ -128,6 +167,40 @@ impl Prototype {
             .collect();
         normalize_energy(&mut h);
         Ok(h)
+    }
+
+    /// The time and frequency localisation of the prototype, $(\sigma_{t}/T_{0},\
+    /// \sigma_{f} T_{0})$, $\sigma_{t}^{2} = \int (t - \bar t)^{2} |p(t)|^{2} dt$,
+    /// $\sigma_{f}^{2} = \int (f - \bar f)^{2} |P(f)|^{2} df$ for a pulse of unit energy
+    /// (Nissel, Schwarz & Rupp 2017, eqs. (4)–(5)), from the [`Prototype::taps`] for
+    /// `subcarriers` $M = T_{0}$ and `overlap`, the spectrum by a DFT zero-padded 16 times
+    /// over; the bound is $\sigma_{t}\sigma_{f} \ge 1/(4\pi)$ (the Gaussian).
+    ///
+    /// # Errors
+    /// As [`Prototype::taps`].
+    pub fn localisation(self, subcarriers: usize, overlap: usize) -> Result<(f64, f64)> {
+        let h = self.taps(subcarriers, overlap)?;
+        let t0 = subcarriers as f64;
+        let energy: f64 = h.iter().map(|v| v * v).sum();
+        let mean_t: f64 = h.iter().enumerate().map(|(k, v)| k as f64 * v * v).sum::<f64>() / energy;
+        let var_t: f64 = h.iter().enumerate().map(|(k, v)| (k as f64 - mean_t).powi(2) * v * v).sum::<f64>() / energy;
+        let n = (16 * h.len()).next_power_of_two();
+        let mut x = vec![C64::new(0.0, 0.0); n];
+        for (xk, hk) in x.iter_mut().zip(&h) {
+            *xk = C64::new(*hk, 0.0);
+        }
+        let spectrum = fft::fft(&x);
+        // frequencies in cycles per sample, centred, |P|^2 summed to the energy
+        let (mut e, mut m1, mut m2) = (0.0, 0.0, 0.0);
+        for (k, v) in spectrum.iter().enumerate() {
+            let f = if k < n / 2 { k as f64 } else { k as f64 - n as f64 } / n as f64;
+            let p = v.norm_sqr();
+            e += p;
+            m1 += f * p;
+            m2 += f * f * p;
+        }
+        let (m1, m2) = (m1 / e, m2 / e);
+        Ok((var_t.sqrt() / t0, (m2 - m1 * m1).sqrt() * t0))
     }
 }
 
@@ -386,6 +459,45 @@ pub fn oqam_destagger(a: &[f64], m: usize) -> Result<Vec<C64>> {
 mod tests {
     use super::*;
     use comnum_core::rng::Rng;
+
+    /// The Hermite pulse is orthogonal for complex symbols at $T = T_{0}$, $F = 2/T_{0}$
+    /// (every other subcarrier and half-symbol; Nissel et al. 2017, eq. (12)) and
+    /// real-orthogonal on the OQAM lattice, to the truncation ($K = 8$).
+    #[test]
+    fn the_hermite_pulse_is_orthogonal_at_tf_2_and_on_the_oqam_lattice() {
+        let f = Fbmc::with_prototype(64, 8, Prototype::Hermite).unwrap();
+        assert_eq!(f.taps().len(), 8 * 64 - 1);
+        for dm in -6isize..=6 {
+            for dn in -16isize..=16 {
+                if dm == 0 && dn == 0 {
+                    continue;
+                }
+                let v = f.interference(8, 16, dm, dn);
+                assert!(v.re.abs() < 1e-6, "real part {v} at ({dm}, {dn})");
+                if dm % 2 == 0 && dn % 2 == 0 {
+                    assert!(v.norm() < 1e-6, "complex {v} at ({dm}, {dn})");
+                }
+            }
+        }
+        // the Hermite pulse one half-symbol apart interferes on the imaginary axis
+        assert!(f.interference(8, 16, 0, 1).im.abs() > 0.1);
+        assert!(Prototype::Hermite.taps(16, 0).is_err());
+    }
+
+    /// The localisation of the prototypes, eqs. (13) and (17) of Nissel et al. 2017:
+    /// Hermite $0.2015\, T_{0}$, $0.403 / T_{0}$ ($1.02 / 4\pi$), PHYDYAS $0.2745\, T_{0}$,
+    /// $0.328 / T_{0}$ ($1.13 / 4\pi$), independent of $M$.
+    #[test]
+    fn the_localisation_of_the_prototypes_is_that_of_nissel_2017() {
+        for m in [32, 256] {
+            let (st, sf) = Prototype::Hermite.localisation(m, 8).unwrap();
+            assert!((st - 0.2015).abs() < 5e-4 && (sf - 0.403).abs() < 5e-4, "Hermite {st} {sf}");
+            assert!((st * sf * 4.0 * std::f64::consts::PI - 1.02).abs() < 5e-3);
+            let (st, sf) = Prototype::Phydyas.localisation(m, 4).unwrap();
+            assert!((st - 0.2745).abs() < 5e-4 && (sf - 0.328).abs() < 5e-4, "PHYDYAS {st} {sf}");
+            assert!((st * sf * 4.0 * std::f64::consts::PI - 1.13).abs() < 5e-3);
+        }
+    }
 
     /// The OQAM phases were written three times with `cis(±π/2 · q)` and the taps
     /// normalised by hand before `oqam_phase` and `comnum_dsp::filter::normalize_energy`:

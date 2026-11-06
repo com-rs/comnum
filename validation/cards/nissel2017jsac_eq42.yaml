@@ -1,0 +1,39 @@
+id: nissel2017jsac_eq42
+title: SIR of CP-OFDM under Jakes' fading with the prefix on the delay spread, eq. (42)
+literature: nissel2017jsac
+evidence: [curve, table]
+source:
+  kind: paper
+  reference: "R. Nissel, S. Schwarz, M. Rupp, Filter bank multicarrier modulation schemes for future mobile communications, IEEE J. Sel. Areas Commun. 35(8), 1768-1782, 2017"
+  locator: "the CP-OFDM curves of Figs. 5-8 (eq. (42)), read on the grid at 100, 200 and 500 km/h, and the labels of the optimal spacing at 500 km/h"
+  file: multicarrier/2017_nissel_fbmc-schemes-future-mobile_jsac.pdf
+description: >
+  comnum::waveform::ofdm::budget::jakes_ici_sir, the closed form of eq. (42) in the
+  hypergeometric function 1F2 (comnum_math::hyp1f2), at the ISI-free spacing F = kappa /
+  tau_max of the profile (kappa = 1/14 for TF = 1.07, Figs. 5-7; kappa = 1 for TF = 2, Fig.
+  8), tau_max the last tap of Pedestrian A and Vehicular A (ITU-R M.1225) and of TDL-A
+  (30 ns) and TDL-B (900 ns) of TR 38.901, the Doppler v f_c / c at 2.5 and 60 GHz.
+run:
+  test: validation/tests/multicarrier/nissel2017jsac.rs::nissel_2017_jsac_eq_42_cp_ofdm_in_closed_form
+tier: ci
+duration: "milliseconds"
+tolerance: {atol: 0.7}
+why: >
+  the SIR curves are read on a grid of 10 dB over 220 dpi renders, about 0.7 dB; the
+  spacings are printed to the kHz
+findings:
+  - "the 500 km/h points of the four figures are reproduced within 0.2 dB (41.6, 25.6, 16.8, 16.2 dB) and the labelled spacings to the kHz (174.2, 28.5, 246.5, 232.3 kHz)"
+  - "in the regime of the figures, (pi f_D T_0)^2 below 0.15, eq. (42) falls as 1/v^2, 14.0 dB from 100 to 500 km/h: the 100 km/h values read on Figs. 6-8 (41.4, 31.5, 31.7 dB) sit 0.7 to 1.8 dB above the 500 km/h values plus 14 dB (39.6, 30.8, 30.3 dB), a reading error on the steep part of the curves"
+cases:
+  - {inputs: {figure: 5, kmh: 200, quantity: sir_db}, expected: 49.5}
+  - {inputs: {figure: 5, kmh: 500, quantity: sir_db}, expected: 41.7}
+  - {inputs: {figure: 5, kmh: 500, quantity: spacing_khz}, expected: 174, tolerance: {atol: 0.5}, why: "printed to the kHz"}
+  - {inputs: {figure: 6, kmh: 100, quantity: sir_db}, expected: 41.4, tolerance: {atol: 2.0}, why: "read 0.7 to 1.8 dB above the 1/v^2 law of eq. (42) that the 500 km/h points follow (findings)"}
+  - {inputs: {figure: 6, kmh: 500, quantity: sir_db}, expected: 25.6}
+  - {inputs: {figure: 6, kmh: 500, quantity: spacing_khz}, expected: 28, tolerance: {atol: 0.5}, why: "printed to the kHz"}
+  - {inputs: {figure: 7, kmh: 100, quantity: sir_db}, expected: 31.5, tolerance: {atol: 2.0}, why: "read 0.7 to 1.8 dB above the 1/v^2 law of eq. (42) that the 500 km/h points follow (findings)"}
+  - {inputs: {figure: 7, kmh: 500, quantity: sir_db}, expected: 16.4}
+  - {inputs: {figure: 7, kmh: 500, quantity: spacing_khz}, expected: 247, tolerance: {atol: 0.5}, why: "printed to the kHz"}
+  - {inputs: {figure: 8, kmh: 100, quantity: sir_db}, expected: 31.7, tolerance: {atol: 2.0}, why: "read 0.7 to 1.8 dB above the 1/v^2 law of eq. (42) that the 500 km/h points follow (findings)"}
+  - {inputs: {figure: 8, kmh: 500, quantity: sir_db}, expected: 16.3}
+  - {inputs: {figure: 8, kmh: 500, quantity: spacing_khz}, expected: 232, tolerance: {atol: 0.5}, why: "printed to the kHz"}

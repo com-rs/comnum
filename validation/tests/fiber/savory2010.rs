@@ -18,6 +18,8 @@
 #![allow(clippy::unwrap_used, clippy::expect_used, reason = "test code: a failure is a test failure")]
 
 use comnum::dsp::compensation::cd::{cd_savory_length, cd_savory_taps};
+use comnum::dsp::compensation::iq::{gram_schmidt, iq_correlation, lowdin};
+use comnum::prelude::*;
 use comnum_validation::card::Card;
 use serde_json::json;
 
@@ -41,6 +43,40 @@ fn savory_2010_eq_11() {
         if m > 0 {
             card.check(&inputs("phase"), (h[c + m] / h[c]).conj().arg());
         }
+    }
+    card.finish().unwrap();
+}
+
+/// Eqs. (6)-(8) and Fig. 3: the arms of a front end with a phase error $2\theta$,
+/// $r = M[I, Q]^{T}$, $M = [[\cos\theta, \sin\theta], [\sin\theta, \cos\theta]]$, on
+/// $10^{5}$ 16-QAM symbols: the correlation of the parts ($\sin 2\theta$, eq. (6)), the
+/// phase of the Gram–Schmidt output against the symbols ($-\theta$: eq. (7) keeps $r_{1}$, the
+/// signal turned by $\theta$), and the error of the Löwdin output, which turns both parts
+/// back (eq. (8), Fig. 3). Values and tolerances in `validation/cards/savory2010_eqs6_8.yaml`.
+#[test]
+fn savory_2010_eqs_6_to_8_orthonormalisation() {
+    let mut card = Card::load("savory2010_eqs6_8").unwrap();
+    let mut rng = Rng::new(2010);
+    let levels = [-3.0, -1.0, 1.0, 3.0];
+    let x: Vec<C64> = (0..100_000)
+        .map(|_| {
+            C64::new(levels[(rng.uniform() * 4.0) as usize % 4], levels[(rng.uniform() * 4.0) as usize % 4])
+                / 10f64.sqrt()
+        })
+        .collect();
+    for theta in [0.05f64, 0.1, 0.2, 0.3] {
+        let r: Vec<C64> = x
+            .iter()
+            .map(|z| C64::new(theta.cos() * z.re + theta.sin() * z.im, theta.sin() * z.re + theta.cos() * z.im))
+            .collect();
+        card.check(&json!({"quantity": "correlation", "theta": theta}), iq_correlation(&r));
+        let phase = |y: &[C64]| y.iter().zip(&x).map(|(a, b)| a * b.conj()).sum::<C64>().arg();
+        let g = gram_schmidt(&r).unwrap();
+        card.check(&json!({"quantity": "gram_schmidt_phase", "theta": theta}), phase(&g));
+        let l = lowdin(&r).unwrap();
+        card.check(&json!({"quantity": "lowdin_phase", "theta": theta}), phase(&l));
+        let err = (l.iter().zip(&x).map(|(a, b)| (a - b).norm_sqr()).sum::<f64>() / x.len() as f64).sqrt();
+        card.check(&json!({"quantity": "lowdin_rms_error", "theta": theta}), err);
     }
     card.finish().unwrap();
 }

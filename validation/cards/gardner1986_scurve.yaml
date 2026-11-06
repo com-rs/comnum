@@ -1,0 +1,42 @@
+id: gardner1986_scurve
+title: S-curve, gain and carrier-phase independence of Gardner's timing-error detector
+literature: gardner1986
+evidence: [closed_form]
+source:
+  kind: paper
+  reference: "F. M. Gardner, A BPSK/QPSK timing-error detector for sampled receivers, IEEE Trans. Commun. 34(5), 423-429, 1986"
+  locator: "eqs. (11), (15), (29) and (33); the expected values are eqs. (15) and (29) evaluated outside comnum (direct summation over 4001 symbols, midpoint rule with 2e5 points), the paper printing no number"
+  file: synchronisation/1986_gardner_bpsk-qpsk-timing-error-detector_tcom.pdf
+description: >
+  The gain 8 pi G_R / T^2 of comnum::dsp::sync::timing::gardner_gain for raised cosines of
+  roll-off 0.2 to 1 against eq. (29); the mean of gardner_ted (eq. (11)) by Monte Carlo
+  on a real raised-cosine BPSK signal of 1e5 symbols (the pulse at the exact instants,
+  64 symbols on each side) at timing offsets of 0.1 and 0.25 symbol against the S-curve
+  of eq. (15); the same mean with the carrier turned by 1 rad (eq. (33)).
+run:
+  test: validation/tests/synchronisation/gardner1986.rs::gardner_1986_s_curve_gain_and_phase_independence
+tier: campaign
+duration: "2 s on an Apple M6"
+tolerance: {atol: 1.0e-6}
+why: >
+  the gains are a quadrature of the same integral (64 Gauss-Legendre nodes against a
+  midpoint rule); the Monte Carlo means of 1e5 detector outputs have a standard error of
+  about 0.002 (the self-noise of the detector), hence 0.01
+findings:
+  - "eq. (29) is printed with a minus sign; the sum (15) as printed, and the detector (11), give U(tau) = +(4/T) G_R sin(2 pi tau / T), a positive slope at tau = 0"
+  - "eq. (28): a j is missing before G_I- in the first line, and the signs of its lines disagree; eq. (2): (r - 5/4)T is most likely (r - 3/4)T"
+cases:
+  - {inputs: {quantity: gain, rolloff: 0.2}, expected: 0.624277}
+  - {inputs: {quantity: gain, rolloff: 0.35}, expected: 1.078011}
+  - {inputs: {quantity: gain, rolloff: 0.5}, expected: 1.508494}
+  - {inputs: {quantity: gain, rolloff: 0.75}, expected: 2.150120}
+  - {inputs: {quantity: gain, rolloff: 1.0}, expected: 2.666667, note: "8/3 exactly: G_R = 1/(3 pi)"}
+  - {inputs: {quantity: mean, rolloff: 0.35, tau: 0.1}, expected: 0.100847, tolerance: {atol: 0.01}}
+  - {inputs: {quantity: mean, rolloff: 0.35, tau: 0.25}, expected: 0.171571, tolerance: {atol: 0.01}}
+  - {inputs: {quantity: mean, rolloff: 0.5, tau: 0.1}, expected: 0.141118, tolerance: {atol: 0.01}}
+  - {inputs: {quantity: mean, rolloff: 0.5, tau: 0.25}, expected: 0.240084, tolerance: {atol: 0.01}}
+  - {inputs: {quantity: mean, rolloff: 1.0, tau: 0.1}, expected: 0.249464, tolerance: {atol: 0.01}}
+  - {inputs: {quantity: mean, rolloff: 1.0, tau: 0.25}, expected: 0.424413, tolerance: {atol: 0.01}}
+  - inputs: {claim: carrier_phase_independence}
+    expected: {max: 1.0e-12}
+    note: "eq. (33): |mean at 1 rad - mean at 0| on the same symbols"

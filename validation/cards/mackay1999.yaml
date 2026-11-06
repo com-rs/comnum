@@ -1,0 +1,46 @@
+id: mackay1999
+title: Correction-effect bound, tree thresholds and short Gallager codes of MacKay
+literature: mackay1999
+evidence: [curve]
+source:
+  kind: paper
+  reference: "D. J. C. MacKay, Good error-correcting codes based on very sparse matrices, IEEE Trans. Inf. Theory 45(2), 399-431, 1999"
+  locator: "Fig. 6(b) (the dotted curves, eq. (57)), Fig. 6 (the tree transitions), Fig. 11 (BER of the (504, 252) and (1008, 504) codes), read on the grid"
+  file: coding/1999_mackay_good-codes-very-sparse-matrices_it.pdf
+description: >
+  The zero in f of eq. (57) (comnum::fec::density_evolution::correction_effect_threshold)
+  for t = 3 to 6 at rate 1/2 and t = 3 at rate 1/4; the BP threshold of the BSC by
+  discretized density evolution (BpDensityEvolution) for (4, 8) and (3, 6); the BER of
+  rate-1/2 codes of column weight 3 built by progressive edge growth (LdpcCode::peg, not
+  the paper's construction 1A), flooding sum-product, at most 500 iterations, BPSK over
+  AWGN, until 100 frame errors (at most 2e5 frames).
+run:
+  test: validation/tests/coding/mackay1999.rs::mackay_1999_figs_6_and_11
+tier: campaign
+duration: "1 min"
+tolerance: {factor: 3}
+why: >
+  Fig. 11 is read to 0.02 dB and a factor 1.3, the codes differ (PEG against the random
+  construction 1A, whose short cycles PEG avoids) and 100 frame errors give a 10 to 20 %
+  error on a BER: a factor of 3 on curves this steep (a decade in 0.3 dB) is about 0.15 dB
+findings:
+  - "eq. (57) gives zeros at f = 0.0912, 0.0797, 0.0711, 0.0644 (t = 3 to 6, R = 1/2) and 0.191 (t = 3, R = 1/4), within 1.6 % of the dotted curves of Fig. 6(b)"
+  - "density evolution of BP on the BSC puts the transitions at 0.0768 (t = 4) and 0.0841 (t = 3), inside the brackets of the Monte Carlo of the tree of Fig. 6"
+  - "with PEG codes the BER of Fig. 11 is within a factor 1.4 from 0.82 to 2.6 dB ((504, 252): 7.6e-2 to 1.9e-4; (1008, 504): 7.2e-2 to 7.5e-5), slightly above the paper at the highest Eb/N0 of each length"
+cases:
+  - {inputs: {figure: "6b", t: 3, tr: 6}, expected: 0.09, tolerance: {rtol: 0.06}, why: "read on the log axis of f to a factor of about 1.05"}
+  - {inputs: {figure: "6b", t: 4, tr: 8}, expected: 0.08, tolerance: {rtol: 0.06}, why: "read on the log axis of f to a factor of about 1.05"}
+  - {inputs: {figure: "6b", t: 5, tr: 10}, expected: 0.07, tolerance: {rtol: 0.06}, why: "read on the log axis of f to a factor of about 1.05"}
+  - {inputs: {figure: "6b", t: 6, tr: 12}, expected: 0.065, tolerance: {rtol: 0.06}, why: "read on the log axis of f to a factor of about 1.05"}
+  - {inputs: {figure: "6b", t: 3, tr: 4}, expected: 0.19, tolerance: {rtol: 0.06}, why: "read on the log axis of f to a factor of about 1.05"}
+  - {inputs: {figure: "6", t: 4, tr: 8}, expected: {min: 0.07, max: 0.08}, note: "the transition at about f = 0.075 (Fig. 6(a))"}
+  - {inputs: {figure: "6", t: 3, tr: 6}, expected: {min: 0.08, max: 0.09}, note: "the last decoded marker at f = 0.08, the first failure at 0.09 (Fig. 6(b), t = 3, R = 1/2)"}
+  - {inputs: {figure: 11, n: 504, ebn0_db: 0.82}, expected: 9.50e-02}
+  - {inputs: {figure: 11, n: 504, ebn0_db: 1.58}, expected: 1.75e-02}
+  - {inputs: {figure: 11, n: 504, ebn0_db: 1.94}, expected: 4.70e-03}
+  - {inputs: {figure: 11, n: 504, ebn0_db: 2.28}, expected: 9.30e-04}
+  - {inputs: {figure: 11, n: 504, ebn0_db: 2.6}, expected: 1.60e-04}
+  - {inputs: {figure: 11, n: 1008, ebn0_db: 0.82}, expected: 7.00e-02}
+  - {inputs: {figure: 11, n: 1008, ebn0_db: 1.58}, expected: 9.70e-03}
+  - {inputs: {figure: 11, n: 1008, ebn0_db: 1.94}, expected: 9.00e-04}
+  - {inputs: {figure: 11, n: 1008, ebn0_db: 2.28}, expected: 5.50e-05}

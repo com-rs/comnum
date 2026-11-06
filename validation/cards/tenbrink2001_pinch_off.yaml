@@ -1,0 +1,42 @@
+id: tenbrink2001_pinch_off
+title: Pinch-off limits of rate-1/2 parallel concatenated codes by EXIT charts
+literature: tenbrink2001
+evidence: [table]
+source:
+  kind: paper
+  reference: "S. ten Brink, Convergence behavior of iteratively decoded parallel concatenated codes, IEEE Trans. Commun. 49(10), 1727-1737, 2001"
+  locator: "Table II (the (037, 021) code) and Table IV (pinch-off limits of the codes C1 to C6, rate-1/2 PCC, AWGN), verbatim"
+  file: coding/2001_tenbrink_exit-convergence-parallel-concatenated-codes_tcom.pdf
+description: >
+  The transfer curves of comnum::fec::exit::ExitCurve (recursive systematic codes of
+  comnum::fec::conv, parity punctured to rate 2/3 by alternate bits, BPSK over AWGN at the
+  Eb/N0 of the rate-1/2 PCC, log-MAP BCJR, Gaussian a priori LLRs, the extrinsic
+  information by the time average over 2e5 bits) and the pinch-off of pinch_off_db
+  (bisection to 0.005 dB of the opening of the tunnel up to I = 0.97, curves on a grid of
+  0.02 in I_A, common random numbers).
+run:
+  test: validation/tests/coding/tenbrink2001.rs::ten_brink_2001_pinch_off_limits
+tier: campaign
+duration: "a few minutes"
+tolerance: {atol: 0.05}
+why: >
+  the limits are printed to 0.01 dB; the paper gives neither its puncturing pattern
+  (alternate parities assumed here) nor its histogram bins nor its search, and the curves
+  are Monte Carlo estimates over 2e5 bits (a few 0.01 dB on a pinch-off)
+findings:
+  - "the diagonal and the pairs with C2 are within 0.02 dB of Table IV (C2 0.696, C3 0.627, C4 0.686, C5 0.779, C6 0.833; C3/C2 0.637, C4/C2 0.657, C5/C2 0.637, C6/C2 0.642), C6/C1 0.862 against 0.84"
+  - "the (037, 021) code pinches off at 0.494 dB against 0.53 dB (EXIT) and 0.537 dB (density evolution) of Table II"
+  - "C2/C1 pinches off at 1.614 dB against 1.49 dB: the curve of the memory-1 code C1 reaches 1 only at I_A = 1 (0.986 at I_A = 0.995), so the limit moves with the end of the chart, 1.541, 1.575, 1.614 and 1.912 dB for a tunnel open to I = 0.90, 0.95, 0.97 and 0.99, where C3/C3 stays at 0.627 dB; the paper does not state its end criterion"
+cases:
+  - {inputs: {table: II, code: "037_021"}, expected: 0.53, note: "0.537 dB by density evolution (Table II)"}
+  - {inputs: {table: IV, first: C2, second: C2}, expected: 0.69}
+  - {inputs: {table: IV, first: C3, second: C3}, expected: 0.62}
+  - {inputs: {table: IV, first: C4, second: C4}, expected: 0.68}
+  - {inputs: {table: IV, first: C5, second: C5}, expected: 0.77}
+  - {inputs: {table: IV, first: C6, second: C6}, expected: 0.84}
+  - {inputs: {table: IV, first: C3, second: C2}, expected: 0.62}
+  - {inputs: {table: IV, first: C4, second: C2}, expected: 0.65}
+  - {inputs: {table: IV, first: C5, second: C2}, expected: 0.62}
+  - {inputs: {table: IV, first: C6, second: C2}, expected: 0.63}
+  - {inputs: {table: IV, first: C2, second: C1}, expected: 1.49, tolerance: {atol: 0.15}, note: "the end of the chart moves this limit by 0.07 dB between I = 0.90 and 0.97 (findings)"}
+  - {inputs: {table: IV, first: C6, second: C1}, expected: 0.84}

@@ -5,6 +5,7 @@ mod bouhadda2014;
 mod ce_ofdm;
 mod han2005;
 mod nissel2017;
+mod nissel2017jsac;
 mod raviteja2019;
 mod saul2004;
 mod vakilian2013;

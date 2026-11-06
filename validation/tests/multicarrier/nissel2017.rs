@@ -13,10 +13,11 @@
 //! - Fig. 4 (64-QAM, no noise, 15 kHz, 2.5 GHz): the BER of OFDM without prefix and of
 //!   CP-OFDM (a 4.76 µs prefix) at 50, 250 and 500 km/h within 30 % of the curves (OFDM
 //!   3.2e-2, 4.3e-2, 6.8e-2; CP-OFDM below 1e-3, 1.45e-2, 4.5e-2). The FBMC curve of the
-//!   paper uses the Hermite prototype of Haas & Belfiore (1997), not in comnum: with the
-//!   PHYDYAS prototype FBMC is between CP-OFDM and OFDM at 50 km/h and below CP-OFDM at
-//!   500 km/h, as in the figure, but equal to CP-OFDM at 250 km/h (1.2e-2 against 8.5e-3
-//!   for Hermite): PHYDYAS, four symbols long, suffers more from the Doppler spread.
+//!   paper uses the Hermite prototype of Haas & Belfiore (1997), `Prototype::Hermite`
+//!   ($K = 8$), checked at 250 km/h (8.5e-3); with the PHYDYAS prototype FBMC is between
+//!   CP-OFDM and OFDM at 50 km/h and below CP-OFDM at 500 km/h, as in the figure, but equal
+//!   to CP-OFDM at 250 km/h (1.2e-2): PHYDYAS, four symbols long, suffers more from the
+//!   Doppler spread.
 //!   The values read and their tolerances are in the card
 //!   `validation/cards/nissel2017_fig4.yaml`.
 #![allow(clippy::unwrap_used, clippy::expect_used, reason = "test code: a failure is a test failure")]
@@ -24,7 +25,7 @@ use comnum::channel::awgn::add_noise;
 use comnum::channel::multipath::{Profile, Taps, Tdl, TdlParams, max_doppler_hz};
 use comnum::metrics::errors::bit_errors;
 use comnum::prelude::*;
-use comnum::waveform::fbmc::{Fbmc, oqam_destagger, oqam_stagger};
+use comnum::waveform::fbmc::{Fbmc, Prototype, oqam_destagger, oqam_stagger};
 use comnum::waveform::ofdm::Ofdm;
 use comnum_validation::card::Card;
 use serde_json::json;
@@ -43,6 +44,7 @@ enum Scheme {
     Ofdm,
     CpOfdm,
     Fbmc,
+    FbmcHermite,
 }
 
 /// One tap of the realisation `taps` applied to `g` placed at `start`, projected on `q`
@@ -77,20 +79,23 @@ fn ber(scheme: Scheme, kmh: f64, realisations: usize, seed: u64) -> f64 {
     let (mut errors, mut total) = (0usize, 0usize);
     let n_cp = if scheme == Scheme::CpOfdm { 14 } else { 0 };
     let ofdm = Ofdm { oversampling: 1, n_cp, ..Ofdm::new(M, M).unwrap() };
-    let fbmc = Fbmc::new(M, 4).unwrap();
-    let k_c = 6; // complex symbols per subcarrier
+    let fbmc = match scheme {
+        Scheme::FbmcHermite => Fbmc::with_prototype(M, 8, Prototype::Hermite).unwrap(),
+        _ => Fbmc::new(M, 4).unwrap(),
+    };
+    let k_c = if scheme == Scheme::FbmcHermite { 10 } else { 6 }; // complex symbols per subcarrier
     for _ in 0..realisations {
         let bits: Vec<u8> = (0..M * k_c * 6).map(|_| rng.below(2) as u8).collect();
         let x = c.map_bits(&bits).unwrap();
         let s = match scheme {
-            Scheme::Fbmc => fbmc.modulate(&oqam_stagger(&x, M).unwrap()).unwrap(),
+            Scheme::Fbmc | Scheme::FbmcHermite => fbmc.modulate(&oqam_stagger(&x, M).unwrap()).unwrap(),
             _ => ofdm.modulate(&x).unwrap(),
         };
         let taps = tdl.draw(s.len(), &mut rng);
         let r = taps.apply(std::slice::from_ref(&s)).unwrap().remove(0);
         // the middle two complex symbols
-        let keep = 2..4;
-        let z: Vec<C64> = if scheme == Scheme::Fbmc {
+        let keep = k_c / 2 - 1..k_c / 2 + 1;
+        let z: Vec<C64> = if matches!(scheme, Scheme::Fbmc | Scheme::FbmcHermite) {
             {
                 let y = fbmc.demodulate(&r).unwrap();
                 let mut est = vec![0.0; y.len()];
@@ -185,9 +190,14 @@ fn nissel_2017_fig_4_vehicular_a() {
         let ofdm = ber(Scheme::Ofdm, v, 300, 1);
         let cp = ber(Scheme::CpOfdm, v, 300, 2);
         let fbmc = ber(Scheme::Fbmc, v, 300, 3);
-        println!("{kmh} km/h: OFDM {ofdm:.3e}, CP-OFDM {cp:.3e}, FBMC {fbmc:.3e}");
+        println!("{kmh} km/h: OFDM {ofdm:.3e}, CP-OFDM {cp:.3e}, FBMC PHYDYAS {fbmc:.3e}");
         card.check(&json!({"kmh": kmh, "scheme": "ofdm"}), ofdm);
         card.check(&json!({"kmh": kmh, "scheme": "cp_ofdm"}), cp);
+        if kmh == 250 {
+            let hermite = ber(Scheme::FbmcHermite, v, 300, 4);
+            println!("{kmh} km/h: FBMC Hermite {hermite:.3e}");
+            card.check(&json!({"kmh": kmh, "scheme": "fbmc_hermite"}), hermite);
+        }
         // the orderings of the curves (a claim with no value to read)
         if kmh < 100 {
             assert!(cp < fbmc && fbmc < ofdm, "{kmh} km/h: {cp} {fbmc} {ofdm}");

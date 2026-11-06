@@ -1,0 +1,78 @@
+id: ding2014_outage
+title: Outage of downlink NOMA with users dropped at random in a disc
+literature: ding2014
+evidence: [table, curve]
+source:
+  kind: paper
+  reference: "Z. Ding, Z. Yang, P. Fan, H. V. Poor, On the performance of non-orthogonal multiple access in 5G systems with randomly deployed users, IEEE Signal Process. Lett. 21(12), 1501-1505, 2014"
+  locator: "the table of Fig. 3 (outage x 1e-4, rho = 80 dB, alpha = 3) verbatim; Fig. 1(a) read on the raster in log10 (0.05 decade)"
+  file: multiple-access/2014_ding_noma-randomly-deployed-users_spl.pdf
+description: >
+  Two users in a disc, path loss 1 + d^alpha, Rayleigh fading, a = (4/5, 1/5)
+  (comnum::mimo::noma). Fig. 3: the high-SNR outage (11) with N = 10 Gauss-Chebyshev
+  nodes against the "anal." rows, the exact outage (9) against the "simul." rows, the
+  orthogonal random user F((2^(R1+R2) - 1)/rho) against the conventional row. Fig. 1(a):
+  a Monte Carlo of 1e6 drops per point (positions, Rayleigh gains, ordering, SIC on the
+  rates of eq. (2)) against the simulated points, log10 of the outage, 10 to 35 dB.
+run:
+  test: validation/tests/mimo/ding2014.rs::ding_2014_fig_3_table_and_fig_1a
+tier: campaign
+duration: "under 1 s"
+tolerance: {atol: 0.08}
+why: >
+  the "anal." rows are printed to four digits; the "simul." and conventional rows are the
+  paper's Monte Carlo at 1e-5 to 1e-3 events, its trials not given (10 %); Fig. 1(a) is
+  read to 0.05 decade and the Monte Carlo of 1e6 drops adds up to 0.04 decade at 1e-4
+findings:
+  - "the anal. rows of Fig. 3 are eq. (11) with N = 10 to their four digits; the simul. rows are 0.2 to 7.5 % from the exact eq. (9) (user 2 case 1: 0.1787 against 0.1662), the paper's Monte Carlo"
+  - "the text calls the table of Fig. 3 'Table III'; eq. (23) reads log(rho log log M) for log(rho log M); Fig. 2(b) matches Rayleigh fading without path loss, not the caption's 5 m and alpha = 2"
+cases:
+  - {inputs: {figure: 3, row: user1_anal, case: 1}, expected: 3.781, tolerance: {rtol: 1.0e-3}}
+  - {inputs: {figure: 3, row: user2_anal, case: 1}, expected: 0.1837, tolerance: {rtol: 1.0e-3}}
+  - {inputs: {figure: 3, row: user1_simul, case: 1}, expected: 3.734, tolerance: {rtol: 0.1}}
+  - {inputs: {figure: 3, row: user2_simul, case: 1}, expected: 0.1662, tolerance: {rtol: 0.1}}
+  - {inputs: {figure: 3, row: conventional, case: 1}, expected: 10.59, tolerance: {rtol: 0.1}}
+  - {inputs: {figure: 3, row: user1_anal, case: 2}, expected: 7.99, tolerance: {rtol: 1.0e-3}}
+  - {inputs: {figure: 3, row: user2_anal, case: 2}, expected: 0.2848, tolerance: {rtol: 1.0e-3}}
+  - {inputs: {figure: 3, row: user1_simul, case: 2}, expected: 7.956, tolerance: {rtol: 0.1}}
+  - {inputs: {figure: 3, row: user2_simul, case: 2}, expected: 0.2812, tolerance: {rtol: 0.1}}
+  - {inputs: {figure: 3, row: conventional, case: 2}, expected: 15.21, tolerance: {rtol: 0.1}}
+  - {inputs: {figure: 3, row: user1_anal, case: 3}, expected: 7.3852, tolerance: {rtol: 1.0e-3}}
+  - {inputs: {figure: 3, row: user2_anal, case: 3}, expected: 0.7007, tolerance: {rtol: 1.0e-3}}
+  - {inputs: {figure: 3, row: user1_simul, case: 3}, expected: 7.294, tolerance: {rtol: 0.1}}
+  - {inputs: {figure: 3, row: user2_simul, case: 3}, expected: 0.6772, tolerance: {rtol: 0.1}}
+  - {inputs: {figure: 3, row: conventional, case: 3}, expected: 20.54, tolerance: {rtol: 0.1}}
+  - {inputs: {figure: 3, row: user1_anal, case: 4}, expected: 15.61, tolerance: {rtol: 1.0e-3}}
+  - {inputs: {figure: 3, row: user2_anal, case: 4}, expected: 1.086, tolerance: {rtol: 1.0e-3}}
+  - {inputs: {figure: 3, row: user1_simul, case: 4}, expected: 15.33, tolerance: {rtol: 0.1}}
+  - {inputs: {figure: 3, row: user2_simul, case: 4}, expected: 1.002, tolerance: {rtol: 0.1}}
+  - {inputs: {figure: 3, row: conventional, case: 4}, expected: 29.6, tolerance: {rtol: 0.1}}
+  - {inputs: {figure: "1a", radius: 3.0, alpha: 2.0, curve: user1, snr_db: 10.0}, expected: -1.02, tolerance: {atol: 0.08}}
+  - {inputs: {figure: "1a", radius: 3.0, alpha: 2.0, curve: user1, snr_db: 15.0}, expected: -1.5, tolerance: {atol: 0.08}}
+  - {inputs: {figure: "1a", radius: 3.0, alpha: 2.0, curve: user1, snr_db: 20.0}, expected: -2.0, tolerance: {atol: 0.08}}
+  - {inputs: {figure: "1a", radius: 3.0, alpha: 2.0, curve: user1, snr_db: 25.0}, expected: -2.5, tolerance: {atol: 0.08}}
+  - {inputs: {figure: "1a", radius: 3.0, alpha: 2.0, curve: user1, snr_db: 30.0}, expected: -3.0, tolerance: {atol: 0.08}}
+  - {inputs: {figure: "1a", radius: 3.0, alpha: 2.0, curve: user2, snr_db: 15.0}, expected: -1.07, tolerance: {atol: 0.08}}
+  - {inputs: {figure: "1a", radius: 3.0, alpha: 2.0, curve: user2, snr_db: 20.0}, expected: -1.92, tolerance: {atol: 0.08}}
+  - {inputs: {figure: "1a", radius: 3.0, alpha: 2.0, curve: user2, snr_db: 30.0}, expected: -3.9, tolerance: {atol: 0.1}}
+  - {inputs: {figure: "1a", radius: 3.0, alpha: 2.0, curve: conventional, snr_db: 10.0}, expected: -0.62, tolerance: {atol: 0.08}}
+  - {inputs: {figure: "1a", radius: 3.0, alpha: 2.0, curve: conventional, snr_db: 15.0}, expected: -1.06, tolerance: {atol: 0.08}}
+  - {inputs: {figure: "1a", radius: 3.0, alpha: 2.0, curve: conventional, snr_db: 20.0}, expected: -1.56, tolerance: {atol: 0.08}}
+  - {inputs: {figure: "1a", radius: 3.0, alpha: 2.0, curve: conventional, snr_db: 25.0}, expected: -2.05, tolerance: {atol: 0.08}}
+  - {inputs: {figure: "1a", radius: 3.0, alpha: 2.0, curve: conventional, snr_db: 30.0}, expected: -2.55, tolerance: {atol: 0.08}}
+  - {inputs: {figure: "1a", radius: 3.0, alpha: 2.0, curve: conventional, snr_db: 35.0}, expected: -3.04, tolerance: {atol: 0.08}}
+  - {inputs: {figure: "1a", radius: 5.0, alpha: 3.0, curve: user1, snr_db: 15.0}, expected: -0.61, tolerance: {atol: 0.08}}
+  - {inputs: {figure: "1a", radius: 5.0, alpha: 3.0, curve: user1, snr_db: 20.0}, expected: -1.06, tolerance: {atol: 0.08}}
+  - {inputs: {figure: "1a", radius: 5.0, alpha: 3.0, curve: user1, snr_db: 25.0}, expected: -1.53, tolerance: {atol: 0.08}}
+  - {inputs: {figure: "1a", radius: 5.0, alpha: 3.0, curve: user1, snr_db: 30.0}, expected: -2.03, tolerance: {atol: 0.08}}
+  - {inputs: {figure: "1a", radius: 5.0, alpha: 3.0, curve: user1, snr_db: 35.0}, expected: -2.52, tolerance: {atol: 0.08}}
+  - {inputs: {figure: "1a", radius: 5.0, alpha: 3.0, curve: user2, snr_db: 15.0}, expected: -0.21, tolerance: {atol: 0.08}}
+  - {inputs: {figure: "1a", radius: 5.0, alpha: 3.0, curve: user2, snr_db: 20.0}, expected: -0.52, tolerance: {atol: 0.08}}
+  - {inputs: {figure: "1a", radius: 5.0, alpha: 3.0, curve: user2, snr_db: 25.0}, expected: -1.15, tolerance: {atol: 0.08}}
+  - {inputs: {figure: "1a", radius: 5.0, alpha: 3.0, curve: user2, snr_db: 30.0}, expected: -2.03, tolerance: {atol: 0.08}}
+  - {inputs: {figure: "1a", radius: 5.0, alpha: 3.0, curve: user2, snr_db: 35.0}, expected: -2.97, tolerance: {atol: 0.08}}
+  - {inputs: {figure: "1a", radius: 5.0, alpha: 3.0, curve: conventional, snr_db: 15.0}, expected: -0.32, tolerance: {atol: 0.08}}
+  - {inputs: {figure: "1a", radius: 5.0, alpha: 3.0, curve: conventional, snr_db: 20.0}, expected: -0.67, tolerance: {atol: 0.08}}
+  - {inputs: {figure: "1a", radius: 5.0, alpha: 3.0, curve: conventional, snr_db: 25.0}, expected: -1.1, tolerance: {atol: 0.08}}
+  - {inputs: {figure: "1a", radius: 5.0, alpha: 3.0, curve: conventional, snr_db: 30.0}, expected: -1.59, tolerance: {atol: 0.08}}
+  - {inputs: {figure: "1a", radius: 5.0, alpha: 3.0, curve: conventional, snr_db: 35.0}, expected: -2.07, tolerance: {atol: 0.08}}

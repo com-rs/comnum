@@ -45,6 +45,8 @@
 //! 2. S.-Y. Chung, G. D. Forney, T. J. Richardson, R. Urbanke, "On the design of
 //!    low-density parity-check codes within 0.0045 dB of the Shannon limit," *IEEE Commun.
 //!    Lett.* 5(2), 58–60, 2001: the discretized density evolution of the check node.
+//! 3. D. J. C. MacKay, "Good error-correcting codes based on very sparse matrices,"
+//!    *IEEE Trans. Inf. Theory* 45(2), 399–431, 1999: eqs. (44), (54)–(57).
 
 use comnum_core::{Error, Result};
 use comnum_math::fft::{fft, ifft};
@@ -206,6 +208,31 @@ fn algorithm_e(dv: usize, dc: usize, eps: f64, iterations: usize) -> f64 {
 pub fn hard_decision_threshold(ensemble: &RegularEnsemble, decoder: HardDecoder) -> Result<f64> {
     let converges = |eps: f64| hard_decision_error(ensemble, decoder, eps, 100_000).is_ok_and(|p| p < 1e-12);
     Ok(bisect(converges, 0.0, 0.5, 20))
+}
+
+/// The crossover probability below which a bit of the BSC that every one of its $t$ checks
+/// votes against is more likely in error than correct, the "correction effect" bound of
+/// MacKay's simple decoder (MacKay 1999, eqs. (44), (54)–(57)): with
+/// $p_{z}(\tau) = \frac12 - \frac12(1 - 2f)^{\tau}$, $a = p_{z}(t_{r} - 1)^{t}$ and
+/// $b = (1 - p_{z}(t_{r} - 1))^{t}$, the root in $f$ of $a(1 - f) - b f$ ($t = d_{v}$,
+/// $t_{r} = d_{c}$; bisection to $10^{-12}$). It bounds the first iteration only.
+///
+/// # Examples
+/// ```
+/// use comnum_fec::density_evolution::{correction_effect_threshold, RegularEnsemble};
+/// // (4, 8): about 0.08 (MacKay 1999, Fig. 6(b))
+/// let f = correction_effect_threshold(&RegularEnsemble::new(4, 8)?);
+/// assert!((f - 0.0796).abs() < 1e-4, "{f}");
+/// # Ok::<(), comnum_core::Error>(())
+/// ```
+pub fn correction_effect_threshold(ensemble: &RegularEnsemble) -> f64 {
+    let (t, tr) = (ensemble.dv as i32, ensemble.dc as i32);
+    let corrects = |f: f64| {
+        let pz = 0.5 - 0.5 * (1.0 - 2.0 * f).powi(tr - 1);
+        let (a, b) = (pz.powi(t), (1.0 - pz).powi(t));
+        a * (1.0 - f) - b * f < 0.0
+    };
+    bisect(corrects, 1e-12, 0.5, 60)
 }
 
 /// A binary-input memoryless output-symmetric channel, the input of

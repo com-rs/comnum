@@ -12,7 +12,8 @@ description: >
   Vehicular A profile with Jakes' Doppler (comnum::channel::multipath::Tdl); OFDM without
   prefix and CP-OFDM with a prefix of 14 samples (4.76 us), and FBMC/OQAM with the
   PHYDYAS prototype (K = 4); the one-tap equaliser on the exact diagonal of Q^H H G
-  (eq. (8)); the middle two of six symbols over 300 realisations.
+  (eq. (8)); the middle two of six symbols over 300 realisations; FBMC/OQAM with the
+  Hermite prototype (K = 8, the paper's) at 250 km/h, the middle two of ten symbols.
 run:
   test: validation/tests/multicarrier/nissel2017.rs::nissel_2017_fig_4_vehicular_a
 tier: campaign
@@ -20,7 +21,7 @@ duration: "about 15 s on an Apple M6"
 tolerance: {rtol: 0.3}
 why: "Fig. 4 read on log axes to about 10 %; the 300 realisations of the test add their own spread; 30 % is the agreement obtained (at most 9 % here)"
 findings:
-  - "the FBMC curve of the paper uses the Hermite prototype of Haas & Belfiore (1997), not in comnum: with PHYDYAS FBMC lies between CP-OFDM and OFDM at 50 km/h and below CP-OFDM at 500 km/h, as in the figure (the test checks these orderings), but equals CP-OFDM at 250 km/h (1.2e-2 against 8.5e-3 for Hermite): PHYDYAS, four symbols long, suffers more from the Doppler spread"
+  - "the FBMC curve of the paper uses the Hermite prototype of Haas & Belfiore (1997): with PHYDYAS FBMC lies between CP-OFDM and OFDM at 50 km/h and below CP-OFDM at 500 km/h, as in the figure (the test checks these orderings), but equals CP-OFDM at 250 km/h (1.2e-2 against 8.5e-3 for Hermite): PHYDYAS, four symbols long, suffers more from the Doppler spread; the Hermite prototype of comnum is checked at 250 km/h"
 cases:
   - {inputs: {kmh: 50, scheme: ofdm}, expected: 3.2e-2}
   - {inputs: {kmh: 250, scheme: ofdm}, expected: 4.3e-2}
@@ -30,3 +31,4 @@ cases:
     note: "the curve leaves the figure below 1e-3"
   - {inputs: {kmh: 250, scheme: cp_ofdm}, expected: 1.45e-2}
   - {inputs: {kmh: 500, scheme: cp_ofdm}, expected: 4.5e-2}
+  - {inputs: {kmh: 250, scheme: fbmc_hermite}, expected: 8.5e-3}
