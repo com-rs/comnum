@@ -127,11 +127,20 @@ def parse_args(cases: list[str]) -> argparse.Namespace:
     return args
 
 
+TORCH_DEVICE = "cpu"
+"""The device of the Sionna runs, set by ``setup_torch``: the scripts put the tensors
+they create themselves on it."""
+
+
 def setup_torch(threads: str) -> dict:
-    """Set the PyTorch thread pools (before any computation), and in the mode ``gpu``
-    the default device (``COMNUM_BENCH_DEVICE``, ``cuda:0`` by default: every tensor the
-    library creates lands on it; Sionna's ``config.device`` wants the index, so a bare
-    ``cuda`` becomes ``cuda:0``); return what was set."""
+    """Set the PyTorch thread pools (before any computation) and the device of Sionna:
+    ``config.device`` of Sionna, which every block of Sionna creates its tensors on.
+    It is ``cpu`` in the modes "1" and "all" (Sionna's own default is the first CUDA
+    device when there is one, which would put the CPU modes on the GPU), and in the
+    mode "gpu" ``COMNUM_BENCH_DEVICE``, ``cuda:0`` by default (a bare ``cuda`` becomes
+    ``cuda:0``, the form Sionna accepts). ``torch.set_default_device`` is not used: its
+    device context adds a Python overhead to every operation. Returns what was set."""
+    global TORCH_DEVICE
     import torch
 
     info: dict = {}
@@ -140,28 +149,27 @@ def setup_torch(threads: str) -> dict:
         torch.set_num_interop_threads(1)
     elif (n := available_cpus()) < (os.cpu_count() or 1):
         torch.set_num_threads(n)  # a container: the quota, not the host's cores
+    device = "cpu"
     if threads == "gpu":
         device = os.environ.get("COMNUM_BENCH_DEVICE", "cuda:0")
         if device == "cuda":
             device = "cuda:0"
         if device.startswith("cuda") and not torch.cuda.is_available():
             raise SystemExit("the mode gpu needs a CUDA device: torch.cuda.is_available() is False")
-        torch.set_default_device(device)
-        try:
-            from sionna.phy import config
+    try:
+        from sionna.phy import config
 
-            if hasattr(config, "device"):
-                config.device = device
-        except ImportError:
-            pass
-        info["device"] = device
-        if device.startswith("cuda"):
-            i = torch.cuda.current_device()
-            info["gpu"] = torch.cuda.get_device_name(i)
-            info["gpu_memory_gb"] = round(
-                torch.cuda.get_device_properties(i).total_memory / 2**30, 1
-            )
-            info["cuda"] = torch.version.cuda
+        if hasattr(config, "device"):
+            config.device = device
+    except ImportError:
+        pass
+    TORCH_DEVICE = device
+    info["device"] = device
+    if device.startswith("cuda"):
+        i = torch.device(device).index or 0
+        info["gpu"] = torch.cuda.get_device_name(i)
+        info["gpu_memory_gb"] = round(torch.cuda.get_device_properties(i).total_memory / 2**30, 1)
+        info["cuda"] = torch.version.cuda
     info.update(
         torch_intra_op_threads=torch.get_num_threads(),
         torch_interop_threads=torch.get_num_interop_threads(),
@@ -395,7 +403,7 @@ def threading_info() -> dict:
 
         info["torch_intra_op_threads"] = torch.get_num_threads()
         info["torch_interop_threads"] = torch.get_num_interop_threads()
-        info["torch_default_device"] = str(torch.get_default_device())
+        info["torch_device"] = TORCH_DEVICE
     return info
 
 

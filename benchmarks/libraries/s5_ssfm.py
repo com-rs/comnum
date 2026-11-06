@@ -136,7 +136,7 @@ def prop_sionna(precision: str):
 
     def run(x: np.ndarray) -> np.ndarray:
         with torch.inference_mode():
-            u = torch.from_numpy(x).to(device=torch.get_default_device(), dtype=cdtype)
+            u = torch.from_numpy(x).to(device=common.TORCH_DEVICE, dtype=cdtype)
             for _ in range(N_SPANS):
                 u = amp(span(u))
             return common.to_numpy(u)

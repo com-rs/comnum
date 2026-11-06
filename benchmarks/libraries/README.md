@@ -82,9 +82,10 @@ decoders (scenario 4), and the exhaustive ML search of comnum (scenario 3).
 ## On a GPU (RunPod or any Linux machine with an NVIDIA GPU)
 
 Sionna is designed for GPUs; the comparison above runs it on the CPU of a laptop. The
-mode `--threads gpu` runs it on the CUDA device (`torch.set_default_device("cuda")`,
-every tensor on the device, the result brought back to the host inside the timed
-call), OptiCommPy's CuPy split-step (`optic.models.modelsGPU.ssfm`, scenario 5, in
+mode `--threads gpu` runs it on the CUDA device (Sionna's `config.device`, which
+every block of Sionna creates its tensors on, set to `cuda:0`; the result brought back
+to the host inside the timed call; in the modes `1` and `all` it is set to `cpu`,
+since Sionna's own default is the GPU as soon as it sees one), OptiCommPy's CuPy split-step (`optic.models.modelsGPU.ssfm`, scenario 5, in
 complex128 and complex64; a scenario names the libraries with a GPU path in
 `GPU_LIBS`) on the same device, and comnum on the CPU of the same machine, the only
 path it has. Nothing is compiled on the machine: comnum, Sionna, OptiCommPy and CuPy

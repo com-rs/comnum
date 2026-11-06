@@ -3,7 +3,7 @@
 Every (scenario, library, threads) runs in its own process with the thread settings
 of ``common.thread_env``: one thread for every pool (``--threads 1``), the library
 defaults, every core (``--threads all``), or the GPU (``--threads gpu``: the libraries
-the scenario lists in ``GPU_LIBS``, Sionna with every tensor on the CUDA device and, for
+the scenario lists in ``GPU_LIBS``, Sionna with ``config.device`` on the CUDA device and, for
 the split-step, OptiCommPy's CuPy solver; comnum has no GPU path and is skipped in that
 mode).
 The error rates are computed in the single-thread runs; the other runs only time (the

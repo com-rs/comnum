@@ -18,6 +18,10 @@ and follow [Semantic Versioning](https://semver.org/).
   Inside a container the thread pools of the modes `all` and `gpu` are sized to the CPU
   quota (cgroup `cpu.max`, the affinity mask) instead of the host's core count, which
   oversubscribed a RunPod pod; the quota is recorded as `cpus_available`.
+  Sionna's `config.device` is set to `cpu` in the modes `1` and `all` (its own default
+  is the first CUDA device when there is one: on the pod the CPU modes ran on the GPU,
+  0.7 ms per 10⁶ bits) and to `cuda:0` in the mode `gpu`, without
+  `torch.set_default_device`, whose device context slowed every operation.
 
 ## [0.3.1] — 2026-11-06
 

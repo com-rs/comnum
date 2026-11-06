@@ -45,9 +45,10 @@ Rules
   LDPC decoder (float32 by default).
 - **Sionna** 2.x is built on PyTorch (not TensorFlow); it runs eagerly, under
   ``torch.inference_mode()``, without ``torch.compile``: on the CPU in the modes *1
-  thread* and *all threads*, and on the GPU in the mode *GPU* (``--threads gpu``:
-  ``torch.set_default_device("cuda")``, every tensor of the chain on the device, the
-  result brought back to the host inside the timed call). **OptiCommPy** has a CuPy
+  thread* and *all threads* (``config.device = "cpu"``: Sionna's own default is the
+  first CUDA device as soon as it sees one), and on the GPU in the mode *GPU*
+  (``--threads gpu``: ``config.device = "cuda:0"``, the device every block of Sionna
+  creates its tensors on, the result brought back to the host inside the timed call). **OptiCommPy** has a CuPy
   copy of its split-step (``optic.models.modelsGPU.ssfm``), run in the mode *GPU* of
   the split-step scenario, in complex128 and complex64, the transfers to and from the
   device inside the timed call; its other blocks are CPU only. comnum and komm have no

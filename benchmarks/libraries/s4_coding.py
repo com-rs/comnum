@@ -237,7 +237,7 @@ def codec_sionna(case: str, seed: int):
         def decode(llr):
             with torch.inference_mode():
                 # Sionna's LLRs are logits, log P(1) / P(0): the opposite sign
-                llr_dev = torch.from_numpy(-llr.astype(np.float32)).to(torch.get_default_device())
+                llr_dev = torch.from_numpy(-llr.astype(np.float32)).to(common.TORCH_DEVICE)
                 return common.to_numpy(dec(llr_dev)).astype(np.uint8)
 
         return same, decode, code.n, "float32 (config.precision = 'single')"
