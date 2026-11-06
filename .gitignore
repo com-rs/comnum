@@ -29,3 +29,5 @@ dist/
 .venv-agent/
 # captures of real signals (HackRF): never committed
 captures/
+# promotional material, rendered locally
+promo/

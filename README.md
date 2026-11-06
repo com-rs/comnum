@@ -1,4 +1,7 @@
-# comnum
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/com-rs/comnum/main/docs/python/_static/readme/logo_dark.png">
+  <img alt="comnum" src="https://raw.githubusercontent.com/com-rs/comnum/main/docs/python/_static/readme/logo.png" width="360">
+</picture>
 
 [![CI](https://github.com/com-rs/comnum/actions/workflows/ci.yml/badge.svg)](https://github.com/com-rs/comnum/actions/workflows/ci.yml)
 [![crates.io](https://img.shields.io/crates/v/comnum.svg)](https://crates.io/crates/comnum)

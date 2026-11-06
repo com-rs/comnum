@@ -85,8 +85,9 @@ html_theme = "pydata_sphinx_theme"
 html_title = f"comnum {release}"
 html_static_path = ["_static"]
 html_css_files = ["custom.css"]
+html_favicon = "_static/logo.svg"
 html_theme_options = {
-    "logo": {"text": "comnum"},
+    "logo": {"text": "comnum", "image_light": "_static/logo.svg", "image_dark": "_static/logo.svg"},
     "github_url": "https://github.com/com-rs/comnum",
     "header_links_before_dropdown": 6,
     "navbar_align": "left",
