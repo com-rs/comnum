@@ -63,21 +63,13 @@ impl Raman {
             signal: false,
         }));
         let n = waves.len();
-        let aeff = self.aeff_um2 * 1e-12;
         let mut c = vec![vec![0.0; n]; n];
         for k in 0..n {
             for j in 0..n {
                 if !self.isrs && waves[k].signal && waves[j].signal {
                     continue;
                 }
-                let (fk, fj) = (waves[k].f, waves[j].f);
-                c[k][j] = if fj > fk {
-                    self.gain.efficiency(fk, fj, aeff)
-                } else if fj < fk {
-                    -(fk / fj) * self.gain.efficiency(fj, fk, aeff)
-                } else {
-                    0.0
-                };
+                c[k][j] = self.coupling(waves[k].f, waves[j].f);
             }
         }
         let length = fiber.span_km;
@@ -122,7 +114,7 @@ impl Raman {
             }
         }
         let ase_psd = (0..signals.len()).map(|k| self.spontaneous(&waves, &c, &y, k, h)).collect();
-        Ok(RamanProfile {
+        let mut profile = RamanProfile {
             z_km: z,
             freqs_hz: waves.iter().map(|w| w.f).collect(),
             directions: waves.iter().map(|w| if w.counter { Direction::Counter } else { Direction::Co }).collect(),
@@ -130,8 +122,13 @@ impl Raman {
             n_signals: signals.len(),
             log_power: y,
             ase_psd,
+            double_rayleigh: vec![0.0; signals.len()],
             iterations,
-        })
+        };
+        if let Some(r) = self.rayleigh_db_km {
+            profile.double_rayleigh = (0..signals.len()).map(|k| profile.double_rayleigh_at(k, r)).collect();
+        }
+        Ok(profile)
     }
 
     /// The spontaneous noise of signal `k` at the end of the span (both polarisations),

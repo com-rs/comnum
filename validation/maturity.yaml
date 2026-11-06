@@ -439,13 +439,14 @@
 - theme: Optical
   name: "Raman amplification and ISRS"
   modules: "`comnum_channel::optical::raman`"
-  summary: "Bromage 2004 eqs. (3)–(5), Figs. 7–8; Hu et al. 2004 eq. (2); GNPy outputs; Semrau & Bayvel 2018 eq. (10)"
+  summary: "Bromage 2004 eqs. (3)–(5), Figs. 7–8; Islam 2002 Fig. 6(b); Hu et al. 2004 eq. (2); GNPy outputs; Semrau & Bayvel 2018 eq. (10)"
   evidence:
     - table: "`validation/tests/fiber/bromage2004.rs` (Bromage, *J. Lightw. Technol.* 22(1), 2004: the small-signal gain of eqs. (3)–(5) and its two examples within 10⁻³ dB, the noise figures of Fig. 8 within 0.3 dB with one fitted pump loss; Hu, Marks & Menyuk, *J. Lightw. Technol.* 22(6), 2004, eq. (2): the gain of every wave from the integrated powers with depleted, interacting pumps within 10⁻⁴ dB)"
+    - curve: "`validation/cards/islam2002_fig6b.yaml` (Islam, *IEEE J. Sel. Topics Quantum Electron.* 8(3), 2002, Fig. 6(b): the effective Rayleigh reflection coefficient of double Rayleigh backscattering, the closed form of Bromage 2004 eqs. (13)–(15) on the solved profile, against the on-off gain of SMF-28 of 80 and 100 km and two dispersion-compensating fibres, within the reading of 1.5 dB at 16 of 20 points, 1.6 to 3 dB off at four)"
     - recording: "GNPy 3.0, recorded: `tests/oracle/test_gnpy_oracle.py::test_power_profiles_and_spontaneous_noise_of_multi_pump_spans` (the power profiles of the channels and of a co-pump and two counter-pumps, the spontaneous noise; GNPy's Euler steps converge to them, 0.004 dB at 5 m)"
     - closed_form: "`crates/comnum-channel/src/optical/raman/mod.rs`, `literature::semrau_2018_eq_10_isrs_power_transfer` (Semrau & Bayvel, *J. Lightw. Technol.* 36(14), 2018, eq. (10), within 5 %)"
     - closed_form: "`specs/raman_wdm.yaml` (the GN model with the Raman power profiles, Semrau et al. 2019, within 0.21 dB; `tests/test_performance.py::test_specification_reproduces_its_closed_forms[raman_wdm]`)"
-  gaps: "• the multi-pump designs of Perlin & Winful (2002) and Hu et al. (2004, Table I) cannot be reproduced: their gain spectra are figures only, and the library has no pump-power optimiser<br>• the pump loss of Bromage's Figs. 7–8 is not given (fitted: 0.22 dB/km); double Rayleigh backscattering is neglected"
+  gaps: "• the multi-pump designs of Perlin & Winful (2002) and Hu et al. (2004, Table I) cannot be reproduced: their gain spectra are figures only, and the library has no pump-power optimiser<br>• the pump loss of Bromage's Figs. 7–8 is not given (fitted: 0.22 dB/km)<br>• the double Rayleigh backscattering is the small-signal closed form on the solved profile, counted as a Gaussian noise of the co-polarised fraction 5/9 (Bromage 2004, eq. (16)): four points of Islam's Fig. 6(b) are 1.6 to 3 dB off, not explained (its model is not written); the Rayleigh backscattering of the pumps and of the ASE is not modelled"
 - theme: Optical
   name: "EDFA and PMD"
   modules: "`comnum_channel::optical::{edfa, pmd}`"

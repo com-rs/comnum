@@ -8,6 +8,26 @@ and follow [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Double Rayleigh backscattering of the Raman-pumped spans: `Raman::rayleigh_db_km`
+  (the Rayleigh backscatter coupling of the signals, $10 \log_{10}$ of $\kappa = \alpha_{R}
+  S$ in 1/km; `None`, the default, leaves it out) and, on every profile, the effective
+  Rayleigh reflection coefficient `RamanProfile::double_rayleigh` (and
+  `double_rayleigh_at` for another coupling), the closed form of Bromage 2004, eqs.
+  (13)–(15), on the solved gain profile: $\kappa^{2} \int_{0}^{L} G^{-2}(z) \int_{z}^{L}
+  G^{2}(z')\,dz'\,dz$. The links count it as a noise, the co-polarised fraction 5/9 of
+  $R^{2} P$ (Bromage 2004, eq. (16); `MPI_COPOLARISED_FRACTION`): `Ssfm` and
+  `ManakovSsfm` add the multiple-path interference of every slice with the
+  spontaneous Raman noise (`RamanProfile::mpi_psd`), `GnModel::snr` divides by it too
+  (`GnModel::mpi_power`). The `raman` mapping of the specifications and of Python gains
+  the key `rayleigh_db_km`, `comnum.raman_profile` the output `double_rayleigh`.
+  Validated against Islam, *IEEE J. Sel. Topics Quantum Electron.* 8(3), 2002, Fig.
+  6(b) (`validation/cards/islam2002_fig6b.yaml`): the coefficient against the on-off
+  gain of SMF-28 of 80 and 100 km and of two dispersion-compensating fibres within the
+  reading of 1.5 dB at 16 of the 20 points, 1.6 to 3 dB off at four (not explained: the
+  paper's model is not written). `Raman::coefficient` (the signed coefficient
+  $C_{kj}$ of the power equations) and `RamanGain::flat` (a constant efficiency, the
+  single number of the data sheets) are public. No existing result changes: without
+  `rayleigh_db_km` the noise is zero.
 - `comnum_math::nlse::NonlinearStep::EffectiveLength`, a third nonlinear step of the
   split-step engine next to `Midpoint` (the default, unchanged) and `Trapezoidal`:
   Optilux's scheme (Shao, Liang & Kumar, *IEEE Photonics J.* 6(4), 2014, cited by its

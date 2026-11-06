@@ -228,8 +228,8 @@ mod tests {
                 steps += solver
                     .run_with_gain(&mut u.x, &mut u.y, f.span_km, fs, &|z0, z1, out| span.field_gain(z0, z1, out))
                     .unwrap();
-                span.amplify(&mut u.x, fs, &link.amplification, f.nf_db, rng.as_deref_mut());
-                span.amplify(&mut u.y, fs, &link.amplification, f.nf_db, rng.as_deref_mut());
+                span.amplify(&mut u.x, fs, 2, &link.amplification, f.nf_db, rng.as_deref_mut());
+                span.amplify(&mut u.y, fs, 2, &link.amplification, f.nf_db, rng.as_deref_mut());
             }
             return steps;
         }

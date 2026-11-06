@@ -123,6 +123,8 @@ block_params! {
         step_km: f64 [Raman::default().step_km => "0.1"] "km" > 0, "grid of the power equations";
         slice_hz: f64 [Raman::default().slice_hz => "25e9"] "Hz" > 0, "slices of the spectrum of the field";
         gain: Option<Mapping<GainSpec>> [absent "standard single-mode fibre"], "the Raman gain curve";
+        rayleigh_db_km: Option<f64> [absent "no double Rayleigh backscattering"] "dB/km",
+            "Rayleigh backscatter coupling of the signals, 10 log10 of its value in 1/km (about -40 for transmission fibre): the double Rayleigh backscattering is counted as a noise";
     }
 }
 
@@ -167,6 +169,7 @@ impl RamanSpec {
             isrs: self.isrs,
             step_km: self.step_km,
             slice_hz: self.slice_hz,
+            rayleigh_db_km: self.rayleigh_db_km,
             ..d
         })
     }

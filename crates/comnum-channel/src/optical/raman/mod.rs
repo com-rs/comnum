@@ -53,7 +53,30 @@
 //! temperature $T$ (Bromage 2004, Eq. (4); the spontaneous term of GNPy's
 //! `RamanSolver`). As in GNPy, the spontaneous scattering of the signals themselves
 //! (Stokes and anti-Stokes noise between channels, about 10 % of the noise of the
-//! pumps for 40 channels of 1 mW) and double Rayleigh backscattering are neglected.
+//! pumps for 40 channels of 1 mW) is neglected.
+//!
+//! # Double Rayleigh backscattering
+//!
+//! A fraction $\kappa = \alpha_{R} S$ (1/km) of the signal is backscattered per unit
+//! length by Rayleigh scattering and recaptured by the mode; the light scattered twice
+//! travels with the signal again, amplified three times by the pumped fibre (Bromage
+//! 2004, Sec. V-A, eqs. (13)–(15)). With the gain profile $G_{k}(z)$ of signal $k$ the
+//! doubly backscattered power at the end of the span is the closed form
+//!
+//! $$
+//! R_{k}^{2} = \frac{P_{\mathrm{DRB}}(L)}{P_{k}(L)} = \kappa^{2} \int_{0}^{L}
+//!   \frac{1}{G_{k}(z)^{2}} \int_{z}^{L} G_{k}(z')^{2}\\, dz'\\, dz,
+//! $$
+//!
+//! the effective Rayleigh reflection coefficient (Islam 2002, Fig. 6(b)); without pump,
+//! $\kappa^{2} [L - (1 - e^{-2 \alpha L})/(2 \alpha)]/(2 \alpha)$. It is computed when
+//! [`Raman::rayleigh_db_km`] gives $\kappa$ ([`RamanProfile::double_rayleigh`]) and
+//! then counted as a noise by the links: the part co-polarised with the signal,
+//! $(5/9) R_{k}^{2} P_{k}$ after the birefringence of the fibre has depolarised the
+//! scattered light (Bromage 2004, Sec. V-A and eq. (16)), the multiple-path interference
+//! (MPI) of the split-step solvers (a Gaussian noise of that power over the slice) and
+//! of the SNR of [`super::gn::GnModel`]. Typical $\kappa$: $10^{-4}$ km⁻¹ (−40 dB/km) for
+//! transmission fibres, up to $5 \cdot 10^{-4}$ for dispersion-compensating fibre.
 //!
 //! # Use in the links
 //!
@@ -133,6 +156,10 @@ pub struct RamanPump {
     pub alpha_db_km: Option<f64>,
 }
 
+/// The fraction of the doubly backscattered light that is co-polarised with the signal
+/// (Bromage 2004, Sec. V-A).
+pub const MPI_COPOLARISED_FRACTION: f64 = 5.0 / 9.0;
+
 impl RamanPump {
     /// A pump of `power_w` at the vacuum wavelength `wavelength_nm`, with the
     /// attenuation of the fibre.
@@ -164,11 +191,17 @@ pub struct Raman {
     /// Width of the slices of the spectrum of a field (Hz) that are the signal waves of
     /// the split-step solvers.
     pub slice_hz: f64,
+    /// The Rayleigh backscatter coupling of the signals $\kappa = \alpha_{R} S$, as
+    /// $10 \log_{10}$ of its value in 1/km (about −40 dB/km for transmission fibres,
+    /// −33 dB/km for dispersion-compensating fibre); `None` leaves double Rayleigh
+    /// backscattering out (see the module).
+    pub rayleigh_db_km: Option<f64>,
 }
 
 impl Default for Raman {
     /// No pump, the gain of standard single-mode fibre, 80 µm², 300 K, ISRS, steps of
-    /// 100 m, tolerance $10^{-10}$, at most 500 sweeps, slices of 25 GHz.
+    /// 100 m, tolerance $10^{-10}$, at most 500 sweeps, slices of 25 GHz, no double
+    /// Rayleigh backscattering.
     fn default() -> Self {
         Raman {
             pumps: Vec::new(),
@@ -180,6 +213,7 @@ impl Default for Raman {
             tolerance: 1e-10,
             max_iterations: 500,
             slice_hz: 25e9,
+            rayleigh_db_km: None,
         }
     }
 }
@@ -202,6 +236,10 @@ pub struct RamanProfile {
     /// The spontaneous Raman noise of every signal at the end of the span, both
     /// polarisations (W/Hz).
     pub ase_psd: Vec<f64>,
+    /// The effective Rayleigh reflection coefficient $R_{k}^{2}$ of every signal, the
+    /// doubly backscattered power over the signal power at the end of the span (see the
+    /// module); 0 without [`Raman::rayleigh_db_km`].
+    pub double_rayleigh: Vec<f64>,
     /// The number of forward-backward sweeps.
     pub iterations: usize,
 }
@@ -228,6 +266,38 @@ impl RamanProfile {
     pub fn on_off_gain_db(&self, k: usize) -> f64 {
         let length = self.z_km[self.z_km.len() - 1];
         self.net_gain_db(k) + np2db(self.alpha_np_km[k]) * length
+    }
+
+    /// The effective Rayleigh reflection coefficient $R_{k}^{2}$ of signal `k` for a
+    /// Rayleigh backscatter coupling of `rayleigh_db_km` ($10 \log_{10} \kappa$, 1/km):
+    /// $\kappa^{2} \int_{0}^{L} G^{-2}(z) \int_{z}^{L} G^{2}(z')\\, dz'\\, dz$ by the
+    /// trapezoidal rule on the grid (the inner integral accumulated from the end of the
+    /// span). See the module.
+    pub fn double_rayleigh_at(&self, k: usize, rayleigh_db_km: f64) -> f64 {
+        let l = &self.log_power[k];
+        let m = l.len();
+        let h = self.z_km[m - 1] / (m - 1) as f64;
+        let g2: Vec<f64> = l.iter().map(|v| (2.0 * (v - l[0])).exp()).collect();
+        let mut inner = vec![0.0; m];
+        for i in (0..m - 1).rev() {
+            inner[i] = inner[i + 1] + h * (g2[i] + g2[i + 1]) / 2.0;
+        }
+        let f: Vec<f64> = (0..m).map(|i| inner[i] / g2[i]).collect();
+        let outer = h * (f.iter().sum::<f64>() - (f[0] + f[m - 1]) / 2.0);
+        let kappa = db2lin(rayleigh_db_km);
+        kappa * kappa * outer
+    }
+
+    /// The multiple-path interference of every signal at the end of the span, both
+    /// polarisations, as a power spectral density over `bandwidth_hz` (W/Hz): the
+    /// co-polarised fraction [`MPI_COPOLARISED_FRACTION`] of $R_{k}^{2} P_{k}(L)$.
+    pub fn mpi_psd(&self, bandwidth_hz: f64) -> Vec<f64> {
+        (0..self.n_signals)
+            .map(|k| {
+                let l = &self.log_power[k];
+                MPI_COPOLARISED_FRACTION * self.double_rayleigh[k] * l[l.len() - 1].exp() / bandwidth_hz
+            })
+            .collect()
     }
 
     /// $\ln (P_{k}(z)/P_{k}(0))$ of signal `k` at `z` (km), linear between the nodes.
@@ -280,7 +350,12 @@ impl RamanProfile {
     /// The spontaneous noise at the end of the span of every frequency of `w`, both
     /// polarisations (W/Hz).
     pub(crate) fn ase_at(&self, w: &SpectralInterp) -> Vec<f64> {
-        w.weights.iter().map(|(a, b, t)| self.ase_psd[*a] + t * (self.ase_psd[*b] - self.ase_psd[*a])).collect()
+        Self::interpolate(&self.ase_psd, w)
+    }
+
+    /// The values `v` of the signals at every frequency of `w`.
+    fn interpolate(v: &[f64], w: &SpectralInterp) -> Vec<f64> {
+        w.weights.iter().map(|(a, b, t)| v[*a] + t * (v[*b] - v[*a])).collect()
     }
 }
 
@@ -300,9 +375,25 @@ pub(crate) struct FieldSpan {
     /// The absolute frequency of every bin (Hz, FFT order).
     freqs: Vec<f64>,
     length_km: f64,
+    slice_hz: f64,
 }
 
 impl Raman {
+    /// The coefficient $C_{kj}$ (1/(W·km)) of a wave at `f_k` from a wave at `f_j` (Hz):
+    /// the gain efficiency of the fibre when `f_j > f_k`, the depletion
+    /// $-(f_{k}/f_{j}) C_{jk}$ when `f_j < f_k` (photon-number conservation), 0 at equal
+    /// frequencies (see the module).
+    pub fn coupling(&self, f_k: f64, f_j: f64) -> f64 {
+        let aeff = self.aeff_um2 * 1e-12;
+        if f_j > f_k {
+            self.gain.efficiency(f_k, f_j, aeff)
+        } else if f_j < f_k {
+            -(f_k / f_j) * self.gain.efficiency(f_j, f_k, aeff)
+        } else {
+            0.0
+        }
+    }
+
     /// The slices of the spectrum of the polarisations `fields` sampled at `fs` around
     /// the carrier `fc` (Hz): the absolute centre frequency of every slice of
     /// [`Raman::slice_hz`] and its average power (W, all polarisations).
@@ -333,7 +424,7 @@ impl Raman {
         let n = fields.first().map_or(0, |x| x.len());
         let freqs: Vec<f64> = fft::fftfreq(n, 1.0 / fs).iter().map(|f| fiber.fc_hz + f).collect();
         let interp = profile.interpolator(&freqs);
-        Ok(FieldSpan { profile, interp, freqs, length_km: fiber.span_km })
+        Ok(FieldSpan { profile, interp, freqs, length_km: fiber.span_km, slice_hz: self.slice_hz })
     }
 }
 
@@ -357,14 +448,16 @@ impl FieldSpan {
         g.iter().map(|l| (-l).exp()).collect()
     }
 
-    /// The end of the span on one polarisation `x`: the spontaneous Raman noise (half of
-    /// the power spectral density of the two polarisations), then the amplifier, and its
-    /// ASE where its gain exceeds 1 (`Edfa`, noise figure `nf_db`): the noise is drawn
-    /// from `rng`, none without one.
+    /// The end of the span on one of the `pols` polarisations, `x`: the spontaneous
+    /// Raman noise and the multiple-path interference of double Rayleigh backscattering
+    /// (each a share `1/pols` of the power spectral density of the slices), then the
+    /// amplifier, and its ASE where its gain exceeds 1 (`Edfa`, noise figure `nf_db`):
+    /// the noise is drawn from `rng`, none without one.
     pub(crate) fn amplify(
         &self,
         x: &mut [C64],
         fs: f64,
+        pols: usize,
         amplification: &Amplification,
         nf_db: f64,
         rng: Option<&mut Rng>,
@@ -384,6 +477,8 @@ impl FieldSpan {
         }
         if let Some(rng) = rng {
             let ase = self.profile.ase_at(&self.interp);
+            let mpi = RamanProfile::interpolate(&self.profile.mpi_psd(self.slice_hz), &self.interp);
+            let share = 1.0 / pols as f64;
             let nf = db2lin(nf_db);
             let mut w: Vec<C64> = (0..n).map(|_| rng.complex_gaussian()).collect();
             p.forward(&mut w);
@@ -392,7 +487,7 @@ impl FieldSpan {
                     Amplification::Edfa if g[b] > 1.0 => ase_density(g[b], nf, self.freqs[b]),
                     _ => 0.0,
                 };
-                *v += wb * ((ase[b] / 2.0 * g[b] + edfa) * fs).sqrt();
+                *v += wb * (((ase[b] + mpi[b]) * share * g[b] + edfa) * fs).sqrt();
             }
         }
         p.inverse(x);
@@ -530,6 +625,72 @@ mod tests {
             * dz;
         let expected = 2.0 * PLANCK * fs * (1.0 + eta) * integral;
         assert!((p.ase_psd[0] / expected - 1.0).abs() < 1e-4, "{} vs {expected}", p.ase_psd[0]);
+    }
+
+    #[test]
+    fn without_pump_the_double_rayleigh_is_its_closed_form() {
+        // κ²/(2α) [L − (1 − e^{−2αL})/(2α)]
+        let f = fiber(80.0);
+        let raman = Raman { isrs: false, rayleigh_db_km: Some(-40.0), ..Raman::default() };
+        let p = raman.solve(&f, &[(193e12, 1e-3)]).unwrap();
+        let (a, kappa) = (f.alpha_np_km(), 1e-4);
+        let expected = kappa * kappa / (2.0 * a) * (80.0 - (1.0 - (-2.0 * a * 80.0).exp()) / (2.0 * a));
+        assert!((p.double_rayleigh[0] / expected - 1.0).abs() < 2e-5, "{} vs {expected}", p.double_rayleigh[0]);
+        assert!((p.double_rayleigh_at(0, -40.0) - p.double_rayleigh[0]).abs() < 1e-30);
+        // none without a coefficient
+        let q = Raman { rayleigh_db_km: None, ..raman }.solve(&f, &[(193e12, 1e-3)]).unwrap();
+        assert_eq!(q.double_rayleigh, vec![0.0]);
+    }
+
+    #[test]
+    fn the_double_rayleigh_of_a_pumped_span_matches_a_fine_double_integral() {
+        let f = fiber(60.0);
+        let pump = RamanPump { alpha_db_km: Some(0.25), ..RamanPump::at_wavelength(1450.0, 0.4, Direction::Counter) };
+        let raman = Raman { pumps: vec![pump], isrs: false, rayleigh_db_km: Some(-40.0), ..Raman::default() };
+        let fs = SPEED_OF_LIGHT / 1550e-9;
+        let p = raman.solve(&f, &[(fs, 1e-9)]).unwrap();
+        // the closed-form profile and a double sum on a grid of 10 m
+        let c = RamanGain::ssmf().efficiency(fs, SPEED_OF_LIGHT / 1450e-9, 80e-12);
+        let (a, ap) = (f.alpha_np_km(), 0.25 / (10.0 * std::f64::consts::LOG10_E));
+        let lg = |z: f64| -a * z + c * 0.4 * ((-ap * (60.0 - z)).exp() - (-ap * 60.0).exp()) / ap;
+        let n = 6000;
+        let dz = 60.0 / n as f64;
+        let g2: Vec<f64> = (0..=n).map(|i| (2.0 * lg(i as f64 * dz)).exp()).collect();
+        let mut inner = vec![0.0; n + 1];
+        for i in (0..n).rev() {
+            inner[i] = inner[i + 1] + dz * (g2[i] + g2[i + 1]) / 2.0;
+        }
+        let outer: f64 = (0..=n).map(|i| inner[i] / g2[i] * if i == 0 || i == n { 0.5 } else { 1.0 }).sum::<f64>() * dz;
+        let expected = 1e-8 * outer;
+        assert!((p.double_rayleigh[0] / expected - 1.0).abs() < 1e-4, "{} vs {expected}", p.double_rayleigh[0]);
+        assert!(p.on_off_gain_db(0) > 10.0);
+    }
+
+    #[test]
+    fn the_split_step_adds_the_multiple_path_interference_of_every_slice() {
+        use super::super::fiber::Ssfm;
+        // a tone in a linear, lossless fibre with a strong Rayleigh coupling and no pump:
+        // the noise added is (5/9) R² P (the spontaneous noise is zero without pump)
+        let fiber =
+            FiberParams { alpha_db_km: 0.0, gamma_w_km: 0.0, d_ps_nm_km: 0.0, span_km: 50.0, ..FiberParams::default() };
+        let (fs, n) = (64e9, 1 << 15);
+        let x = tones(n, fs, &[(0.0, 1e-3)]);
+        let raman = Raman { isrs: false, rayleigh_db_km: Some(-20.0), ..Raman::default() };
+        let ssfm = Ssfm {
+            fiber: fiber.clone(),
+            step_km: 5.0,
+            amplification: Amplification::None,
+            raman: Some(raman.clone()),
+            rule: None,
+            nonlinear: NonlinearStep::Midpoint,
+            check_sampling: false,
+        };
+        let y = crate::optical::fiber::tests::propagated(&ssfm, &x, fs, Some(&mut Rng::new(5)));
+        let noise = y.iter().zip(&x).map(|(u, v)| (u - v).norm_sqr()).sum::<f64>() / n as f64;
+        // lossless: R² = κ² L²/2
+        let r2 = 1e-4 * 50.0 * 50.0 / 2.0;
+        let expected = MPI_COPOLARISED_FRACTION * r2 * 1e-3;
+        assert!((noise / expected - 1.0).abs() < 0.05, "{noise} vs {expected}");
     }
 
     fn tones(n: usize, fs: f64, offsets: &[(f64, f64)]) -> Vec<C64> {

@@ -831,7 +831,16 @@
     - validation/tests/fiber/bromage2004.rs::bromage_2004_figs_7_8_noise_figure
     - tests/oracle/test_gnpy_oracle.py::test_power_profiles_and_spontaneous_noise_of_multi_pump_spans
   badge: green
-  not_covered: "the pump loss of Figs. 7-8 is not given (0.22 dB/km fits both points of Fig. 8); the broad-band design of Fig. 6 and the second-order pumping of Fig. 19 (NZDF spectrum given as a figure only); double Rayleigh backscattering (Sec. V)"
+  not_covered: "the pump loss of Figs. 7-8 is not given (0.22 dB/km fits both points of Fig. 8); the broad-band design of Fig. 6 and the second-order pumping of Fig. 19 (NZDF spectrum given as a figure only); the OSNR of multiple-path interference of Fig. 11 (its fibre's Rayleigh coupling and losses are not given; the closed form of eqs. (13)-(15) is checked on Islam 2002 Fig. 6(b))"
+- id: islam2002
+  area: Optical
+  ref: "M. N. Islam, Raman amplifiers for telecommunications, JSTQE 8(3), 2002"
+  module: comnum_channel::optical::raman
+  tested: "Fig. 6(b): the effective Rayleigh reflection coefficient of double Rayleigh backscattering against the on-off gain for SMF-28 of 80 and 100 km and two DCF (all fibre parameters given), within the reading of 1.5 dB at 16 of 20 points, 1.6 to 3.0 dB off at four (not explained: the paper's DRS model is not written)"
+  tests:
+    - validation/tests/fiber/islam2002.rs::islam_2002_fig_6b_double_rayleigh_against_the_on_off_gain
+  badge: orange
+  not_covered: "Fig. 3 (the depleted single-pump DCF amplifier: output power and conversion efficiency against the pump power); the noise-figure convention of Sec. II-A; Fig. 6(a) (the DSF parameters are not given); the S-band amplifiers and link of Sec. IV (products and an experiment)"
 - id: hu2004
   area: Optical
   ref: "J. Hu, B. S. Marks, C. R. Menyuk, Flat-gain fiber Raman amplifiers using equally spaced pumps, JLT 22(6), 2004"

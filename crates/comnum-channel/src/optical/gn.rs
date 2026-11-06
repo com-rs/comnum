@@ -103,7 +103,7 @@
 
 use super::edfa::ase_density;
 use super::fiber::FiberParams;
-use super::raman::{Raman, RamanProfile};
+use super::raman::{MPI_COPOLARISED_FRACTION, Raman, RamanProfile};
 use comnum_core::{Result, ensure, ensure_shape};
 use comnum_math::{C64, db2lin};
 use std::f64::consts::PI;
@@ -325,6 +325,26 @@ impl GnModel {
         fib.n_spans as f64 * (p.ase_psd[ch] * g + edfa)
     }
 
+    /// The multiple-path interference of double Rayleigh backscattering at the receiver
+    /// on channel `ch` (W): with [`GnModel::raman`] and its `rayleigh_db_km`, the
+    /// co-polarised fraction of $R^{2} P$ of every span (Bromage 2004, eq. (16)); 0
+    /// otherwise.
+    ///
+    /// # Errors
+    /// As [`GnModel::snr`].
+    pub fn mpi_power(&self, spectrum: &WdmSpectrum, ch: usize) -> Result<f64> {
+        ensure(ch < spectrum.freqs_hz.len(), || {
+            format!("no channel {ch}: the spectrum has {} channels", spectrum.freqs_hz.len())
+        })?;
+        let profile = self.profile(spectrum)?;
+        Ok(self.mpi_with(spectrum, ch, profile.as_ref()))
+    }
+
+    fn mpi_with(&self, spectrum: &WdmSpectrum, ch: usize, profile: Option<&RamanProfile>) -> f64 {
+        let Some(p) = profile else { return 0.0 };
+        self.fiber.n_spans as f64 * MPI_COPOLARISED_FRACTION * p.double_rayleigh[ch] * spectrum.powers_w[ch]
+    }
+
     /// The Raman profile of the channels of `spectrum` over one span.
     ///
     /// # Errors
@@ -496,7 +516,8 @@ impl GnModel {
         let profile = self.profile(spectrum)?;
         let nli = self.nli_with(spectrum, spectrum.freqs_hz[ch], profile.as_ref())?;
         let ase = self.ase_with(spectrum, ch, profile.as_ref());
-        Ok(spectrum.powers_w[ch] / ((ase + nli) * spectrum.symbol_rate))
+        let mpi = self.mpi_with(spectrum, ch, profile.as_ref());
+        Ok(spectrum.powers_w[ch] / ((ase + nli) * spectrum.symbol_rate + mpi))
     }
 
     /// The NLI coefficient $\eta = G_{\mathrm{NLI}}/P^{3}$ of channel `ch` of the grid, symbol

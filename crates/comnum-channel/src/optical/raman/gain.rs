@@ -152,6 +152,35 @@ impl RamanGain {
         Ok(RamanGain { offsets_hz, gain_m_w, reference_hz })
     }
 
+    /// A constant gain efficiency `c_r_w_km` (1/(W·km)) at every offset from 0 to 40 THz
+    /// (zero beyond) for a fibre of `aeff_um2` and a pump at `reference_hz`: the single
+    /// number of the data sheets and of the examples of Bromage 2004 and Islam 2002 (a
+    /// "Raman gain coefficient" of $g$ dB/(W·km) is $C_{R} = g \ln(10)/10$).
+    ///
+    /// # Errors
+    /// [`comnum_core::Error::Config`] for a negative efficiency, a non-positive area or
+    /// reference frequency.
+    ///
+    /// # Examples
+    /// ```
+    /// use comnum_channel::optical::raman::RamanGain;
+    /// use comnum_math::nm2hz;
+    /// let g = RamanGain::flat(0.373, 80.0, nm2hz(1451.0))?;
+    /// let c = g.efficiency(nm2hz(1550.0), nm2hz(1451.0), 80e-12);
+    /// assert!((c - 0.373).abs() < 1e-12);
+    /// # Ok::<(), comnum_core::Error>(())
+    /// ```
+    pub fn flat(c_r_w_km: f64, aeff_um2: f64, reference_hz: f64) -> Result<RamanGain> {
+        ensure(c_r_w_km >= 0.0 && aeff_um2 > 0.0, || {
+            format!(
+                "the flat Raman gain needs a non-negative efficiency and a positive area, got {c_r_w_km} and {aeff_um2}"
+            )
+        })?;
+        let offsets: Vec<f64> = (0..=40).map(|k| f64::from(k) * 1e12).collect();
+        let g = c_r_w_km * aeff_um2 * 1e-12 / 1e3;
+        RamanGain::new(offsets, vec![g; 41], reference_hz)
+    }
+
     /// $g_{R} A_{\mathrm{eff}}$ (m/W) at the offset `df` (Hz) for a pump at the
     /// reference frequency.
     pub fn at(&self, df: f64) -> f64 {

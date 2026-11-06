@@ -168,15 +168,19 @@ fn format_moments(
 ///         ``{wavelength_nm | frequency_thz, power_mw, direction: "co" | "counter",
 ///         alpha_db_km}``), ``aeff_um2`` (80), ``temperature_k`` (300), ``isrs`` (True:
 ///         the channels also exchange power), ``step_km`` (0.1), ``slice_hz`` (25e9, for
-///         the split-step solvers) and ``gain`` (``{offsets_thz, gain_m_w,
+///         the split-step solvers), ``gain`` (``{offsets_thz, gain_m_w,
 ///         reference_thz}``, the gain spectrum ``g_R A_eff``; standard single-mode fibre
-///         by default).
+///         by default) and ``rayleigh_db_km`` (the Rayleigh backscatter coupling of the
+///         signals, 10 log10 of its value in 1/km, about -40 for transmission fibre;
+///         absent: no double Rayleigh backscattering).
 ///
 /// Returns:
 ///     dict: ``z_km``, ``freqs_hz`` (absolute, the channels then the pumps),
 ///     ``power_dbm`` (one row per wave), ``net_gain_db`` and ``on_off_gain_db`` (per
 ///     channel), ``ase_psd`` (W/Hz, both polarisations, per channel at the end of the
-///     span) and ``iterations``.
+///     span), ``double_rayleigh`` (the effective Rayleigh reflection coefficient of every
+///     channel, the doubly backscattered power over the signal power at the end of the
+///     span, linear; 0 without ``rayleigh_db_km``) and ``iterations``.
 ///
 /// Raises:
 ///     ValueError: for an invalid parameter or input (the message names it).
@@ -217,6 +221,7 @@ fn raman_profile<'py>(
     d.set_item("net_gain_db", farr(py, (0..n).map(|k| p.net_gain_db(k)).collect()))?;
     d.set_item("on_off_gain_db", farr(py, (0..n).map(|k| p.on_off_gain_db(k)).collect()))?;
     d.set_item("ase_psd", farr(py, p.ase_psd.clone()))?;
+    d.set_item("double_rayleigh", farr(py, p.double_rayleigh.clone()))?;
     d.set_item("iterations", p.iterations)?;
     Ok(d)
 }

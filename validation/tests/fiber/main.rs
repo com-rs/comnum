@@ -12,6 +12,7 @@ mod fatadin2009;
 mod foschini1991;
 mod gordon2000;
 mod ip2008;
+mod islam2002;
 mod musetti2018;
 mod optilux;
 mod pfau2009;

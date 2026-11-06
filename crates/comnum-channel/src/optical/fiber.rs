@@ -309,8 +309,9 @@ pub(crate) fn amplified_spans(
             let views: Vec<&[C64]> = fields.iter().map(|f| f.as_slice()).collect();
             let profile = raman.field_span(fiber, &views, fs)?;
             total += span(k, fields, Some(&profile))?;
+            let pols = fields.len();
             for f in fields.iter_mut() {
-                profile.amplify(f, fs, amplification, fiber.nf_db, rng.as_deref_mut());
+                profile.amplify(f, fs, pols, amplification, fiber.nf_db, rng.as_deref_mut());
             }
         } else {
             total += span(k, fields, None)?;
@@ -746,7 +747,7 @@ pub(crate) mod tests {
             for _ in 0..fiber.n_spans {
                 let span = raman.field_span(&fiber, &[&e], fs).unwrap();
                 steps.run_with_gain(&mut e, &|z0, z1, out| span.field_gain(z0, z1, out));
-                span.amplify(&mut e, fs, &s.amplification, fiber.nf_db, rng.as_deref_mut());
+                span.amplify(&mut e, fs, 1, &s.amplification, fiber.nf_db, rng.as_deref_mut());
             }
             e
         }
