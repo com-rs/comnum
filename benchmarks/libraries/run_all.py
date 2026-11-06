@@ -2,8 +2,10 @@
 
 Every (scenario, library, threads) runs in its own process with the thread settings
 of ``common.thread_env``: one thread for every pool (``--threads 1``), the library
-defaults, every core (``--threads all``), or the GPU (``--threads gpu``: Sionna only,
-every tensor on the CUDA device; comnum has no GPU path and is skipped in that mode).
+defaults, every core (``--threads all``), or the GPU (``--threads gpu``: the libraries
+the scenario lists in ``GPU_LIBS``, Sionna with every tensor on the CUDA device and, for
+the split-step, OptiCommPy's CuPy solver; comnum has no GPU path and is skipped in that
+mode).
 The error rates are computed in the single-thread runs; the other runs only time (the
 results do not depend on the threads). OptiCommPy without numba runs the same code as OptiCommPy with numba, so
 it is only timed. The machine, the versions, the commit and the commands are recorded
@@ -144,9 +146,10 @@ def main() -> None:
             supported = [c for c, sup in mod.CASES.items() if sup.get(lib) is True]
             if not supported:
                 continue
+            gpu_libs = getattr(mod, "GPU_LIBS", common.GPU_LIBS_DEFAULT)
             for threads in modes:
-                if threads == "gpu" and lib != "sionna":
-                    continue  # no GPU path: comnum, komm and OptiCommPy run on the CPU only
+                if threads == "gpu" and lib not in gpu_libs:
+                    continue  # no GPU path in this scenario: the library runs on the CPU only
                 if lib == "comnum-rust" and not rust_ok:
                     runs.append(
                         {

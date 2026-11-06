@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 # The library benchmark on a GPU machine (a RunPod pod, or any Linux box with an NVIDIA
-# GPU): Sionna on the GPU, comnum on the CPU of the same machine, the same scripts as
-# on the laptop. Nothing is compiled on the machine: comnum comes from PyPI (or from a
-# wheel sent to the machine), Sionna from PyPI, and the PyTorch of the pod's image is
-# kept (the RunPod "PyTorch" template has it with CUDA). From a fresh pod:
+# GPU): Sionna on the GPU, OptiCommPy's CuPy split-step on the GPU (scenario 5), comnum
+# on the CPU of the same machine, the same scripts as on the laptop. Nothing is compiled
+# on the machine: comnum comes from PyPI (or from a wheel sent to the machine), Sionna,
+# OptiCommPy and CuPy from PyPI, and the PyTorch of the pod's image is kept (the RunPod
+# "PyTorch" template has it with CUDA). From a fresh pod:
 #
 #   git clone https://github.com/com-rs/comnum && cd comnum
 #   bash benchmarks/libraries/runpod.sh --quick      # a few minutes: checks that everything runs
@@ -49,8 +50,8 @@ while [ $# -gt 0 ]; do
   esac
   shift
 done
-[ -z "$LIBS" ] && LIBS="comnum,comnum-spec,sionna"
-[ -n "$SOURCE" ] && [ "$LIBS" = "comnum,comnum-spec,sionna" ] && LIBS="comnum,comnum-spec,comnum-rust,sionna"
+[ -z "$LIBS" ] && LIBS="comnum,comnum-spec,opticommpy,sionna"
+[ -n "$SOURCE" ] && [ "$LIBS" = "comnum,comnum-spec,opticommpy,sionna" ] && LIBS="comnum,comnum-spec,comnum-rust,opticommpy,sionna"
 
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 cd "$ROOT"
@@ -75,11 +76,17 @@ fi
 # Sionna and the few packages of the scripts; the torch of the image is kept when it
 # satisfies Sionna, downloaded otherwise
 $PIP -r benchmarks/libraries/requirements-gpu.txt
+# CuPy for OptiCommPy's GPU split-step: the wheel of the CUDA major version of torch
+CUDA_MAJOR=$(python3 -c "import torch; print((torch.version.cuda or '12').split('.')[0])")
+$PIP "cupy-cuda${CUDA_MAJOR}x"
 python3 - <<'PY'
-import torch, sionna
+import torch, sionna, cupy, optic
 print("torch", torch.__version__, "CUDA", torch.version.cuda, "available", torch.cuda.is_available())
 print("sionna", sionna.__version__)
+print("cupy", cupy.__version__, "devices", cupy.cuda.runtime.getDeviceCount())
+print("OptiCommPy", getattr(optic, "__version__", ""))
 assert torch.cuda.is_available(), "torch has no CUDA device: install the CUDA build of torch (pip install torch --index-url https://download.pytorch.org/whl/cu126)"
+assert cupy.cuda.runtime.getDeviceCount() > 0, "cupy sees no CUDA device"
 PY
 
 echo "== comnum $VERSION"

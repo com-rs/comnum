@@ -84,9 +84,12 @@ decoders (scenario 4), and the exhaustive ML search of comnum (scenario 3).
 Sionna is designed for GPUs; the comparison above runs it on the CPU of a laptop. The
 mode `--threads gpu` runs it on the CUDA device (`torch.set_default_device("cuda")`,
 every tensor on the device, the result brought back to the host inside the timed
-call), and comnum on the CPU of the same machine, the only path it has. Nothing is
-compiled on the machine: comnum comes from PyPI, Sionna from PyPI, and the PyTorch of
-the image (the RunPod "PyTorch" template ships it with CUDA) is kept:
+call), OptiCommPy's CuPy split-step (`optic.models.modelsGPU.ssfm`, scenario 5, in
+complex128 and complex64; a scenario names the libraries with a GPU path in
+`GPU_LIBS`) on the same device, and comnum on the CPU of the same machine, the only
+path it has. Nothing is compiled on the machine: comnum, Sionna, OptiCommPy and CuPy
+come from PyPI, and the PyTorch of the image (the RunPod "PyTorch" template ships it
+with CUDA) is kept:
 
 ```bash
 git clone https://github.com/com-rs/comnum && cd comnum
@@ -94,10 +97,11 @@ bash benchmarks/libraries/runpod.sh --quick          # a few minutes: checks tha
 bash benchmarks/libraries/runpod.sh                  # the full run, 20 to 40 minutes
 ```
 
-The script installs `requirements-gpu.txt` (Sionna and the packages of the scripts),
-`pip install comnum==<the version of the checkout>`, and runs `run_all.py --threads
-1,all,gpu --results results/runpod` with comnum, its runner and Sionna (komm and
-OptiCommPy are not needed there). For a checkout that is not on PyPI yet, `just
+The script installs `requirements-gpu.txt` (Sionna, OptiCommPy and the packages of
+the scripts) and the CuPy wheel of the image's CUDA version, `pip install
+comnum==<the version of the checkout>`, and runs `run_all.py --threads 1,all,gpu
+--results results/runpod` with comnum, its runner, OptiCommPy and Sionna (komm is not
+needed there). For a checkout that is not on PyPI yet, `just
 runpod-wheel` builds its Linux wheel on the laptop (maturin with the zig linker: `uv pip
 install ziglang` once) to send with `scp` and install with `--wheel <file>`; `--source`
 installs the Rust toolchain and builds on the machine instead (the only mode that also
@@ -111,3 +115,11 @@ section "On another machine: runpod", the same tables with the column *GPU*. Com
 them with `git add -f benchmarks/libraries/results/runpod/*.json`. The relative times
 stay against comnum on one thread of that machine, so that the two machines are not
 compared with each other.
+
+Which pod: the GPU hardly matters for these sizes (2¹⁴ to 2¹⁶ samples through the
+fibre, batches of 10⁶ bits), the CPU does, since every comnum time is a CPU time and
+RunPod pods get a slice of the host's CPU that depends on the GPU type. A secure-cloud
+RTX 4090 pod (24 GB, the GPU of a lab workstation) and an H100 or A100 pod (the
+data-centre reference) make two useful points, each under an hour; take the pod with
+the most vCPUs offered for that GPU, and note the CPU model the result file records.
+The "RunPod PyTorch" template (CUDA 12) is the one the script assumes.

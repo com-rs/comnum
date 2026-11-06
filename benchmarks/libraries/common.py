@@ -34,14 +34,17 @@ LIBRARIES = {
     "comnum-spec": "comnum from Python: comnum.run_spec, the parallel Monte Carlo runner of Rust",
     "comnum-rust": "comnum from Rust: the comnum command-line binary on the same specification",
     "komm": "komm (NumPy)",
-    "opticommpy": "OptiCommPy with numba (its @njit kernels compiled)",
+    "opticommpy": "OptiCommPy with numba (its @njit kernels compiled; its CuPy split-step on the GPU in the mode gpu)",
     "opticommpy-nojit": "OptiCommPy without numba (NUMBA_DISABLE_JIT=1: the same @njit kernels run as plain Python)",
     "sionna": "Sionna PHY (PyTorch, eager mode; the CPU, or the GPU in the mode gpu)",
 }
 
 # The modes of a run: one thread for every pool, the defaults of the library (every
-# core), or the GPU (Sionna only: comnum has no GPU path; the CPU pools at their defaults).
+# core), or the GPU (the libraries a scenario lists in ``GPU_LIBS``, Sionna by default,
+# and OptiCommPy's CuPy split-step; comnum has no GPU path; the CPU pools at their
+# defaults).
 MODES = ["1", "all", "gpu"]
+GPU_LIBS_DEFAULT = {"sionna"}
 
 # The variables that set the size of the thread pools, all set to 1 for the
 # single-thread runs and left unset (the library default: every core) otherwise.
@@ -222,6 +225,24 @@ def frame_ber_point(errors_per_frame, k: int, theory: float | None = None, **ext
     return d
 
 
+def setup_cupy() -> dict:
+    """Check that CuPy sees a CUDA device and return the device, CuPy and CUDA
+    versions, for a run of OptiCommPy in the mode ``gpu``."""
+    import cupy as cp
+
+    if cp.cuda.runtime.getDeviceCount() < 1:
+        raise SystemExit("the mode gpu needs a CUDA device: cupy sees none")
+    props = cp.cuda.runtime.getDeviceProperties(cp.cuda.Device().id)
+    name = props["name"]
+    return {
+        "device": "cuda",
+        "gpu": name.decode() if isinstance(name, bytes) else str(name),
+        "gpu_memory_gb": round(props["totalGlobalMem"] / 2**30, 1),
+        "cuda": str(cp.cuda.runtime.runtimeGetVersion()),
+        "cupy": cp.__version__,
+    }
+
+
 def versions() -> dict[str, str]:
     out = {}
     for pkg in [
@@ -231,6 +252,9 @@ def versions() -> dict[str, str]:
         "sionna",
         "torch",
         "numba",
+        "cupy",
+        "cupy-cuda12x",
+        "cupy-cuda13x",
         "llvmlite",
         "numpy",
         "scipy",

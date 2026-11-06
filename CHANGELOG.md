@@ -6,6 +6,14 @@ and follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- Library benchmark on a GPU: OptiCommPy's CuPy split-step (`optic.models.modelsGPU.ssfm`)
+  runs in the mode `gpu` of scenario 5, in complex128 and complex64, next to Sionna on
+  the device and comnum on the CPU; a scenario names its GPU-capable libraries in
+  `GPU_LIBS`. `runpod.sh` installs OptiCommPy and the CuPy wheel of the image's CUDA
+  version. Results on the laptop unchanged.
+
 ## [0.3.1] — 2026-11-06
 
 ### Fixed

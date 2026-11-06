@@ -118,9 +118,12 @@ Rules
   ``torch.inference_mode()``, without ``torch.compile``: on the CPU in the modes *1
   thread* and *all threads*, and on the GPU in the mode *GPU* (``--threads gpu``:
   ``torch.set_default_device("cuda")``, every tensor of the chain on the device, the
-  result brought back to the host inside the timed call). comnum, komm and OptiCommPy
-  have no GPU path: in the GPU column they do not run, and the comparison is Sionna on
-  the device against comnum on the CPU of the same machine.
+  result brought back to the host inside the timed call). **OptiCommPy** has a CuPy
+  copy of its split-step (``optic.models.modelsGPU.ssfm``), run in the mode *GPU* of
+  the split-step scenario, in complex128 and complex64, the transfers to and from the
+  device inside the timed call; its other blocks are CPU only. comnum and komm have no
+  GPU path: in the GPU column they do not run, and the comparison is a library on the
+  device against comnum on the CPU of the same machine.
 - **OptiCommPy without numba** means ``NUMBA_DISABLE_JIT=1``: numba's own switch, which
   runs every ``@njit`` function of OptiCommPy as plain Python (OptiCommPy has no option
   of its own). Its results are those of the compiled code; it is timed only.
@@ -132,7 +135,8 @@ Limits of this comparison
   learning and automatic differentiation. The first set of results runs it on the CPU
   of the same machine as comnum, eagerly, without ``torch.compile``: its home ground is
   elsewhere. A second set, when present below, runs the same scripts on a machine with
-  a GPU, Sionna on the device and comnum on that machine's CPU; comnum has no GPU
+  a GPU, Sionna (and OptiCommPy's split-step) on the device and comnum on that
+  machine's CPU; comnum has no GPU
   path, so that comparison is one of a CPU library against an accelerator, which is
   what a user choosing between the two faces.
 - **Python libraries only.** komm, OptiCommPy and Sionna are NumPy, numba and PyTorch
@@ -611,8 +615,9 @@ def other_machine_section(name: str, results: dict[str, dict]) -> list[str]:
     out += [
         f"The same scripts, run on a second machine (``run_all.py --results results/{name}``):"
         + (
-            " Sionna on its GPU in the column *GPU*, and every library on its CPU in the"
-            " other columns. The *Relative* column stays the 1-thread time over that of"
+            " Sionna (and, for the split-step, OptiCommPy) on its GPU in the column *GPU*,"
+            " and every library on its CPU in the other columns. The *Relative* column"
+            " stays the 1-thread time over that of"
             " comnum (functions) on 1 thread of this machine."
             if any("gpu" in d["thread_modes"] for d in results.values())
             else " every library on its CPU."

@@ -14,8 +14,11 @@ Sionna's equation is the complex conjugate of the one of comnum and OptiCommPy
 convention, conj(sionna(conj(x))), and the NMSE of the plain output is reported too.
 Sionna propagates one span per call (SSFM) and amplifies with its EDFA of noise figure
 0 (no noise). OptiCommPy's ssfm is NumPy only (no numba kernel): its two variants run
-the same code. Timing: one propagation over the 10 spans, median of 5 runs after a
-warm-up run.
+the same code. In the mode gpu, OptiCommPy runs its CuPy solver
+(optic.models.modelsGPU.ssfm: the same steps, every array on the device; the input is
+copied to the device and the output back to the host inside the timed call) in
+complex128 and in complex64. Timing: one propagation over the 10 spans, median of 5
+runs after a warm-up run.
 
     python s5_ssfm.py --lib opticommpy --threads 1 [--quick] --out results/_work/s5.json
 """
@@ -40,6 +43,8 @@ CASES = {
         "sionna": True,
     }
 }
+# The libraries with a GPU path in this scenario (run_all.py: the mode gpu).
+GPU_LIBS = {"sionna", "opticommpy"}
 ALPHA_DB_KM, D_PS_NM_KM, GAMMA, FC = 0.2, 17.0, 1.3, 193.1e12
 SPAN_KM, N_SPANS, STEP_KM = 80.0, 10, 1.0
 REF_STEP_KM = 0.05
@@ -92,14 +97,20 @@ def prop_comnum(precision: str, step_km: float = STEP_KM):
     return lambda x: link.propagate(x, FS, precision=precision)
 
 
-def prop_opticommpy():
-    from optic.models.channels import ssfm
+def prop_opticommpy(gpu: bool = False, prec=np.complex128):
+    """OptiCommPy's split-step: the NumPy solver, or its CuPy copy on the GPU
+    (``optic.models.modelsGPU.ssfm``, which takes and returns NumPy arrays: the
+    transfers to and from the device are inside the timed call)."""
+    if gpu:
+        from optic.models.modelsGPU import ssfm
+    else:
+        from optic.models.channels import ssfm
     from optic.utils import parameters
 
     p = parameters()
     p.Ltotal, p.Lspan, p.hz = SPAN_KM * N_SPANS, SPAN_KM, STEP_KM
     p.alpha, p.D, p.gamma, p.Fc, p.Fs = ALPHA_DB_KM, D_PS_NM_KM, GAMMA, FC, FS
-    p.amp, p.prgsBar, p.prec = "ideal", False, np.complex128
+    p.amp, p.prgsBar, p.prec = "ideal", False, prec
     return lambda x: ssfm(x, p)
 
 
@@ -134,7 +145,12 @@ def prop_sionna(precision: str):
 
 
 def run_lib(args, todo: list[str]) -> list[dict]:
-    threading = common.setup_torch(args.threads) if args.lib == "sionna" else {}
+    if args.lib == "sionna":
+        threading = common.setup_torch(args.threads)
+    elif args.lib == "opticommpy" and args.threads == "gpu":
+        threading = common.setup_cupy()
+    else:
+        threading = {}
     x = input_field(args.quick)
     work = Path(args.work)
     work.mkdir(parents=True, exist_ok=True)
@@ -144,6 +160,13 @@ def run_lib(args, todo: list[str]) -> list[dict]:
         variants = {
             "single": (prop_sionna("single"), "float32 (precision = 'single', the default)"),
             "double": (prop_sionna("double"), "float64 (precision = 'double')"),
+        }
+    elif args.lib == "opticommpy" and args.threads == "gpu":
+        import cupy as cp
+
+        variants = {
+            "f64": (prop_opticommpy(True, cp.complex128), "float64 (prec = cp.complex128)"),
+            "f32": (prop_opticommpy(True, cp.complex64), "float32 (prec = cp.complex64)"),
         }
     else:
         variants = {"f64": (prop_opticommpy(), "float64 (prec = np.complex128)")}
