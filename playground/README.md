@@ -68,12 +68,22 @@ the page.
 ## Speed
 
 The browser runs the trials one after the other on one thread, with the native
-kernels. On a laptop (Apple M-series), with the page visible, Chrome takes 1.8 to 2
-times the native one-thread time: a sweep of 11 points of QPSK over AWGN with 10⁶
-bits per point 0.18 s against 0.105 s for `comnum run --threads 1`, the example
-`qam_awgn` (33 conditions, 24 000 trials of 4096 symbols) 3.6 s against 2.0 s,
-`proakis_awgn` 2.5 s against 1.3 s. A hidden tab is throttled by the browser (up to
-5 times slower was observed): keep the page in front while it runs. The validation
-specifications that take minutes natively on every core (`hager2021_fig5`,
-`dvbs2_table13`) take as many minutes times the core count here: use the short ones
-(`proakis_awgn`, `msk_bpsk`, `thompson2008_eq15`) or lower `max_trials`.
+kernels. On a laptop (Apple M-series), once the browser has optimised the module,
+Chrome takes 1.8 to 2 times the native one-thread time: a sweep of 11 points of QPSK
+over AWGN with 10⁶ bits per point 0.18 s against 0.105 s for
+`comnum run --threads 1`, the example `qam_awgn` (33 conditions, 24 000 trials of 4096
+symbols) 3.6 s against 2.0 s, `proakis_awgn` 2.5 s against 1.3 s.
+
+**Cold start.** V8 (Chrome, Edge) runs a freshly loaded module in its baseline
+compiler, about five times slower, and installs the optimised code in the background
+over the next tens of seconds (20 s measured for this module), then caches it for the
+next visit; a campaign started before that runs to its end in the baseline tier,
+because a function already running is never swapped. The page probes the module every
+1.5 s while idle and says in the status when the engine is optimised; a run started
+earlier gets a note in the terminal. `?nocache=1` reloads the module past the caches,
+to measure a cold start.
+
+The validation specifications that take minutes natively on every core
+(`hager2021_fig5`, `dvbs2_table13`) take as many minutes times the core count here:
+use the short ones (`proakis_awgn`, `msk_bpsk`, `thompson2008_eq15`) or lower
+`max_trials`.

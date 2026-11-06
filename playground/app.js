@@ -76,9 +76,13 @@ let inspectId = 0;
 let rows = [];          // the completed conditions of the run in progress
 let running = false;
 let runStart = 0;
+let optimised = false;  // whether the browser has installed its optimised code for the module
+let probes = [];        // the times of the probes, ms
+let probeTimer = null;
+let probeStart = 0;
 
 function startWorker() {
-  worker = new Worker("worker.js", { type: "module" });
+  worker = new Worker(`worker.js${location.search}`, { type: "module" });
   worker.onmessage = onMessage;
   worker.onerror = (e) => {
     setStatus(`the engine failed to load: ${e.message || e}`);
@@ -104,7 +108,10 @@ function onMessage(e) {
     }
     ui.run.disabled = false;
     setStatus("ready");
+    startProbing();
     onEdit();
+  } else if (m.type === "probe") {
+    onProbe(m.ms);
   } else if (m.type === "inspect") {
     if (m.id !== inspectId) return;
     if (m.ok) {
@@ -134,6 +141,46 @@ function onMessage(e) {
 }
 
 const elapsed = () => ((performance.now() - runStart) / 1e3).toFixed(1);
+
+// ---------------------------------------------------------------- the probes
+
+// V8 runs a fresh module in its baseline tier, about five times slower than its
+// optimised code, which it compiles in the background over tens of seconds (and
+// caches for the next visit); a campaign started before that runs to its end in the
+// baseline tier. A short probe every 1.5 s while the page is idle sees the switch.
+const PROBE_EVERY_MS = 1500;
+const PROBE_FOR_S = 120;
+
+function startProbing() {
+  stopProbing();
+  optimised = false;
+  probes = [];
+  probeStart = performance.now();
+  probeTimer = setInterval(() => {
+    if (!running && worker) worker.postMessage({ type: "probe" });
+  }, PROBE_EVERY_MS);
+}
+
+function stopProbing() {
+  clearInterval(probeTimer);
+  probeTimer = null;
+}
+
+function onProbe(ms) {
+  probes.push(ms);
+  const first = Math.min(...probes.slice(0, 2));
+  const since = (performance.now() - probeStart) / 1e3;
+  if (probes.length >= 3 && ms < first / 2.5) {
+    optimised = true;
+    stopProbing();
+    if (!running) setStatus(`ready, engine optimised (${since.toFixed(0)} s after load)`);
+  } else if (since > PROBE_FOR_S) {
+    stopProbing();
+    if (!running) setStatus("ready");
+  } else if (!running) {
+    setStatus(`ready · the browser is still optimising the engine (${since.toFixed(0)} s)…`);
+  }
+}
 
 // ---------------------------------------------------------------- the menu
 
@@ -190,6 +237,9 @@ ui.run.addEventListener("click", () => {
     log(`$ comnum run ${inspected.name}.yaml --threads 1`, "dim");
     log(`[${inspected.name}] ${n} conditions, seed ${inspected.seed}, 1 thread, stop: ${inspected.stop}`);
   }
+  if (!optimised && probeTimer) {
+    log("note: the browser has not finished optimising the engine: this run uses its baseline compiler, about five times slower", "dim");
+  }
   worker.postMessage({ type: "run", yaml: text() });
   draw();
 });
@@ -201,6 +251,7 @@ ui.stop.addEventListener("click", () => {
   ui.run.disabled = true;
   ui.stop.disabled = true;
   setStatus("stopped, reloading the engine…");
+  stopProbing();
   startWorker();
 });
 

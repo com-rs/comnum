@@ -15,8 +15,10 @@ and follow [Semantic Versioning](https://semver.org/).
   (Plotly, log scale for the error rates, confidence intervals) as the conditions
   complete in a Web Worker, the published points and closed forms of the expectations
   drawn over the simulated curve, a terminal panel with the lines of `comnum run` and
-  `comnum verify` as the conditions complete, and
-  the errors of the specification marked in the editor. `just playground` builds the
+  `comnum verify` as the conditions complete, the errors of the specification marked
+  in the editor, and a probe that tells when the browser has installed its optimised
+  code for the module (V8 runs a fresh module in its baseline tier, about five times
+  slower, for some twenty seconds). `just playground` builds the
   module, `just playground-serve` serves the page. The engine is the native one on one
   thread: the runner of `comnum-sim` runs the trials of a batch one after the other on
   `wasm32-unknown-unknown` (no thread there), with the records merged in trial order as

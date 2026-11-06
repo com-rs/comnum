@@ -4,7 +4,24 @@
 
 import init, { inspect, run, specs, version } from "./pkg/comnum.js";
 
-const ready = init().then(() => {
+// A short campaign, run on request to measure the speed of the module: V8 starts a
+// module in its baseline tier (Liftoff) and installs the optimised code (TurboFan) in
+// the background, function by function, tens of seconds later for a module this size,
+// never inside a call already running; the page probes until the probe speeds up.
+const PROBE = `name: probe
+grid: {ebn0_db: [0, 4, 8]}
+link:
+  - {type: source, constellation: QPSK, n_symbols: 1000}
+  - {type: awgn_ebn0, ebn0_db: $ebn0_db}
+metrics: {report: [ber]}
+stop: {max_trials: 8}
+`;
+
+// `?nocache=1` on the page fetches the module under a new URL every time, past the
+// browser's caches (to measure a cold start).
+const params = new URLSearchParams(self.location.search);
+const wasmUrl = new URL("./pkg/comnum_bg.wasm" + (params.get("nocache") ? `?v=${Date.now()}` : ""), import.meta.url);
+const ready = init({ module_or_path: wasmUrl }).then(() => {
   postMessage({ type: "ready", version: version(), specs: JSON.parse(specs()) });
 });
 
@@ -17,6 +34,10 @@ onmessage = async (e) => {
     } catch (err) {
       postMessage({ type: "inspect", id, ok: false, error: String(err) });
     }
+  } else if (type === "probe") {
+    const t0 = performance.now();
+    run(PROBE, () => {}, () => {});
+    postMessage({ type: "probe", ms: performance.now() - t0 });
   } else if (type === "run") {
     try {
       const out = run(
