@@ -40,6 +40,11 @@ and follow [Semantic Versioning](https://semver.org/).
   is the first CUDA device when there is one: on the pod the CPU modes ran on the GPU,
   0.7 ms per 10⁶ bits) and to `cuda:0` in the mode `gpu`, without
   `torch.set_default_device`, whose device context slowed every operation.
+  The results of two RunPod pods (`results/rtx4090/`, `results/h100/`) are recorded,
+  and the benchmark page becomes an overview, `docs/python/benchmarks.rst` (the
+  machines with their provenance, the CPU comparison with charts, then what a GPU
+  changes, the limits), generated with its SVG charts by `tools/benchmarks_page.py`
+  from the headline cases; every number moves to `docs/python/benchmarks_details.rst`.
 
 ## [0.3.1] — 2026-11-06
 

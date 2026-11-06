@@ -117,6 +117,14 @@ them with `git add -f benchmarks/libraries/results/runpod/*.json`. The relative 
 stay against comnum on one thread of that machine, so that the two machines are not
 compared with each other.
 
+The recorded result sets `results/rtx4090/` and `results/h100/` come from two
+[RunPod](https://www.runpod.io/) Secure Cloud pods (one RTX 4090 on an EPYC 7K62 host,
+11 vCPU; one H100 SXM on a Xeon Platinum 8480+ host, 24 vCPU), the PyTorch template
+(torch 2.13, CUDA 13.0), comnum 0.3.1 from PyPI, run with this script on 6 November
+2026; `tools/benchmarks_page.py` names them in `MACHINES` (title and provenance) for
+the overview page `docs/python/benchmarks.rst`, which draws its charts from the
+headline cases of every machine, and the detail page `docs/python/benchmarks_details.rst`.
+
 Which pod: the GPU hardly matters for these sizes (2¹⁴ to 2¹⁶ samples through the
 fibre, batches of 10⁶ bits), the CPU does, since every comnum time is a CPU time and
 RunPod pods get a slice of the host's CPU that depends on the GPU type. A secure-cloud

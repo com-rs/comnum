@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
-"""Render `docs/python/benchmarks.rst` from the results of the library benchmarks.
+"""Render the benchmark pages from the results of the library benchmarks:
+`docs/python/benchmarks.rst`, the overview (the machines, the CPU comparison with its
+charts, then what a GPU changes) and `docs/python/benchmarks_details.rst`, every number
+(the charts are written to `docs/python/_static/benchmarks/`).
 
 The results are the files `benchmarks/libraries/results/<scenario>.json` written by
 `benchmarks/libraries/run_all.py` (see `benchmarks/libraries/README.md`): per scenario,
@@ -8,8 +11,8 @@ there is one, the timings on one thread and on every core, the machine, the vers
 the commit and the commands. The page shows, per scenario, what every library supports,
 how its results agree with the theory or with comnum, and how long it takes.
 
-    python3 tools/benchmarks_page.py            # write the page
-    python3 tools/benchmarks_page.py --check    # fail if the page is out of date
+    python3 tools/benchmarks_page.py            # write the pages and the charts
+    python3 tools/benchmarks_page.py --check    # fail if a page or a chart is out of date
 """
 
 from __future__ import annotations
@@ -23,6 +26,8 @@ from _common import ROOT, rst_table, write_or_check
 
 RESULTS = ROOT / "benchmarks" / "libraries" / "results"
 PAGE = ROOT / "docs" / "python" / "benchmarks.rst"
+DETAILS = ROOT / "docs" / "python" / "benchmarks_details.rst"
+CHARTS = ROOT / "docs" / "python" / "_static" / "benchmarks"
 REPO = "https://github.com/com-rs/comnum/blob/main"
 SCENARIOS = ["s1_awgn", "s2_rayleigh", "s3_mimo", "s4_coding", "s5_ssfm"]
 ORDER = ["comnum", "comnum-spec", "comnum-rust", "komm", "opticommpy", "opticommpy-nojit", "sionna"]
@@ -66,11 +71,35 @@ UNITS = {
 }
 Z_MAX = 4.0
 
-INTRO = """\
-Benchmarks against other libraries
-==================================
+# Where the result sets of the other machines come from (``results/<name>/``): the
+# text of the overview and of the detail page. A directory without an entry is
+# described by its machine information only.
+RUNPOD = "`RunPod <https://www.runpod.io/>`_"
+MACHINES = {
+    "rtx4090": {
+        "title": "RunPod pod, RTX 4090",
+        "text": (
+            f"a {RUNPOD} Secure Cloud pod with one NVIDIA GeForce RTX 4090 (24 GB), the"
+            " PyTorch template (torch 2.13, CUDA 13.0): a container with a CPU quota on a"
+            " shared host"
+        ),
+    },
+    "h100": {
+        "title": "RunPod pod, H100 SXM",
+        "text": (
+            f"a {RUNPOD} Secure Cloud pod with one NVIDIA H100 SXM (80 GB HBM3), the"
+            " PyTorch template (torch 2.13, CUDA 13.0): a container with a CPU quota on a"
+            " shared host"
+        ),
+    },
+}
 
-The same links simulated with comnum and with the Python libraries that offer them —
+INTRO = """\
+Benchmarks, every number
+========================
+
+Every point, interval, timing and command of the :doc:`benchmark <benchmarks>`, by
+scenario and by machine. The same links simulated with comnum and with the Python libraries that offer them —
 `komm <https://github.com/rwnobrega/komm>`_, `OptiCommPy
 <https://github.com/edsonportosilva/OptiCommPy>`_ (with and without numba) and `Sionna
 <https://github.com/NVlabs/sionna>`_ — with the same parameters and the same number of
@@ -630,6 +659,8 @@ def other_machine_section(name: str, results: dict[str, dict]) -> list[str]:
         ),
         "",
     ]
+    if name in MACHINES:
+        out += [f"This machine is {MACHINES[name]['text']}.", ""]
     if any(d["quick"] for d in results.values()):
         out += [".. warning::", "", "   A ``--quick`` run: the timings mean nothing.", ""]
     out += machine_section(first)
@@ -638,15 +669,456 @@ def other_machine_section(name: str, results: dict[str, dict]) -> list[str]:
     return out
 
 
+# ------------------------------------------------------------------ the overview
+
+# The headline cases of the overview: scenario, case, the variant of each library when
+# the case has several (the split-step: double precision for every library), the
+# label of the chart panel.
+HEADLINE: list[tuple[str, str, dict[str, str], str]] = [
+    ("s1_awgn", "qpsk", {}, "QPSK over AWGN"),
+    ("s2_rayleigh", "bpsk", {}, "BPSK over flat Rayleigh fading"),
+    ("s3_mimo", "zf", {}, "4 × 4 MIMO, zero forcing"),
+    ("s3_mimo", "ml", {}, "4 × 4 MIMO, exhaustive ML"),
+    ("s4_coding", "nr_ldpc", {}, "5G NR LDPC (1024, 2048) decoder"),
+    (
+        "s5_ssfm",
+        "ssfm",
+        {"comnum": "f64", "opticommpy": "f64", "opticommpy-nojit": "f64", "sionna": "double"},
+        "Split-step, 10 × 80 km, float64",
+    ),
+]
+SHORT_UNIT = {"bit": "ns/bit", "vector": "µs/vector", "frame": "ms/frame", "propagation": "s"}
+# One colour per library, the same on every chart; a mode is a shade or a hatch.
+COLOURS = {
+    "comnum": "#2a78d6",
+    "comnum-spec": "#2a78d6",
+    "comnum-rust": "#1c4f8f",
+    "komm": "#8a8a8a",
+    "opticommpy": "#eb6834",
+    "opticommpy-nojit": "#eb6834",
+    "sionna": "#1baf7a",
+}
+INK, MUTED, GRID = "#1f1f1d", "#52514e", "#d9d8d4"
+
+
+def headline_time(
+    results: dict[str, dict], lib: str, mode: str, scenario: str, case: str, variants: dict
+) -> tuple[float, str] | None:
+    """The time per unit of work (seconds) and the unit of ``lib`` in the mode ``mode`` on
+    the headline case, or None when it was not run."""
+    data = results.get(scenario)
+    if not data:
+        return None
+    for c in case_results(runs_by(data).get((lib, mode)), case):
+        if "timing" not in c or c.get("variant", "") != variants.get(lib, ""):
+            continue
+        return c["timing"]["median_s"] / c["timing"]["units"], c["timing"]["unit"]
+    return None
+
+
+def machine_label(name: str, results: dict[str, dict]) -> str:
+    m = next(iter(results.values()))["machine"]
+    cores = m.get("cpus_available") or m["logical_cores"]
+    cpu = (m.get("cpu") or "?").replace("(R)", "").replace("Processor", "").strip()
+    return f"{cpu}, {cores} {'vCPU' if m.get('cpus_available') else 'cores'}"
+
+
+def chart(
+    panels: list[tuple[str, list[tuple[str, float, str, str, str]]]], fmt: str = "svg"
+) -> str | bytes:
+    """A 2 × 3 grid of horizontal bar charts (log scale, the value at the end of every
+    bar) as the text of an SVG. Every panel is (title, bars) and every bar (label,
+    value, unit, colour, style), the style "solid", "light" (every core: the same
+    colour, lighter) or "gpu" (hatched)."""
+    import io
+
+    import matplotlib
+
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+
+    plt.rcParams.update(
+        {
+            "svg.hashsalt": "comnum",
+            "svg.fonttype": "none",
+            "font.family": "DejaVu Sans",
+            "font.size": 9,
+            "axes.edgecolor": GRID,
+            "axes.labelcolor": INK,
+            "xtick.color": MUTED,
+            "ytick.color": INK,
+            "hatch.linewidth": 0.8,
+        }
+    )
+    n_rows = max(len(bars) for _, bars in panels)
+    fig, axes = plt.subplots(2, 3, figsize=(13.5, 1.2 + 0.42 * n_rows * 2), dpi=100)
+    for ax, (title, bars) in zip(axes.flat, panels, strict=False):
+        labels = [b[0] for b in bars]
+        values = [b[1] for b in bars]
+        # the bars hang from the top of the panel, the same thickness on every panel
+        y = [n_rows - 1 - i for i in range(len(bars))]
+        for yi, (_, value, unit, colour, style) in zip(y, bars, strict=True):
+            ax.barh(
+                yi,
+                value,
+                height=0.62,
+                color=colour,
+                alpha=0.5 if style == "light" else 1.0,
+                hatch="////" if style == "gpu" else None,
+                edgecolor="white" if style == "gpu" else colour,
+                linewidth=0.6,
+            )
+            ax.text(
+                value * 1.15,
+                yi,
+                f"{num(value)} {unit}",
+                va="center",
+                ha="left",
+                fontsize=8,
+                color=INK,
+            )
+        ax.set_xscale("log")
+        lo, hi = min(values), max(values)
+        ax.set_xlim(lo / 2.5, hi * 60)
+        ax.set_yticks(y, labels)
+        ax.set_ylim(-0.7, n_rows - 0.3)
+        ax.set_title(title, loc="left", fontsize=9.5, color=INK, fontweight="bold")
+        ax.tick_params(axis="x", labelsize=7.5, length=2)
+        ax.tick_params(axis="y", length=0)
+        ax.grid(axis="x", color=GRID, linewidth=0.6)
+        ax.set_axisbelow(True)
+        for side in ["top", "right", "left"]:
+            ax.spines[side].set_visible(False)
+    for ax in list(axes.flat)[len(panels) :]:
+        ax.axis("off")
+    fig.tight_layout(h_pad=1.6, w_pad=2.5)
+    if fmt != "svg":  # a raster, to look at the chart
+        raw = io.BytesIO()
+        fig.savefig(raw, format=fmt, dpi=150)
+        plt.close(fig)
+        return raw.getvalue()
+    buf = io.StringIO()
+    fig.savefig(buf, format="svg", metadata={"Date": None})
+    plt.close(fig)
+    # the text stays text (selectable, searchable); a browser without DejaVu falls back
+    return buf.getvalue().replace(
+        "font-family: 'DejaVu Sans'", "font-family: 'DejaVu Sans', Helvetica, Arial, sans-serif"
+    )
+
+
+def cpu_panels(results: dict[str, dict], mode: str) -> list:
+    """The panels of a CPU chart: every library that ran the headline case in ``mode``
+    (the comnum functions are single-threaded: in the mode *all* they are left out,
+    comnum is then its Monte Carlo runner)."""
+    panels = []
+    for scenario, case, variants, title in HEADLINE:
+        bars = []
+        for lib in ORDER:
+            if mode == "all" and lib == "comnum":
+                continue
+            t = headline_time(results, lib, mode, scenario, case, variants)
+            if t is None:
+                continue
+            value, unit = t
+            factor = UNITS[unit][1]
+            bars.append((NAMES[lib], value * factor, SHORT_UNIT[unit], COLOURS[lib], "solid"))
+        if bars:
+            panels.append((title, bars))
+    return panels
+
+
+def gpu_panels(results: dict[str, dict], gpu_name: str, cores: int) -> list:
+    """The panels of a GPU chart: comnum on one core and on every core, Sionna on the
+    CPU (every core) and on the GPU, OptiCommPy on the GPU when it has a path."""
+    panels = []
+    rows = [
+        ("comnum", "1", "comnum (functions), 1 core", "solid"),
+        ("comnum-spec", "all", f"comnum.run_spec, {cores} vCPU", "light"),
+        ("opticommpy", "1", "OptiCommPy (numba), 1 core", "solid"),
+        ("sionna", "1", "Sionna, CPU, 1 thread", "solid"),
+        ("sionna", "all", f"Sionna, CPU, {cores} threads", "light"),
+        ("sionna", "gpu", f"Sionna, {gpu_name}", "gpu"),
+        ("opticommpy", "gpu", f"OptiCommPy (CuPy), {gpu_name}", "gpu"),
+    ]
+    for scenario, case, variants, title in HEADLINE:
+        bars = []
+        for lib, mode, label, style in rows:
+            t = headline_time(results, lib, mode, scenario, case, variants)
+            if t is None:
+                continue
+            value, unit = t
+            bars.append((label, value * UNITS[unit][1], SHORT_UNIT[unit], COLOURS[lib], style))
+        if bars:
+            panels.append((title, bars))
+    return panels
+
+
+def ratio_table(machines: dict[str, dict[str, dict]]) -> list[str]:
+    """Per headline case and machine, the 1-thread time of komm, OptiCommPy and Sionna
+    over that of the comnum functions on the same machine."""
+    libs = ["komm", "opticommpy", "sionna"]
+    header = ["Case", "Library", *[MACHINES.get(n, {}).get("title", n) for n in machines]]
+    rows = []
+    for scenario, case, variants, title in HEADLINE:
+        for lib in libs:
+            cells = []
+            for results in machines.values():
+                base = headline_time(results, "comnum", "1", scenario, case, variants)
+                t = headline_time(results, lib, "1", scenario, case, variants)
+                cells.append(f"× {num(t[0] / base[0])}" if t and base else "—")
+            if any(c != "—" for c in cells):
+                rows.append([title, NAMES[lib], *cells])
+    return rst_table(header, rows)
+
+
+def gpu_table(name: str, results: dict[str, dict], gpu_name: str, cores: int) -> list[str]:
+    header = [
+        "Case",
+        "comnum, 1 core",
+        f"comnum.run_spec, {cores} vCPU",
+        f"Sionna, CPU, {cores} threads",
+        f"Sionna, {gpu_name}",
+        f"OptiCommPy, {gpu_name}",
+        "GPU gain over comnum, 1 core",
+        f"GPU gain over comnum, {cores} vCPU",
+    ]
+    rows = []
+    for scenario, case, variants, title in HEADLINE:
+        cells = []
+        times = {}
+        for lib, mode in [
+            ("comnum", "1"),
+            ("comnum-spec", "all"),
+            ("sionna", "all"),
+            ("sionna", "gpu"),
+            ("opticommpy", "gpu"),
+        ]:
+            t = headline_time(results, lib, mode, scenario, case, variants)
+            times[(lib, mode)] = t
+            cells.append(f"{num(t[0] * UNITS[t[1]][1])} {SHORT_UNIT[t[1]]}" if t else "—")
+        gpu = times[("sionna", "gpu")] or times[("opticommpy", "gpu")]
+        one, every = times[("comnum", "1")], times[("comnum-spec", "all")]
+        cells.append(f"× {num(one[0] / gpu[0])}" if gpu and one else "—")
+        cells.append(f"× {num(every[0] / gpu[0])}" if gpu and every else "—")
+        rows.append([title, *cells])
+    return rst_table(header, rows)
+
+
+OVERVIEW_INTRO = """\
+Benchmarks against other libraries
+==================================
+
+The same links simulated with comnum and with the Python libraries that offer them,
+`komm <https://github.com/rwnobrega/komm>`_, `OptiCommPy
+<https://github.com/edsonportosilva/OptiCommPy>`_ (with and without numba) and `Sionna
+<https://github.com/NVlabs/sionna>`_, with the same parameters and the same number of
+samples: do the results agree, and how long does each library take? This page is the
+overview; :doc:`every number <benchmarks_details>` (each point with its confidence
+interval, the closed form, the first-call times, the versions and the command of every
+run) is on the detail page, and the :doc:`comparisons <comparisons>` page compares
+single blocks value by value.
+
+How to read it: every time is the median of five runs of the same work, per unit of
+work (bit, vector, frame or propagation), after a warm-up call; *1 thread* means every
+thread pool at one thread, *all cores* the defaults of the library (every core the
+process may use); the results of every library agree with the closed form, or with
+comnum when there is none, on every machine (the detail page shows the intervals).
+comnum computes in float64, Sionna in float32 by default (float64 for the split-step
+below), OptiCommPy in float64 except its Gray constellations: the faster library is
+not always doing less work. komm and OptiCommPy without numba ran on the laptop only.
+
+.. generated by tools/benchmarks_page.py from benchmarks/libraries/results/: do not edit
+"""
+
+LIMITS = """\
+Limits
+------
+
+- **Cases chosen by comnum.** The scenarios are classical links that several libraries
+  offer; other cases, sizes and batch shapes may rank the libraries differently, and
+  Sionna's home ground (large batches, learning, automatic differentiation) is not
+  measured here. The scripts are published to be rerun.
+- **Small work for a GPU.** 10⁶ bits, 2000 frames or 2¹⁴ symbols per call do not fill
+  an RTX 4090, let alone an H100: the two cards give nearly the same times, and a
+  larger batch would lower the GPU times further. What the GPU columns show is the
+  cost of a call of that size, which is what a Monte Carlo loop pays.
+- **Containers.** The pods are containers with a CPU quota on a shared host: the pools
+  of the mode *all cores* are sized to the quota, but the host's other tenants can
+  slow a run; the laptop's times were taken on a quiet machine.
+- **One wheel for every x86-64.** On the pods comnum ran from the PyPI wheel, compiled
+  for the baseline x86-64 instruction set (no AVX2); the laptop ran a native build.
+  Part of the per-core gap between the pods and the laptop may come from that, not
+  from the processors alone.
+- **Not timed here.** Specialised C++ decoders (AFF3CT) are timed against comnum's,
+  one thread, on the :doc:`comparisons <comparisons>` page.
+"""
+
+
+def render_overview() -> tuple[str, dict[str, str]]:
+    """The overview page and its charts, as (text of the page, {chart file name: svg})."""
+    laptop = load()
+    machines = other_machines()
+    charts: dict[str, str] = {}
+    lines = [OVERVIEW_INTRO]
+    if not laptop:
+        lines += ["No results yet: run ``benchmarks/libraries/run_all.py``.", ""]
+        return "\n".join(lines).rstrip() + "\n", charts
+    first = next(iter(laptop.values()))
+    m = first["machine"]
+    # the machines
+    lines += heading("The machines", "-")
+    rows = [
+        [
+            "laptop",
+            f"{m.get('cpu')}, {m['logical_cores']} cores, {m.get('ram_gb')} GB, macOS {m.get('macos')}",
+            "every library; the reference of the CPU comparison",
+        ]
+    ]
+    for name, results in machines.items():
+        mm = next(iter(results.values()))["machine"]
+        gpu = mm.get("gpu", {})
+        rows.append(
+            [
+                MACHINES.get(name, {}).get("title", name),
+                f"{machine_label(name, results)}; "
+                + (MACHINES[name]["text"] if name in MACHINES else gpu.get("name", "")),
+                "comnum, OptiCommPy and Sionna on the CPU; Sionna and OptiCommPy's split-step on the GPU",
+            ]
+        )
+    lines += rst_table(["Machine", "What it is", "What ran on it"], rows, [18, 52, 30])
+    lines += [
+        "The laptop ran a native build of comnum from the checkout; the pods installed"
+        " ``comnum`` from PyPI, the other libraries from PyPI at the versions of"
+        " ``requirements.txt`` and ``requirements-gpu.txt``, and ran"
+        " ``benchmarks/libraries/runpod.sh``. The commit, the versions and the full"
+        " machine information of every run are on the :doc:`detail page <benchmarks_details>`.",
+        "",
+    ]
+    # the CPU
+    lines += heading("On the CPU", "-")
+    lines += [
+        "**Same work, one thread.** The time per unit of work of every library on one"
+        " thread of the laptop, six headline cases (the detail page has every case and"
+        " every machine). Lower is better; the axis is logarithmic.",
+        "",
+        ".. figure:: _static/benchmarks/cpu_1thread.svg",
+        "   :width: 100%",
+        "   :alt: Time per unit of work of every library on one thread of the laptop",
+        "",
+        "   One thread of the laptop: ns per bit, µs per vector (4 × 4 16-QAM), ms per"
+        " frame, s per propagation; median of five runs.",
+        "",
+    ]
+    charts["cpu_1thread.svg"] = chart(cpu_panels(laptop, "1"))
+    lines += [
+        "**Every core.** The same cases with the thread pools at their defaults: comnum"
+        " is then its Monte Carlo runner (``comnum.run_spec``, the trials in parallel;"
+        " its functions are single-threaded and are left out), Sionna its PyTorch"
+        " pools, OptiCommPy its numba threads, komm NumPy.",
+        "",
+        ".. figure:: _static/benchmarks/cpu_all.svg",
+        "   :width: 100%",
+        "   :alt: Time per unit of work of every library on every core of the laptop",
+        "",
+        "   Every core of the laptop: the same units; median of five runs.",
+        "",
+    ]
+    charts["cpu_all.svg"] = chart(cpu_panels(laptop, "all"))
+    lines += [
+        "**Does the ranking hold on other processors?** The 1-thread time of each library"
+        " over that of the comnum functions on the same machine (× 2 means twice the"
+        " time of comnum), on the laptop and on the CPU of the two pods. The ratios"
+        " compare libraries on one machine; the machines are not compared with each"
+        " other here (their cores differ: see the GPU section).",
+        "",
+    ]
+    lines += ratio_table({"laptop": laptop, **machines})
+    lines += [
+        "What the numbers do not say: OptiCommPy's first call compiles its numba kernels"
+        " (about 3 s), Sionna's first call initialises PyTorch; the single-thread path"
+        " of comnum over flat fading was rewritten after the first run of this benchmark"
+        " found it slower than Sionna (same error counts, see the detail page).",
+        "",
+    ]
+    # the GPU
+    if machines:
+        lines += heading("What a GPU changes", "-")
+        lines += [
+            "Sionna is designed for GPUs, and OptiCommPy has a CuPy copy of its"
+            " split-step. On each pod the same scripts ran every library on the pod's"
+            " CPU (one thread, then every vCPU of the quota) and Sionna and the split-step"
+            " of OptiCommPy on the pod's GPU, with the input copied to the device and the"
+            " result brought back inside the timed call. comnum has no GPU path: the"
+            " comparison is a library on the device against comnum on the CPU of the same"
+            " machine, which is what a user choosing between the two faces.",
+            "",
+        ]
+        for name, results in machines.items():
+            mm = next(iter(results.values()))["machine"]
+            gpu_name = (mm.get("gpu") or {}).get("name", "GPU")
+            short = {"NVIDIA GeForce RTX 4090": "RTX 4090", "NVIDIA H100 80GB HBM3": "H100"}.get(
+                gpu_name, gpu_name
+            )
+            cores = mm.get("cpus_available") or mm["logical_cores"]
+            title = MACHINES.get(name, {}).get("title", name)
+            lines += [f"**{title}** ({machine_label(name, results)}, {gpu_name}).", ""]
+            lines += [
+                f".. figure:: _static/benchmarks/gpu_{name}.svg",
+                "   :width: 100%",
+                f"   :alt: comnum on the CPU of the pod against Sionna and OptiCommPy on the {short}",
+                "",
+                f"   {title}: comnum on the CPU, Sionna on the CPU and on the {short},"
+                " OptiCommPy on the CPU and, for the split-step, on the GPU (hatched);"
+                " median of five runs.",
+                "",
+            ]
+            charts[f"gpu_{name}.svg"] = chart(gpu_panels(results, short, cores))
+            lines += gpu_table(name, results, short, cores)
+        lines += [
+            "What this says: on the chains that vectorise (the AWGN and fading links, the"
+            " LDPC decoder, the split-step), the GPU is 5 to 70 times faster than comnum"
+            " on one core, and 2 to 12 times faster than comnum's runner on every vCPU of"
+            " the pod. On the exhaustive ML detector, a search over 65 536 candidates per"
+            " vector that does not vectorise, comnum's runner on the 24 vCPU of the H100"
+            " pod is level with Sionna's reference detector on the H100 (56 against"
+            " 62 µs per vector), and within a factor 2.4 on the RTX 4090 pod. The two"
+            " cards give nearly the same times: at these sizes the GPU is not the"
+            " bottleneck, the host and the Python overhead of each call are. On one"
+            " core, the pods are 2 to 7 times slower than the laptop for comnum and 4 to"
+            " 13 times for Sionna (see the limits below).",
+            "",
+        ]
+    lines += [LIMITS]
+    lines += [
+        "Reproducing",
+        "-----------",
+        "",
+        "See the :doc:`detail page <benchmarks_details>`: the commands, the environment"
+        " files and ``benchmarks/libraries/runpod.sh`` for a GPU machine.",
+        "",
+        ".. toctree::",
+        "   :hidden:",
+        "",
+        "   benchmarks_details",
+        "",
+    ]
+    return "\n".join(lines).rstrip() + "\n", charts
+
+
 def main() -> int:
     p = argparse.ArgumentParser(
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
     )
     p.add_argument("--check", action="store_true", help="fail if the page is out of date")
     args = p.parse_args()
-    return write_or_check(
-        PAGE, render(), args.check, fix="python3 tools/benchmarks_page.py", written="wrote {path}"
-    )
+    fix = "python3 tools/benchmarks_page.py"
+    status = write_or_check(DETAILS, render(), args.check, fix=fix, written="wrote {path}")
+    overview, charts = render_overview()
+    status |= write_or_check(PAGE, overview, args.check, fix=fix, written="wrote {path}")
+    CHARTS.mkdir(parents=True, exist_ok=True)
+    for name, svg in charts.items():
+        status |= write_or_check(CHARTS / name, svg, args.check, fix=fix, written="wrote {path}")
+    return status
 
 
 if __name__ == "__main__":
