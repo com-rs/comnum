@@ -103,6 +103,8 @@ comnum/
 │   ├── comnum-systems/           # dvbs2/ (with fec), pas
 │   └── comnum/                 # facade: re-exports, prelude, examples, benchmarks
 ├── bindings/comnum-py/           # PyO3 extension of the Python package (built by maturin)
+├── bindings/comnum-wasm/         # wasm-bindgen module of the browser playground (built by wasm-pack)
+├── playground/                # the browser playground: a static page, the module in pkg/ (built)
 ├── python/comnum/              # the Python package: chains, results, plots, generated blocks
 ├── validation/                # statistical validation (crate comnum-validation): tests/, cards/
 │                              # (validation cards), aff3ct/ fixtures, literature.yaml,
@@ -151,8 +153,10 @@ comnum-mapping` (ADR 0008), `comnum-waveform → comnum-mapping` and `comnum-wav
 crates of one layer requires an ADR.
 
 The Python extension (`bindings/comnum-py`) depends on the facade and adds no algorithm:
-it converts arrays and calls the crates. `validation/` (the crate `comnum-validation`,
-not published) depends on the facade.
+it converts arrays and calls the crates. So does the WebAssembly module of the browser
+playground (`bindings/comnum-wasm`, built by wasm-pack for `wasm32-unknown-unknown`):
+it parses, inspects and runs a specification, and relays the conditions to the page as
+JSON. `validation/` (the crate `comnum-validation`, not published) depends on the facade.
 
 ## Placement rules
 
@@ -740,7 +744,12 @@ not change; they import by name (`use super::{Taps, LOS_DOPPLER_RATIO};`, the pr
   `_into` methods that reuse their output, callers reuse buffers, and blocks whose
   scratch shows in a profile keep a workspace (ADR 0011).
 - Parallelism lives in `comnum-sim` only (rayon over the trials of a batch). Blocks are
-  single-threaded, which avoids nested parallelism.
+  single-threaded, which avoids nested parallelism. The runner and the clock are the
+  only code that differs by target: on `wasm32-unknown-unknown`, where the standard
+  library can neither spawn a thread nor read a clock, the trials of a batch run one
+  after the other on the calling thread (the records are merged in trial order on
+  every target, so the results are the same) and `comnum_sim::clock` reads the clock
+  the host registers. No kernel has a target-specific branch.
 - FFT plans and code matrices are built once at construction and cached in the block.
 - Profile before optimising (`samply`, `cargo flamegraph`, or `profile: true` in a
   specification for the time of every block). An optimisation states its gain,

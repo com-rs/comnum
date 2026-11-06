@@ -6,9 +6,9 @@ use crate::metrics::Metrics;
 use crate::{Spec, params};
 use comnum_core::rng::{Rng, fnv1a64, stream};
 use comnum_core::{Error, Result};
+use comnum_sim::clock::Stopwatch;
 use comnum_sim::grid::Condition;
 use comnum_sim::scenario::{Record, Scenario};
-use std::time::Instant;
 
 impl Spec {
     /// Build the link of a condition: substitute the variables, build the blocks, train
@@ -108,9 +108,9 @@ impl Link {
     /// The first error of a block or of the metrics.
     pub fn trial(&self, rng: &mut Rng, rec: &mut Record) -> Result<Frame> {
         let mut s = Frame { trial: rec.trial(), ..Frame::default() };
-        let t_link = Instant::now();
+        let t_link = Stopwatch::start();
         for (i, (b, kind)) in self.blocks.iter().zip(&self.kinds).enumerate() {
-            let t = Instant::now();
+            let t = Stopwatch::start();
             b.apply(&mut s, rng).map_err(|e| e.context(format!("link block {} ({kind})", i + 1)))?;
             if self.profile {
                 rec.value(&format!("{}.time_ms", self.labels[i]), t.elapsed().as_secs_f64() * 1e3);

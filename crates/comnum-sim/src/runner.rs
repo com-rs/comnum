@@ -42,6 +42,7 @@
 //! ```
 
 use crate::callbacks::{Action, Callback};
+use crate::clock::{Stopwatch, unix_time_s};
 use crate::grid::{Condition, Grid, Value};
 use crate::loggers::Logger;
 use crate::scenario::{Record, Scenario};
@@ -50,7 +51,7 @@ use crate::stopping::{Progress, Stop};
 use comnum_core::rng::stream;
 use comnum_core::{Error, Result};
 use rayon::prelude::*;
-use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
+use std::time::Duration;
 
 /// How a condition ended.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -284,11 +285,11 @@ impl Runner {
             scenario: scenario.to_string(),
             seed: self.seed,
             batch: self.batch,
-            threads: if self.threads == 0 { rayon::current_num_threads() } else { self.threads },
+            threads: if self.threads == 0 { Pool::available_threads() } else { self.threads },
             stop: if self.fast_dev_run { "fast_dev_run".into() } else { self.stop.to_string() },
             confidence: self.confidence,
             n_conditions,
-            started_unix_s: SystemTime::now().duration_since(UNIX_EPOCH).map_or(0, |d| d.as_secs()),
+            started_unix_s: unix_time_s(),
             version: crate::VERSION.into(),
             commit: crate::COMMIT.into(),
             config: self.config.clone(),
@@ -308,14 +309,11 @@ impl Runner {
     /// loggers.
     pub fn run<S: Scenario>(mut self, scenario: &S, grid: &Grid) -> Result<Vec<ConditionResult>> {
         self.check(grid)?;
-        let pool = rayon::ThreadPoolBuilder::new()
-            .num_threads(self.threads)
-            .build()
-            .map_err(|e| Error::Config(format!("thread pool: {e}")))?;
+        let pool = Pool::new(self.threads)?;
         let conditions = grid.conditions();
-        let info = RunInfo { threads: pool.current_num_threads(), ..self.run_info(scenario.name(), conditions.len()) };
+        let info = RunInfo { threads: pool.threads(), ..self.run_info(scenario.name(), conditions.len()) };
         self.start(&info)?;
-        let t_run = Instant::now();
+        let t_run = Stopwatch::start();
         let mut results = Vec::with_capacity(conditions.len());
         let mut stop_run = false;
         for (index, cond) in conditions.into_iter().enumerate() {
@@ -359,7 +357,7 @@ impl Runner {
         scenario: &S,
         index: usize,
         cond: Condition,
-        pool: &rayon::ThreadPool,
+        pool: &Pool,
         stop_run: bool,
     ) -> Result<ConditionResult> {
         // every callback sees the start of the condition (no short circuit), unless
@@ -403,7 +401,12 @@ impl Runner {
 
     /// The end of the run, for every callback, then every logger with the wall time since
     /// `t_run`; the results.
-    fn finish(&mut self, info: RunInfo, results: Vec<ConditionResult>, t_run: Instant) -> Result<Vec<ConditionResult>> {
+    fn finish(
+        &mut self,
+        info: RunInfo,
+        results: Vec<ConditionResult>,
+        t_run: Stopwatch,
+    ) -> Result<Vec<ConditionResult>> {
         for c in &mut self.callbacks {
             c.on_run_end(&results);
         }
@@ -419,9 +422,9 @@ impl Runner {
         scenario: &S,
         index: usize,
         cond: Condition,
-        pool: &rayon::ThreadPool,
+        pool: &Pool,
     ) -> Result<ConditionResult> {
-        let t0 = Instant::now();
+        let t0 = Stopwatch::start();
         let state = scenario.setup(&cond).map_err(|e| e.context(format!("setup of ({})", cond.label())))?;
         let name = scenario.name().to_string();
         let mut record = Record::new();
@@ -432,18 +435,13 @@ impl Runner {
             let end = limit.map_or(trials + self.batch, |n| (trials + self.batch).min(n).max(trials + 1));
             let range = trials..end;
             let seed = self.seed;
-            let recs: Vec<Result<Record>> = pool.install(|| {
-                range
-                    .into_par_iter()
-                    .map(|t| {
-                        let mut rng = stream(seed, &name, index as u64, t);
-                        let mut rec = Record::for_trial(t);
-                        scenario
-                            .trial(&state, &cond, &mut rng, &mut rec)
-                            .map(|()| rec)
-                            .map_err(|e| e.context(format!("trial {t} of ({})", cond.label())))
-                    })
-                    .collect()
+            let recs = pool.trials(range, |t| {
+                let mut rng = stream(seed, &name, index as u64, t);
+                let mut rec = Record::for_trial(t);
+                scenario
+                    .trial(&state, &cond, &mut rng, &mut rec)
+                    .map(|()| rec)
+                    .map_err(|e| e.context(format!("trial {t} of ({})", cond.label())))
             });
             for r in recs {
                 record.merge(&r?);
@@ -470,6 +468,58 @@ impl Runner {
             }
         };
         Ok(ConditionResult { index, condition: cond, status, trials, wall_s: t0.elapsed().as_secs_f64(), record })
+    }
+}
+
+/// The threads of a run: a rayon pool of `threads` workers (0: one per core), or, on
+/// `wasm32-unknown-unknown` where the standard library cannot spawn a thread, the
+/// calling thread alone. The trials of a batch run in parallel on the pool and one after
+/// the other on the calling thread, with the same results: the records are merged in
+/// trial order whatever the order they were run in.
+struct Pool(Option<rayon::ThreadPool>);
+
+impl Pool {
+    #[cfg(not(all(target_arch = "wasm32", target_os = "unknown")))]
+    fn new(threads: usize) -> Result<Pool> {
+        rayon::ThreadPoolBuilder::new()
+            .num_threads(threads)
+            .build()
+            .map(|p| Pool(Some(p)))
+            .map_err(|e| Error::Config(format!("thread pool: {e}")))
+    }
+
+    #[cfg(all(target_arch = "wasm32", target_os = "unknown"))]
+    #[allow(clippy::unnecessary_wraps, reason = "the signature of the native pool")]
+    fn new(_threads: usize) -> Result<Pool> {
+        Ok(Pool(None))
+    }
+
+    /// The threads a run with `threads: 0` gets: one per core, or one in the browser.
+    fn available_threads() -> usize {
+        #[cfg(not(all(target_arch = "wasm32", target_os = "unknown")))]
+        {
+            rayon::current_num_threads()
+        }
+        #[cfg(all(target_arch = "wasm32", target_os = "unknown"))]
+        {
+            1
+        }
+    }
+
+    /// The threads of this pool.
+    fn threads(&self) -> usize {
+        self.0.as_ref().map_or(1, rayon::ThreadPool::current_num_threads)
+    }
+
+    /// The records of the trials `range`, in trial order.
+    fn trials<F>(&self, range: std::ops::Range<u64>, trial: F) -> Vec<Result<Record>>
+    where
+        F: Fn(u64) -> Result<Record> + Sync + Send,
+    {
+        match &self.0 {
+            Some(pool) => pool.install(|| range.into_par_iter().map(trial).collect()),
+            None => range.map(trial).collect(),
+        }
     }
 }
 

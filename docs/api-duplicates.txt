@@ -47,6 +47,7 @@ checksum                2  # Crc::checksum (the parity bits of a CRC) / ais::nme
 filter                  3  # fft::filter (circular, by a frequency response) / Fir::filter (linear FIR) / Ofdm::filter (keeps the active subcarriers)
 frame                   3  # Dvbs2Fec::frame (the frame size) / Dvbt::frame (the OFDM frame structure): accessors / hdlc::frame (the bits of an HDLC frame)
 frequency_correlation   2  # Tdl::frequency_correlation calls comnum_dsp::estimation::frequency_correlation
+metric                  2  # ConditionResult::metric (the estimate of a metric in a result) / verify::Expectation::metric (the name of the metric an expectation checks): an accessor
 pulse                   2  # Fbmc::pulse / Ofdm::pulse: the sampled pulse of a symbol of each modem (the columns of G for comnum_waveform::sir)
 from_bits               2  # BigUint::from_bits (an integer of its bits) / lte::mib::Mib::from_bits (the fields of a MIB): the inverse of to_bits
 identity                2  # linalg::identity (the identity matrix) / Puncturer::identity (the pattern that keeps every bit)
@@ -85,6 +86,7 @@ sequence                2  # Scrambler::sequence (the sequence of a configured s
 ser                     2  # the closed forms of two modulations, mapping::theory and css::theory
 ser_esn0                2  # comnum_mapping::theory (a constellation) / ce_ofdm::theory (the waveform at the SNR of its linear regime, on the former)
 snr                     2  # GnModel::snr (the SNR of a WDM channel) / ce_ofdm::theory::snr (that of a CE-OFDM subcarrier)
+source                  2  # dvbt::InnerInterleaver::source (the punctured bit a cell carries) / verify::Expectation::source (where an expected value comes from, for the reader): an accessor
 specular                2  # Profile::specular (the delay and power of the specular component of a profile) / Tdl::specular (its tap index and normalised power in a built channel)
 sss                     2  # ofdm::nr::sss (the Gold sequence of length 127 of NR) / ofdm::lte::sss (the two interleaved m-sequences of LTE): the SSS of two standards
 stream                  2  # comnum_core::rng::stream (a generator) / Signal::stream (a slice of a signal)

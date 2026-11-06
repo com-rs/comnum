@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>comnum playground</title>
+  <meta name="description" content="Edit a comnum specification and run the Monte Carlo simulation in your browser: the Rust engine compiled to WebAssembly, the published points of the reference over the curve.">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Ccircle cx='8' cy='8' r='7' fill='%23e8590c'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="style.css">
+  <script src="https://cdn.jsdelivr.net/npm/plotly.js-basic-dist-min@2.35.2/plotly-basic.min.js" charset="utf-8"></script>
+</head>
+<body>
+  <header>
+    <div class="brand">
+      <span class="dot"></span>
+      <h1>comnum <span class="muted">playground</span></h1>
+      <span id="version" class="badge" title="version of the library compiled to WebAssembly"></span>
+    </div>
+    <nav>
+      <a href="https://com-rs.github.io/comnum/" target="_blank" rel="noopener">Docs</a>
+      <a href="https://github.com/com-rs/comnum" target="_blank" rel="noopener">GitHub</a>
+      <a href="https://pypi.org/project/comnum/" target="_blank" rel="noopener">PyPI</a>
+    </nav>
+  </header>
+
+  <p class="lead">
+    A comnum specification is a YAML file: a grid of conditions, a link as a list of
+    blocks, metrics and a stopping rule. Pick one, edit it, press <b>Run</b>: the Rust
+    engine, compiled to WebAssembly, runs the Monte Carlo campaign in your browser, on one
+    thread, with the seeds and results of <code>comnum run</code>. The validation
+    specifications draw the published points of their reference over the simulated curve.
+  </p>
+
+  <div class="toolbar">
+    <label>Specification
+      <select id="spec-select" aria-label="specification"></select>
+    </label>
+    <button id="run" class="primary" disabled>Run</button>
+    <button id="stop" disabled>Stop</button>
+    <span id="status" class="status" aria-live="polite">loading the engine…</span>
+  </div>
+
+  <main>
+    <section class="editor-pane">
+      <div id="editor" aria-label="specification editor"></div>
+      <div id="error" class="error" hidden></div>
+    </section>
+    <section class="plot-pane">
+      <div class="plot-controls">
+        <label>x <select id="x-axis"></select></label>
+        <label>y <select id="metric"></select></label>
+        <label><input type="checkbox" id="log-y"> log y</label>
+      </div>
+      <div id="caption" class="caption"></div>
+      <div id="plot"></div>
+    </section>
+  </main>
+
+  <section class="terminal" aria-label="terminal">
+    <div class="terminal-title"><span>TERMINAL</span><span class="muted">comnum run / verify</span><button id="clear" class="small" title="clear the terminal">clear</button></div>
+    <pre id="terminal"></pre>
+  </section>
+
+  <footer>
+    <p>
+      comnum is MIT OR Apache-2.0. The page loads CodeMirror and Plotly from a CDN; the
+      simulation never leaves your browser. The same specifications run on your machine
+      with <code>pip install comnum</code> (<code>comnum.run_spec</code>) or
+      <code>cargo install comnum-spec</code> (<code>comnum run spec.yaml</code>), on every core.
+    </p>
+  </footer>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>

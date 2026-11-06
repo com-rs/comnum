@@ -262,6 +262,51 @@ impl Expectation {
         Ok(Expectation { spec })
     }
 
+    /// The name of the expectation (possibly empty).
+    pub fn name(&self) -> &str {
+        &self.spec.name
+    }
+
+    /// Where the expected value comes from (possibly empty).
+    pub fn source(&self) -> &str {
+        &self.spec.source
+    }
+
+    /// The metric it checks.
+    pub fn metric(&self) -> &str {
+        &self.spec.metric
+    }
+
+    /// The expected value on a condition, known before any run (what a plot draws over
+    /// the simulated curve): `None` when the expectation does not apply to the condition
+    /// (`where`), when the condition is outside its curve or on a missing point, or when
+    /// the expected value is a `reference` metric (known after the run only).
+    ///
+    /// # Examples
+    /// ```
+    /// use comnum_spec::verify::Expectation;
+    /// use comnum_sim::grid::Condition;
+    /// let e = Expectation::from_json(&serde_json::json!({
+    ///     "metric": "ber", "where": {"m": 4}, "atol": 0.1,
+    ///     "curve": {"along": "ebn0_db", "x": [0, 2], "y": [0.5, 0.25]},
+    /// }))?;
+    /// let at = |m: i64, x: f64| e.expected_on(&Condition::new().with("m", m).with("ebn0_db", x));
+    /// assert_eq!(at(4, 1.0)?, Some(0.375));
+    /// assert_eq!(at(4, 3.0)?, None);
+    /// assert_eq!(at(16, 1.0)?, None);
+    /// # Ok::<(), comnum_core::Error>(())
+    /// ```
+    ///
+    /// # Errors
+    /// [`Error::Config`] for a variable of the curve or the theory that the condition does
+    /// not define, or an invalid theory.
+    pub fn expected_on(&self, cond: &Condition) -> Result<Option<f64>> {
+        if self.spec.reference.is_some() || !self.applies(cond) {
+            return Ok(None);
+        }
+        self.expected(cond)
+    }
+
     fn applies(&self, cond: &Condition) -> bool {
         self.spec.filter.iter().all(|(k, want)| match (cond.get(k), want) {
             (Some(v), Json::Number(n)) => {

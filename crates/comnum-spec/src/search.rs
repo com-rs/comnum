@@ -188,7 +188,7 @@ pub fn search(spec: &Spec, opts: &RunOptions) -> Result<Vec<SearchResult>> {
     let s = spec.search.as_ref().ok_or_else(|| Error::Config(format!("{}: no search section", spec.name)))?;
     let combos = combinations(&spec.grid, &s.along);
     let info = spec.bare_runner(opts).run_info(&spec.name, combos.len());
-    let t0 = std::time::Instant::now();
+    let t0 = comnum_sim::clock::Stopwatch::start();
     let mut results = Vec::new();
     for base in combos {
         results.push(bisect(spec, opts, s, base)?);

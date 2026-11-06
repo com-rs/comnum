@@ -23,6 +23,7 @@ members = [
     "crates/comnum",
     # bindings and validation
     "bindings/comnum-py",
+    "bindings/comnum-wasm",
     "validation",
 ]
 default-members = [

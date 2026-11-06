@@ -67,16 +67,15 @@ def rust_dependencies() -> list[str]:
 
 
 def native_crates() -> list[str]:
-    """The crates of ``Cargo.lock`` that bind a system library (``*-sys``)."""
-    return sorted(
-        set(
-            re.findall(
-                r'^name = "([^"]+-sys)"',
-                (ROOT / "Cargo.lock").read_text(encoding="utf-8"),
-                re.MULTILINE,
-            )
-        )
+    """The crates of ``Cargo.lock`` that bind a system library (``*-sys``); ``js-sys``
+    and ``web-sys``, the JavaScript and browser interfaces of the WebAssembly module of
+    the playground, bind no system library."""
+    names = re.findall(
+        r'^name = "([^"]+-sys)"',
+        (ROOT / "Cargo.lock").read_text(encoding="utf-8"),
+        re.MULTILINE,
     )
+    return sorted(set(names) - {"js-sys", "web-sys"})
 
 
 def python_dependencies() -> list[str]:

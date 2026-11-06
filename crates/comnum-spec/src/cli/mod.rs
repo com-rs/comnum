@@ -161,7 +161,7 @@ fn run_one(path: &PathBuf, a: &Args) -> comnum_core::Result<()> {
     let (spec, original) = budgeted(path, a)?;
     let opts =
         RunOptions { fast_dev_run: a.fast_dev_run, profile: a.profile.then_some(true), ..report_options(&spec, a) };
-    let started = std::time::Instant::now();
+    let started = comnum_sim::clock::Stopwatch::start();
     if a.json {
         let mut doc = json!({
             "ok": true,

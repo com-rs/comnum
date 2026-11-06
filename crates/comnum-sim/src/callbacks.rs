@@ -40,11 +40,11 @@
 //! assert_eq!(status, ["completed", "completed", "completed", "skipped"]);
 //! ```
 
+use crate::clock::Stopwatch;
 use crate::grid::{Condition, Value};
 use crate::runner::{ConditionResult, RunInfo, secs};
 use crate::stopping::Progress;
 use std::io::Write;
-use std::time::Instant;
 
 /// What a callback asks the runner to do.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -88,7 +88,7 @@ pub struct ProgressBar {
     /// Confidence of the printed intervals.
     pub confidence: f64,
     n: usize,
-    last: Option<Instant>,
+    last: Option<Stopwatch>,
 }
 
 impl Default for ProgressBar {
@@ -114,14 +114,13 @@ impl Callback for ProgressBar {
     }
 
     fn on_condition_start(&mut self, _: usize, _: &Condition) -> crate::callbacks::Action {
-        self.last = Some(Instant::now());
+        self.last = Some(Stopwatch::start());
         Action::Continue
     }
 
     fn on_batch_end(&mut self, p: &Progress<'_>) -> Action {
-        let now = Instant::now();
-        if self.last.is_some_and(|t| now.duration_since(t) >= secs(self.every_s)) {
-            self.last = Some(now);
+        if self.last.is_some_and(|t| t.elapsed() >= secs(self.every_s)) {
+            self.last = Some(Stopwatch::start());
             eprint!(
                 "\r  condition {}/{}: {} trials, {:.0} s",
                 p.condition + 1,

@@ -8,6 +8,24 @@ and follow [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Browser playground (`playground/`): a static page where a specification is edited
+  (CodeMirror) and run in the browser, the Rust engine compiled to WebAssembly by
+  `wasm-pack` from the new crate `bindings/comnum-wasm` (not published): the menu of the
+  specifications of `specs/` and `specs/validation/`, a Run button, the curves plotted
+  (Plotly, log scale for the error rates, confidence intervals) as the conditions
+  complete in a Web Worker, the published points and closed forms of the expectations
+  drawn over the simulated curve, a terminal panel with the lines of `comnum run` and
+  `comnum verify` as the conditions complete, and
+  the errors of the specification marked in the editor. `just playground` builds the
+  module, `just playground-serve` serves the page. The engine is the native one on one
+  thread: the runner of `comnum-sim` runs the trials of a batch one after the other on
+  `wasm32-unknown-unknown` (no thread there), with the records merged in trial order as
+  on every target, and the new module `comnum_sim::clock` (`Stopwatch`, `unix_time_s`,
+  `set_clock`) replaces `std::time::Instant`, which has no clock in the browser, in the
+  runner, the progress bar, the profile of a link and the search. No result changes;
+  the `qam_awgn` example takes 3.6 s in Chrome against 2.0 s natively on one core.
+  `comnum_spec::verify::Expectation` gains `name`, `source`, `metric` and
+  `expected_on`, the expected value on a condition before any run.
 - Library benchmark on a GPU: OptiCommPy's CuPy split-step (`optic.models.modelsGPU.ssfm`)
   runs in the mode `gpu` of scenario 5, in complex128 and complex64, next to Sionna on
   the device and comnum on the CPU; a scenario names its GPU-capable libraries in

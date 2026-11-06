@@ -25,6 +25,7 @@
 //! | [`runner`] | the [`Runner`](runner::Runner): batches of trials on a thread pool, seeds, results |
 //! | [`stopping`] | the stopping rules [`Stop`](stopping::Stop) and their combinations |
 //! | [`callbacks`] | the hooks of a run: progress bar, skipping the rest of a sweep |
+//! | [`clock`] | the wall clock of a run, on every target (the browser included) |
 //! | [`loggers`] | the CSV and JSON reports |
 //! | [`stats`] | error rates with Wilson intervals, means with normal intervals |
 //! | [`json`] | a minimal JSON writer for the reports |
@@ -88,6 +89,7 @@ pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 pub const COMMIT: &str = env!("COM_GIT_COMMIT");
 
 pub mod callbacks;
+pub mod clock;
 pub mod grid;
 pub mod json;
 pub mod loggers;

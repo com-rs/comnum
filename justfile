@@ -86,6 +86,16 @@ regen: develop
 deny:
     cargo deny check
 
+# The WebAssembly module of the browser playground (needs the target
+# wasm32-unknown-unknown and wasm-pack): playground/pkg/, not tracked
+[doc('The WebAssembly module of the browser playground (wasm-pack)')]
+playground:
+    wasm-pack build bindings/comnum-wasm --target web --release --out-dir ../../playground/pkg --out-name comnum
+
+# Serve the playground locally (a module worker needs HTTP): http://localhost:8765/
+playground-serve:
+    python3 -m http.server 8765 --directory playground
+
 # Rerun the comparison of one validation card (validation/cards/<id>.yaml): its Python
 # function, Rust test or specification
 [doc('Rerun the comparison of one validation card')]

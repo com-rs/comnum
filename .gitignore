@@ -31,3 +31,5 @@ dist/
 captures/
 # promotional material, rendered locally
 promo/
+# the WebAssembly package of the playground, built by `just playground`
+playground/pkg/
