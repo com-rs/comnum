@@ -105,7 +105,7 @@ pub(super) fn blocks() -> Vec<Extension> {
         ),
         builtin!(
             "manakov",
-            "Dual-polarisation nonlinear propagation over the link (Manakov equation, split step with the phase at the middle of the step or OptiCommPy's trapezoidal one), EDFAs with ASE.",
+            "Dual-polarisation nonlinear propagation over the link (Manakov equation, split step with the phase at the middle of the step, Optilux's effective-length one or OptiCommPy's trapezoidal one), EDFAs with ASE.",
             ManakovSpec,
             needs [Samples],
             gives [],
@@ -226,8 +226,8 @@ block_params! {
         bandwidth_hz: Option<f64> [absent] "Hz" > 0, "signal bandwidth of the rule fwm (measured on the launched field if absent)";
         max_nl_phase_rad: f64 [2e-2] "rad" > 0, "largest nonlinear phase rotation per step (step_rule nonlinear_phase)";
         step_km: Option<f64> [absent] "km" > 0, "a fixed step instead of the adaptive one";
-        nonlinear_step: String ["midpoint"] one_of ["midpoint", "trapezoidal"],
-            "the nonlinear phase of a step: the power at its middle (the scalar solver) or the trapezoidal mean of the power at its ends (OptiCommPy, iterated; less accurate in WDM)";
+        nonlinear_step: String ["midpoint"] one_of ["midpoint", "effective_length", "trapezoidal"],
+            "the nonlinear phase of a step: the power at its middle (the scalar solver), Optilux's power at the start of the nonlinear block over the effective length of the step, or the trapezoidal mean of the power at its ends (OptiCommPy, iterated; less accurate in WDM)";
         check_sampling: bool [true], "refuse a signal whose sampling rate or block cannot hold the four-wave mixing and the walk-off of the link (Musetti et al. 2018, Appendix B)";
         max_iterations: usize [10] >= 1, "trapezoidal iterations per step at most";
         tolerance: f64 [1e-5] > 0, "convergence tolerance of the iterations";

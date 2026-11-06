@@ -46,7 +46,9 @@
 //!
 //! (the trapezoidal rule of OptiCommPy, iterated until the step converges since
 //! $P(z + h)$ depends on the step itself, [`NonlinearStep::Trapezoidal`]; by default the
-//! power at the middle of the step, [`NonlinearStep::Midpoint`], as [`SplitStep`]) and a
+//! power at the middle of the step, [`NonlinearStep::Midpoint`], as [`SplitStep`]; or
+//! Optilux's scheme, the power at the start of the nonlinear block over the effective
+//! length of the step, [`NonlinearStep::EffectiveLength`]) and a
 //! half linear step. The step is fixed, adapted so
 //! that the largest nonlinear phase of a step is a given rotation (the nonlinear phase
 //! rotation method of Sinkin et al., which concentrates the steps where the power is
@@ -89,6 +91,9 @@
 //!    references: its eq. (2) as Häger & Pfister describe it).
 //! 7. C. Häger and H. D. Pfister, "Physics-based deep learning for fiber-optic
 //!    communication systems," *IEEE J. Sel. Areas Commun.*, 39(1), 280–294, 2021.
+//! 8. J. Shao, X. Liang and S. Kumar, "Comparison of split-step Fourier schemes for
+//!    simulating fiber optic communication systems," *IEEE Photonics J.*, 6(4),
+//!    7200515, 2014 (the scheme of Optilux's `fiber`, [`NonlinearStep::EffectiveLength`]).
 
 use crate::fft::{self, Fft};
 use crate::{C64, cis};
@@ -668,17 +673,37 @@ pub enum NonlinearStep {
     /// within a step, the mean smooths the intensity that drives the cross-phase
     /// modulation (see [`ManakovSplitStep`]).
     Trapezoidal,
+    /// Optilux's `fiber` (Shao, Liang and Kumar 2014): the phase of the power at the
+    /// start of the nonlinear block over the effective length of the step,
+    ///
+    /// $$
+    /// \phi = \gamma P\, L_{\mathrm{eff}}(h), \qquad
+    /// L_{\mathrm{eff}}(h) = \frac{1 - e^{-\alpha h}}{\alpha},
+    /// $$
+    ///
+    /// which integrates the attenuation within the step exactly: the first half step
+    /// carries the dispersion only, the attenuation of the whole step follows the phase
+    /// with the second half of the dispersion. No iteration. Over a span of constant
+    /// power the phases of the steps add up to $\gamma P L_{\mathrm{eff}}(L)$ whatever the
+    /// step; with a distributed gain the medium carries no attenuation and the scheme is
+    /// [`NonlinearStep::Midpoint`]. At 1 km steps its field is closer to the
+    /// step-converged solution than the midpoint one on a 16-QAM channel at 4 dBm over
+    /// 10 × 80 km (`docs/python/user_guide/fibre_validation.rst`, section 3).
+    EffectiveLength,
 }
 
 impl std::str::FromStr for NonlinearStep {
     type Err = Error;
 
-    /// `trapezoidal` or `midpoint` (case-insensitive).
+    /// `midpoint`, `trapezoidal` or `effective_length` (case-insensitive).
     fn from_str(s: &str) -> Result<NonlinearStep> {
         match s.to_ascii_lowercase().as_str() {
             "trapezoidal" => Ok(NonlinearStep::Trapezoidal),
             "midpoint" => Ok(NonlinearStep::Midpoint),
-            _ => Err(Error::Config(format!("the nonlinear step must be trapezoidal or midpoint, got {s:?}"))),
+            "effective_length" => Ok(NonlinearStep::EffectiveLength),
+            _ => Err(Error::Config(format!(
+                "the nonlinear step must be midpoint, trapezoidal or effective_length, got {s:?}"
+            ))),
         }
     }
 }
@@ -1085,7 +1110,74 @@ mod tests {
         assert!((d / e).sqrt() < 1e-12, "{}", (d / e).sqrt());
         assert!(y.iter().all(|v| v.norm() == 0.0));
         assert_eq!("Midpoint".parse::<NonlinearStep>().unwrap(), NonlinearStep::Midpoint);
+        assert_eq!("effective_length".parse::<NonlinearStep>().unwrap(), NonlinearStep::EffectiveLength);
         assert!("euler".parse::<NonlinearStep>().is_err());
+    }
+
+    /// The effective-length step of Optilux: on a constant field (no dispersion acts)
+    /// the phases of the steps add up to $\gamma P L_{\mathrm{eff}}(L)$ exactly whatever the
+    /// step, where the midpoint step leaves its discretisation error; without loss it
+    /// is the midpoint step bit for bit; with loss and dispersion it is within the step
+    /// error of the other two schemes, and the adaptive loop gives the fixed path's field.
+    #[test]
+    fn the_effective_length_step_integrates_the_attenuation_of_the_step_exactly() {
+        let m = Medium { alpha_np_km: 0.046, beta2_s2_km: 0.0, gamma_w_km: 1.3, beta3_s3_km: 0.0 };
+        let (p, n, fs) = (5e-3_f64, 64, 32e9);
+        let x0 = vec![C64::new(p.sqrt(), 0.0); n];
+        let expected = m.gamma_w_km * p * crate::effective_length(m.alpha_np_km, 80.0);
+        let run = |nonlinear: NonlinearStep, h: f64| {
+            // one field: the scalar equation, the phase γ P L (8/9 γ with two)
+            let mut x = x0.clone();
+            let solver = ManakovSplitStep { rule: StepRule::Fixed(h), nonlinear, ..ManakovSplitStep::new(m) };
+            solver.run_fields(&mut [&mut x], 80.0, fs, &PropagationOptions::default()).unwrap();
+            x
+        };
+        for h in [0.5, 4.0, 20.0, 80.0] {
+            let phase = run(NonlinearStep::EffectiveLength, h)[0].arg();
+            assert!((phase - expected).abs() < 1e-12, "step {h}: {phase} against {expected}");
+        }
+        // the midpoint step discretises L_eff: 1.6 % off with one step of the span
+        let midpoint = run(NonlinearStep::Midpoint, 80.0)[0].arg();
+        assert!((midpoint - expected).abs() > 1e-2 * expected);
+        // without loss the two schemes are the same, bit for bit
+        let lossless = Medium { alpha_np_km: 0.0, beta2_s2_km: -2.17e-23, ..m };
+        let (xd, _) = dual_field(256);
+        let run_lossless = |nonlinear: NonlinearStep| {
+            let (mut x, mut y) = (xd.clone(), vec![C64::new(0.0, 0.0); 256]);
+            ManakovSplitStep { rule: StepRule::Fixed(1.0), nonlinear, ..ManakovSplitStep::new(lossless) }
+                .run(&mut x, &mut y, 10.0, 256e9)
+                .unwrap();
+            x
+        };
+        assert_eq!(run_lossless(NonlinearStep::EffectiveLength), run_lossless(NonlinearStep::Midpoint));
+        // with loss and dispersion: within the step error of the other schemes, and the
+        // adaptive loop (the nonlinear-phase rule with an unreachable bound) takes the
+        // same steps as the fixed path and gives its field to the rounding
+        let lossy = Medium { alpha_np_km: 0.046, beta2_s2_km: -2.17e-23, gamma_w_km: 1.3, beta3_s3_km: 0.0 };
+        let nmse = |a: &[C64], b: &[C64]| {
+            let d: f64 = a.iter().zip(b).map(|(u, v)| (u - v).norm_sqr()).sum();
+            d / b.iter().map(C64::norm_sqr).sum::<f64>()
+        };
+        let run_lossy = |rule: StepRule, nonlinear: NonlinearStep| {
+            let (mut x, mut y) = (xd.clone(), vec![C64::new(0.0, 0.0); 256]);
+            let steps = ManakovSplitStep { rule, nonlinear, ..ManakovSplitStep::new(lossy) }
+                .run(&mut x, &mut y, 80.0, 256e9)
+                .unwrap();
+            (x, steps)
+        };
+        let fine = run_lossy(StepRule::Fixed(0.05), NonlinearStep::Midpoint).0;
+        let (eff, steps) = run_lossy(StepRule::Fixed(1.0), NonlinearStep::EffectiveLength);
+        assert_eq!(steps, 80);
+        let mid = run_lossy(StepRule::Fixed(1.0), NonlinearStep::Midpoint).0;
+        let trap = run_lossy(StepRule::Fixed(1.0), NonlinearStep::Trapezoidal).0;
+        // 3.83e-5, 3.83e-5 and 2.8e-4 on this strong field
+        for (name, field) in [("effective length", &eff), ("midpoint", &mid), ("trapezoidal", &trap)] {
+            assert!(nmse(field, &fine) < 1e-3, "{name}: {}", nmse(field, &fine));
+        }
+        let (adaptive, steps) = run_lossy(StepRule::NonlinearPhase(1e9), NonlinearStep::EffectiveLength);
+        assert_eq!(steps, 1);
+        let (one, _) = run_lossy(StepRule::Fixed(80.0), NonlinearStep::EffectiveLength);
+        assert!(nmse(&adaptive, &one) < 1e-28, "{}", nmse(&adaptive, &one));
     }
 
     #[test]

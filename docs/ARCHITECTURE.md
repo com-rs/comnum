@@ -959,7 +959,9 @@ tests/oracle/test_oracle.py tests/oracle/test_gnpy_oracle.py`) is a deliberate a
 commit message with the version of the tool; re-recording an unchanged oracle
 produces no diff. Tools that are not Python packages are recorded by a script of
 `tools/` with the same functions: `tools/record_gr_dtv.py` (GNU Radio) and
-`tools/record_optilux.py` (Optilux under Octave, `tools/record_optilux.m`).
+`tools/record_optilux.py` (Optilux under Octave, `tools/record_optilux.m`; one mode per
+fixture, `--mode ssfm` for the scalar field and `--mode manakov` for the dual-polarisation
+WDM field).
 
 ### The AFF3CT fixtures
 

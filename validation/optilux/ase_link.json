@@ -12,7 +12,9 @@
   "wavelength_nm": 1550.0
  },
  "name": "ase_link",
+ "numpy": "2.5.4",
  "octave": "GNU Octave (aarch64-apple-darwin27.0.0) version 11.3.0",
+ "python": "3.12.15",
  "receiver": "no optical filter; the root-raised-cosine electrical filter of bandwidth 0.5 symbol rate; data-aided timing; the SNR of samp2snr (Es/N0 per polarisation)",
  "repository": "https://optilux.sourceforge.io/",
  "script": "tools/record_optilux_ase.m: the chain of Examples/ex21_opt_modulation_ase_ber.m with the stopping rule 3 % at 95 % confidence or 400 000 bits",

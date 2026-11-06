@@ -15,6 +15,7 @@
  },
  "convention": "the fields are conj(optilux(conj(x))): Optilux writes the NLSE with the opposite sign of the imaginary unit",
  "digits": 15,
+ "equation": "the scalar NLSE (one polarisation)",
  "license": "GPL-3.0 (the outputs, not the code)",
  "link": {
   "alpha_db_km": 0.2,

@@ -402,6 +402,7 @@ impl FieldSpan {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use comnum_math::nlse::NonlinearStep;
     use comnum_math::{BOLTZMANN, PLANCK, SPEED_OF_LIGHT};
 
     fn fiber(span_km: f64) -> FiberParams {
@@ -570,6 +571,7 @@ mod tests {
             amplification: Amplification::None,
             raman: Some(raman.clone()),
             rule: None,
+            nonlinear: NonlinearStep::Midpoint,
             check_sampling: false,
         };
         let y = crate::optical::fiber::tests::propagated(&ssfm, &x, fs, None);

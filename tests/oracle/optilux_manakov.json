@@ -1,0 +1,62 @@
+{
+ "cases": {
+  "kerr_10spans": {
+   "gamma_scale": 1.0,
+   "spans": 10
+  },
+  "kerr_1span": {
+   "gamma_scale": 1.0,
+   "spans": 1
+  },
+  "linear_1span": {
+   "gamma_scale": 0.0,
+   "spans": 1
+  }
+ },
+ "convention": "the fields are conj(optilux(conj(x))): Optilux writes the NLSE with the opposite sign of the imaginary unit",
+ "equation": "the Manakov equation of the unique-field mode (ismanakov true, 8/9 gamma), no PMD and no birefringence (pmdpar 0: one waveplate, the identity)",
+ "layout": "one row per polarisation (x, y)",
+ "license": "GPL-3.0 (the outputs, not the code)",
+ "link": {
+  "alpha_db_km": 0.2,
+  "amplification": "ideal (noiseless, alpha L at the end of every span)",
+  "beta3": 0.0,
+  "d_ps_nm_km": 17.0,
+  "fc_hz": 193100000000000.0,
+  "fs_hz": 512000000000.0,
+  "gamma_w_km": 1.3,
+  "span_km": 80.0,
+  "step_km": 1.0
+ },
+ "name": "optilux_manakov",
+ "npz": "optilux_manakov.npz",
+ "numpy": "2.5.4",
+ "octave": "GNU Octave (aarch64-apple-darwin27.0.0) version 11.3.0",
+ "python": "3.12.15",
+ "repository": "https://optilux.sourceforge.io/",
+ "script": "tools/record_optilux.m (fiber with steptype symm, dzmax 1000 m, dphi1fwm false, stepupd nlp, dphimax 1e9; ampliflat with the gain alpha L)",
+ "signal": "5 channels of 16-QAM at 32 GBd spaced by 50 GHz (comnum.wdm_grid), RRC roll-off 0.1, 16 samples per symbol, 2.0 dBm per channel split between two polarisations, 2048 symbols, seed 1 (comnum: the symbols of every channel and polarisation drawn in order from one generator)",
+ "steps_per_span": {
+  "kerr_10spans": [
+   80,
+   80,
+   80,
+   80,
+   80,
+   80,
+   80,
+   80,
+   80,
+   80
+  ],
+  "kerr_1span": [
+   80
+  ],
+  "linear_1span": [
+   1
+  ]
+ },
+ "tool": "Optilux",
+ "units": "sqrt(W)",
+ "version": "Apr 2021"
+}

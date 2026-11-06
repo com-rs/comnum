@@ -6,7 +6,7 @@ use super::{
     signal_bandwidth,
 };
 use crate::fft;
-use crate::{C64, cis};
+use crate::{C64, cis, effective_length};
 use comnum_core::{Error, Result, ensure, same_len};
 
 /// The symmetric split-step solver of the Manakov equation (see the module).
@@ -15,7 +15,10 @@ use comnum_core::{Error, Result, ensure, same_len};
 /// but its error on a collision of two solitons 800 GHz apart is 6.4 times that of
 /// [`NonlinearStep::Midpoint`] (the default) at the same steps (`validation/tests/fiber/sinkin2003.rs`),
 /// and it underestimates the cross-channel interference of a WDM link whose channels
-/// walk off within a step.
+/// walk off within a step. [`NonlinearStep::EffectiveLength`] (Optilux's scheme) applies
+/// the phase of the power at the start of the nonlinear block over the effective length
+/// of the step, the attenuation of the step after it: it reproduces Optilux's fields
+/// (`tests/oracle/test_optilux_oracle.py`).
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct ManakovSplitStep {
     /// The fibre.
@@ -170,7 +173,11 @@ impl ManakovSplitStep {
         if n == 0 || length_km <= 0.0 {
             return Ok(0);
         }
-        if let (StepRule::Fixed(_) | StepRule::Logarithmic(_), NonlinearStep::Midpoint) = (self.rule, self.nonlinear) {
+        if let (
+            StepRule::Fixed(_) | StepRule::Logarithmic(_),
+            NonlinearStep::Midpoint | NonlinearStep::EffectiveLength,
+        ) = (self.rule, self.nonlinear)
+        {
             return Ok(self.run_fixed_midpoint(fields, length_km, fs, options));
         }
         let p = fft::plan(n);
@@ -232,9 +239,10 @@ impl ManakovSplitStep {
                 mul(u, half);
                 p.inverse(u);
             }
-            if self.nonlinear == NonlinearStep::Midpoint {
-                // the phase of the power after the first half of the dispersion
-                kerr_rotation(&mut w.h, k * h);
+            if matches!(self.nonlinear, NonlinearStep::Midpoint | NonlinearStep::EffectiveLength) {
+                // the phase of the power after the first half of the dispersion (and, for
+                // the midpoint step, of the attenuation)
+                kerr_rotation(&mut w.h, k * self.nonlinear_length(h));
                 for (u, half) in w.h.iter_mut().zip(&w.half2) {
                     p.forward(u);
                     mul(u, half);
@@ -276,11 +284,11 @@ impl ManakovSplitStep {
         Ok(steps)
     }
 
-    /// [`ManakovSplitStep::run_fields`] with fixed steps of at most `hf` and the phase at
-    /// the middle of the step: the fields stay in the frequency domain from the second half
-    /// step of a step to the first of the next (two FFTs per step and field, as
-    /// [`SplitStep`]), and come back to the time domain only for the nonlinear phase and
-    /// at the boundaries of the sections.
+    /// [`ManakovSplitStep::run_fields`] with fixed steps of at most `hf` and the phase of
+    /// the midpoint or the effective-length step (no iteration): the fields stay in the
+    /// frequency domain from the second half step of a step to the first of the next (two
+    /// FFTs per step and field, as [`SplitStep`]), and come back to the time domain only
+    /// for the nonlinear phase and at the boundaries of the sections.
     fn run_fixed_midpoint(
         &self,
         fields: &mut [&mut [C64]],
@@ -352,7 +360,7 @@ impl ManakovSplitStep {
                 for u in &mut w.h {
                     p.inverse(u);
                 }
-                kerr_rotation_scalar_order(&mut w.h, k, h);
+                kerr_rotation_scalar_order(&mut w.h, k, self.nonlinear_length(h));
                 for (u, half) in w.h.iter_mut().zip(&w.half2) {
                     p.forward(u);
                     mul(u, half);
@@ -373,10 +381,31 @@ impl ManakovSplitStep {
         steps
     }
 
+    /// The length over which the nonlinear phase of a step of `h` is applied: `h`, or
+    /// its effective length $(1 - e^{-\alpha h})/\alpha$ for [`NonlinearStep::EffectiveLength`]
+    /// (the expression of Optilux; $h$ without attenuation).
+    fn nonlinear_length(&self, h: f64) -> f64 {
+        match self.nonlinear {
+            NonlinearStep::EffectiveLength => {
+                let a = self.medium.alpha_np_km;
+                if a >= 0.0 { effective_length(a, h) } else { -(-a * h).exp_m1() / a }
+            }
+            NonlinearStep::Midpoint | NonlinearStep::Trapezoidal => h,
+        }
+    }
+
     /// The two half linear steps of every field for the step from `z` of length `h`: the
     /// loss and dispersion of the medium, the DGD of the section, the distributed gain.
+    /// With [`NonlinearStep::EffectiveLength`] the first half step carries no loss and the
+    /// second the loss of the whole step, $e^{-\alpha h / 2}$ on the field.
     fn half_steps(&self, w: &mut Work, z: f64, h: f64, section: Option<usize>, options: &PropagationOptions<'_>) {
-        self.medium.half_step_into(&w.omega, h, &mut w.lin);
+        let effective = self.nonlinear == NonlinearStep::EffectiveLength;
+        if effective {
+            Medium { alpha_np_km: 0.0, ..self.medium }.half_step_into(&w.omega, h, &mut w.lin);
+        } else {
+            self.medium.half_step_into(&w.omega, h, &mut w.lin);
+        }
+        let loss = (-(self.medium.alpha_np_km / 2.0) * h).exp();
         let nf = w.half1.len();
         let dgd = match (options.birefringence, section) {
             (Some(b), Some(s)) => b.dgd_s_per_km[s],
@@ -388,7 +417,7 @@ impl ManakovSplitStep {
             for ((a, b), (l, wk)) in w.half1[i].iter_mut().zip(w.half2[i].iter_mut()).zip(w.lin.iter().zip(&w.omega)) {
                 let d = if dgd == 0.0 { *l } else { l * cis(sign * 0.25 * wk * dgd * h) };
                 *a = d;
-                *b = d;
+                *b = if effective { d * loss } else { d };
             }
         }
         if let Some(g) = options.gain {

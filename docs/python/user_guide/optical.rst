@@ -44,8 +44,11 @@ and its defaults differ from OptiCommPy's ``manakovSSF`` on both
 
 - **the nonlinear step** (``nonlinear_step``): ``"midpoint"`` (the default) takes the
   phase of the power at the middle of the step, as the scalar solver ``Ssfm``;
-  ``"trapezoidal"`` is OptiCommPy's mean of the power at the two ends of the step,
-  iterated. When channels walk off within a step the mean smooths the intensity that
+  ``"effective_length"`` is Optilux's scheme, the power at the start of the nonlinear
+  block over the effective length of the step, which integrates the attenuation within
+  the step exactly (the most accurate of the three on one channel, :doc:`fibre_validation`,
+  section 3); ``"trapezoidal"`` is OptiCommPy's mean of the power at the two ends of
+  the step, iterated. When channels walk off within a step the mean smooths the intensity that
   drives the cross-phase modulation: with steps of 0.5 km, a probe 125 GHz from a
   modulated pump receives 45 % of its XPM, and a five-channel link 0.9 dB too little
   interference;
