@@ -836,11 +836,16 @@
   area: Optical
   ref: "M. N. Islam, Raman amplifiers for telecommunications, JSTQE 8(3), 2002"
   module: comnum_channel::optical::raman
-  tested: "Fig. 6(b): the effective Rayleigh reflection coefficient of double Rayleigh backscattering against the on-off gain for SMF-28 of 80 and 100 km and two DCF (all fibre parameters given), within the reading of 1.5 dB at 16 of 20 points, 1.6 to 3.0 dB off at four (not explained: the paper's DRS model is not written)"
+  tested: "Fig. 6(b): the effective Rayleigh reflection coefficient of double Rayleigh backscattering against the on-off gain for SMF-28 of 80 and 100 km and two DCF (all fibre parameters given), within the reading of 1.5 dB at 16 of 20 points, 1.6 to 3.0 dB off at four (not explained: the paper's DRS model is not written); Fig. 3: the output power of the depleted single-pump DCF amplifier (20 mW at 1529.5 nm, 1433 nm pump of 0.1 to 1.15 W, counter-propagating and 0.63 dB/km of pump loss assumed) within 1 mW at 0.1 and 0.2 W and 3 to 5.6 % above the reading from 0.45 W, the power conversion efficiency within 2.5 points of the one panel (a) implies; Sec. II-A: the noise figure of a lossless undepleted amplifier is 2 - 1/G (and (1 + eta) 2 (G - 1)/G + 1/G at 300 K) within 1e-3 dB"
   tests:
     - validation/tests/fiber/islam2002.rs::islam_2002_fig_6b_double_rayleigh_against_the_on_off_gain
+    - validation/tests/fiber/islam2002.rs::islam_2002_fig_3_depleted_single_pump_amplifier
+    - validation/tests/fiber/islam2002.rs::islam_2002_sec_2a_noise_figure_of_a_fully_inverted_amplifier
   badge: orange
-  not_covered: "Fig. 3 (the depleted single-pump DCF amplifier: output power and conversion efficiency against the pump power); the noise-figure convention of Sec. II-A; Fig. 6(a) (the DSF parameters are not given); the S-band amplifiers and link of Sec. IV (products and an experiment)"
+  not_covered: "Fig. 3: the EDFA curves (no rate-equation EDFA); Fig. 6(a) (the DSF parameters are not given); the S-band amplifiers and link of Sec. IV (products and an experiment)"
+  remarks:
+    - "Fig. 3: panel (b) is not consistent with panel (a) at low pump powers: (a) gives a PCE of (30 - 20)/100 = 10 % at 0.1 W and 22.5 % at 0.2 W where (b) reads 2 and 13 %, and 2 points more than (b) from 0.45 W on"
+    - "Fig. 3: the pump loss and direction are not given; a co-propagating pump saturates at 47 % of PCE, the figure reaches 59 %: counter-pumped"
 - id: hu2004
   area: Optical
   ref: "J. Hu, B. S. Marks, C. R. Menyuk, Flat-gain fiber Raman amplifiers using equally spaced pumps, JLT 22(6), 2004"

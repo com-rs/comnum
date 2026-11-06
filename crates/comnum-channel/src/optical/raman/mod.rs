@@ -132,7 +132,7 @@ use super::edfa::ase_density;
 use super::fiber::{Amplification, FiberParams};
 use comnum_core::Result;
 use comnum_core::rng::Rng;
-use comnum_math::{C64, db2lin, fft, nm2hz, np2db};
+use comnum_math::{C64, PLANCK, db2lin, fft, lin2db, nm2hz, np2db};
 
 /// The direction of propagation of a pump.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -264,8 +264,41 @@ impl RamanProfile {
     /// The on-off gain of signal `k`: the net gain with the pumps and ISRS against the
     /// loss alone (dB).
     pub fn on_off_gain_db(&self, k: usize) -> f64 {
-        let length = self.z_km[self.z_km.len() - 1];
-        self.net_gain_db(k) + np2db(self.alpha_np_km[k]) * length
+        self.net_gain_db(k) + self.span_loss_db(k)
+    }
+
+    /// The loss of wave `k` over the span without pumps, $\alpha_{k} L$ (dB).
+    pub fn span_loss_db(&self, k: usize) -> f64 {
+        np2db(self.alpha_np_km[k]) * self.z_km[self.z_km.len() - 1]
+    }
+
+    /// The noise figure of the span for signal `k` (dB), signal-spontaneous beating and
+    /// shot noise (Bromage 2004, eq. (9)): $\mathrm{NF} = 2 P_{A}^{+}(L)/(h \nu G B) +
+    /// 1/G$ with $P_{A}^{+}$ the spontaneous noise of one polarisation (half of
+    /// [`RamanProfile::ase_psd`]) and $G$ the net gain. For a lossless, undepleted
+    /// amplifier at 0 K it is $2 - 1/G$, the fully inverted amplifier of Islam 2002,
+    /// Sec. II-A (3 dB at high gain). The multiple-path interference is not counted.
+    pub fn noise_figure_db(&self, k: usize) -> f64 {
+        let g = db2lin(self.net_gain_db(k));
+        lin2db(self.ase_psd[k] / (PLANCK * self.freqs_hz[k] * g) + 1.0 / g)
+    }
+
+    /// The effective noise figure of the span for signal `k` (dB): the noise figure of
+    /// a discrete amplifier of the on-off gain that, after the unpumped span, would give
+    /// the same noise, $\mathrm{NF}_{\mathrm{span}} - \alpha_{k} L$ in dB (Bromage 2004,
+    /// eq. (12)); negative for a pumped span.
+    pub fn effective_noise_figure_db(&self, k: usize) -> f64 {
+        self.noise_figure_db(k) - self.span_loss_db(k)
+    }
+
+    /// The integrated power of wave `k` over the span, $I_{k} = \int_{0}^{L} P_{k}\\, dz$
+    /// (W·km), by the trapezoidal rule on the grid: the quantity of the gain identity
+    /// of Hu, Marks & Menyuk 2004, eq. (2), $\ln G_{k} = -\alpha_{k} L + \sum_{j} C_{kj}
+    /// I_{j}$.
+    pub fn integral_w_km(&self, k: usize) -> f64 {
+        let w = self.power_w(k);
+        let h = self.z_km[self.z_km.len() - 1] / (w.len() - 1) as f64;
+        h * (w.iter().sum::<f64>() - (w[0] + w[w.len() - 1]) / 2.0)
     }
 
     /// The effective Rayleigh reflection coefficient $R_{k}^{2}$ of signal `k` for a

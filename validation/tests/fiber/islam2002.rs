@@ -20,7 +20,7 @@
 
 use comnum::channel::optical::fiber::FiberParams;
 use comnum::channel::optical::raman::{Direction, Raman, RamanGain, RamanPump};
-use comnum::math::{bisect, db2np, lin2db, nm2hz};
+use comnum::math::{bisect, db2lin, db2np, lin2db, nm2hz};
 use comnum_validation::card::Card;
 use serde_json::json;
 
@@ -90,6 +90,60 @@ fn islam_2002_fig_6b_double_rayleigh_against_the_on_off_gain() {
         // of the two mirrored profiles differ by their discretisation, 3·10⁻³ dB at 30 dB)
         assert!((r - reflection_db(&f, gain, Direction::Co)).abs() < 1e-2);
         card.check(&inputs, r);
+    }
+    card.finish().unwrap();
+}
+
+/// Fig. 3: the output power (mW) of the 20 mW signal at 1529.5 nm and the power
+/// conversion efficiency (%) for a pump of `pump_w` at 1433 nm in `direction`.
+fn fig_3(pump_w: f64, direction: Direction) -> (f64, f64) {
+    let fiber = FiberParams { span_km: 5.64, alpha_db_km: 0.472, ..FiberParams::default() };
+    let pump = RamanPump { alpha_db_km: Some(0.63), ..RamanPump::at_wavelength(1433.0, pump_w, direction) };
+    let raman = Raman {
+        pumps: vec![pump],
+        gain: RamanGain::flat(db2np(13.5), 80.0, nm2hz(1433.0)).unwrap(),
+        aeff_um2: 80.0,
+        isrs: false,
+        ..Raman::default()
+    };
+    let p_in = 20e-3;
+    let p = raman.solve(&fiber, &[(nm2hz(1529.5), p_in)]).unwrap();
+    let out = p_in * db2lin(p.net_gain_db(0));
+    (out * 1e3, 100.0 * (out - p_in) / pump_w)
+}
+
+#[test]
+fn islam_2002_fig_3_depleted_single_pump_amplifier() {
+    let mut card = Card::load("islam2002_fig3").unwrap();
+    for inputs in card.inputs_matching(&json!({"quantity": "output_mw"})) {
+        card.check(&inputs, fig_3(inputs["pump_w"].as_f64().unwrap(), Direction::Counter).0);
+    }
+    for inputs in card.inputs_matching(&json!({"quantity": "pce_percent"})) {
+        card.check(&inputs, fig_3(inputs["pump_w"].as_f64().unwrap(), Direction::Counter).1);
+    }
+    // the pump power at which the PCE reaches the EDFA's 38 %
+    let crossover = bisect(|w| fig_3(w, Direction::Counter).1 < 38.0, 0.05, 1.0, 40);
+    card.check(&json!({"claim": "pce_crossover_w"}), crossover);
+    card.finish().unwrap();
+}
+
+#[test]
+fn islam_2002_sec_2a_noise_figure_of_a_fully_inverted_amplifier() {
+    // lossless fibre, undepleted co-pump without loss: G = exp(C P L); the signal of 1 pW
+    // keeps the depletion of the pump below 10⁻⁹
+    let fiber = FiberParams { span_km: 10.0, alpha_db_km: 0.0, ..FiberParams::default() };
+    let (fs, fp) = (nm2hz(1550.0), nm2hz(1450.0));
+    let mut card = Card::load("islam2002_sec2a").unwrap();
+    for inputs in card.inputs_matching(&json!({})) {
+        let (gain_db, t) = (inputs["gain_db"].as_f64().unwrap(), inputs["temperature_k"].as_f64().unwrap());
+        let raman = Raman { isrs: false, temperature_k: t, step_km: 0.01, ..Raman::default() };
+        let c = raman.coupling(fs, fp);
+        let power = db2np(gain_db) / (c * fiber.span_km);
+        let pump = RamanPump { alpha_db_km: Some(0.0), ..RamanPump::at_wavelength(1450.0, power, Direction::Co) };
+        let p = Raman { pumps: vec![pump], ..raman }.solve(&fiber, &[(fs, 1e-12)]).unwrap();
+        // the pump is depleted by the signal to 10⁻⁹ relative
+        assert!((p.net_gain_db(0) - gain_db).abs() < 1e-6, "{} vs {gain_db}", p.net_gain_db(0));
+        card.check(&inputs, p.noise_figure_db(0));
     }
     card.finish().unwrap();
 }

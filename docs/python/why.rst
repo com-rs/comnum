@@ -9,8 +9,8 @@ claimed: the numbers below are recomputed by ``tools/highlights.py`` and checked
 
 - **Lightweight**: one run-time dependency in Python (numpy), 9 direct crates in Rust and no C, C++ or Fortran library to build; 27 MB installed with its dependencies (the benchmark's environment: komm 22 MB, OptiCommPy 321 MB, Sionna 1004 MB).
 - **Fast**: compiled Rust, Monte Carlo runs on every core; on one CPU thread, the links of the benchmark take 2.1 to 33 times as long with komm, 2.3 to 4.7 times as long with OptiCommPy and 1.1 to 7.4 times as long with Sionna as with comnum.
-- **Safe**: ``unsafe`` code forbidden in every crate, invalid inputs are errors (one error type), results independent of the thread count; 754 unit tests, 201 validation tests, 284 Python tests.
-- **Validated**: compared with 141 papers, standards and reference tools (89 fully reproduced, 48 partly), 121 inconsistencies found in them; 107 validation cards rerun a comparison without the paper.
+- **Safe**: ``unsafe`` code forbidden in every crate, invalid inputs are errors (one error type), results independent of the thread count; 754 unit tests, 203 validation tests, 284 Python tests.
+- **Validated**: compared with 141 papers, standards and reference tools (89 fully reproduced, 48 partly), 123 inconsistencies found in them; 109 validation cards rerun a comparison without the paper.
 
 Lightweight
 -----------
@@ -128,7 +128,7 @@ Rust checks memory safety at compile time, and ``unsafe`` code is forbidden in e
    * - Unit tests of the crates
      - 754
    * - Validation tests (against papers, standards and tools)
-     - 201
+     - 203
    * - Python tests (functions; many are parametrised)
      - 284
 
@@ -155,9 +155,9 @@ are written as :doc:`validation cards <comparisons>` (``just card <id>``).
    * - — implemented, not yet compared
      - 4
    * - Inconsistencies found in the documents
-     - 121
+     - 123
    * - Validation cards
-     - 107
+     - 109
    * - Modules at maturity A / B / C
      - 70 / 3 / 2
 

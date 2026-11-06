@@ -28,7 +28,7 @@
 
 use comnum::channel::optical::fiber::FiberParams;
 use comnum::channel::optical::raman::{Direction, Raman, RamanGain, RamanPump};
-use comnum::math::{PLANCK, bisect, db2lin, lin2db, nm2hz, np2db};
+use comnum::math::{bisect, db2lin, lin2db, nm2hz, np2db};
 
 const SIGNAL_NM: f64 = 1550.0;
 const PUMP_NM: f64 = 1450.0;
@@ -83,7 +83,7 @@ fn figs_7_8(target: f64) -> (f64, f64, f64, f64) {
     let p = solve(bisect(|w| solve(w).on_off_gain_db(0) < target, 1e-5, 3.0, 60));
     let g = db2lin(p.net_gain_db(0));
     // eq. (9): NF = 2 P_ASE / (h ν G B) + 1/G, P_ASE of one polarisation
-    let span = p.ase_psd[0] / (PLANCK * fs * g) + 1.0 / g;
+    let span = db2lin(p.noise_figure_db(0));
     // eq. (10): then an amplifier of 5 dB
     let total = span + (db2lin(5.0) - 1.0) / g;
     let power = p.power_w(0);
@@ -119,11 +119,7 @@ fn hu_2004_eq_2_gain_from_the_integrated_powers() {
     let n = p.freqs_hz.len();
     // the coefficients of eq. (1), from the gain spectrum alone
     let coefficient = |k: usize, j: usize| raman.coupling(p.freqs_hz[k], p.freqs_hz[j]);
-    let integral = |j: usize| {
-        let w = p.power_w(j);
-        (1..w.len()).map(|i| 0.5 * (w[i] + w[i - 1]) * (p.z_km[i] - p.z_km[i - 1])).sum::<f64>()
-    };
-    let integrals: Vec<f64> = (0..n).map(integral).collect();
+    let integrals: Vec<f64> = (0..n).map(|j| p.integral_w_km(j)).collect();
     for k in 0..n {
         let predicted: f64 =
             -p.alpha_np_km[k] * fiber.span_km + (0..n).map(|j| coefficient(k, j) * integrals[j]).sum::<f64>();

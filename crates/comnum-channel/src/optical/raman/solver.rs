@@ -89,28 +89,45 @@ impl Raman {
             sys.sweep(&mut y, &co, true, 1.0);
             iterations = 1;
         } else {
-            let mut omega: f64 = 1.0;
-            let mut last = f64::INFINITY;
-            loop {
-                iterations += 1;
-                let r_co = sys.sweep(&mut y, &co, true, 1.0);
-                let r_cnt = sys.sweep(&mut y, &counter, false, omega);
-                let residue = r_co.max(r_cnt / omega);
-                if !residue.is_finite() {
-                    return Err(Error::Numerical("raman: the power profiles diverge".into()));
+            let pumps: Vec<usize> = (0..n).filter(|k| !waves[*k].signal).collect();
+            if let Ok(it) = sys.relax(&mut y, &co, &counter, self.tolerance, self.max_iterations) {
+                iterations = it;
+            } else {
+                {
+                    // continuation from a fraction of the pump powers (a strongly depleted
+                    // amplifier: the sweeps from the loss-only guess oscillate): the
+                    // fraction is halved until the sweeps converge, then doubled from the
+                    // previous solution, whose pump rows are shifted by the logarithm of the
+                    // ratio of the fractions
+                    let guess = y.clone();
+                    let (mut solved, mut f) = (0.0f64, 0.5f64);
+                    loop {
+                        let (mut trial, shift) =
+                            if solved == 0.0 { (guess.clone(), f.ln()) } else { (y.clone(), (f / solved).ln()) };
+                        for k in &pumps {
+                            for v in &mut trial[*k] {
+                                *v += shift;
+                            }
+                        }
+                        match sys.relax(&mut trial, &co, &counter, self.tolerance, self.max_iterations) {
+                            Ok(it) => {
+                                iterations += it;
+                                y = trial;
+                                solved = f;
+                                if f >= 1.0 {
+                                    break;
+                                }
+                                f = (2.0 * f).min(1.0);
+                            }
+                            Err(e) => {
+                                f = (solved + f) / 2.0;
+                                if f - solved < 1.0 / 256.0 {
+                                    return Err(e);
+                                }
+                            }
+                        }
+                    }
                 }
-                if residue < self.tolerance {
-                    break;
-                }
-                if iterations >= self.max_iterations {
-                    return Err(Error::Numerical(format!(
-                        "raman: no convergence after {iterations} sweeps (change {residue:.2e})"
-                    )));
-                }
-                if residue > last {
-                    omega = (omega / 2.0).max(1.0 / 64.0);
-                }
-                last = residue;
             }
         }
         let ase_psd = (0..signals.len()).map(|k| self.spontaneous(&waves, &c, &y, k, h)).collect();
@@ -163,6 +180,43 @@ struct System<'a> {
 }
 
 impl System<'_> {
+    /// The forward-backward sweeps from the profiles `y` until the logarithms change by
+    /// less than `tolerance`, with under-relaxation of the backward sweep when the
+    /// changes grow: the number of sweeps.
+    fn relax(
+        &self,
+        y: &mut [Vec<f64>],
+        co: &[usize],
+        counter: &[usize],
+        tolerance: f64,
+        max_iterations: usize,
+    ) -> Result<usize> {
+        let mut omega: f64 = 1.0;
+        let mut last = f64::INFINITY;
+        let mut iterations = 0;
+        loop {
+            iterations += 1;
+            let r_co = self.sweep(y, co, true, 1.0);
+            let r_cnt = self.sweep(y, counter, false, omega);
+            let residue = r_co.max(r_cnt / omega);
+            if !residue.is_finite() {
+                return Err(Error::Numerical("raman: the power profiles diverge".into()));
+            }
+            if residue < tolerance {
+                return Ok(iterations);
+            }
+            if iterations >= max_iterations {
+                return Err(Error::Numerical(format!(
+                    "raman: no convergence after {iterations} sweeps (change {residue:.2e})"
+                )));
+            }
+            if residue > last {
+                omega = (omega / 2.0).max(1.0 / 64.0);
+            }
+            last = residue;
+        }
+    }
+
     /// $d \ln P_{k} / dz$ along $+z$ of the waves of `group` for their logarithms
     /// `own` and the logarithms `fixed` of every wave (the others are read there): the
     /// rate $-\alpha_{k} + \sum_{j} C_{kj} P_{j}$, opposite for the counter-propagating

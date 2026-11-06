@@ -1,0 +1,49 @@
+id: islam2002_fig3
+title: Output power and power conversion efficiency of a depleted single-pump DCF Raman amplifier (Islam 2002, Fig. 3)
+literature: islam2002
+evidence: [curve, claim]
+source:
+  kind: paper
+  reference: "M. N. Islam, Raman amplifiers for telecommunications, IEEE J. Sel. Topics Quantum Electron. 8(3), 548-559, 2002"
+  locator: "Fig. 3(a) (signal output power against the launched pump power) and 3(b) (power conversion efficiency), the Raman curves read on the grid at 0.1, 0.2, 0.45, 0.6, 0.8, 1.0 and 1.15 W; the parameters of Sec. II-B, text"
+  file: fiber/2002_islam_raman-amplifiers-telecommunications_jstqe.pdf
+description: >
+  One signal at 1529.5 nm of 20 mW and one pump at 1433 nm (13.2 THz above the signal)
+  in 5.64 km of Lucent WBDK dispersion-compensating fibre, 0.472 dB/km at the signal,
+  Raman gain coefficient 13.5 dB/(W km) (C_R = 3.109 /(W km), a flat gain spectrum):
+  the output power P_out (mW) and the power conversion efficiency
+  100 (P_out - P_in) / P_pump (%) against the launched pump power, with pump depletion.
+  Assumed, the paper does not give them: the pump is counter-propagating and its loss
+  is the 0.63 dB/km at 1451 nm of the DCF of the paper's Fig. 6 text. A co-propagating
+  pump gives the output powers of the findings.
+run:
+  test: validation/tests/fiber/islam2002.rs::islam_2002_fig_3_depleted_single_pump_amplifier
+tier: ci
+duration: "0.2 s"
+tolerance: {rtol: 0.06}
+why: >
+  the reading precision of Fig. 3(a) is 10 mW (major grid 100 mW) and of 3(b) 1 %; the
+  pump loss is assumed (0.63 dB/km, the DCF's at 1451 nm, for a pump at 1433 nm whose
+  loss is higher), which moves the output at the strongest pumps: 6 % covers the 5.6 %
+  gap at 1.15 W; the PCE cases carry the systematic gap of the findings
+findings:
+  - "the output powers are within 1 mW at 0.1 and 0.2 W and 8 to 14 mW (3 to 5 %) above the reading from 0.45 to 1 W, 41 mW (5.6 %) at 1.15 W, with the counter-propagating pump: a co-propagating pump gives the same outputs up to 0.45 W then saturates (290, 393, 494 and 569 mW at 0.6, 0.8, 1 and 1.15 W against 310, 470, 630 and 730 read; PCE 47 % at most against the 59 % of the figure), so the figure is counter-pumped"
+  - "the PCE of panel (b) is not consistent with panel (a) at low pump powers: (a) gives (30 - 20)/100 = 10 % at 0.1 W and (65 - 20)/200 = 22.5 % at 0.2 W where (b) reads 2 and 13 %; from 0.45 W on, (a) implies 40, 48, 56 and 61 % against the 38, 46, 54 and 59 % read on (b); the module gives 9.3, 22.1, 42.4, 50.1, 57.3 and 62.4 %, panel (a)'s values within 2.5 points"
+  - "the PCE crosses the EDFA's 38 % at 0.38 W, the paper says about 0.45 W (26 dBm): the 4 points of the finding above"
+cases:
+  - {inputs: {quantity: output_mw, pump_w: 0.1}, expected: 30}
+  - {inputs: {quantity: output_mw, pump_w: 0.2}, expected: 65}
+  - {inputs: {quantity: output_mw, pump_w: 0.45}, expected: 200}
+  - {inputs: {quantity: output_mw, pump_w: 0.6}, expected: 310}
+  - {inputs: {quantity: output_mw, pump_w: 0.8}, expected: 470}
+  - {inputs: {quantity: output_mw, pump_w: 1.0}, expected: 630}
+  - {inputs: {quantity: output_mw, pump_w: 1.15}, expected: 730}
+  - {inputs: {quantity: pce_percent, pump_w: 0.1}, expected: 2, tolerance: {atol: 10}, note: "panel (a) implies 10 % (findings)"}
+  - {inputs: {quantity: pce_percent, pump_w: 0.2}, expected: 13, tolerance: {atol: 10}, note: "panel (a) implies 22.5 % (findings)"}
+  - {inputs: {quantity: pce_percent, pump_w: 0.45}, expected: 38, tolerance: {atol: 5}, note: "panel (a) implies 40 % (findings)"}
+  - {inputs: {quantity: pce_percent, pump_w: 0.6}, expected: 46, tolerance: {atol: 5}, note: "panel (a) implies 48 % (findings)"}
+  - {inputs: {quantity: pce_percent, pump_w: 0.8}, expected: 54, tolerance: {atol: 5}, note: "panel (a) implies 56 % (findings)"}
+  - {inputs: {quantity: pce_percent, pump_w: 1.0}, expected: 59, tolerance: {atol: 5}, note: "panel (a) implies 61 % (findings)"}
+  - inputs: {claim: pce_crossover_w}
+    expected: {min: 0.35, max: 0.5}
+    note: "Sec. II-B, text: the Raman PCE crosses the EDFA's (38 %, flat from 0.45 W on Fig. 3(b)) at about 0.45 W (26 dBm): the pump power at which the Raman PCE reaches 38 %"

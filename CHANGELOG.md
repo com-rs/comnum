@@ -8,6 +8,28 @@ and follow [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- `RamanProfile::noise_figure_db` (Bromage 2004, eq. (9): signal-spontaneous beating
+  and shot noise from the spontaneous noise of the solver), `effective_noise_figure_db`
+  (eq. (12), the noise figure minus the loss of the span, negative for a pumped span),
+  `span_loss_db` and `integral_w_km` (the integrated power of a wave, the quantity of the
+  gain identity of Hu, Marks & Menyuk 2004, eq. (2)); `comnum.raman_profile` returns
+  `noise_figure_db` and `effective_noise_figure_db`. The Bromage and Hu tests reuse
+  them. Validated against Islam, *IEEE J. Sel. Topics Quantum Electron.* 8(3), 2002:
+  Sec. II-A (`validation/cards/islam2002_sec2a.yaml`): a lossless undepleted amplifier
+  has the noise figure $2 - 1/G$ of a fully inverted amplifier within 10⁻³ dB (with the
+  thermal factor at 300 K, $(1 + \eta) 2 (G - 1)/G + 1/G$); Fig. 3
+  (`validation/cards/islam2002_fig3.yaml`): the output power of a depleted single-pump
+  DCF amplifier (20 mW of signal, 0.1 to 1.15 W of pump, 13.5 dB/(W·km) over 5.64 km;
+  counter-propagating and 0.63 dB/km of pump loss assumed, the paper gives neither)
+  within 1 mW at 0.1 and 0.2 W and 3 to 5.6 % above the reading beyond, the conversion
+  efficiency within 2.5 points of what the paper's panel (a) implies (its panel (b)
+  reads 8 to 10 points lower at 0.1 and 0.2 W, inconsistent with (a)); a co-propagating
+  pump saturates at 47 % of conversion against the 59 % of the figure.
+- `Raman::solve` converges on strongly depleted amplifiers (a 1 W counter-pump on a
+  20 mW signal in 5.64 km of DCF, 52 dB of small-signal gain): when the sweeps from the
+  loss-only guess do not converge, it continues from a fraction of the pump powers
+  (halved until the sweeps converge, then doubled with the previous solution as the
+  guess). Converged results are unchanged (the sweeps are the same).
 - Double Rayleigh backscattering of the Raman-pumped spans: `Raman::rayleigh_db_km`
   (the Rayleigh backscatter coupling of the signals, $10 \log_{10}$ of $\kappa = \alpha_{R}
   S$ in 1/km; `None`, the default, leaves it out) and, on every profile, the effective
