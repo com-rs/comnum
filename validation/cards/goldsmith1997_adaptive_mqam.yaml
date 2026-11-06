@@ -78,5 +78,5 @@ cases:
   - {inputs: {table: II, region: 4, snr_db: 20.0}, expected: 3.84, tolerance: {rtol: 0.015}}
   - {inputs: {figure: 10, eps_db: 1.0, ber0: 0.001}, expected: 3.00e-03, tolerance: {rtol: 0.1}, why: "read on the log grid to about 5 %"}
   - {inputs: {figure: 10, eps_db: 5.0, ber0: 0.001}, expected: 3.60e-02, tolerance: {rtol: 0.1}, why: "read on the log grid to about 5 %"}
-  - {inputs: {figure: 10, eps_db: 0.5, ber0: 1e-06}, expected: 3.70e-06, tolerance: {rtol: 0.1}, why: "read on the log grid to about 5 %"}
-  - {inputs: {figure: 10, eps_db: 5.0, ber0: 1e-06}, expected: 4.00e-03, tolerance: {rtol: 0.1}, why: "read on the log grid to about 5 %"}
+  - {inputs: {figure: 10, eps_db: 0.5, ber0: 1.0e-6}, expected: 3.70e-06, tolerance: {rtol: 0.1}, why: "read on the log grid to about 5 %"}
+  - {inputs: {figure: 10, eps_db: 5.0, ber0: 1.0e-6}, expected: 4.00e-03, tolerance: {rtol: 0.1}, why: "read on the log grid to about 5 %"}
