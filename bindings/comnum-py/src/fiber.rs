@@ -311,12 +311,25 @@ pub(crate) fn raman(py: Python<'_>, v: Option<&Bound<'_, PyAny>>) -> PyResult<Op
     BuildContext::default().raman(Some(&serde_json::json!({ "raman": j }))).py()
 }
 
+/// The string of a nonlinear step, as the constructors parse it.
+fn nonlinear_step_name(step: NonlinearStep) -> &'static str {
+    match step {
+        NonlinearStep::Midpoint => "midpoint",
+        NonlinearStep::Trapezoidal => "trapezoidal",
+        NonlinearStep::EffectiveLength => "effective_length",
+        _ => "unknown",
+    }
+}
+
 /// The symmetric split-step Fourier method of OptiCommPy (`ssfm`), one polarisation.
 ///
 /// Every span is cut into `n = ⌈L_span/h⌉` equal steps of `δ = L_span/n` (`h` itself
 /// when it divides the span); a step applies half of the linear operator (loss and
 /// dispersion) in the frequency domain, the nonlinear phase `γ|A|²δ`, then the other
-/// half. After every span:
+/// half (``nonlinear_step="midpoint"``; ``"effective_length"`` is Optilux's scheme, the
+/// phase of the power at the start of the nonlinear block over the effective length
+/// ``(1 - e^{-αδ})/α`` of the step, the attenuation of the step after it). After every
+/// span:
 ///
 /// - `"edfa"`: an EDFA of gain `α L` and the noise figure of the fibre (ASE drawn from
 ///   `rng`, noiseless without one);
@@ -334,6 +347,9 @@ pub(crate) fn raman(py: Python<'_>, v: Option<&Bound<'_, PyAny>>) -> PyResult<Op
 ///     raman (dict, optional): Raman pumps and ISRS in every span, the keys of
 ///         ``fiber.raman`` in a specification (see :func:`raman_profile`); the amplifier
 ///         after a span then restores every frequency to its launch power.
+///     nonlinear_step (str): ``"midpoint"`` (the default), ``"effective_length"``
+///         (Optilux) or ``"trapezoidal"`` (OptiCommPy's ``manakovSSF``, iterated); double
+///         precision only for the last two.
 ///
 /// Raises:
 ///     ValueError: for an invalid parameter or input (the message names it).
@@ -354,20 +370,22 @@ impl PySsfm {
     fn __repr__(&self) -> String {
         let s = &self.inner;
         format!(
-            "Ssfm(n_spans={}, span_km={}, {}, amplification='{}', raman={})",
+            "Ssfm(n_spans={}, span_km={}, {}, nonlinear_step='{}', amplification='{}', raman={})",
             s.fiber.n_spans,
             s.fiber.span_km,
             match s.rule {
                 Some(StepRule::Logarithmic(n)) => format!("steps_per_span={n}"),
                 _ => format!("step_km={}", s.step_km),
             },
+            nonlinear_step_name(s.nonlinear),
             format!("{:?}", s.amplification).to_lowercase(),
             py_bool(s.raman.is_some())
         )
     }
 
     #[new]
-    #[pyo3(signature = (fiber, *, step_km = 1.0, steps_per_span = None, amplification = "edfa", raman = None, check_sampling = true))]
+    #[pyo3(signature = (fiber, *, step_km = 1.0, steps_per_span = None, amplification = "edfa", raman = None, nonlinear_step = "midpoint", check_sampling = true))]
+    #[allow(clippy::too_many_arguments, reason = "the settings of the link, by keyword")]
     fn new(
         py: Python<'_>,
         fiber: &PyFiber,
@@ -375,6 +393,7 @@ impl PySsfm {
         steps_per_span: Option<usize>,
         amplification: &str,
         raman: Option<&Bound<'_, PyAny>>,
+        nonlinear_step: &str,
         check_sampling: bool,
     ) -> PyResult<Self> {
         if steps_per_span == Some(0) {
@@ -387,6 +406,7 @@ impl PySsfm {
                 amplification: amplification.parse::<Amplification>().py()?,
                 raman: self::raman(py, raman)?,
                 rule: steps_per_span.map(StepRule::Logarithmic),
+                nonlinear: nonlinear_step.parse::<NonlinearStep>().py()?,
                 check_sampling,
             },
         })
@@ -610,12 +630,14 @@ impl PyManakov {
 
 /// Dual-polarisation nonlinear propagation over the link: the Manakov equation solved
 /// by the symmetric split-step method (``nonlinear_step="trapezoidal"`` is OptiCommPy's
-/// ``manakovSSF``).
+/// ``manakovSSF``, ``"effective_length"`` Optilux's ``fiber``).
 ///
 /// Each step is a half linear step, the nonlinear phase ``(8/9) γ h P`` (``P = |A_x|² +
 /// |A_y|²`` at the middle of the step; with ``nonlinear_step="trapezoidal"``, OptiCommPy's
 /// ``(P(z) + P(z+h))/2``, iterated until the relative change of the fields falls below
-/// ``tolerance``) and a half linear step. The step is fixed (``step_km``) or adaptive
+/// ``tolerance``; with ``"effective_length"``, Optilux's ``P`` at the start of the
+/// nonlinear block over the effective length ``(1 - e^{-αh})/α`` of the step, the
+/// attenuation of the step after it) and a half linear step. The step is fixed (``step_km``) or adaptive
 /// (``step_rule``). An amplifier follows every span. Polarisation-mode dispersion is neglected (see :class:`ManakovPmd`).
 ///
 /// Args:
@@ -635,9 +657,11 @@ impl PyManakov {
 ///         ``step_rule="nonlinear_phase"``.
 ///     step_km (float, optional): a fixed step (km) instead of the adaptive one.
 ///     nonlinear_step (str): ``"midpoint"``, the power at the middle of a step (the
-///         scalar solver), or ``"trapezoidal"``, the mean of the power at its two ends,
-///         iterated (OptiCommPy): the trapezoidal mean smooths the cross-phase
-///         modulation of channels that walk off within a step.
+///         scalar solver); ``"effective_length"``, Optilux's power at the start of the
+///         nonlinear block over the effective length of the step; or ``"trapezoidal"``,
+///         the mean of the power at its two ends, iterated (OptiCommPy): the trapezoidal
+///         mean smooths the cross-phase modulation of channels that walk off within a
+///         step.
 ///     max_iterations (int): trapezoidal iterations per step at most.
 ///     tolerance (float): convergence tolerance of the iterations.
 ///     amplification (str): ``"edfa"``, ``"ideal"`` or ``"none"``.
@@ -663,7 +687,7 @@ impl PyManakovSsfm {
             "ManakovSsfm(n_spans={}, rule={:?}, nonlinear_step='{}', max_iterations={}, tolerance={:e}, amplification='{}')",
             m.fiber.n_spans,
             m.rule,
-            format!("{:?}", m.nonlinear).to_lowercase(),
+            nonlinear_step_name(m.nonlinear),
             m.max_iterations,
             m.tolerance,
             format!("{:?}", m.amplification).to_lowercase()

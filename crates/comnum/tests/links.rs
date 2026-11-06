@@ -8,6 +8,7 @@ use comnum::dsp::signal;
 use comnum::hardware::optical::{Iqm, Photodiode, coherent_receiver};
 use comnum::mapping::constellation::gray_code;
 use comnum::math::Jacobian;
+use comnum::math::nlse::NonlinearStep;
 use comnum::math::{cis, power};
 use comnum::prelude::*;
 use comnum::sim::scenario::from_fn;
@@ -122,6 +123,7 @@ fn linear_split_step_is_the_linear_channel_with_ideal_gain() {
         amplification: Amplification::Ideal,
         raman: None,
         rule: None,
+        nonlinear: NonlinearStep::Midpoint,
         check_sampling: false,
     };
     let mut y = x.clone();
@@ -161,6 +163,7 @@ fn nonlinear_phase_of_a_constant_field_is_gamma_p_leff() {
         amplification: Amplification::Ideal,
         raman: None,
         rule: None,
+        nonlinear: NonlinearStep::Midpoint,
         check_sampling: false,
     };
     let mut y = x;

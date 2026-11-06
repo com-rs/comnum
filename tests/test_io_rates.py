@@ -60,6 +60,21 @@ def test_single_precision_split_step():
         link.propagate(x, 64e9, precision="f16")
 
 
+def test_the_effective_length_step_runs_in_double_precision_only():
+    fibre = comnum.FiberParams(n_spans=1)
+    x = comnum.Rng(3).complex_noise(1024, 2e-3)
+    link = comnum.Ssfm(fibre, nonlinear_step="effective_length", check_sampling=False)
+    assert "nonlinear_step='effective_length'" in repr(link)
+    y = link.propagate(x, 64e9)
+    z = comnum.Ssfm(fibre, check_sampling=False).propagate(x, 64e9)
+    # the two weightings of the attenuation within a 1 km step: close, not equal
+    assert 1e-10 < np.linalg.norm(y - z) / np.linalg.norm(z) < 1e-3
+    with pytest.raises(ValueError, match="midpoint"):
+        link.propagate(x, 64e9, precision="f32")
+    with pytest.raises(ValueError, match="effective_length"):
+        comnum.Ssfm(fibre, nonlinear_step="euler")
+
+
 def test_verify_spec_reports_every_check():
     out = comnum.verify_spec(ROOT / "specs" / "validation" / "proakis_awgn.yaml")
     assert out["passed"] and len(out["checks"]) > 20

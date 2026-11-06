@@ -413,6 +413,7 @@ class Ssfm(Native):
         amplification (str): edfa (gain αL, ASE), ideal (noiseless gain) or none; with fiber.raman, the amplifier restores every frequency; one of edfa, ideal, none; default edfa
         noise (bool): draw the ASE of the EDFAs and the spontaneous Raman noise; default true
         precision (str): f64, or f32 (about twice as fast, relative error about 1e-6 √steps; not with Raman); one of f64, f32; default f64
+        nonlinear_step (str): the nonlinear phase of a step: the power at its middle (OptiCommPy's ssfm), Optilux's power at the start of the nonlinear block over the effective length of the step, or the trapezoidal mean of the power at its ends (OptiCommPy's manakovSSF, iterated); f64 only for the last two; one of midpoint, effective_length, trapezoidal; default midpoint
         check_sampling (bool): refuse a signal whose sampling rate or block cannot hold the four-wave mixing and the walk-off of the link (Musetti et al. 2018, Appendix B); default true
     """
 
@@ -425,6 +426,7 @@ class Ssfm(Native):
         "amplification",
         "noise",
         "precision",
+        "nonlinear_step",
         "check_sampling",
     )
 
@@ -437,6 +439,7 @@ class Ssfm(Native):
         amplification: str | Var = "edfa",
         noise: bool | Var = True,
         precision: str | Var = "f64",
+        nonlinear_step: str | Var = "midpoint",
         check_sampling: bool | Var = True,
     ) -> None:
         _init(
@@ -448,6 +451,7 @@ class Ssfm(Native):
             amplification=amplification,
             noise=noise,
             precision=precision,
+            nonlinear_step=nonlinear_step,
             check_sampling=check_sampling,
         )
 
@@ -1137,7 +1141,7 @@ class WdmTx(Native):
 
 
 class Manakov(Native):
-    """Dual-polarisation nonlinear propagation over the link (Manakov equation, split step with the phase at the middle of the step or OptiCommPy's trapezoidal one), EDFAs with ASE.
+    """Dual-polarisation nonlinear propagation over the link (Manakov equation, split step with the phase at the middle of the step, Optilux's effective-length one or OptiCommPy's trapezoidal one), EDFAs with ASE.
 
     Needs: samples. Gives: nothing.
 
@@ -1149,7 +1153,7 @@ class Manakov(Native):
         bandwidth_hz (float): signal bandwidth of the rule fwm (measured on the launched field if absent) [Hz]; default none
         max_nl_phase_rad (float): largest nonlinear phase rotation per step (step_rule nonlinear_phase) [rad]; default 2e-2
         step_km (float): a fixed step instead of the adaptive one [km]; default none
-        nonlinear_step (str): the nonlinear phase of a step: the power at its middle (the scalar solver) or the trapezoidal mean of the power at its ends (OptiCommPy, iterated; less accurate in WDM); one of midpoint, trapezoidal; default midpoint
+        nonlinear_step (str): the nonlinear phase of a step: the power at its middle (the scalar solver), Optilux's power at the start of the nonlinear block over the effective length of the step, or the trapezoidal mean of the power at its ends (OptiCommPy, iterated; less accurate in WDM); one of midpoint, effective_length, trapezoidal; default midpoint
         check_sampling (bool): refuse a signal whose sampling rate or block cannot hold the four-wave mixing and the walk-off of the link (Musetti et al. 2018, Appendix B); default true
         max_iterations (int): trapezoidal iterations per step at most; default 10
         tolerance (float): convergence tolerance of the iterations; default 1e-5

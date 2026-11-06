@@ -183,7 +183,7 @@ one layer down, instead of written again (`docs/ARCHITECTURE.md`, placement).
 - `fn Amplification::apply( &self, e: &mut [C64], fiber: &FiberParams, length_km: f64, fs: f64, rng: Option<&mut Rng>, ) -> Result<()>` — Amplify the field `e` (√W, sampled at `fs`) after a span: the EDFA of `fiber`
 - `enum Precision` — The arithmetic of the split steps of [`Ssfm::propagate_with`].
 - `struct Ssfm` — The symmetric split-step Fourier method of OptiCommPy (`ssfm`), one polarisation.
-- `fn Ssfm::new(fiber: FiberParams, step_km: f64) -> Ssfm` — A simulation of `fiber` with steps of `step_km` and EDFAs.
+- `fn Ssfm::new(fiber: FiberParams, step_km: f64) -> Ssfm` — A simulation of `fiber` with steps of `step_km`, the phase at the middle of the
 - `fn Ssfm::sampling_check(&self, x: &[C64], fs: f64) -> SamplingCheck` — The sampling conditions of `x` through this link (see [`Ssfm::check_sampling`]).
 - `fn Ssfm::propagate(&self, x: &mut Vec<C64>, fs: f64, rng: Option<&mut Rng>) -> Result<()>` — Propagate a field (√W) sampled at `fs` over the link, in place; the ASE of the
 - `fn Ssfm::propagate_with(&self, x: &mut Vec<C64>, fs: f64, rng: Option<&mut Rng>, precision: Precision) -> Result<()>` — [`Ssfm::propagate`] or [`Ssfm::propagate_f32`], as `precision` says.
@@ -3344,7 +3344,7 @@ one layer down, instead of written again (`docs/ARCHITECTURE.md`, placement).
 - `class Fiber(Native)` — Linear fibre (loss and dispersion, OptiCommPy linearFiberChannel).
 - `def Fiber.__init__(self, *, fiber: dict | Var | None = None, length_km: float | Var | None = None, compensate_loss: bool | Var = True) -> None`
 - `class Ssfm(Native)` — Split-step Fourier propagation over the link, one polarisation.
-- `def Ssfm.__init__(self, *, fiber: dict | Var | None = None, step_km: float | Var = 1.0, steps_per_span: int | Var | None = None, amplification: str | Var = "edfa", noise: bool | Var = True, precision: str | Var = "f64", check_sampling: bool | Var = True) -> None`
+- `def Ssfm.__init__(self, *, fiber: dict | Var | None = None, step_km: float | Var = 1.0, steps_per_span: int | Var | None = None, amplification: str | Var = "edfa", noise: bool | Var = True, precision: str | Var = "f64", nonlinear_step: str | Var = "midpoint", check_sampling: bool | Var = True) -> None`
 - `class Edfa(Native)` — Erbium-doped fibre amplifier with ASE.
 - `def Edfa.__init__(self, *, gain_db: float | Var, nf_db: float | Var = 4.5, fc_hz: float | Var = 193100000000000.0) -> None`
 - `class Cdc(Native)` — Chromatic-dispersion compensation in the frequency domain.
@@ -3393,7 +3393,7 @@ one layer down, instead of written again (`docs/ARCHITECTURE.md`, placement).
 - `def Classify.__init__(self, *, candidates: list | Var | None = None, method: str | Var = "ml") -> None`
 - `class WdmTx(Native)` — WDM transmitter: the channel under test and independently modulated neighbours on the grid of OptiCommPy's simpleWDMTx.
 - `def WdmTx.__init__(self, *, n_channels: int | Var = 5, spacing_hz: float | Var = 50000000000.0, sps: int | Var = 8, power_dbm: float | list | Var = 0.0, kind: str | Var = "rrc", rolloff: float | Var = 0.1, n_taps: int | Var = 1025, linewidth_hz: float | Var = 0.0, channel: int | Var | None = None, mzm_scale: float | Var | None = None) -> None`
-- `class Manakov(Native)` — Dual-polarisation nonlinear propagation over the link (Manakov equation, split step with the phase at the middle of the step or OptiCommPy's trapezoidal one), EDFAs with ASE.
+- `class Manakov(Native)` — Dual-polarisation nonlinear propagation over the link (Manakov equation, split step with the phase at the middle of the step, Optilux's effective-length one or OptiCommPy's trapezoidal one), EDFAs with ASE.
 - `def Manakov.__init__(self, *, fiber: dict | Var | None = None, step_rule: str | Var = "fwm", steps_per_span: int | Var = 100, fwm_phase_rad: float | Var = 20.0, bandwidth_hz: float | Var | None = None, max_nl_phase_rad: float | Var = 0.02, step_km: float | Var | None = None, nonlinear_step: str | Var = "midpoint", check_sampling: bool | Var = True, max_iterations: int | Var = 10, tolerance: float | Var = 1e-05, amplification: str | Var = "edfa", noise: bool | Var = True) -> None`
 - `class Pmd(Native)` — Random rotation of the polarisations and polarisation-mode dispersion of a dual-polarisation signal, a new realisation every trial.
 - `def Pmd.__init__(self, *, mean_dgd_ps: float | Var = 0.0, sections: int | Var = 20, theta_deg: float | Var | None = None) -> None`

@@ -8,6 +8,24 @@ and follow [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- `comnum_math::nlse::NonlinearStep::EffectiveLength`, a third nonlinear step of the
+  split-step engine next to `Midpoint` (the default, unchanged) and `Trapezoidal`:
+  Optilux's scheme (Shao, Liang & Kumar, *IEEE Photonics J.* 6(4), 2014, cited by its
+  `fiber`), the phase of the power at the start of the nonlinear block over the
+  effective length `(1 - e^{-αh})/α` of the step, the attenuation of the whole step
+  after it. The scalar `Ssfm` gains the field `nonlinear` (double precision only for
+  the new step and the trapezoidal one), `comnum.Ssfm` and `comnum.ManakovSsfm` the
+  string `nonlinear_step="effective_length"`, the blocks `ssfm` and `manakov` the same
+  value. With it comnum reproduces Optilux's fields to machine precision
+  (`tests/oracle/test_optilux_oracle.py`: NMSE 4·10⁻²⁸ after one span and 3·10⁻²⁶
+  after 10 × 80 km at 1 km steps, against 1.2·10⁻¹⁰ and 1.5·10⁻⁸ with the midpoint
+  step). On that field (16-QAM at 32 GBd, 4 dBm, 10 × 80 km) the NMSE against the
+  step-converged solution (comnum at 0.05 km) makes it the most accurate of the three
+  schemes at every step, 2.8 to 3.5 times below the midpoint step and 12 to 39 times
+  below the trapezoidal one: 3.8·10⁻¹¹, 6.7·10⁻¹⁰, 1.1·10⁻⁸, 2.3·10⁻⁷ and 3.7·10⁻⁶ at 0.25,
+  0.5, 1, 2 and 4 km (midpoint 1.3·10⁻¹⁰, 2.3·10⁻⁹, 3.7·10⁻⁸, 6.4·10⁻⁷ and 1.0·10⁻⁵;
+  trapezoidal 1.5·10⁻⁹, 2.3·10⁻⁸, 3.5·10⁻⁷, 4.6·10⁻⁶ and 4.4·10⁻⁵). The default stays
+  the midpoint step: no published result changes.
 - Browser playground (`playground/`): a static page where a specification is edited
   (CodeMirror) and run in the browser, the Rust engine compiled to WebAssembly by
   `wasm-pack` from the new crate `bindings/comnum-wasm` (not published): the menu of the

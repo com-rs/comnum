@@ -14,13 +14,20 @@ What the comparison shows, with ``comnum.Ssfm`` at the same step on the same fie
 
 - the linear span agrees to machine precision (NMSE of the fields below 10⁻²⁴): same
   dispersion operator, same attenuation, same amplifier;
-- the Kerr spans differ by the nonlinear step: comnum rotates the phase by the power at
-  the middle of the step over its length, Optilux by the power at the start over the
-  effective length :math:`(1 - e^{-\\alpha h}) / \\alpha` of the step, which weighs the
-  attenuation within it ([Sha14] in its help). At 1 km the two differ by an NMSE of
-  about 10⁻¹⁰ after one span and 1.5 · 10⁻⁸ after ten, both within 4 · 10⁻⁸ of the
-  step-converged solution (comnum at 0.05 km): Optilux's scheme is the closer of the
-  two at this step (1.1 · 10⁻⁸ against 3.7 · 10⁻⁸).
+- the Kerr spans differ by the nonlinear step: by default comnum rotates the phase by
+  the power at the middle of the step over its length (``nonlinear_step="midpoint"``),
+  Optilux by the power at the start of the nonlinear block over the effective length
+  :math:`(1 - e^{-\\alpha h}) / \\alpha` of the step, which weighs the attenuation
+  within it (Shao, Liang & Kumar, *IEEE Photonics J.* 6(4), 2014, cited by its help).
+  At 1 km the two differ by an NMSE of about 10⁻¹⁰ after one span and 1.5 · 10⁻⁸ after
+  ten, both within 4 · 10⁻⁸ of the step-converged solution (comnum at 0.05 km);
+- with ``nonlinear_step="effective_length"`` comnum's step is Optilux's, and the Kerr
+  spans agree to machine precision too (NMSE 4 · 10⁻²⁸ after one span, 3 · 10⁻²⁶ after
+  ten);
+- against the step-converged solution, the effective-length step is the most accurate
+  of the three at every step from 0.25 to 4 km on this field (1.1 · 10⁻⁸ against
+  3.7 · 10⁻⁸ for the midpoint step and 3.5 · 10⁻⁷ for the trapezoidal one at 1 km;
+  the table in ``docs/python/user_guide/fibre_validation.rst``, section 3).
 
 Conventions: Optilux writes the nonlinear Schrödinger equation with the opposite sign
 of the imaginary unit, so the recorder propagated the conjugate of the field and
@@ -47,7 +54,12 @@ def nmse(a: np.ndarray, b: np.ndarray) -> float:
     return float(np.sum(np.abs(a - b) ** 2) / np.sum(np.abs(b) ** 2))
 
 
-def propagate(gamma_w_km: float, n_spans: int, step_km: float = LINK["step_km"]) -> np.ndarray:
+def propagate(
+    gamma_w_km: float,
+    n_spans: int,
+    step_km: float = LINK["step_km"],
+    nonlinear_step: str = "midpoint",
+) -> np.ndarray:
     fibre = comnum.FiberParams(
         alpha_db_km=LINK["alpha_db_km"],
         d_ps_nm_km=LINK["d_ps_nm_km"],
@@ -56,7 +68,7 @@ def propagate(gamma_w_km: float, n_spans: int, step_km: float = LINK["step_km"])
         n_spans=n_spans,
         fc_hz=LINK["fc_hz"],
     )
-    link = comnum.Ssfm(fibre, step_km=step_km, amplification="ideal")
+    link = comnum.Ssfm(fibre, step_km=step_km, amplification="ideal", nonlinear_step=nonlinear_step)
     return link.propagate(V["input"], LINK["fs_hz"], precision="f64")
 
 
@@ -71,8 +83,9 @@ def test_the_recorded_steps_are_those_of_the_benchmark():
         assert steps == [per_span] * spans, case
 
 
-def test_the_linear_span_agrees_to_machine_precision():
-    ours = propagate(0.0, 1)
+@pytest.mark.parametrize("nonlinear_step", ["midpoint", "effective_length"])
+def test_the_linear_span_agrees_to_machine_precision(nonlinear_step):
+    ours = propagate(0.0, 1, nonlinear_step=nonlinear_step)
     assert nmse(V["linear_1span"], ours) < 1e-24
 
 
@@ -84,8 +97,27 @@ def test_the_kerr_spans_agree_within_the_nonlinear_step(case, spans, bound):
     assert nmse(V[case], ours) < bound
 
 
+@pytest.mark.parametrize(
+    ("case", "spans", "bound"), [("kerr_1span", 1, 1e-26), ("kerr_10spans", 10, 1e-24)]
+)
+def test_the_effective_length_step_is_optilux_s_step(case, spans, bound):
+    ours = propagate(LINK["gamma_w_km"], spans, nonlinear_step="effective_length")
+    assert nmse(V[case], ours) < bound
+
+
 def test_both_solvers_are_within_the_step_error_of_the_converged_solution():
     ref = propagate(LINK["gamma_w_km"], 10, REF_STEP_KM)
     ours = propagate(LINK["gamma_w_km"], 10)
     assert nmse(V["kerr_10spans"], ref) < 4e-8
     assert nmse(ours, ref) < 4e-8
+
+
+def test_the_effective_length_step_is_the_most_accurate_at_1_km():
+    """Against the step-converged solution: 1.1e-8 (effective length) against 3.7e-8
+    (midpoint) and 3.5e-7 (trapezoidal)."""
+    ref = propagate(LINK["gamma_w_km"], 10, REF_STEP_KM)
+    err = {
+        step: nmse(propagate(LINK["gamma_w_km"], 10, nonlinear_step=step), ref)
+        for step in ("effective_length", "midpoint", "trapezoidal")
+    }
+    assert err["effective_length"] < 0.5 * err["midpoint"] < 0.5 * err["trapezoidal"], err

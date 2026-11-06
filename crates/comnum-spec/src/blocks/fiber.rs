@@ -11,7 +11,7 @@ use comnum_core::ensure;
 use comnum_core::rng::Rng;
 use comnum_dsp::compensation::cd;
 use comnum_dsp::compensation::dbp::NonlinearLength;
-use comnum_math::nlse::{StepDistribution, StepRule};
+use comnum_math::nlse::{NonlinearStep, StepDistribution, StepRule};
 use serde_json::Value as Json;
 
 /// The blocks of this module: their documentation and their builders.
@@ -113,6 +113,8 @@ block_params! {
         amplifiers: AmplifierSettings [flatten], "the amplifiers after every span";
         precision: String ["f64"] one_of ["f64", "f32"],
             "f64, or f32 (about twice as fast, relative error about 1e-6 √steps; not with Raman)";
+        nonlinear_step: String ["midpoint"] one_of ["midpoint", "effective_length", "trapezoidal"],
+            "the nonlinear phase of a step: the power at its middle (OptiCommPy's ssfm), Optilux's power at the start of the nonlinear block over the effective length of the step, or the trapezoidal mean of the power at its ends (OptiCommPy's manakovSSF, iterated); f64 only for the last two";
         check_sampling: bool [true], "refuse a signal whose sampling rate or block cannot hold the four-wave mixing and the walk-off of the link (Musetti et al. 2018, Appendix B)";
     }
 }
@@ -132,6 +134,7 @@ impl SplitStep {
             amplification: q.amplifiers.amplification()?,
             raman: ctx.raman(fiber_json(q.fiber.as_ref()))?,
             rule: q.steps_per_span.map(StepRule::Logarithmic),
+            nonlinear: q.nonlinear_step.parse().map_err(|e: Error| e.context("ssfm"))?,
             check_sampling: q.check_sampling,
         };
         let precision: Precision = q.precision.parse().map_err(|e: Error| e.context("ssfm"))?;
@@ -140,6 +143,9 @@ impl SplitStep {
         })?;
         ensure(!(precision == Precision::F32 && ssfm.rule.is_some()), || {
             "ssfm: the logarithmic steps (steps_per_span) are simulated in double precision only".into()
+        })?;
+        ensure(!(precision == Precision::F32 && ssfm.nonlinear != NonlinearStep::Midpoint), || {
+            "ssfm: only the midpoint nonlinear step is simulated in single precision".into()
         })?;
         Ok(SplitStep { ssfm, noise: q.amplifiers.noise(), precision })
     }
@@ -227,6 +233,7 @@ impl Dbp {
             amplification: q.amplification.parse()?,
             raman: None,
             rule: None,
+            nonlinear: NonlinearStep::Midpoint,
             check_sampling: true,
         };
         Ok(Dbp {

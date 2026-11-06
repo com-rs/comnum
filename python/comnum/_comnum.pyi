@@ -1224,6 +1224,7 @@ class Ssfm:
         steps_per_span: int | None = ...,
         amplification: str = ...,
         raman: dict[str, Any] | None = ...,
+        nonlinear_step: str = ...,
         check_sampling: Any = ...,
     ) -> None: ...
     def __repr__(self) -> str: ...

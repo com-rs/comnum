@@ -51,7 +51,7 @@
 //! // without loss and nonlinearity the split step is the linear channel
 //! let a = linear_fiber_channel(&x, &fiber, 80.0, 64e9);
 //! let mut b = x.clone();
-//! Ssfm { fiber: fiber.clone(), step_km: 10.0, amplification: Amplification::None, raman: None, rule: None, check_sampling: false }
+//! Ssfm { fiber: fiber.clone(), step_km: 10.0, amplification: Amplification::None, check_sampling: false, ..Ssfm::new(fiber.clone(), 10.0) }
 //!     .propagate(&mut b, 64e9, None)
 //!     .unwrap();
 //! assert!(a.iter().zip(&b).all(|(u, v)| (u - v).norm() < 1e-9));
@@ -380,15 +380,32 @@ pub struct Ssfm {
     /// ([`Ssfm::dbp`]), and the single-precision path the fixed steps (it refuses the
     /// logarithmic ones).
     pub rule: Option<StepRule>,
+    /// The nonlinear step of the engine: the phase of the power at the middle of the step
+    /// ([`NonlinearStep::Midpoint`], the default, OptiCommPy's `ssfm`), Optilux's phase of
+    /// the power at the start of the nonlinear block over the effective length of the step
+    /// ([`NonlinearStep::EffectiveLength`]), or the trapezoidal mean of OptiCommPy's
+    /// `manakovSSF` ([`NonlinearStep::Trapezoidal`], iterated with the defaults of
+    /// [`ManakovSplitStep::new`]). The single-precision path and the back-propagation keep
+    /// the midpoint step.
+    pub nonlinear: NonlinearStep,
     /// Refuse a field whose sampling rate or block cannot hold the four-wave mixing and
     /// the walk-off of the link ([`SamplingCheck`]); `false` runs anyway.
     pub check_sampling: bool,
 }
 
 impl Ssfm {
-    /// A simulation of `fiber` with steps of `step_km` and EDFAs.
+    /// A simulation of `fiber` with steps of `step_km`, the phase at the middle of the
+    /// step and EDFAs.
     pub fn new(fiber: FiberParams, step_km: f64) -> Ssfm {
-        Ssfm { fiber, step_km, amplification: Amplification::Edfa, raman: None, rule: None, check_sampling: true }
+        Ssfm {
+            fiber,
+            step_km,
+            amplification: Amplification::Edfa,
+            raman: None,
+            rule: None,
+            nonlinear: NonlinearStep::Midpoint,
+            check_sampling: true,
+        }
     }
 
     /// The sampling conditions of `x` through this link (see [`Ssfm::check_sampling`]).
@@ -440,7 +457,7 @@ impl Ssfm {
         };
         // the engine of every propagator, one field, fixed steps unless another rule
         let rule = resolve_bandwidth(self.rule.unwrap_or(StepRule::Fixed(h)), &[x.as_slice()], fs);
-        let engine = ManakovSplitStep { rule, nonlinear: NonlinearStep::Midpoint, ..ManakovSplitStep::new(medium) };
+        let engine = ManakovSplitStep { rule, nonlinear: self.nonlinear, ..ManakovSplitStep::new(medium) };
         amplified_spans(
             &fiber,
             simulated_km,
@@ -524,6 +541,9 @@ impl Ssfm {
         ensure(self.raman.is_none(), || "the Raman amplification is simulated in double precision only".into())?;
         ensure(!matches!(self.rule, Some(StepRule::Logarithmic(_))), || {
             "the logarithmic steps are simulated in double precision only".into()
+        })?;
+        ensure(self.nonlinear == NonlinearStep::Midpoint, || {
+            "only the midpoint nonlinear step is simulated in single precision".into()
         })?;
         let (n_steps, h) = self.steps()?;
         let n = x.len();
@@ -613,6 +633,7 @@ pub(crate) mod tests {
                 amplification,
                 raman: None,
                 rule: None,
+                nonlinear: NonlinearStep::Midpoint,
                 check_sampling: false,
             };
             let a = propagated(&s, &x, 64e9, None);
@@ -652,6 +673,7 @@ pub(crate) mod tests {
                 amplification,
                 raman: None,
                 rule: None,
+                nonlinear: NonlinearStep::Midpoint,
                 check_sampling: false,
             };
             // the single precision rounds the power of 270 steps by about 1e-4 dB
@@ -668,6 +690,7 @@ pub(crate) mod tests {
             amplification: Amplification::None,
             raman: None,
             rule: None,
+            nonlinear: NonlinearStep::Midpoint,
             check_sampling: false,
         };
         let a = linear_fiber_channel(&x, &lossless, 80.0, 64e9);
@@ -766,6 +789,7 @@ pub(crate) mod tests {
                 amplification,
                 raman: None,
                 rule: None,
+                nonlinear: NonlinearStep::Midpoint,
                 check_sampling: false,
             };
             for seed in [None, Some(5)] {
@@ -789,6 +813,7 @@ pub(crate) mod tests {
                 amplification,
                 raman: Some(raman.clone()),
                 rule: None,
+                nonlinear: NonlinearStep::Midpoint,
                 check_sampling: false,
             };
             let (mut a, mut b) = (Rng::new(3), Rng::new(3));

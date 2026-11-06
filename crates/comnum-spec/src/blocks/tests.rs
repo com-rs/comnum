@@ -70,6 +70,7 @@ fn example(b: &str, p: &str) -> Option<Json> {
         ("dump", "dir") => json!("results/signals"),
         ("dump", "datatype") => json!("cf64"),
         ("manakov", "nonlinear_step") => json!("trapezoidal"),
+        ("ssfm", "nonlinear_step") => json!("effective_length"),
         ("manakov", "step_rule") => json!("nonlinear_phase"),
         ("ssfm", "precision") => json!("f64"), // f32 refuses the logarithmic steps of steps_per_span
         ("dbp", "step_distribution") => json!("modified_logarithmic"),
