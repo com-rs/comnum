@@ -98,8 +98,9 @@ def parse_args(cases: list[str]) -> argparse.Namespace:
 
 def setup_torch(threads: str) -> dict:
     """Set the PyTorch thread pools (before any computation), and in the mode ``gpu``
-    the default device (``COMNUM_BENCH_DEVICE``, ``cuda`` by default: every tensor the
-    library creates lands on it); return what was set."""
+    the default device (``COMNUM_BENCH_DEVICE``, ``cuda:0`` by default: every tensor the
+    library creates lands on it; Sionna's ``config.device`` wants the index, so a bare
+    ``cuda`` becomes ``cuda:0``); return what was set."""
     import torch
 
     info: dict = {}
@@ -107,7 +108,9 @@ def setup_torch(threads: str) -> dict:
         torch.set_num_threads(1)
         torch.set_num_interop_threads(1)
     if threads == "gpu":
-        device = os.environ.get("COMNUM_BENCH_DEVICE", "cuda")
+        device = os.environ.get("COMNUM_BENCH_DEVICE", "cuda:0")
+        if device == "cuda":
+            device = "cuda:0"
         if device.startswith("cuda") and not torch.cuda.is_available():
             raise SystemExit("the mode gpu needs a CUDA device: torch.cuda.is_available() is False")
         torch.set_default_device(device)

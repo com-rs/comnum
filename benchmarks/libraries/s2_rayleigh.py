@@ -156,7 +156,7 @@ def spec(m: int, ebn0: list[float], bits: int, trials: int, seed: int) -> dict:
                 "constellation": {"kind": "psk" if m == 2 else "qam", "m": m},
                 "n_symbols": bits // (k * trials),
             },
-            {"type": "rayleigh", "n_rx": 1, "coherence": 1},
+            {"type": "rayleigh", "n_rx": 1, "coherence_samples": 1},
             {"type": "awgn_ebn0", "ebn0_db": "$ebn0_db"},
             {"type": "mimo_rx", "detector": "zf"},
         ],

@@ -190,7 +190,7 @@ def spec(case: str, ebn0: list[float], vectors: int, trials: int, seed: int) -> 
         "link": [
             {"type": "source", "constellation": "16-QAM", "n_symbols": NT * vectors // trials},
             {"type": "mimo_tx", "n_tx": NT, "scheme": "spatial"},
-            {"type": "rayleigh", "n_rx": NR, "coherence": 1},
+            {"type": "rayleigh", "n_rx": NR, "coherence_samples": 1},
             {"type": "awgn_ebn0", "ebn0_db": "$ebn0_db"},
             {"type": "mimo_rx", "detector": SPEC_DETECTOR[case]},
         ],

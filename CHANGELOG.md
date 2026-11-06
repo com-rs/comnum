@@ -12,7 +12,9 @@ and follow [Semantic Versioning](https://semver.org/).
   runs in the mode `gpu` of scenario 5, in complex128 and complex64, next to Sionna on
   the device and comnum on the CPU; a scenario names its GPU-capable libraries in
   `GPU_LIBS`. `runpod.sh` installs OptiCommPy and the CuPy wheel of the image's CUDA
-  version. Results on the laptop unchanged.
+  version. Results on the laptop unchanged. The scenarios 2 and 3 name the Rayleigh
+  block's `coherence_samples` (the field was renamed after the recorded run), and the
+  GPU mode gives Sionna the device as `cuda:0`, the form its `config.device` accepts.
 
 ## [0.3.1] — 2026-11-06
 
