@@ -36,7 +36,7 @@ system, and states what each found.
      - within 0.08 to 0.25 dB (GN); 9.95 and 5.78 dB against 10 and 6 dB (Dar)
    * - Does a published system come out the same?
      - Häger & Pfister (2021), Fig. 5
-     - within 0.13 dB
+     - within 0.20 dB
    * - Does another simulator give the same field?
      - OptiCommPy 0.11, Sionna, GNPy 3.0
      - to :math:`10^{-8}` (OptiCommPy, its own options); NMSE :math:`5 \cdot 10^{-26}`
@@ -195,7 +195,7 @@ off). The Raman-amplified links are compared with the generalised GN model in
 C. Häger & H. D. Pfister (*IEEE J. Sel. Areas Commun.* 39(1), 2021, Fig. 5) give the
 effective SNR of linear equalisation and of digital back-propagation (DBP) with one
 step per span over 25 × 80 km, against the launch power. comnum reproduces both
-curves within 0.13 dB of the digitised points (``specs/validation/hager2021_fig5.yaml``,
+curves within 0.20 dB of the 25 digitised points (``specs/validation/hager2021_fig5.yaml``,
 card ``hager2021_fig5``, run in CI; gallery
 :doc:`../auto_examples/optical/plot_03_hager2021_fig5`).
 

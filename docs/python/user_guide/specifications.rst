@@ -118,7 +118,7 @@ one has a :doc:`validation card <../validation>`; CI verifies the short ones):
      - MI and GMI by Gauss–Hermite quadrature (Alvarado et al. 2018), within 0.02 bit
    * - ``validation/hager2021_fig5.yaml``
      - Häger & Pfister 2021, Fig. 5: linear equalisation and DBP over 25 × 80 km,
-       within 0.13 dB
+       within 0.20 dB at the 25 points of the figure
    * - ``validation/msk_bpsk.yaml``, ``validation/thompson2008_eq15.yaml``
      - precoded MSK with maximum-likelihood detection has the BER of BPSK; the BER of
        CE-OFDM in the linear regime (Thompson et al. 2008, eq. (15))

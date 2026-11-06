@@ -6,12 +6,11 @@
 # 0.2 dB/km, noise figure 5 dB, root-raised cosine of roll-off 0.1, propagation at
 # 6 samples per symbol, receivers at 2. The split step uses 200 uniform steps per span
 # in single precision (the paper: 500 logarithmic steps; with the paper's steps,
-# `{type: ssfm, steps_per_span: 500}`, every point moves by at most 0.01 dB and the
-# largest gap is 0.13 dB, for six times the computation: the forward model is converged). The published values were
+# `{type: ssfm, steps_per_span: 500}`, every point moves by at most 0.01 dB, for six times the computation: the forward model is converged). The published values were
 # read from the vector paths of the figure (about 0.05 dB). The tolerance, 0.3 dB,
 # covers the realisation of one figure point (one block of 4096 symbols in the paper)
 # and the small differences of the amplifier and step models; the agreement is within
-# 0.13 dB. This specification found that the DBP with coarse steps applied the
+# 0.20 dB at the 25 launch powers of the figure (0.15 dB below 2 dBm). This specification found that the DBP with coarse steps applied the
 # nonlinear phase over the step length instead of the effective length (60 % of the
 # phase with one step per span; fixed in Ssfm::backpropagate).
 name: hager2021_fig5
@@ -23,7 +22,7 @@ cases:
   - {receiver: linear, steps: 1, nonlinear: false}
   - {receiver: dbp1, steps: 1, nonlinear: true}
 grid:
-  power_dbm: [-10, -8, -6, -4, -2, 0, 2]
+  power_dbm: {from: -12, to: 2, step: 1}
 link:
   - {type: source, constellation: gaussian, n_symbols: 4096, symbol_rate: 10.7e9}
   - {type: pulse_shape, sps: 6, rolloff: 0.1, n_taps: 6145}

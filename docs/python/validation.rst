@@ -98,7 +98,7 @@ findings, both fixed in comnum:
 - coarse back-propagation applied the nonlinear phase over the step length instead of
   the effective length: with one step per span it applied 60 % of the phase
   (``specs/validation/hager2021_fig5.yaml`` now agrees with Häger & Pfister 2021 within
-  0.13 dB);
+  0.20 dB);
 - OptiCommPy's estimators of MI and GMI normalise the power of the noisy signal,
   which underestimates the rates by 0.06 bit at 0 dB; the declarative metrics use the
   least-squares channel gain, and the OptiCommPy-compatible functions are kept for

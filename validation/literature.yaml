@@ -943,7 +943,7 @@
   area: Optical
   ref: "C. Häger, H. D. Pfister, Physics-based deep learning for fiber-optic communication systems, JSAC 39(1), 2021"
   module: comnum_channel::optical::fiber, comnum_dsp::compensation::dbp
-  tested: "Fig. 5: linear equalisation and DBP with one step per span over 25 x 80 km, within 0.13 dB of the digitised curves; the same with the paper's forward model (500 logarithmic steps per span) within 0.01 dB of the 200 uniform steps of the specification. Fig. 8 (32 GBd over 10 x 100 km, the modified logarithmic steps of Zhang et al. with the factor 0.4): linear equalisation within 0.06 dB, DBP with 2 steps per span within 0.14 dB, with 500 within 0.15 dB, with 4 within 0.12 dB up to 4 dBm; with the paper's nonlinear step (the power at the middle of the step times the step, `nonlinear_length: step`) the DBP with 4 steps within 0.09 dB up to 6 dBm and 0.24 and 0.33 dB at 7 and 8 dBm, with 2 within 0.14 dB. Example 1 of Sec. IV-C (2 steps over 100 km: about 30 and 70 km)"
+  tested: "Fig. 5: linear equalisation and DBP with one step per span over 25 x 80 km, within 0.20 dB of the digitised curves at their 25 points (0.15 dB below 2 dBm); the same with the paper's forward model (500 logarithmic steps per span) within 0.01 dB of the 200 uniform steps of the specification. Fig. 8 (32 GBd over 10 x 100 km, the modified logarithmic steps of Zhang et al. with the factor 0.4): linear equalisation within 0.06 dB, DBP with 2 steps per span within 0.14 dB, with 500 within 0.15 dB, with 4 within 0.12 dB up to 4 dBm; with the paper's nonlinear step (the power at the middle of the step times the step, `nonlinear_length: step`) the DBP with 4 steps within 0.09 dB up to 6 dBm and 0.24 and 0.33 dB at 7 and 8 dBm, with 2 within 0.14 dB. Example 1 of Sec. IV-C (2 steps over 100 km: about 30 and 70 km)"
   tests:
     - specs/validation/hager2021_fig5.yaml
     - specs/validation/hager2021_fig8.yaml
@@ -1003,7 +1003,7 @@
   badge: orange
   not_covered: "Figs. 5, 9, 13 and 15 (a DCF per span, the NLPN compensator of eqs. (2)-(3), BP-MS and BP-SS)"
   remarks:
-    - "not explained: the nonlinear penalty of the figure is larger than comnum's at every distance (linear equalisation 0.114 against 0.204 rad at 25 spans and M/K = 2, BP-1S 0.111 against 0.157 at 80 spans; 0.71 to 0.81 of the figure for the back-propagated curves at 80 spans); the linear-equalisation curve of panel (a) is reproduced at 3 dBm instead of 0 dBm, not the BP curves nor the AWGN limit; the same model reproduces Häger & Pfister 2021 within 0.13 dB; in the figure, linear equalisation is worse at M/K = 3 than at 2 (0.230 against 0.204 at 25 spans) while its BP curves are better, as here"
+    - "not explained: the nonlinear penalty of the figure is larger than comnum's at every distance (linear equalisation 0.114 against 0.204 rad at 25 spans and M/K = 2, BP-1S 0.111 against 0.157 at 80 spans; 0.71 to 0.81 of the figure for the back-propagated curves at 80 spans); the linear-equalisation curve of panel (a) is reproduced at 3 dBm instead of 0 dBm, not the BP curves nor the AWGN limit; the same model reproduces Häger & Pfister 2021 within 0.20 dB; in the figure, linear equalisation is worse at M/K = 3 than at 2 (0.230 against 0.204 at 25 spans) while its BP curves are better, as here"
 - id: eghbali2014
   area: Receiver DSP
   ref: "A. Eghbali et al., Optimal least-squares FIR filters for compensation of chromatic dispersion, JLT 32(8), 2014"

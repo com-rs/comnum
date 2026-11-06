@@ -13,7 +13,8 @@ pulses of roll-off 0.1, propagation at 6 samples per symbol and receivers at 2.
 
 The published values were read from the vector paths of the figure (about 0.05 dB)
 and are the ``expect`` entries of ``specs/validation/hager2021_fig5.yaml``, which CI
-checks within 0.3 dB; the agreement is within 0.13 dB. This script runs that
+checks within 0.3 dB at the 25 launch powers of the figure; the agreement is within
+0.20 dB (0.15 dB below 2 dBm). This script runs that
 specification with two trials per point instead of four and draws the published
 points on the simulated curves. The validation found that the coarse-step DBP applied
 the nonlinear phase over the step length instead of the effective length (60 % of the
