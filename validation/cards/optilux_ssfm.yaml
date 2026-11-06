@@ -1,0 +1,44 @@
+id: optilux_ssfm
+title: Split-step Fourier propagation of 16-QAM over 80 km spans against Optilux
+literature: optilux
+evidence: [recording]
+source:
+  kind: tool
+  reference: "Optilux (GPL-3.0), P. Serena, University of Parma, the release of April 2021, its functions fiber and ampliflat run under Octave 11.3"
+  locator: "recorded fields validation/optilux/ssfm_256.json (tools/record_optilux.py: 16-QAM, 32 GBd, RRC roll-off 0.1, 4 samples per symbol, 4 dBm, 256 symbols; 80 km spans, 0.2 dB/km, 17 ps/nm/km, 1.3 /W/km, symmetric steps of 1 km, noiseless amplification)"
+  version: "Apr 2021"
+description: >
+  The same input field propagated by comnum's scalar split step (Ssfm, symmetric
+  steps of 1 km, ideal amplification of alpha L after every span) and by Optilux's
+  fiber (steptype symm, dzmax 1000 m, the nonlinear-phase rule with an unreachable
+  bound so that every step is 1 km, ampliflat with the gain alpha L). The measured
+  value is the normalised mean square error of comnum's field against the recorded
+  one; the expected value is 0, the same solution. Optilux writes the equation with
+  the opposite sign of the imaginary unit: the recording propagated the conjugate
+  of the field and conjugated the result.
+run:
+  test: validation/tests/fiber/optilux.rs::the_split_step_of_optilux_on_the_same_field
+tier: ci
+duration: "0.2 s on an Apple M6"
+why: >
+  Without the Kerr effect both solvers apply the same dispersion operator, attenuation
+  and gain: the tolerance is the arithmetic (the fields are recorded with 15
+  significant digits). With it they differ by the nonlinear step: comnum rotates the
+  phase by gamma |A|^2 h with the field at the middle of the step, Optilux by
+  gamma |A|^2 L_eff(h) with the effective length (1 - exp(-alpha h)) / alpha of the
+  step (Shao, Liang & Kumar, IEEE Photonics J. 6(4), 2014, cited by its help); the
+  tolerance of each Kerr case is ten times the difference measured on the field of
+  the recording (1.2e-10 after one span, 1.4e-8 after ten).
+findings:
+  - "one span without the Kerr effect: NMSE 3e-28, the two solvers are the same to the arithmetic"
+  - "with the Kerr effect at 1 km steps: NMSE 1.2e-10 after one span and 1.4e-8 after 10 x 80 km, the difference of the nonlinear steps; on the longer field of tests/oracle/optilux_ssfm.npz (2048 symbols) Optilux's field is 1.1e-8 from the step-converged solution (comnum at 0.05 km) and comnum's 3.7e-8: at this step Optilux's effective-length step is the more accurate of the two"
+cases:
+  - inputs: {case: linear_1span}
+    expected: 0
+    tolerance: {atol: 1.0e-24}
+  - inputs: {case: kerr_1span}
+    expected: 0
+    tolerance: {atol: 1.0e-9}
+  - inputs: {case: kerr_10spans}
+    expected: 0
+    tolerance: {atol: 1.5e-7}

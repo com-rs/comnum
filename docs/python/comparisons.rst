@@ -44,13 +44,21 @@ standard or the paper, and documented.
        Octave)
      - split-step Fourier propagation of 16-QAM at 32 GBd over 10 × 80 km with 1 km
        steps, and one span with and without the Kerr effect, on the field of the
-       benchmark scenario (``tests/oracle/test_optilux_oracle.py``)
+       benchmark scenario (``tests/oracle/test_optilux_oracle.py``, the card
+       ``optilux_ssfm``); the amplified link of its example 21, PDM QPSK through 50
+       spans of 150 km with amplifiers of 30 dB gain and 6 dB noise figure (the card
+       ``optilux_ase_link``)
      - to machine precision without the Kerr effect (NMSE 3·10⁻²⁸); 1.2·10⁻¹⁰ after
-       one span and 1.5·10⁻⁸ after ten with it
+       one span and 1.5·10⁻⁸ after ten with it; the SNR after 10 to 50 amplified
+       spans within 0.15 dB of Optilux's estimates and 0.03 dB of the example's
+       formula, the BER within 3 % of the formula
      - the nonlinear step: Optilux applies the phase over the effective length of the
        step, comnum over its length; at 1 km Optilux's field is the closer to the
        step-converged solution (1.1·10⁻⁸ against 3.7·10⁻⁸). Optilux writes the equation
-       with the opposite sign of the imaginary unit, which the recording undoes
+       with the opposite sign of the imaginary unit, which the recording undoes. Its
+       example 21 re-draws the noise of the last span only, so its BER estimates carry
+       the bias of one realisation of the previous spans (1.45·10⁻³ after 20 spans
+       against 8.7·10⁻⁴ of its own formula); its SNR estimates do not
    * - `GNPy <https://github.com/Telecominfraproject/oopt-gnpy>`_ 3.0
        (BSD-3-Clause)
      - Raman power profiles with co- and counter-propagating pumps, their spontaneous

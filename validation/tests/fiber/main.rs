@@ -13,6 +13,7 @@ mod foschini1991;
 mod gordon2000;
 mod ip2008;
 mod musetti2018;
+mod optilux;
 mod pfau2009;
 mod poggiolini2012;
 mod radhakrishnan1997;

@@ -1,0 +1,52 @@
+id: optilux_ase_link
+title: SNR and BER of PDM QPSK through 50 amplified spans, the example 21 of Optilux
+literature: optilux
+evidence: [recording, closed_form]
+source:
+  kind: tool
+  reference: "Optilux (GPL-3.0), P. Serena, University of Parma, the release of April 2021, Examples/ex21_opt_modulation_ase_ber.m run under Octave 11.3"
+  locator: "recorded results validation/optilux/ase_link.json (tools/record_optilux_ase.m: the chain of the example with a stopping rule of 3 % at 95 % confidence or 400 000 bits); the example's formula SNR = P / (F G h nu n R) and BER = 0.5 erfc(sqrt(SNR/2))"
+  version: "Apr 2021"
+description: >
+  Polarisation-multiplexed QPSK at 10 GBd (root-raised cosine of roll-off 0.01, 32
+  samples per symbol, 0 dBm in total) through 50 spans of 150 km of fibre at 0.2 dB/km
+  without dispersion nor Kerr effect, each followed by an amplifier of 30 dB gain and
+  6 dB noise figure at 1550 nm; a root-raised-cosine matched filter, the sample at the
+  symbol instant, the least-squares gain, hard decisions. comnum's chain (the EDFA of
+  comnum_channel::optical::edfa, the pulse on the periodic block) runs 200 independent
+  blocks of 1024 symbols per polarisation, every span's noise drawn anew, and measures
+  the data-aided SNR (Es/N0 per polarisation) and the bit error rate after 10, 20, 30,
+  40 and 50 spans. The expected values are Optilux's SNR estimates (recording) and the
+  SNR and BER of the example's own formula (closed form).
+run:
+  test: validation/tests/fiber/optilux.rs::the_amplified_link_of_example_21
+tier: ci
+duration: "7 s on an Apple M6"
+why: >
+  The SNR estimates of Optilux carry the bias of the example's estimation (below) and
+  its own sampling error (0.1 dB for 4096 samples, its help of samp2snr): 0.3 dB. The
+  formula is exact for this link once the amplifier's n_sp = (G NF - 1) / (2 (G - 1))
+  is written F G / 2 (a relative 1/(F G) = 2.5e-4 difference) and the matched filter
+  of a root-raised cosine has the noise bandwidth of the symbol rate: 0.15 dB on the
+  SNR is the sampling error of 200 blocks; a factor 1.15 on the BER is three times its
+  relative standard deviation at 20 spans (about 360 errors) and the rounding of the
+  closed form at the other spans.
+findings:
+  - "the SNR of comnum's chain follows the example's formula within 0.03 dB from 10 to 50 spans (12.94, 9.92, 8.16, 6.91, 5.95 dB against 12.92, 9.91, 8.15, 6.90, 5.93), and Optilux's estimates within 0.15 dB; its BER is within 3 % of the formula from 20 to 50 spans"
+  - "the example re-draws the noise of the last span only (`E = Esp; fiber; ampliflat; meanestimate` until the accuracy, then `Esp = E`): the previous spans keep one realisation, so its BER estimates carry the bias of that realisation: 1.45e-3 ± 6e-5 after 20 spans against 8.7e-4 of its own formula, 6.9e-3 ± 1.3e-4 after 30 against 5.3e-3, 2.40e-2 ± 3.6e-4 after 50 against 2.39e-2 (a property of the example's loop, which the example's own note calls a bad accuracy; its SNR estimates are within 0.16 dB of the formula); comnum's chain draws every span anew and is compared with the formula"
+  - "the noise of Optilux's ampliflat is sigma^2 = F G h nu B / 4 per quadrature and polarisation, the standard per-polarisation ASE density F G h nu / 2, the convention of comnum's Edfa to 1/(F G)"
+cases:
+  - {inputs: {spans: 10, quantity: snr_db}, expected: 13.02, tolerance: {atol: 0.3}}
+  - {inputs: {spans: 20, quantity: snr_db}, expected: 9.90, tolerance: {atol: 0.3}}
+  - {inputs: {spans: 30, quantity: snr_db}, expected: 8.19, tolerance: {atol: 0.3}}
+  - {inputs: {spans: 40, quantity: snr_db}, expected: 7.06, tolerance: {atol: 0.3}}
+  - {inputs: {spans: 50, quantity: snr_db}, expected: 6.06, tolerance: {atol: 0.3}}
+  - {inputs: {spans: 10, quantity: snr_theory_db}, expected: 12.92, tolerance: {atol: 0.15}}
+  - {inputs: {spans: 20, quantity: snr_theory_db}, expected: 9.91, tolerance: {atol: 0.15}}
+  - {inputs: {spans: 30, quantity: snr_theory_db}, expected: 8.15, tolerance: {atol: 0.15}}
+  - {inputs: {spans: 40, quantity: snr_theory_db}, expected: 6.90, tolerance: {atol: 0.15}}
+  - {inputs: {spans: 50, quantity: snr_theory_db}, expected: 5.93, tolerance: {atol: 0.15}}
+  - {inputs: {spans: 20, quantity: ber_theory}, expected: 8.73e-4, tolerance: {factor: 1.15}}
+  - {inputs: {spans: 30, quantity: ber_theory}, expected: 5.29e-3, tolerance: {factor: 1.15}}
+  - {inputs: {spans: 40, quantity: ber_theory}, expected: 1.34e-2, tolerance: {factor: 1.15}}
+  - {inputs: {spans: 50, quantity: ber_theory}, expected: 2.39e-2, tolerance: {factor: 1.15}}

@@ -53,6 +53,14 @@ and follow [Semantic Versioning](https://semver.org/).
   compares: machine precision without the Kerr effect, NMSE 1.2·10⁻¹⁰ after one span
   and 1.5·10⁻⁸ after 10 × 80 km at 1 km steps (Optilux's nonlinear step uses the
   effective length of the step), both solvers within 4·10⁻⁸ of the solution at 0.05 km.
+  Two validation cards on Optilux, run by `validation/tests/fiber/optilux.rs` from the
+  recordings of `validation/optilux/` (`tools/record_optilux.py`): `optilux_ssfm`, the
+  same three cases on a field of 2⁸ symbols (NMSE 2·10⁻²⁸, 1.2·10⁻¹⁰, 1.4·10⁻⁸), and
+  `optilux_ase_link`, the amplified link of its example 21 (`tools/record_optilux_ase.m`:
+  PDM QPSK through 50 spans of 150 km with amplifiers of 30 dB gain and 6 dB noise
+  figure), the SNR of comnum's chain within 0.15 dB of Optilux's estimates and 0.03 dB
+  of the example's formula, the BER within 3 % of the formula; the example re-draws the
+  noise of the last span only, so its own BER estimates are biased (noted on the card).
 
 ## [0.3.1] — 2026-11-06
 

@@ -233,8 +233,11 @@ outputs are recorded once (``tests/oracle/``), so the tools are not dependencies
        convention gives the complex conjugate, which the comparison undoes.
    * - `Optilux <https://optilux.sourceforge.io/>`_ Apr 2021, under Octave
      - the same scenario at its quick size (2¹¹ symbols), and one span with and
-       without the Kerr effect (``tests/oracle/test_optilux_oracle.py``,
-       recorded by ``tools/record_optilux.py``)
+       without the Kerr effect (``tests/oracle/test_optilux_oracle.py`` and the card
+       ``optilux_ssfm``, recorded by ``tools/record_optilux.py``); the amplified link
+       of its example 21, PDM QPSK through 50 spans with noisy amplifiers (the card
+       ``optilux_ase_link``: the SNR within 0.15 dB of its estimates and 0.03 dB of
+       its formula, the BER within 3 % of the formula)
      - NMSE :math:`3 \cdot 10^{-28}` without the Kerr effect, :math:`1.2 \cdot 10^{-10}`
        after one span and :math:`1.5 \cdot 10^{-8}` after ten with it: Optilux's
        nonlinear step uses the effective length of the step, comnum its length;

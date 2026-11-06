@@ -216,7 +216,7 @@ Optical
      - Bromage 2004 eqs. (3)–(5), Figs. 7–8; Hu et al. 2004 eq. (2); GNPy outputs; Semrau & Bayvel 2018 eq. (10)
    * - EDFA and PMD
      - A
-     - the Maxwellian DGD of Foschini & Poole 1991 Fig. 3; the accumulated ASE
+     - the Maxwellian DGD of Foschini & Poole 1991 Fig. 3; the accumulated ASE; Optilux outputs
    * - Optical front ends (laser, modulators, photodiodes, coherent receiver)
      - A
      - OptiCommPy outputs
