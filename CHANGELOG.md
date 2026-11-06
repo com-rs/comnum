@@ -6,6 +6,14 @@ and follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.3.1] — 2026-11-06
+
+### Fixed
+
+- `validation/cards/goldsmith1997_adaptive_mqam.yaml` wrote the target BER of the two
+  Fig. 10 cases as `1e-06`, which YAML 1.1 reads as a string: `tests/test_cards.py`
+  failed in CI. The value is `1.0e-6`, unchanged.
+
 ## [0.3.0] — 2026-11-06
 
 Eight references reproduced and recorded as validation cards (Gardner 1986, Zheng & Xiao

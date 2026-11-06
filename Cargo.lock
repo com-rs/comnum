@@ -95,7 +95,7 @@ checksum = "1c133bc6a41be0d194c306b5506d15e6feeea7b1d6604bd3f8310dfb2ca96486"
 
 [[package]]
 name = "comnum"
-version = "0.3.0"
+version = "0.3.1"
 dependencies = [
  "comnum-channel",
  "comnum-core",
@@ -116,7 +116,7 @@ dependencies = [
 
 [[package]]
 name = "comnum-channel"
-version = "0.3.0"
+version = "0.3.1"
 dependencies = [
  "comnum-core",
  "comnum-dsp",
@@ -127,7 +127,7 @@ dependencies = [
 
 [[package]]
 name = "comnum-core"
-version = "0.3.0"
+version = "0.3.1"
 dependencies = [
  "ndarray",
  "num-complex",
@@ -136,7 +136,7 @@ dependencies = [
 
 [[package]]
 name = "comnum-dsp"
-version = "0.3.0"
+version = "0.3.1"
 dependencies = [
  "comnum-core",
  "comnum-math",
@@ -145,7 +145,7 @@ dependencies = [
 
 [[package]]
 name = "comnum-fec"
-version = "0.3.0"
+version = "0.3.1"
 dependencies = [
  "comnum-core",
  "comnum-math",
@@ -153,7 +153,7 @@ dependencies = [
 
 [[package]]
 name = "comnum-hardware"
-version = "0.3.0"
+version = "0.3.1"
 dependencies = [
  "comnum-core",
  "comnum-dsp",
@@ -162,7 +162,7 @@ dependencies = [
 
 [[package]]
 name = "comnum-mapping"
-version = "0.3.0"
+version = "0.3.1"
 dependencies = [
  "comnum-core",
  "comnum-math",
@@ -171,7 +171,7 @@ dependencies = [
 
 [[package]]
 name = "comnum-math"
-version = "0.3.0"
+version = "0.3.1"
 dependencies = [
  "comnum-core",
  "ndarray",
@@ -181,7 +181,7 @@ dependencies = [
 
 [[package]]
 name = "comnum-metrics"
-version = "0.3.0"
+version = "0.3.1"
 dependencies = [
  "comnum-core",
  "comnum-dsp",
@@ -191,7 +191,7 @@ dependencies = [
 
 [[package]]
 name = "comnum-mimo"
-version = "0.3.0"
+version = "0.3.1"
 dependencies = [
  "comnum-core",
  "comnum-mapping",
@@ -201,7 +201,7 @@ dependencies = [
 
 [[package]]
 name = "comnum-py"
-version = "0.3.0"
+version = "0.3.1"
 dependencies = [
  "comnum",
  "ndarray",
@@ -214,7 +214,7 @@ dependencies = [
 
 [[package]]
 name = "comnum-sim"
-version = "0.3.0"
+version = "0.3.1"
 dependencies = [
  "comnum-channel",
  "comnum-core",
@@ -226,7 +226,7 @@ dependencies = [
 
 [[package]]
 name = "comnum-spec"
-version = "0.3.0"
+version = "0.3.1"
 dependencies = [
  "comnum-channel",
  "comnum-core",
@@ -249,7 +249,7 @@ dependencies = [
 
 [[package]]
 name = "comnum-systems"
-version = "0.3.0"
+version = "0.3.1"
 dependencies = [
  "comnum-core",
  "comnum-dsp",
@@ -262,7 +262,7 @@ dependencies = [
 
 [[package]]
 name = "comnum-validation"
-version = "0.3.0"
+version = "0.3.1"
 dependencies = [
  "comnum",
  "ndarray",
@@ -271,7 +271,7 @@ dependencies = [
 
 [[package]]
 name = "comnum-waveform"
-version = "0.3.0"
+version = "0.3.1"
 dependencies = [
  "comnum-core",
  "comnum-dsp",
