@@ -15,6 +15,9 @@ and follow [Semantic Versioning](https://semver.org/).
   version. Results on the laptop unchanged. The scenarios 2 and 3 name the Rayleigh
   block's `coherence_samples` (the field was renamed after the recorded run), and the
   GPU mode gives Sionna the device as `cuda:0`, the form its `config.device` accepts.
+  Inside a container the thread pools of the modes `all` and `gpu` are sized to the CPU
+  quota (cgroup `cpu.max`, the affinity mask) instead of the host's core count, which
+  oversubscribed a RunPod pod; the quota is recorded as `cpus_available`.
 
 ## [0.3.1] — 2026-11-06
 

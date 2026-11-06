@@ -60,13 +60,44 @@ THREAD_VARS = [
 REPEATS = 5
 
 
+def available_cpus() -> int:
+    """The CPUs this process may use: ``os.cpu_count()`` bounded by the affinity mask
+    and by the cgroup CPU quota (a container, a RunPod pod: the host has far more cores
+    than the pod may use, and a pool sized by ``os.cpu_count()`` oversubscribes the
+    quota)."""
+    n = os.cpu_count() or 1
+    if hasattr(os, "sched_getaffinity"):
+        n = min(n, len(os.sched_getaffinity(0)))
+    quota: float | None = None
+    try:  # cgroup v2: "max 100000" or "<quota> <period>"
+        q, period = Path("/sys/fs/cgroup/cpu.max").read_text().split()
+        if q != "max":
+            quota = int(q) / int(period)
+    except (OSError, ValueError):
+        try:  # cgroup v1
+            q = int(Path("/sys/fs/cgroup/cpu/cpu.cfs_quota_us").read_text())
+            period = int(Path("/sys/fs/cgroup/cpu/cpu.cfs_period_us").read_text())
+            if q > 0:
+                quota = q / period
+        except (OSError, ValueError):
+            pass
+    if quota is not None:
+        n = min(n, max(1, math.ceil(quota)))
+    return n
+
+
 def thread_env(lib: str, threads: str, base: dict[str, str] | None = None) -> dict[str, str]:
-    """The environment of a run of ``lib`` in the mode ``threads`` ("1", "all" or "gpu")."""
+    """The environment of a run of ``lib`` in the mode ``threads`` ("1", "all" or "gpu").
+    In the modes "all" and "gpu" the pools are left at the library defaults, except
+    inside a container whose CPU quota is below ``os.cpu_count()``: the pools are then
+    sized to the quota (the default would oversubscribe it)."""
     env = dict(os.environ if base is None else base)
     for v in THREAD_VARS:
         env.pop(v, None)
     if threads == "1":
         env.update({v: "1" for v in THREAD_VARS})
+    elif (n := available_cpus()) < (os.cpu_count() or 1):
+        env.update({v: str(n) for v in THREAD_VARS})
     env.pop("NUMBA_DISABLE_JIT", None)
     if lib == "opticommpy-nojit":
         env["NUMBA_DISABLE_JIT"] = "1"
@@ -107,6 +138,8 @@ def setup_torch(threads: str) -> dict:
     if threads == "1":
         torch.set_num_threads(1)
         torch.set_num_interop_threads(1)
+    elif (n := available_cpus()) < (os.cpu_count() or 1):
+        torch.set_num_threads(n)  # a container: the quota, not the host's cores
     if threads == "gpu":
         device = os.environ.get("COMNUM_BENCH_DEVICE", "cuda:0")
         if device == "cuda":
@@ -287,6 +320,7 @@ def machine_info() -> dict:
         or _linux_cpu()
         or platform.processor(),
         "logical_cores": os.cpu_count(),
+        "cpus_available": available_cpus(),
         "physical_cores": _run(["sysctl", "-n", "hw.physicalcpu"]) or _linux_physical_cores(),
         "core_levels": [],
         "ram_gb": None,
@@ -350,7 +384,7 @@ def git_commit() -> dict:
 
 def threading_info() -> dict:
     """The thread pools of the libraries loaded by the run, as they ended up."""
-    info: dict = {"cpu_count": os.cpu_count()}
+    info: dict = {"cpu_count": os.cpu_count(), "cpus_available": available_cpus()}
     if "numba" in sys.modules:
         import numba
 

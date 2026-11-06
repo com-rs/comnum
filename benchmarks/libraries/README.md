@@ -122,4 +122,7 @@ RunPod pods get a slice of the host's CPU that depends on the GPU type. A secure
 RTX 4090 pod (24 GB, the GPU of a lab workstation) and an H100 or A100 pod (the
 data-centre reference) make two useful points, each under an hour; take the pod with
 the most vCPUs offered for that GPU, and note the CPU model the result file records.
+Inside a pod `os.cpu_count()` is the host's core count, far above the pod's quota:
+the scripts size the pools of the mode *all threads* to the quota (`cgroup cpu.max`,
+the affinity mask), recorded as `cpus_available` next to `logical_cores`.
 The "RunPod PyTorch" template (CUDA 12) is the one the script assumes.

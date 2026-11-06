@@ -508,6 +508,11 @@ def machine_section(data: dict) -> list[str]:
     cores = f"{m['logical_cores']} logical"
     if m.get("core_levels"):
         cores += " (" + ", ".join(lv.lower() for lv in m["core_levels"]) + ")"
+    if m.get("cpus_available") and m["cpus_available"] < m["logical_cores"]:
+        cores += (
+            f"; {m['cpus_available']} available to the process (a container's CPU quota:"
+            " the thread pools of the mode *all threads* are sized to it)"
+        )
     out = heading("Machine and versions", "-")
     rows = [
         ["CPU", m.get("cpu") or "—"],
