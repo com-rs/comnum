@@ -231,6 +231,15 @@ outputs are recorded once (``tests/oracle/``), so the tools are not dependencies
        :math:`4.8 \cdot 10^{-26}` (Sionna); all three are :math:`3.7 \cdot 10^{-8}`
        from the reference at 0.05 km (:doc:`../benchmarks`). Sionna's sign
        convention gives the complex conjugate, which the comparison undoes.
+   * - `Optilux <https://optilux.sourceforge.io/>`_ Apr 2021, under Octave
+     - the same scenario at its quick size (2¹¹ symbols), and one span with and
+       without the Kerr effect (``tests/oracle/test_optilux_oracle.py``,
+       recorded by ``tools/record_optilux.py``)
+     - NMSE :math:`3 \cdot 10^{-28}` without the Kerr effect, :math:`1.2 \cdot 10^{-10}`
+       after one span and :math:`1.5 \cdot 10^{-8}` after ten with it: Optilux's
+       nonlinear step uses the effective length of the step, comnum its length;
+       Optilux is :math:`1.1 \cdot 10^{-8}` from the solution at 0.05 km, comnum
+       :math:`3.7 \cdot 10^{-8}`. Optilux's sign convention is the conjugate too.
    * - `GNPy <https://github.com/Telecominfraproject/oopt-gnpy>`_ 3.0
      - Raman power profiles with co- and counter-pumps, their spontaneous noise,
        the generalised GN model (``tests/oracle/test_gnpy_oracle.py``)

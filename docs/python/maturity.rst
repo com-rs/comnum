@@ -207,7 +207,7 @@ Optical
      - Strongest evidence
    * - Fibre: linear, split-step Fourier, Manakov, back-propagation
      - A
-     - OptiCommPy outputs; Häger & Pfister 2021 Figs. 5 and 8; Ip & Kahn 2008 Fig. 12 (in part)
+     - OptiCommPy and Optilux outputs; Häger & Pfister 2021 Figs. 5 and 8; Ip & Kahn 2008 Fig. 12 (in part)
    * - GN and EGN models
      - A
      - Carena et al. 2014 Fig. 1(a); GNPy outputs; Semrau, Killey & Bayvel 2019 Figs. 4a, 4b, 5

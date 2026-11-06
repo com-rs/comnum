@@ -110,8 +110,8 @@ comnum/
 │                              # (validation cards), aff3ct/ fixtures, literature.yaml,
 │                              # maturity.yaml
 ├── specs/                     # specifications; specs/validation/: checked against the literature
-├── tests/                     # Python tests; tests/oracle/: recorded OptiCommPy, GNPy, py3gpp
-│                              # and Sionna outputs
+├── tests/                     # Python tests; tests/oracle/: recorded OptiCommPy, GNPy, py3gpp,
+│                              # Sionna, GNU Radio and Optilux outputs
 ├── examples/                  # runnable examples of the facade; data/: a synthetic SigMF
 │                              # capture (`just make-capture`)
 ├── benchmarks/                # rust/: criterion benchmarks of the facade; opticommpy/: speed
@@ -881,7 +881,7 @@ module is summarised in [`MATURITY.md`](MATURITY.md).
 | Integration | `crates/comnum/tests/` (`links`, `simulation`, `specs`), `crates/comnum-spec/tests/extension.rs` | End-to-end links against closed forms, the runner (thread independence, stopping rules), every specification runs one trial per condition | `cargo test`, every push |
 | Specifications | `specs/validation/*.yaml` and `specs/*.yaml` with an `expect` section | Simulated results against closed forms, tables of standards and published curves | `comnum verify`: five in CI; the others with `just validate`, `validation/tests/simulation/specs.rs` or `tests/test_performance.py` |
 | Statistical | `validation/tests/<theme>/<key>.rs` (crate `comnum-validation`, one test binary per theme) | Monte Carlo curves against closed forms, published figures and tables, standards and the industry, and recorded AFF3CT runs | quick tests with `cargo test`, every push; `#[ignore]` ones on demand (`just card <id>`, `cargo test --release -p comnum-validation -- --ignored`, or `validation.yml` started by hand) |
-| Oracle | `tests/oracle/test_*.py`, the recordings beside them | The blocks against the recorded outputs of OptiCommPy, GNPy, py3gpp, Sionna and GNU Radio on the same inputs | `python -m pytest`, every push |
+| Oracle | `tests/oracle/test_*.py`, the recordings beside them | The blocks against the recorded outputs of OptiCommPy, GNPy, py3gpp, Sionna, GNU Radio and Optilux on the same inputs | `python -m pytest`, every push |
 | Classical results | `tests/test_performance.py` and the gallery of `docs/python` | Textbook results end to end from Python | `python -m pytest`; the gallery when the documentation is built |
 | Benchmark | `benchmarks/rust/blocks.rs` (criterion), `benchmarks/opticommpy/bench_opticommpy.py`, `benchmarks/libraries/` | Throughput; speed and agreement against OptiCommPy; results and speed against komm, OptiCommPy and Sionna | on demand (`validation.yml` with its benchmarks switch, `just bench-rust`, `just bench`, `just bench-libraries`); not compared with a threshold |
 
@@ -957,7 +957,9 @@ when a file is missing, so neither tool is needed. Re-recording
 (`pip install --group oracle`, `COMNUM_RECORD_ORACLE=1 python -m pytest
 tests/oracle/test_oracle.py tests/oracle/test_gnpy_oracle.py`) is a deliberate act, named in the
 commit message with the version of the tool; re-recording an unchanged oracle
-produces no diff.
+produces no diff. Tools that are not Python packages are recorded by a script of
+`tools/` with the same functions: `tools/record_gr_dtv.py` (GNU Radio) and
+`tools/record_optilux.py` (Optilux under Octave, `tools/record_optilux.m`).
 
 ### The AFF3CT fixtures
 

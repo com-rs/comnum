@@ -40,6 +40,17 @@ standard or the paper, and documented.
        leaves 0.45 dB of error on WDM links, so the Manakov solver of comnum uses other
        defaults (``docs/adr/0013-manakov-defaults.md``; all the fibre comparisons:
        :doc:`user_guide/fibre_validation`)
+   * - `Optilux <https://optilux.sourceforge.io/>`_ Apr 2021 (GPL-3.0, under
+       Octave)
+     - split-step Fourier propagation of 16-QAM at 32 GBd over 10 × 80 km with 1 km
+       steps, and one span with and without the Kerr effect, on the field of the
+       benchmark scenario (``tests/oracle/test_optilux_oracle.py``)
+     - to machine precision without the Kerr effect (NMSE 3·10⁻²⁸); 1.2·10⁻¹⁰ after
+       one span and 1.5·10⁻⁸ after ten with it
+     - the nonlinear step: Optilux applies the phase over the effective length of the
+       step, comnum over its length; at 1 km Optilux's field is the closer to the
+       step-converged solution (1.1·10⁻⁸ against 3.7·10⁻⁸). Optilux writes the equation
+       with the opposite sign of the imaginary unit, which the recording undoes
    * - `GNPy <https://github.com/Telecominfraproject/oopt-gnpy>`_ 3.0
        (BSD-3-Clause)
      - Raman power profiles with co- and counter-propagating pumps, their spontaneous

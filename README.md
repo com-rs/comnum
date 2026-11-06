@@ -219,7 +219,7 @@ Summary: 75 modules: 70 at A, 3 at B, 2 at C.
 
 | Module | Level | Strongest evidence |
 |---|---|---|
-| Fibre: linear, split-step Fourier, Manakov, back-propagation | A | OptiCommPy outputs; Häger & Pfister 2021 Figs. 5 and 8; Ip & Kahn 2008 Fig. 12 (in part) |
+| Fibre: linear, split-step Fourier, Manakov, back-propagation | A | OptiCommPy and Optilux outputs; Häger & Pfister 2021 Figs. 5 and 8; Ip & Kahn 2008 Fig. 12 (in part) |
 | GN and EGN models | A | Carena et al. 2014 Fig. 1(a); GNPy outputs; Semrau, Killey & Bayvel 2019 Figs. 4a, 4b, 5 |
 | Raman amplification and ISRS | A | Bromage 2004 eqs. (3)–(5), Figs. 7–8; Hu et al. 2004 eq. (2); GNPy outputs; Semrau & Bayvel 2018 eq. (10) |
 | EDFA and PMD | A | the Maxwellian DGD of Foschini & Poole 1991 Fig. 3; the accumulated ASE |

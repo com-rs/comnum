@@ -47,6 +47,12 @@ and follow [Semantic Versioning](https://semver.org/).
   machines with their provenance, the CPU comparison with charts, then what a GPU
   changes, the limits), generated with its SVG charts by `tools/benchmarks_page.py`
   from the headline cases; every number moves to `docs/python/benchmarks_details.rst`.
+- Optilux (Apr 2021, GPL-3.0, under Octave) as a recorded oracle of the split-step:
+  `tools/record_optilux.py` runs its `fiber` and `ampliflat` (`tools/record_optilux.m`)
+  on the field of the benchmark scenario and `tests/oracle/test_optilux_oracle.py`
+  compares: machine precision without the Kerr effect, NMSE 1.2·10⁻¹⁰ after one span
+  and 1.5·10⁻⁸ after 10 × 80 km at 1 km steps (Optilux's nonlinear step uses the
+  effective length of the step), both solvers within 4·10⁻⁸ of the solution at 0.05 km.
 
 ## [0.3.1] — 2026-11-06
 
