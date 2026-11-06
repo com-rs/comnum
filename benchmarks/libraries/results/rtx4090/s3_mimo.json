@@ -1,0 +1,1658 @@
+{
+ "scenario": "s3_mimo",
+ "title": "4 x 4 MIMO, 16-QAM, i.i.d. Rayleigh fading: ZF, MMSE and ML detection",
+ "description": "Scenario 3: 4 x 4 spatial multiplexing of Gray 16-QAM over i.i.d. Rayleigh fading (one channel matrix per vector, known at the receiver), detected by zero forcing, MMSE and maximum likelihood.",
+ "script": "benchmarks/libraries/s3_mimo.py",
+ "parameters": {
+  "ebn0_db": [
+   0.0,
+   4.0,
+   8.0,
+   12.0,
+   16.0
+  ],
+  "vectors_per_point": "linear detectors and sphere: 10^5 (quick: 5\u00b710^3); exhaustive ML: 2\u00b710^4 (quick: 10^3)",
+  "timing": "10^4 vectors at Eb/N0 = 12 dB (exhaustive ML: 10^3; quick: 2\u00b710^3 and 2\u00b710^2)",
+  "theory": "ZF: 16-QAM over SISO Rayleigh fading (Winters, Salz & Gitlin, IEEE Trans. Commun. 42(2/3/4), 1994)"
+ },
+ "quick": false,
+ "generated_utc": "2026-11-06T18:21:32+00:00",
+ "machine": {
+  "platform": "Linux-6.8.0-147-generic-x86_64-with-glibc2.39",
+  "machine": "x86_64",
+  "python": "3.12.3",
+  "cpu": "AMD EPYC 7K62 48-Core Processor",
+  "logical_cores": 96,
+  "cpus_available": 11,
+  "physical_cores": "48",
+  "core_levels": [],
+  "ram_gb": 251.5,
+  "macos": null,
+  "linux": "Ubuntu 24.04.5 LTS",
+  "rustc": null,
+  "gpu": {
+   "name": "NVIDIA GeForce RTX 4090",
+   "memory": "24564 MiB",
+   "driver": "595.91.07"
+  }
+ },
+ "git": {
+  "commit": "45a7c78f80fcfe29dd0fc8b41e22a6d945d9391f",
+  "dirty": false
+ },
+ "versions": {
+  "comnum": "0.3.1",
+  "komm": null,
+  "OptiCommPy": "0.11.0",
+  "sionna": "2.2.0",
+  "torch": "2.13.0+cu130",
+  "numba": "0.68.1",
+  "cupy": null,
+  "cupy-cuda12x": null,
+  "cupy-cuda13x": "14.2.0",
+  "llvmlite": "0.50.0",
+  "numpy": "2.5.2",
+  "scipy": "1.18.1"
+ },
+ "libraries": {
+  "comnum": "comnum from Python: the functions of the comnum package, called block by block",
+  "comnum-spec": "comnum from Python: comnum.run_spec, the parallel Monte Carlo runner of Rust",
+  "opticommpy": "OptiCommPy with numba (its @njit kernels compiled; its CuPy split-step on the GPU in the mode gpu)",
+  "sionna": "Sionna PHY (PyTorch, eager mode; the CPU, or the GPU in the mode gpu)"
+ },
+ "support": {
+  "zf": {
+   "comnum": true,
+   "comnum-spec": true,
+   "opticommpy": "no MIMO detection (only the 2 x 2 adaptive equalisers of polarisation multiplexing)",
+   "sionna": true
+  },
+  "mmse": {
+   "comnum": true,
+   "comnum-spec": true,
+   "opticommpy": "no MIMO detection (only the 2 x 2 adaptive equalisers of polarisation multiplexing)",
+   "sionna": true
+  },
+  "ml": {
+   "comnum": true,
+   "comnum-spec": true,
+   "opticommpy": "no MIMO detection (only the 2 x 2 adaptive equalisers of polarisation multiplexing)",
+   "sionna": true
+  },
+  "sphere": {
+   "comnum": true,
+   "comnum-spec": true,
+   "opticommpy": "no MIMO detection (only the 2 x 2 adaptive equalisers of polarisation multiplexing)",
+   "sionna": "no sphere decoder (its exhaustive ML detector is the case ml)"
+  }
+ },
+ "thread_modes": [
+  "1",
+  "all",
+  "gpu"
+ ],
+ "commands": [
+  "python run_all.py --scenarios s1_awgn,s2_rayleigh,s3_mimo,s4_coding,s5_ssfm --libs comnum,comnum-spec,opticommpy,sionna --threads 1,all,gpu --results results/runpod --no-rust-build"
+ ],
+ "runs": [
+  {
+   "scenario": "s3_mimo",
+   "library": "comnum",
+   "threads": "1",
+   "quick": false,
+   "timing_only": false,
+   "env": {
+    "OMP_NUM_THREADS": "1",
+    "OPENBLAS_NUM_THREADS": "1",
+    "MKL_NUM_THREADS": "1",
+    "VECLIB_MAXIMUM_THREADS": "1",
+    "NUMBA_NUM_THREADS": "1",
+    "RAYON_NUM_THREADS": "1",
+    "NUMBA_DISABLE_JIT": null
+   },
+   "versions": {
+    "comnum": "0.3.1",
+    "komm": null,
+    "OptiCommPy": "0.11.0",
+    "sionna": "2.2.0",
+    "torch": "2.13.0+cu130",
+    "numba": "0.68.1",
+    "cupy": null,
+    "cupy-cuda12x": null,
+    "cupy-cuda13x": "14.2.0",
+    "llvmlite": "0.50.0",
+    "numpy": "2.5.2",
+    "scipy": "1.18.1"
+   },
+   "wall_s": 154.17078557191417,
+   "threading": {
+    "cpu_count": 96,
+    "cpus_available": 11
+   },
+   "cases": [
+    {
+     "case": "zf",
+     "precision": "float64",
+     "first_call_s": 0.0327876228839159,
+     "points": [
+      {
+       "errors": 316520,
+       "total": 1600000,
+       "frames": 100000,
+       "value": 0.197825,
+       "lo": 0.19691866690507476,
+       "hi": 0.19873133309492524,
+       "se": 0.0004624148443496193,
+       "ci": "per-frame",
+       "ebn0_db": 0.0,
+       "vectors": 100000,
+       "theory": 0.19757395798903504,
+       "z": 0.5428934949483412
+      },
+      {
+       "errors": 190564,
+       "total": 1600000,
+       "frames": 100000,
+       "value": 0.1191025,
+       "lo": 0.11829385711769347,
+       "hi": 0.11991114288230653,
+       "se": 0.0004125728991359842,
+       "ci": "per-frame",
+       "ebn0_db": 4.0,
+       "vectors": 100000,
+       "theory": 0.11987748450526879,
+       "z": -1.8784183519852482
+      },
+      {
+       "errors": 98610,
+       "total": 1600000,
+       "frames": 100000,
+       "value": 0.06163125,
+       "lo": 0.06098993539173925,
+       "hi": 0.06227256460826075,
+       "se": 0.00032720133074528197,
+       "ci": "per-frame",
+       "ebn0_db": 8.0,
+       "vectors": 100000,
+       "theory": 0.06198768029901046,
+       "z": -1.0893302242952432
+      },
+      {
+       "errors": 45159,
+       "total": 1600000,
+       "frames": 100000,
+       "value": 0.028224375,
+       "lo": 0.027767111787822433,
+       "hi": 0.028681638212177566,
+       "se": 0.00023329755723345207,
+       "ci": "per-frame",
+       "ebn0_db": 12.0,
+       "vectors": 100000,
+       "theory": 0.028251418589803318,
+       "z": -0.11591887255063153
+      },
+      {
+       "errors": 19326,
+       "total": 1600000,
+       "frames": 100000,
+       "value": 0.01207875,
+       "lo": 0.01177068334841078,
+       "hi": 0.012386816651589218,
+       "se": 0.00015717686305572395,
+       "ci": "per-frame",
+       "ebn0_db": 16.0,
+       "vectors": 100000,
+       "theory": 0.011958373375334508,
+       "z": 0.7658673313947881
+      }
+     ],
+     "sweep_s": 1.7519159701187164,
+     "timing": {
+      "warmup_s": 0.03002894390374422,
+      "median_s": 0.029927602969110012,
+      "min_s": 0.028459432069212198,
+      "max_s": 0.042013493832200766,
+      "times_s": [
+       0.028965948848053813,
+       0.04132904298603535,
+       0.029927602969110012,
+       0.028459432069212198,
+       0.042013493832200766
+      ],
+      "repeats": 5,
+      "units": 10000,
+      "unit": "vector",
+      "workload": "10000 vectors at Eb/N0 = 12.0 dB"
+     }
+    },
+    {
+     "case": "mmse",
+     "precision": "float64",
+     "first_call_s": 0.030638132011517882,
+     "points": [
+      {
+       "errors": 222213,
+       "total": 1600000,
+       "frames": 100000,
+       "value": 0.138883125,
+       "lo": 0.13824397598365396,
+       "hi": 0.13952227401634604,
+       "se": 0.0003260964369112386,
+       "ci": "per-frame",
+       "ebn0_db": 0.0,
+       "vectors": 100000
+      },
+      {
+       "errors": 132308,
+       "total": 1600000,
+       "frames": 100000,
+       "value": 0.0826925,
+       "lo": 0.08212557763229274,
+       "hi": 0.08325942236770727,
+       "se": 0.0002892461059730938,
+       "ci": "per-frame",
+       "ebn0_db": 4.0,
+       "vectors": 100000
+      },
+      {
+       "errors": 68950,
+       "total": 1600000,
+       "frames": 100000,
+       "value": 0.04309375,
+       "lo": 0.0426415800524847,
+       "hi": 0.0435459199475153,
+       "se": 0.0002306989528139287,
+       "ci": "per-frame",
+       "ebn0_db": 8.0,
+       "vectors": 100000
+      },
+      {
+       "errors": 31511,
+       "total": 1600000,
+       "frames": 100000,
+       "value": 0.019694375,
+       "lo": 0.01937258389398454,
+       "hi": 0.02001616610601546,
+       "se": 0.00016417913572217333,
+       "ci": "per-frame",
+       "ebn0_db": 12.0,
+       "vectors": 100000
+      },
+      {
+       "errors": 13475,
+       "total": 1600000,
+       "frames": 100000,
+       "value": 0.008421875,
+       "lo": 0.008204198464785284,
+       "hi": 0.008639551535214717,
+       "se": 0.00011105945674220216,
+       "ci": "per-frame",
+       "ebn0_db": 16.0,
+       "vectors": 100000
+      }
+     ],
+     "sweep_s": 1.714118781965226,
+     "timing": {
+      "warmup_s": 0.04082903591915965,
+      "median_s": 0.032108345068991184,
+      "min_s": 0.028193017933517694,
+      "max_s": 0.04663377208635211,
+      "times_s": [
+       0.02859773114323616,
+       0.033042625058442354,
+       0.04663377208635211,
+       0.032108345068991184,
+       0.028193017933517694
+      ],
+      "repeats": 5,
+      "units": 10000,
+      "unit": "vector",
+      "workload": "10000 vectors at Eb/N0 = 12.0 dB"
+     }
+    },
+    {
+     "case": "ml",
+     "precision": "float64",
+     "first_call_s": 1.59355468605645,
+     "points": [
+      {
+       "errors": 39890,
+       "total": 320000,
+       "frames": 20000,
+       "value": 0.12465625,
+       "lo": 0.12282909110302945,
+       "hi": 0.12648340889697055,
+       "se": 0.0009322239270257875,
+       "ci": "per-frame",
+       "ebn0_db": 0.0,
+       "vectors": 20000
+      },
+      {
+       "errors": 12902,
+       "total": 320000,
+       "frames": 20000,
+       "value": 0.04031875,
+       "lo": 0.03903009405975509,
+       "hi": 0.04160740594024491,
+       "se": 0.000657477520533117,
+       "ci": "per-frame",
+       "ebn0_db": 4.0,
+       "vectors": 20000
+      },
+      {
+       "errors": 1319,
+       "total": 320000,
+       "frames": 20000,
+       "value": 0.004121875,
+       "lo": 0.0036788264553546477,
+       "hi": 0.004564923544645352,
+       "se": 0.00022604517583946524,
+       "ci": "per-frame",
+       "ebn0_db": 8.0,
+       "vectors": 20000
+      },
+      {
+       "errors": 75,
+       "total": 320000,
+       "frames": 20000,
+       "value": 0.000234375,
+       "lo": 0.00012400002100897996,
+       "hi": 0.00034474997899102,
+       "se": 5.631376479133674e-05,
+       "ci": "per-frame",
+       "ebn0_db": 12.0,
+       "vectors": 20000
+      },
+      {
+       "errors": 0,
+       "total": 320000,
+       "frames": 20000,
+       "value": 0.0,
+       "lo": 0.0,
+       "hi": 9.375e-06,
+       "se": 0.0,
+       "ci": "per-frame",
+       "ebn0_db": 16.0,
+       "vectors": 20000
+      }
+     ],
+     "sweep_s": 138.2522892660927,
+     "timing": {
+      "warmup_s": 1.3343265941366553,
+      "median_s": 1.3148284549824893,
+      "min_s": 1.3127507190220058,
+      "max_s": 1.3182637260761112,
+      "times_s": [
+       1.313121470157057,
+       1.3155596489086747,
+       1.3182637260761112,
+       1.3127507190220058,
+       1.3148284549824893
+      ],
+      "repeats": 5,
+      "units": 1000,
+      "unit": "vector",
+      "workload": "1000 vectors at Eb/N0 = 12.0 dB"
+     }
+    },
+    {
+     "case": "sphere",
+     "precision": "float64",
+     "first_call_s": 0.03585500502958894,
+     "points": [
+      {
+       "errors": 198834,
+       "total": 1600000,
+       "frames": 100000,
+       "value": 0.12427125,
+       "lo": 0.12345403740126752,
+       "hi": 0.1250884625987325,
+       "se": 0.0004169452034349378,
+       "ci": "per-frame",
+       "ebn0_db": 0.0,
+       "vectors": 100000
+      },
+      {
+       "errors": 63560,
+       "total": 1600000,
+       "frames": 100000,
+       "value": 0.039725,
+       "lo": 0.0391505736577278,
+       "hi": 0.04029942634227221,
+       "se": 0.00029307466442459547,
+       "ci": "per-frame",
+       "ebn0_db": 4.0,
+       "vectors": 100000
+      },
+      {
+       "errors": 7098,
+       "total": 1600000,
+       "frames": 100000,
+       "value": 0.00443625,
+       "lo": 0.004228532216645396,
+       "hi": 0.004643967783354604,
+       "se": 0.00010597846089520612,
+       "ci": "per-frame",
+       "ebn0_db": 8.0,
+       "vectors": 100000
+      },
+      {
+       "errors": 305,
+       "total": 1600000,
+       "frames": 100000,
+       "value": 0.000190625,
+       "lo": 0.0001494445692485798,
+       "hi": 0.00023180543075142023,
+       "se": 2.1010423852765427e-05,
+       "ci": "per-frame",
+       "ebn0_db": 12.0,
+       "vectors": 100000
+      },
+      {
+       "errors": 5,
+       "total": 1600000,
+       "frames": 100000,
+       "value": 3.125e-06,
+       "lo": 0.0,
+       "hi": 6.3660036847863735e-06,
+       "se": 1.6535733085644762e-06,
+       "ci": "per-frame",
+       "ebn0_db": 16.0,
+       "vectors": 100000
+      }
+     ],
+     "sweep_s": 2.227701449068263,
+     "timing": {
+      "warmup_s": 0.03271889500319958,
+      "median_s": 0.03272599494084716,
+      "min_s": 0.03238842310383916,
+      "max_s": 0.03442054917104542,
+      "times_s": [
+       0.03425199305638671,
+       0.032482946990057826,
+       0.03272599494084716,
+       0.03442054917104542,
+       0.03238842310383916
+      ],
+      "repeats": 5,
+      "units": 10000,
+      "unit": "vector",
+      "workload": "10000 vectors at Eb/N0 = 12.0 dB"
+     }
+    }
+   ],
+   "command": "OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 VECLIB_MAXIMUM_THREADS=1 NUMBA_NUM_THREADS=1 RAYON_NUM_THREADS=1 python s3_mimo.py --lib comnum --threads 1 --work runpod/_work --out runpod/_work/s3_mimo_comnum_1.json",
+   "process_wall_s": 154.35327161219902
+  },
+  {
+   "scenario": "s3_mimo",
+   "library": "comnum",
+   "threads": "all",
+   "quick": false,
+   "timing_only": true,
+   "env": {
+    "OMP_NUM_THREADS": "11",
+    "OPENBLAS_NUM_THREADS": "11",
+    "MKL_NUM_THREADS": "11",
+    "VECLIB_MAXIMUM_THREADS": "11",
+    "NUMBA_NUM_THREADS": "11",
+    "RAYON_NUM_THREADS": "11",
+    "NUMBA_DISABLE_JIT": null
+   },
+   "versions": {
+    "comnum": "0.3.1",
+    "komm": null,
+    "OptiCommPy": "0.11.0",
+    "sionna": "2.2.0",
+    "torch": "2.13.0+cu130",
+    "numba": "0.68.1",
+    "cupy": null,
+    "cupy-cuda12x": null,
+    "cupy-cuda13x": "14.2.0",
+    "llvmlite": "0.50.0",
+    "numpy": "2.5.2",
+    "scipy": "1.18.1"
+   },
+   "wall_s": 9.940621549030766,
+   "threading": {
+    "cpu_count": 96,
+    "cpus_available": 11
+   },
+   "cases": [
+    {
+     "case": "zf",
+     "precision": "float64",
+     "first_call_s": 0.030171081889420748,
+     "timing": {
+      "warmup_s": 0.031889528036117554,
+      "median_s": 0.028662143973633647,
+      "min_s": 0.02824569004587829,
+      "max_s": 0.0308861848898232,
+      "times_s": [
+       0.030642366968095303,
+       0.0283543539699167,
+       0.02824569004587829,
+       0.0308861848898232,
+       0.028662143973633647
+      ],
+      "repeats": 5,
+      "units": 10000,
+      "unit": "vector",
+      "workload": "10000 vectors at Eb/N0 = 12.0 dB"
+     }
+    },
+    {
+     "case": "mmse",
+     "precision": "float64",
+     "first_call_s": 0.0283393741119653,
+     "timing": {
+      "warmup_s": 0.028822497930377722,
+      "median_s": 0.028743125963956118,
+      "min_s": 0.02822134899906814,
+      "max_s": 0.030209993943572044,
+      "times_s": [
+       0.02990061417222023,
+       0.028279411140829325,
+       0.02822134899906814,
+       0.030209993943572044,
+       0.028743125963956118
+      ],
+      "repeats": 5,
+      "units": 10000,
+      "unit": "vector",
+      "workload": "10000 vectors at Eb/N0 = 12.0 dB"
+     }
+    },
+    {
+     "case": "ml",
+     "precision": "float64",
+     "first_call_s": 1.305726391961798,
+     "timing": {
+      "warmup_s": 1.3167911178898066,
+      "median_s": 1.334921842906624,
+      "min_s": 1.3171068888623267,
+      "max_s": 1.3413917608559132,
+      "times_s": [
+       1.334921842906624,
+       1.3413917608559132,
+       1.322017617058009,
+       1.3171068888623267,
+       1.3360302988439798
+      ],
+      "repeats": 5,
+      "units": 1000,
+      "unit": "vector",
+      "workload": "1000 vectors at Eb/N0 = 12.0 dB"
+     }
+    },
+    {
+     "case": "sphere",
+     "precision": "float64",
+     "first_call_s": 0.034218682907521725,
+     "timing": {
+      "warmup_s": 0.03322117985226214,
+      "median_s": 0.0335599509999156,
+      "min_s": 0.03298769285902381,
+      "max_s": 0.03822015202604234,
+      "times_s": [
+       0.03822015202604234,
+       0.03343191696330905,
+       0.03298769285902381,
+       0.03602708107791841,
+       0.0335599509999156
+      ],
+      "repeats": 5,
+      "units": 10000,
+      "unit": "vector",
+      "workload": "10000 vectors at Eb/N0 = 12.0 dB"
+     }
+    }
+   ],
+   "command": "OMP_NUM_THREADS=11 OPENBLAS_NUM_THREADS=11 MKL_NUM_THREADS=11 VECLIB_MAXIMUM_THREADS=11 NUMBA_NUM_THREADS=11 RAYON_NUM_THREADS=11 python s3_mimo.py --lib comnum --threads all --work runpod/_work --out runpod/_work/s3_mimo_comnum_all.json --timing-only",
+   "process_wall_s": 10.102198155131191
+  },
+  {
+   "scenario": "s3_mimo",
+   "library": "comnum-spec",
+   "threads": "1",
+   "quick": false,
+   "timing_only": false,
+   "env": {
+    "OMP_NUM_THREADS": "1",
+    "OPENBLAS_NUM_THREADS": "1",
+    "MKL_NUM_THREADS": "1",
+    "VECLIB_MAXIMUM_THREADS": "1",
+    "NUMBA_NUM_THREADS": "1",
+    "RAYON_NUM_THREADS": "1",
+    "NUMBA_DISABLE_JIT": null
+   },
+   "versions": {
+    "comnum": "0.3.1",
+    "komm": null,
+    "OptiCommPy": "0.11.0",
+    "sionna": "2.2.0",
+    "torch": "2.13.0+cu130",
+    "numba": "0.68.1",
+    "cupy": null,
+    "cupy-cuda12x": null,
+    "cupy-cuda13x": "14.2.0",
+    "llvmlite": "0.50.0",
+    "numpy": "2.5.2",
+    "scipy": "1.18.1"
+   },
+   "wall_s": 145.65909123397432,
+   "threading": {
+    "cpu_count": 96,
+    "cpus_available": 11
+   },
+   "cases": [
+    {
+     "case": "zf",
+     "precision": "float64",
+     "ebn0_offset_db": 6.020599913279624,
+     "threads_option": 1,
+     "sweep_s": 1.259117139969021,
+     "points": [
+      {
+       "errors": 316151,
+       "total": 1600000,
+       "value": 0.197594375,
+       "lo": 0.19697810822563497,
+       "hi": 0.19821209392268965,
+       "ci": "binomial",
+       "ebn0_db": 0.0,
+       "vectors": 100000,
+       "theory": 0.19757395798903504,
+       "z": 0.06486117259880324
+      },
+      {
+       "errors": 191123,
+       "total": 1600000,
+       "value": 0.119451875,
+       "lo": 0.11895025022712344,
+       "hi": 0.11995532716058527,
+       "ci": "binomial",
+       "ebn0_db": 4.0,
+       "vectors": 100000,
+       "theory": 0.11987748450526879,
+       "z": -1.657413735617778
+      },
+      {
+       "errors": 98271,
+       "total": 1600000,
+       "value": 0.061419375,
+       "lo": 0.06104839132641297,
+       "hi": 0.06179246473269164,
+       "ci": "binomial",
+       "ebn0_db": 8.0,
+       "vectors": 100000,
+       "theory": 0.06198768029901046,
+       "z": -2.9811562109303558
+      },
+      {
+       "errors": 44991,
+       "total": 1600000,
+       "value": 0.028119375,
+       "lo": 0.02786434928852617,
+       "hi": 0.0283766666767945,
+       "ci": "binomial",
+       "ebn0_db": 12.0,
+       "vectors": 100000,
+       "theory": 0.028251418589803318,
+       "z": -1.0080457117495374
+      },
+      {
+       "errors": 18987,
+       "total": 1600000,
+       "value": 0.011866875,
+       "lo": 0.011700250826328867,
+       "hi": 0.012035843183309419,
+       "ci": "binomial",
+       "ebn0_db": 16.0,
+       "vectors": 100000,
+       "theory": 0.011958373375334508,
+       "z": -1.0647550251523794
+      }
+     ],
+     "timing": {
+      "warmup_s": 0.027357461163774133,
+      "median_s": 0.025098469108343124,
+      "min_s": 0.024956513894721866,
+      "max_s": 0.028253700118511915,
+      "times_s": [
+       0.025718819117173553,
+       0.024956513894721866,
+       0.025098469108343124,
+       0.028253700118511915,
+       0.025056436890736222
+      ],
+      "repeats": 5,
+      "units": 10000,
+      "unit": "vector",
+      "workload": "10000 vectors at Eb/N0 = 12.0 dB, 40 trials"
+     }
+    },
+    {
+     "case": "mmse",
+     "precision": "float64",
+     "ebn0_offset_db": 6.020599913279624,
+     "threads_option": 1,
+     "sweep_s": 1.255183903966099,
+     "points": [
+      {
+       "errors": 221023,
+       "total": 1600000,
+       "value": 0.138139375,
+       "lo": 0.1376055891172743,
+       "hi": 0.1386748985332749,
+       "ci": "binomial",
+       "ebn0_db": 0.0,
+       "vectors": 100000
+      },
+      {
+       "errors": 134418,
+       "total": 1600000,
+       "value": 0.08401125,
+       "lo": 0.08358240512779012,
+       "hi": 0.0844420924453912,
+       "ci": "binomial",
+       "ebn0_db": 4.0,
+       "vectors": 100000
+      },
+      {
+       "errors": 68642,
+       "total": 1600000,
+       "value": 0.04290125,
+       "lo": 0.04258836056958615,
+       "hi": 0.043216334413341204,
+       "ci": "binomial",
+       "ebn0_db": 8.0,
+       "vectors": 100000
+      },
+      {
+       "errors": 31856,
+       "total": 1600000,
+       "value": 0.01991,
+       "lo": 0.019694696345847675,
+       "hi": 0.020127609040797093,
+       "ci": "binomial",
+       "ebn0_db": 12.0,
+       "vectors": 100000
+      },
+      {
+       "errors": 13322,
+       "total": 1600000,
+       "value": 0.00832625,
+       "lo": 0.00818662489705746,
+       "hi": 0.008468236114621254,
+       "ci": "binomial",
+       "ebn0_db": 16.0,
+       "vectors": 100000
+      }
+     ],
+     "timing": {
+      "warmup_s": 0.036249858094379306,
+      "median_s": 0.025336546823382378,
+      "min_s": 0.025015186052769423,
+      "max_s": 0.04298096499405801,
+      "times_s": [
+       0.02520330296829343,
+       0.025015186052769423,
+       0.029757147887721658,
+       0.025336546823382378,
+       0.04298096499405801
+      ],
+      "repeats": 5,
+      "units": 10000,
+      "unit": "vector",
+      "workload": "10000 vectors at Eb/N0 = 12.0 dB, 40 trials"
+     }
+    },
+    {
+     "case": "ml",
+     "precision": "float64",
+     "ebn0_offset_db": 6.020599913279624,
+     "threads_option": 1,
+     "sweep_s": 132.57803272106685,
+     "points": [
+      {
+       "errors": 39917,
+       "total": 320000,
+       "value": 0.124740625,
+       "lo": 0.12360026519194146,
+       "hi": 0.12588999467748876,
+       "ci": "binomial",
+       "ebn0_db": 0.0,
+       "vectors": 20000
+      },
+      {
+       "errors": 12769,
+       "total": 320000,
+       "value": 0.039903125,
+       "lo": 0.039230454524449836,
+       "hi": 0.04058684226890214,
+       "ci": "binomial",
+       "ebn0_db": 4.0,
+       "vectors": 20000
+      },
+      {
+       "errors": 1527,
+       "total": 320000,
+       "value": 0.004771875,
+       "lo": 0.00453897363023132,
+       "hi": 0.005016666654307065,
+       "ci": "binomial",
+       "ebn0_db": 8.0,
+       "vectors": 20000
+      },
+      {
+       "errors": 73,
+       "total": 320000,
+       "value": 0.000228125,
+       "lo": 0.0001814561097508219,
+       "hi": 0.00028679326891538717,
+       "ci": "binomial",
+       "ebn0_db": 12.0,
+       "vectors": 20000
+      },
+      {
+       "errors": 0,
+       "total": 320000,
+       "value": 0.0,
+       "lo": 0.0,
+       "hi": 1.200485588170514e-05,
+       "ci": "binomial",
+       "ebn0_db": 16.0,
+       "vectors": 20000
+      }
+     ],
+     "timing": {
+      "warmup_s": 1.346360633149743,
+      "median_s": 1.3062402699142694,
+      "min_s": 1.2913445308804512,
+      "max_s": 1.3638221770524979,
+      "times_s": [
+       1.3638221770524979,
+       1.2913445308804512,
+       1.2955919350497425,
+       1.3066381008829921,
+       1.3062402699142694
+      ],
+      "repeats": 5,
+      "units": 1000,
+      "unit": "vector",
+      "workload": "1000 vectors at Eb/N0 = 12.0 dB, 40 trials"
+     }
+    },
+    {
+     "case": "sphere",
+     "precision": "float64",
+     "ebn0_offset_db": 6.020599913279624,
+     "threads_option": 1,
+     "sweep_s": 2.092935818945989,
+     "points": [
+      {
+       "errors": 199209,
+       "total": 1600000,
+       "value": 0.124505625,
+       "lo": 0.12399494203423908,
+       "hi": 0.1250181110854204,
+       "ci": "binomial",
+       "ebn0_db": 0.0,
+       "vectors": 100000
+      },
+      {
+       "errors": 64988,
+       "total": 1600000,
+       "value": 0.0406175,
+       "lo": 0.04031272312169331,
+       "hi": 0.040924482827775215,
+       "ci": "binomial",
+       "ebn0_db": 4.0,
+       "vectors": 100000
+      },
+      {
+       "errors": 7390,
+       "total": 1600000,
+       "value": 0.00461875,
+       "lo": 0.004514869017973865,
+       "hi": 0.004725009797077101,
+       "ci": "binomial",
+       "ebn0_db": 8.0,
+       "vectors": 100000
+      },
+      {
+       "errors": 312,
+       "total": 1600000,
+       "value": 0.000195,
+       "lo": 0.00017453109615170646,
+       "hi": 0.00021786896169575468,
+       "ci": "binomial",
+       "ebn0_db": 12.0,
+       "vectors": 100000
+      },
+      {
+       "errors": 20,
+       "total": 1600000,
+       "value": 1.25e-05,
+       "lo": 8.092154163176504e-06,
+       "hi": 1.930878004718046e-05,
+       "ci": "binomial",
+       "ebn0_db": 16.0,
+       "vectors": 100000
+      }
+     ],
+     "timing": {
+      "warmup_s": 0.030907781096175313,
+      "median_s": 0.03372911410406232,
+      "min_s": 0.0305668821092695,
+      "max_s": 0.04158464609645307,
+      "times_s": [
+       0.04077281313948333,
+       0.03184380894526839,
+       0.03372911410406232,
+       0.0305668821092695,
+       0.04158464609645307
+      ],
+      "repeats": 5,
+      "units": 10000,
+      "unit": "vector",
+      "workload": "10000 vectors at Eb/N0 = 12.0 dB, 40 trials"
+     }
+    }
+   ],
+   "command": "OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 VECLIB_MAXIMUM_THREADS=1 NUMBA_NUM_THREADS=1 RAYON_NUM_THREADS=1 python s3_mimo.py --lib comnum-spec --threads 1 --work runpod/_work --out runpod/_work/s3_mimo_comnum-spec_1.json",
+   "process_wall_s": 145.8195742419921
+  },
+  {
+   "scenario": "s3_mimo",
+   "library": "comnum-spec",
+   "threads": "all",
+   "quick": false,
+   "timing_only": true,
+   "env": {
+    "OMP_NUM_THREADS": "11",
+    "OPENBLAS_NUM_THREADS": "11",
+    "MKL_NUM_THREADS": "11",
+    "VECLIB_MAXIMUM_THREADS": "11",
+    "NUMBA_NUM_THREADS": "11",
+    "RAYON_NUM_THREADS": "11",
+    "NUMBA_DISABLE_JIT": null
+   },
+   "versions": {
+    "comnum": "0.3.1",
+    "komm": null,
+    "OptiCommPy": "0.11.0",
+    "sionna": "2.2.0",
+    "torch": "2.13.0+cu130",
+    "numba": "0.68.1",
+    "cupy": null,
+    "cupy-cuda12x": null,
+    "cupy-cuda13x": "14.2.0",
+    "llvmlite": "0.50.0",
+    "numpy": "2.5.2",
+    "scipy": "1.18.1"
+   },
+   "wall_s": 1.1570677398703992,
+   "threading": {
+    "cpu_count": 96,
+    "cpus_available": 11
+   },
+   "cases": [
+    {
+     "case": "zf",
+     "precision": "float64",
+     "ebn0_offset_db": 6.020599913279624,
+     "threads_option": 0,
+     "timing": {
+      "warmup_s": 0.007690727012231946,
+      "median_s": 0.0045117828994989395,
+      "min_s": 0.004158511990681291,
+      "max_s": 0.0057371389120817184,
+      "times_s": [
+       0.0057371389120817184,
+       0.0045117828994989395,
+       0.004158511990681291,
+       0.0050870501436293125,
+       0.004227794939652085
+      ],
+      "repeats": 5,
+      "units": 10000,
+      "unit": "vector",
+      "workload": "10000 vectors at Eb/N0 = 12.0 dB, 40 trials"
+     }
+    },
+    {
+     "case": "mmse",
+     "precision": "float64",
+     "ebn0_offset_db": 6.020599913279624,
+     "threads_option": 0,
+     "timing": {
+      "warmup_s": 0.004765901016071439,
+      "median_s": 0.004875514190644026,
+      "min_s": 0.004081489983946085,
+      "max_s": 0.006458299933001399,
+      "times_s": [
+       0.004081489983946085,
+       0.004875514190644026,
+       0.004713888978585601,
+       0.005187762901186943,
+       0.006458299933001399
+      ],
+      "repeats": 5,
+      "units": 10000,
+      "unit": "vector",
+      "workload": "10000 vectors at Eb/N0 = 12.0 dB, 40 trials"
+     }
+    },
+    {
+     "case": "ml",
+     "precision": "float64",
+     "ebn0_offset_db": 6.020599913279624,
+     "threads_option": 0,
+     "timing": {
+      "warmup_s": 0.19233773183077574,
+      "median_s": 0.16927619208581746,
+      "min_s": 0.15844353195279837,
+      "max_s": 0.1924238339997828,
+      "times_s": [
+       0.17102797306142747,
+       0.15923695592209697,
+       0.15844353195279837,
+       0.16927619208581746,
+       0.1924238339997828
+      ],
+      "repeats": 5,
+      "units": 1000,
+      "unit": "vector",
+      "workload": "1000 vectors at Eb/N0 = 12.0 dB, 40 trials"
+     }
+    },
+    {
+     "case": "sphere",
+     "precision": "float64",
+     "ebn0_offset_db": 6.020599913279624,
+     "threads_option": 0,
+     "timing": {
+      "warmup_s": 0.005918493960052729,
+      "median_s": 0.006410269066691399,
+      "min_s": 0.005751860095188022,
+      "max_s": 0.0077797300182282925,
+      "times_s": [
+       0.006410269066691399,
+       0.005751860095188022,
+       0.005907644052058458,
+       0.007015706971287727,
+       0.0077797300182282925
+      ],
+      "repeats": 5,
+      "units": 10000,
+      "unit": "vector",
+      "workload": "10000 vectors at Eb/N0 = 12.0 dB, 40 trials"
+     }
+    }
+   ],
+   "command": "OMP_NUM_THREADS=11 OPENBLAS_NUM_THREADS=11 MKL_NUM_THREADS=11 VECLIB_MAXIMUM_THREADS=11 NUMBA_NUM_THREADS=11 RAYON_NUM_THREADS=11 python s3_mimo.py --lib comnum-spec --threads all --work runpod/_work --out runpod/_work/s3_mimo_comnum-spec_all.json --timing-only",
+   "process_wall_s": 1.3231783390510827
+  },
+  {
+   "scenario": "s3_mimo",
+   "library": "sionna",
+   "threads": "1",
+   "quick": false,
+   "timing_only": false,
+   "env": {
+    "OMP_NUM_THREADS": "1",
+    "OPENBLAS_NUM_THREADS": "1",
+    "MKL_NUM_THREADS": "1",
+    "VECLIB_MAXIMUM_THREADS": "1",
+    "NUMBA_NUM_THREADS": "1",
+    "RAYON_NUM_THREADS": "1",
+    "NUMBA_DISABLE_JIT": null
+   },
+   "versions": {
+    "comnum": "0.3.1",
+    "komm": null,
+    "OptiCommPy": "0.11.0",
+    "sionna": "2.2.0",
+    "torch": "2.13.0+cu130",
+    "numba": "0.68.1",
+    "cupy": null,
+    "cupy-cuda12x": null,
+    "cupy-cuda13x": "14.2.0",
+    "llvmlite": "0.50.0",
+    "numpy": "2.5.2",
+    "scipy": "1.18.1"
+   },
+   "wall_s": 2072.226786699146,
+   "threading": {
+    "cpu_count": 96,
+    "cpus_available": 11,
+    "torch_intra_op_threads": 1,
+    "torch_interop_threads": 1,
+    "torch_device": "cpu"
+   },
+   "cases": [
+    {
+     "case": "zf",
+     "precision": "float32 (config.precision = 'single')",
+     "device": "cpu",
+     "torch_intra_op_threads": 1,
+     "torch_interop_threads": 1,
+     "first_call_s": 0.05690763797610998,
+     "points": [
+      {
+       "errors": 316229,
+       "total": 1600000,
+       "frames": 100000,
+       "value": 0.197643125,
+       "lo": 0.19673807575464172,
+       "hi": 0.19854817424535828,
+       "se": 0.00046175981906035167,
+       "ci": "per-frame",
+       "ebn0_db": 0.0,
+       "vectors": 100000,
+       "theory": 0.19757395798903504,
+       "z": 0.1497900166058406
+      },
+      {
+       "errors": 191088,
+       "total": 1600000,
+       "frames": 100000,
+       "value": 0.11943,
+       "lo": 0.11862391081899129,
+       "hi": 0.1202360891810087,
+       "se": 0.00041126999031056144,
+       "ci": "per-frame",
+       "ebn0_db": 4.0,
+       "vectors": 100000,
+       "theory": 0.11987748450526879,
+       "z": -1.0880553305892535
+      },
+      {
+       "errors": 100124,
+       "total": 1600000,
+       "frames": 100000,
+       "value": 0.0625775,
+       "lo": 0.061930966130566735,
+       "hi": 0.06322403386943326,
+       "se": 0.0003298642190986018,
+       "ci": "per-frame",
+       "ebn0_db": 8.0,
+       "vectors": 100000,
+       "theory": 0.06198768029901046,
+       "z": 1.7880681408892938
+      },
+      {
+       "errors": 45257,
+       "total": 1600000,
+       "frames": 100000,
+       "value": 0.028285625,
+       "lo": 0.027828326686661575,
+       "hi": 0.02874292331333842,
+       "se": 0.00023331546598899194,
+       "ci": "per-frame",
+       "ebn0_db": 12.0,
+       "vectors": 100000,
+       "theory": 0.028251418589803318,
+       "z": 0.1466101274156189
+      },
+      {
+       "errors": 19038,
+       "total": 1600000,
+       "frames": 100000,
+       "value": 0.01189875,
+       "lo": 0.011595226344707586,
+       "hi": 0.012202273655292414,
+       "se": 0.00015485900780225207,
+       "ci": "per-frame",
+       "ebn0_db": 16.0,
+       "vectors": 100000,
+       "theory": 0.011958373375334508,
+       "z": -0.3850171596775603
+      }
+     ],
+     "sweep_s": 2.729462187970057,
+     "timing": {
+      "warmup_s": 0.05441257497295737,
+      "median_s": 0.05493633006699383,
+      "min_s": 0.05465190205723047,
+      "max_s": 0.05527189001441002,
+      "times_s": [
+       0.05527189001441002,
+       0.05493633006699383,
+       0.05499227182008326,
+       0.05471783294342458,
+       0.05465190205723047
+      ],
+      "repeats": 5,
+      "units": 10000,
+      "unit": "vector",
+      "workload": "10000 vectors at Eb/N0 = 12.0 dB"
+     }
+    },
+    {
+     "case": "mmse",
+     "precision": "float32 (config.precision = 'single')",
+     "device": "cpu",
+     "torch_intra_op_threads": 1,
+     "torch_interop_threads": 1,
+     "first_call_s": 0.054499227087944746,
+     "points": [
+      {
+       "errors": 221359,
+       "total": 1600000,
+       "frames": 100000,
+       "value": 0.138349375,
+       "lo": 0.13771450154862563,
+       "hi": 0.13898424845137436,
+       "se": 0.0003239150262114059,
+       "ci": "per-frame",
+       "ebn0_db": 0.0,
+       "vectors": 100000
+      },
+      {
+       "errors": 133334,
+       "total": 1600000,
+       "frames": 100000,
+       "value": 0.08333375,
+       "lo": 0.08276640359280486,
+       "hi": 0.08390109640719513,
+       "se": 0.0002894624526505812,
+       "ci": "per-frame",
+       "ebn0_db": 4.0,
+       "vectors": 100000
+      },
+      {
+       "errors": 69179,
+       "total": 1600000,
+       "frames": 100000,
+       "value": 0.043236875,
+       "lo": 0.04278618983650623,
+       "hi": 0.043687560163493774,
+       "se": 0.00022994140994580294,
+       "ci": "per-frame",
+       "ebn0_db": 8.0,
+       "vectors": 100000
+      },
+      {
+       "errors": 31340,
+       "total": 1600000,
+       "frames": 100000,
+       "value": 0.0195875,
+       "lo": 0.019265857048780203,
+       "hi": 0.0199091429512198,
+       "se": 0.00016410354654071275,
+       "ci": "per-frame",
+       "ebn0_db": 12.0,
+       "vectors": 100000
+      },
+      {
+       "errors": 13173,
+       "total": 1600000,
+       "frames": 100000,
+       "value": 0.008233125,
+       "lo": 0.008019602107642531,
+       "hi": 0.00844664789235747,
+       "se": 0.00010894025120279038,
+       "ci": "per-frame",
+       "ebn0_db": 16.0,
+       "vectors": 100000
+      }
+     ],
+     "sweep_s": 2.791211879113689,
+     "timing": {
+      "warmup_s": 0.052733964985236526,
+      "median_s": 0.04660100396722555,
+      "min_s": 0.04597385600209236,
+      "max_s": 0.047267574118450284,
+      "times_s": [
+       0.04660100396722555,
+       0.046131539857015014,
+       0.04597385600209236,
+       0.047267574118450284,
+       0.047117769019678235
+      ],
+      "repeats": 5,
+      "units": 10000,
+      "unit": "vector",
+      "workload": "10000 vectors at Eb/N0 = 12.0 dB"
+     }
+    },
+    {
+     "case": "ml",
+     "precision": "float32 (config.precision = 'single')",
+     "device": "cpu",
+     "torch_intra_op_threads": 1,
+     "torch_interop_threads": 1,
+     "first_call_s": 18.956859103869647,
+     "points": [
+      {
+       "errors": 40090,
+       "total": 320000,
+       "frames": 20000,
+       "value": 0.12528125,
+       "lo": 0.1234358236455108,
+       "hi": 0.12712667635448924,
+       "se": 0.0009415440584128664,
+       "ci": "per-frame",
+       "ebn0_db": 0.0,
+       "vectors": 20000
+      },
+      {
+       "errors": 12945,
+       "total": 320000,
+       "frames": 20000,
+       "value": 0.040453125,
+       "lo": 0.03915782745759502,
+       "hi": 0.04174842254240498,
+       "se": 0.0006608660930637665,
+       "ci": "per-frame",
+       "ebn0_db": 4.0,
+       "vectors": 20000
+      },
+      {
+       "errors": 1432,
+       "total": 320000,
+       "frames": 20000,
+       "value": 0.004475,
+       "lo": 0.004016657250953197,
+       "hi": 0.004933342749046802,
+       "se": 0.00023384834135040946,
+       "ci": "per-frame",
+       "ebn0_db": 8.0,
+       "vectors": 20000
+      },
+      {
+       "errors": 51,
+       "total": 320000,
+       "frames": 20000,
+       "value": 0.000159375,
+       "lo": 7.609319820096175e-05,
+       "hi": 0.00024265680179903827,
+       "se": 4.249071520359095e-05,
+       "ci": "per-frame",
+       "ebn0_db": 12.0,
+       "vectors": 20000
+      },
+      {
+       "errors": 4,
+       "total": 320000,
+       "frames": 20000,
+       "value": 1.25e-05,
+       "lo": 0.0,
+       "hi": 3.7e-05,
+       "se": 1.2499999999999999e-05,
+       "ci": "per-frame",
+       "ebn0_db": 16.0,
+       "vectors": 20000
+      }
+     ],
+     "sweep_s": 1928.5136511959136,
+     "timing": {
+      "warmup_s": 19.23289015609771,
+      "median_s": 19.05882025300525,
+      "min_s": 18.987591146025807,
+      "max_s": 19.079045547172427,
+      "times_s": [
+       19.0602483660914,
+       18.987591146025807,
+       19.079045547172427,
+       19.05753558478318,
+       19.05882025300525
+      ],
+      "repeats": 5,
+      "units": 1000,
+      "unit": "vector",
+      "workload": "1000 vectors at Eb/N0 = 12.0 dB"
+     }
+    }
+   ],
+   "command": "OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 VECLIB_MAXIMUM_THREADS=1 NUMBA_NUM_THREADS=1 RAYON_NUM_THREADS=1 python s3_mimo.py --lib sionna --threads 1 --work runpod/_work --out runpod/_work/s3_mimo_sionna_1.json",
+   "process_wall_s": 2073.2252563370857
+  },
+  {
+   "scenario": "s3_mimo",
+   "library": "sionna",
+   "threads": "all",
+   "quick": false,
+   "timing_only": true,
+   "env": {
+    "OMP_NUM_THREADS": "11",
+    "OPENBLAS_NUM_THREADS": "11",
+    "MKL_NUM_THREADS": "11",
+    "VECLIB_MAXIMUM_THREADS": "11",
+    "NUMBA_NUM_THREADS": "11",
+    "RAYON_NUM_THREADS": "11",
+    "NUMBA_DISABLE_JIT": null
+   },
+   "versions": {
+    "comnum": "0.3.1",
+    "komm": null,
+    "OptiCommPy": "0.11.0",
+    "sionna": "2.2.0",
+    "torch": "2.13.0+cu130",
+    "numba": "0.68.1",
+    "cupy": null,
+    "cupy-cuda12x": null,
+    "cupy-cuda13x": "14.2.0",
+    "llvmlite": "0.50.0",
+    "numpy": "2.5.2",
+    "scipy": "1.18.1"
+   },
+   "wall_s": 43.222321443026885,
+   "threading": {
+    "cpu_count": 96,
+    "cpus_available": 11,
+    "torch_intra_op_threads": 11,
+    "torch_interop_threads": 96,
+    "torch_device": "cpu"
+   },
+   "cases": [
+    {
+     "case": "zf",
+     "precision": "float32 (config.precision = 'single')",
+     "device": "cpu",
+     "torch_intra_op_threads": 11,
+     "torch_interop_threads": 96,
+     "first_call_s": 0.02927035209722817,
+     "timing": {
+      "warmup_s": 0.022428441094234586,
+      "median_s": 0.022373490035533905,
+      "min_s": 0.02212443179450929,
+      "max_s": 0.02832103311084211,
+      "times_s": [
+       0.02230567717924714,
+       0.022373490035533905,
+       0.02212443179450929,
+       0.023066010093316436,
+       0.02832103311084211
+      ],
+      "repeats": 5,
+      "units": 10000,
+      "unit": "vector",
+      "workload": "10000 vectors at Eb/N0 = 12.0 dB"
+     }
+    },
+    {
+     "case": "mmse",
+     "precision": "float32 (config.precision = 'single')",
+     "device": "cpu",
+     "torch_intra_op_threads": 11,
+     "torch_interop_threads": 96,
+     "first_call_s": 0.025663350941613317,
+     "timing": {
+      "warmup_s": 0.025493444874882698,
+      "median_s": 0.026131915859878063,
+      "min_s": 0.025236227083951235,
+      "max_s": 0.03475442109629512,
+      "times_s": [
+       0.03306291904300451,
+       0.026131915859878063,
+       0.025236227083951235,
+       0.025371411815285683,
+       0.03475442109629512
+      ],
+      "repeats": 5,
+      "units": 10000,
+      "unit": "vector",
+      "workload": "10000 vectors at Eb/N0 = 12.0 dB"
+     }
+    },
+    {
+     "case": "ml",
+     "precision": "float32 (config.precision = 'single')",
+     "device": "cpu",
+     "torch_intra_op_threads": 11,
+     "torch_interop_threads": 96,
+     "first_call_s": 5.605004715966061,
+     "timing": {
+      "warmup_s": 5.598357931012288,
+      "median_s": 5.566621982958168,
+      "min_s": 5.517566581023857,
+      "max_s": 5.588441994972527,
+      "times_s": [
+       5.584692360134795,
+       5.517566581023857,
+       5.546898904955015,
+       5.588441994972527,
+       5.566621982958168
+      ],
+      "repeats": 5,
+      "units": 1000,
+      "unit": "vector",
+      "workload": "1000 vectors at Eb/N0 = 12.0 dB"
+     }
+    }
+   ],
+   "command": "OMP_NUM_THREADS=11 OPENBLAS_NUM_THREADS=11 MKL_NUM_THREADS=11 VECLIB_MAXIMUM_THREADS=11 NUMBA_NUM_THREADS=11 RAYON_NUM_THREADS=11 python s3_mimo.py --lib sionna --threads all --work runpod/_work --out runpod/_work/s3_mimo_sionna_all.json --timing-only",
+   "process_wall_s": 44.228116708109155
+  },
+  {
+   "scenario": "s3_mimo",
+   "library": "sionna",
+   "threads": "gpu",
+   "quick": false,
+   "timing_only": true,
+   "env": {
+    "OMP_NUM_THREADS": "11",
+    "OPENBLAS_NUM_THREADS": "11",
+    "MKL_NUM_THREADS": "11",
+    "VECLIB_MAXIMUM_THREADS": "11",
+    "NUMBA_NUM_THREADS": "11",
+    "RAYON_NUM_THREADS": "11",
+    "NUMBA_DISABLE_JIT": null
+   },
+   "versions": {
+    "comnum": "0.3.1",
+    "komm": null,
+    "OptiCommPy": "0.11.0",
+    "sionna": "2.2.0",
+    "torch": "2.13.0+cu130",
+    "numba": "0.68.1",
+    "cupy": null,
+    "cupy-cuda12x": null,
+    "cupy-cuda13x": "14.2.0",
+    "llvmlite": "0.50.0",
+    "numpy": "2.5.2",
+    "scipy": "1.18.1"
+   },
+   "wall_s": 4.858057498000562,
+   "threading": {
+    "cpu_count": 96,
+    "cpus_available": 11,
+    "torch_intra_op_threads": 11,
+    "torch_interop_threads": 96,
+    "torch_device": "cuda:0"
+   },
+   "cases": [
+    {
+     "case": "zf",
+     "precision": "float32 (config.precision = 'single')",
+     "device": "cuda:0",
+     "gpu": "NVIDIA GeForce RTX 4090",
+     "gpu_memory_gb": 23.5,
+     "cuda": "13.0",
+     "torch_intra_op_threads": 11,
+     "torch_interop_threads": 96,
+     "first_call_s": 0.3160702500026673,
+     "timing": {
+      "warmup_s": 0.0026910430751740932,
+      "median_s": 0.0016178300138562918,
+      "min_s": 0.0016084189992398024,
+      "max_s": 0.0016320999711751938,
+      "times_s": [
+       0.0016215001232922077,
+       0.0016178300138562918,
+       0.0016320999711751938,
+       0.0016169100999832153,
+       0.0016084189992398024
+      ],
+      "repeats": 5,
+      "units": 10000,
+      "unit": "vector",
+      "workload": "10000 vectors at Eb/N0 = 12.0 dB"
+     }
+    },
+    {
+     "case": "mmse",
+     "precision": "float32 (config.precision = 'single')",
+     "device": "cuda:0",
+     "gpu": "NVIDIA GeForce RTX 4090",
+     "gpu_memory_gb": 23.5,
+     "cuda": "13.0",
+     "torch_intra_op_threads": 11,
+     "torch_interop_threads": 96,
+     "first_call_s": 0.0025207281578332186,
+     "timing": {
+      "warmup_s": 0.001897728070616722,
+      "median_s": 0.0018872078508138657,
+      "min_s": 0.0018665078096091747,
+      "max_s": 0.00189341907389462,
+      "times_s": [
+       0.0018786080181598663,
+       0.00189341907389462,
+       0.0018921978771686554,
+       0.0018872078508138657,
+       0.0018665078096091747
+      ],
+      "repeats": 5,
+      "units": 10000,
+      "unit": "vector",
+      "workload": "10000 vectors at Eb/N0 = 12.0 dB"
+     }
+    },
+    {
+     "case": "ml",
+     "precision": "float32 (config.precision = 'single')",
+     "device": "cuda:0",
+     "gpu": "NVIDIA GeForce RTX 4090",
+     "gpu_memory_gb": 23.5,
+     "cuda": "13.0",
+     "torch_intra_op_threads": 11,
+     "torch_interop_threads": 96,
+     "first_call_s": 0.09394014510326087,
+     "timing": {
+      "warmup_s": 0.07309998292475939,
+      "median_s": 0.07132518803700805,
+      "min_s": 0.07129835803061724,
+      "max_s": 0.07148606306873262,
+      "times_s": [
+       0.07142155081965029,
+       0.0713079369161278,
+       0.07148606306873262,
+       0.07132518803700805,
+       0.07129835803061724
+      ],
+      "repeats": 5,
+      "units": 1000,
+      "unit": "vector",
+      "workload": "1000 vectors at Eb/N0 = 12.0 dB"
+     }
+    }
+   ],
+   "command": "OMP_NUM_THREADS=11 OPENBLAS_NUM_THREADS=11 MKL_NUM_THREADS=11 VECLIB_MAXIMUM_THREADS=11 NUMBA_NUM_THREADS=11 RAYON_NUM_THREADS=11 python s3_mimo.py --lib sionna --threads gpu --work runpod/_work --out runpod/_work/s3_mimo_sionna_gpu.json --timing-only",
+   "process_wall_s": 5.9626860280986875
+  }
+ ]
+}

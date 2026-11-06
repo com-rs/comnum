@@ -1,0 +1,819 @@
+{
+ "scenario": "s5_ssfm",
+ "title": "Split-step Fourier propagation, 16-QAM, 32 GBd, 10 x 80 km",
+ "description": "Scenario 5: single-polarisation split-step Fourier propagation of 32 GBd 16-QAM over 10 x 80 km of standard single-mode fibre, a fixed step of 1 km (80 steps per span), noiseless amplification at the end of every span (gain e^{alpha L}).",
+ "script": "benchmarks/libraries/s5_ssfm.py",
+ "parameters": {
+  "fibre": "alpha = 0.2 dB/km, D = 17 ps/nm/km, gamma = 1.3 /W/km, fc = 193.1 THz",
+  "link": "10 x 80 km, ideal (noiseless) amplification after every span",
+  "step": "1 km (800 steps); reference: comnum at 0.05 km (16000 steps)",
+  "signal": "16-QAM, 32 GBd, RRC roll-off 0.1, 4 samples per symbol, 4 dBm; 2^14 symbols (quick: 2^11)",
+  "timing": "one propagation over the 10 spans"
+ },
+ "quick": false,
+ "generated_utc": "2026-11-06T18:43:00+00:00",
+ "machine": {
+  "platform": "Linux-6.8.0-147-generic-x86_64-with-glibc2.39",
+  "machine": "x86_64",
+  "python": "3.12.3",
+  "cpu": "AMD EPYC 7K62 48-Core Processor",
+  "logical_cores": 96,
+  "cpus_available": 11,
+  "physical_cores": "48",
+  "core_levels": [],
+  "ram_gb": 251.5,
+  "macos": null,
+  "linux": "Ubuntu 24.04.5 LTS",
+  "rustc": null,
+  "gpu": {
+   "name": "NVIDIA GeForce RTX 4090",
+   "memory": "24564 MiB",
+   "driver": "595.91.07"
+  }
+ },
+ "git": {
+  "commit": "45a7c78f80fcfe29dd0fc8b41e22a6d945d9391f",
+  "dirty": false
+ },
+ "versions": {
+  "comnum": "0.3.1",
+  "komm": null,
+  "OptiCommPy": "0.11.0",
+  "sionna": "2.2.0",
+  "torch": "2.13.0+cu130",
+  "numba": "0.68.1",
+  "cupy": null,
+  "cupy-cuda12x": null,
+  "cupy-cuda13x": "14.2.0",
+  "llvmlite": "0.50.0",
+  "numpy": "2.5.2",
+  "scipy": "1.18.1"
+ },
+ "libraries": {
+  "comnum": "comnum from Python: the functions of the comnum package, called block by block",
+  "comnum-spec": "comnum from Python: comnum.run_spec, the parallel Monte Carlo runner of Rust",
+  "opticommpy": "OptiCommPy with numba (its @njit kernels compiled; its CuPy split-step on the GPU in the mode gpu)",
+  "sionna": "Sionna PHY (PyTorch, eager mode; the CPU, or the GPU in the mode gpu)"
+ },
+ "support": {
+  "ssfm": {
+   "comnum": true,
+   "opticommpy": true,
+   "sionna": true
+  }
+ },
+ "thread_modes": [
+  "1",
+  "all",
+  "gpu"
+ ],
+ "commands": [
+  "python run_all.py --scenarios s1_awgn,s2_rayleigh,s3_mimo,s4_coding,s5_ssfm --libs comnum,comnum-spec,opticommpy,sionna --threads 1,all,gpu --results results/runpod --no-rust-build"
+ ],
+ "runs": [
+  {
+   "scenario": "s5_ssfm",
+   "library": "comnum",
+   "threads": "1",
+   "quick": false,
+   "timing_only": false,
+   "env": {
+    "OMP_NUM_THREADS": "1",
+    "OPENBLAS_NUM_THREADS": "1",
+    "MKL_NUM_THREADS": "1",
+    "VECLIB_MAXIMUM_THREADS": "1",
+    "NUMBA_NUM_THREADS": "1",
+    "RAYON_NUM_THREADS": "1",
+    "NUMBA_DISABLE_JIT": null
+   },
+   "versions": {
+    "comnum": "0.3.1",
+    "komm": null,
+    "OptiCommPy": "0.11.0",
+    "sionna": "2.2.0",
+    "torch": "2.13.0+cu130",
+    "numba": "0.68.1",
+    "cupy": null,
+    "cupy-cuda12x": null,
+    "cupy-cuda13x": "14.2.0",
+    "llvmlite": "0.50.0",
+    "numpy": "2.5.2",
+    "scipy": "1.18.1"
+   },
+   "wall_s": 39.588056941051036,
+   "threading": {
+    "cpu_count": 96,
+    "cpus_available": 11
+   },
+   "cases": [
+    {
+     "case": "ssfm",
+     "variant": "f64",
+     "precision": "float64",
+     "samples": 65536,
+     "first_call_s": 1.3064712351188064,
+     "timing": {
+      "warmup_s": 1.2805901549290866,
+      "median_s": 1.2889189168345183,
+      "min_s": 1.2842007058206946,
+      "max_s": 1.2889835198875517,
+      "times_s": [
+       1.2842007058206946,
+       1.288202101830393,
+       1.2889195680618286,
+       1.2889835198875517,
+       1.2889189168345183
+      ],
+      "repeats": 5,
+      "units": 1,
+      "unit": "propagation",
+      "workload": "65536 samples, 10 x 80 km, 1 km steps"
+     }
+    },
+    {
+     "case": "ssfm",
+     "variant": "f32",
+     "precision": "float32",
+     "samples": 65536,
+     "first_call_s": 0.6245816920418292,
+     "timing": {
+      "warmup_s": 0.6124211091082543,
+      "median_s": 0.6136316331103444,
+      "min_s": 0.6129555888473988,
+      "max_s": 0.6163302618078887,
+      "times_s": [
+       0.6136316331103444,
+       0.6163302618078887,
+       0.6129965309519321,
+       0.6129555888473988,
+       0.6139023539144546
+      ],
+      "repeats": 5,
+      "units": 1,
+      "unit": "propagation",
+      "workload": "65536 samples, 10 x 80 km, 1 km steps"
+     }
+    },
+    {
+     "case": "ssfm",
+     "variant": "reference",
+     "precision": "float64",
+     "step_km": 0.05,
+     "wall_s": 26.23524468089454
+    }
+   ],
+   "command": "OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 VECLIB_MAXIMUM_THREADS=1 NUMBA_NUM_THREADS=1 RAYON_NUM_THREADS=1 python s5_ssfm.py --lib comnum --threads 1 --work runpod/_work --out runpod/_work/s5_ssfm_comnum_1.json",
+   "process_wall_s": 39.750163750955835
+  },
+  {
+   "scenario": "s5_ssfm",
+   "library": "comnum",
+   "threads": "all",
+   "quick": false,
+   "timing_only": true,
+   "env": {
+    "OMP_NUM_THREADS": "11",
+    "OPENBLAS_NUM_THREADS": "11",
+    "MKL_NUM_THREADS": "11",
+    "VECLIB_MAXIMUM_THREADS": "11",
+    "NUMBA_NUM_THREADS": "11",
+    "RAYON_NUM_THREADS": "11",
+    "NUMBA_DISABLE_JIT": null
+   },
+   "versions": {
+    "comnum": "0.3.1",
+    "komm": null,
+    "OptiCommPy": "0.11.0",
+    "sionna": "2.2.0",
+    "torch": "2.13.0+cu130",
+    "numba": "0.68.1",
+    "cupy": null,
+    "cupy-cuda12x": null,
+    "cupy-cuda13x": "14.2.0",
+    "llvmlite": "0.50.0",
+    "numpy": "2.5.2",
+    "scipy": "1.18.1"
+   },
+   "wall_s": 13.634665650082752,
+   "threading": {
+    "cpu_count": 96,
+    "cpus_available": 11
+   },
+   "cases": [
+    {
+     "case": "ssfm",
+     "variant": "f64",
+     "precision": "float64",
+     "samples": 65536,
+     "first_call_s": 1.376537550939247,
+     "timing": {
+      "warmup_s": 1.3108122230041772,
+      "median_s": 1.3106167858932167,
+      "min_s": 1.302566243102774,
+      "max_s": 1.3578519420698285,
+      "times_s": [
+       1.3578519420698285,
+       1.3106167858932167,
+       1.3106617669109255,
+       1.3027640110813081,
+       1.302566243102774
+      ],
+      "repeats": 5,
+      "units": 1,
+      "unit": "propagation",
+      "workload": "65536 samples, 10 x 80 km, 1 km steps"
+     }
+    },
+    {
+     "case": "ssfm",
+     "variant": "f32",
+     "precision": "float32",
+     "samples": 65536,
+     "first_call_s": 0.6295856339856982,
+     "timing": {
+      "warmup_s": 0.619629381923005,
+      "median_s": 0.6191834749188274,
+      "min_s": 0.618537622038275,
+      "max_s": 0.619455685140565,
+      "times_s": [
+       0.6191834749188274,
+       0.6191955860704184,
+       0.6189843991305679,
+       0.618537622038275,
+       0.619455685140565
+      ],
+      "repeats": 5,
+      "units": 1,
+      "unit": "propagation",
+      "workload": "65536 samples, 10 x 80 km, 1 km steps"
+     }
+    }
+   ],
+   "command": "OMP_NUM_THREADS=11 OPENBLAS_NUM_THREADS=11 MKL_NUM_THREADS=11 VECLIB_MAXIMUM_THREADS=11 NUMBA_NUM_THREADS=11 RAYON_NUM_THREADS=11 python s5_ssfm.py --lib comnum --threads all --work runpod/_work --out runpod/_work/s5_ssfm_comnum_all.json --timing-only",
+   "process_wall_s": 13.794911020901054
+  },
+  {
+   "scenario": "s5_ssfm",
+   "library": "opticommpy",
+   "threads": "1",
+   "quick": false,
+   "timing_only": false,
+   "env": {
+    "OMP_NUM_THREADS": "1",
+    "OPENBLAS_NUM_THREADS": "1",
+    "MKL_NUM_THREADS": "1",
+    "VECLIB_MAXIMUM_THREADS": "1",
+    "NUMBA_NUM_THREADS": "1",
+    "RAYON_NUM_THREADS": "1",
+    "NUMBA_DISABLE_JIT": null
+   },
+   "versions": {
+    "comnum": "0.3.1",
+    "komm": null,
+    "OptiCommPy": "0.11.0",
+    "sionna": "2.2.0",
+    "torch": "2.13.0+cu130",
+    "numba": "0.68.1",
+    "cupy": null,
+    "cupy-cuda12x": null,
+    "cupy-cuda13x": "14.2.0",
+    "llvmlite": "0.50.0",
+    "numpy": "2.5.2",
+    "scipy": "1.18.1"
+   },
+   "wall_s": 34.1042136978358,
+   "threading": {
+    "cpu_count": 96,
+    "cpus_available": 11,
+    "numba_threads": 1,
+    "numba_jit_disabled": false
+   },
+   "cases": [
+    {
+     "case": "ssfm",
+     "variant": "f64",
+     "precision": "float64 (prec = np.complex128)",
+     "samples": 65536,
+     "first_call_s": 5.279767538886517,
+     "timing": {
+      "warmup_s": 4.564618977019563,
+      "median_s": 4.541333341039717,
+      "min_s": 4.533173835137859,
+      "max_s": 4.562397425994277,
+      "times_s": [
+       4.541333341039717,
+       4.548884885152802,
+       4.562397425994277,
+       4.533173835137859,
+       4.538345251930878
+      ],
+      "repeats": 5,
+      "units": 1,
+      "unit": "propagation",
+      "workload": "65536 samples, 10 x 80 km, 1 km steps"
+     }
+    }
+   ],
+   "command": "OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 VECLIB_MAXIMUM_THREADS=1 NUMBA_NUM_THREADS=1 RAYON_NUM_THREADS=1 python s5_ssfm.py --lib opticommpy --threads 1 --work runpod/_work --out runpod/_work/s5_ssfm_opticommpy_1.json",
+   "process_wall_s": 34.529434226918966
+  },
+  {
+   "scenario": "s5_ssfm",
+   "library": "opticommpy",
+   "threads": "all",
+   "quick": false,
+   "timing_only": true,
+   "env": {
+    "OMP_NUM_THREADS": "11",
+    "OPENBLAS_NUM_THREADS": "11",
+    "MKL_NUM_THREADS": "11",
+    "VECLIB_MAXIMUM_THREADS": "11",
+    "NUMBA_NUM_THREADS": "11",
+    "RAYON_NUM_THREADS": "11",
+    "NUMBA_DISABLE_JIT": null
+   },
+   "versions": {
+    "comnum": "0.3.1",
+    "komm": null,
+    "OptiCommPy": "0.11.0",
+    "sionna": "2.2.0",
+    "torch": "2.13.0+cu130",
+    "numba": "0.68.1",
+    "cupy": null,
+    "cupy-cuda12x": null,
+    "cupy-cuda13x": "14.2.0",
+    "llvmlite": "0.50.0",
+    "numpy": "2.5.2",
+    "scipy": "1.18.1"
+   },
+   "wall_s": 34.054699019063264,
+   "threading": {
+    "cpu_count": 96,
+    "cpus_available": 11,
+    "numba_threads": 11,
+    "numba_jit_disabled": false
+   },
+   "cases": [
+    {
+     "case": "ssfm",
+     "variant": "f64",
+     "precision": "float64 (prec = np.complex128)",
+     "samples": 65536,
+     "first_call_s": 5.3536177719943225,
+     "timing": {
+      "warmup_s": 4.5488745050970465,
+      "median_s": 4.506434442941099,
+      "min_s": 4.477585165062919,
+      "max_s": 4.564894216833636,
+      "times_s": [
+       4.564894216833636,
+       4.554737047990784,
+       4.477585165062919,
+       4.505833761068061,
+       4.506434442941099
+      ],
+      "repeats": 5,
+      "units": 1,
+      "unit": "propagation",
+      "workload": "65536 samples, 10 x 80 km, 1 km steps"
+     }
+    }
+   ],
+   "command": "OMP_NUM_THREADS=11 OPENBLAS_NUM_THREADS=11 MKL_NUM_THREADS=11 VECLIB_MAXIMUM_THREADS=11 NUMBA_NUM_THREADS=11 RAYON_NUM_THREADS=11 python s5_ssfm.py --lib opticommpy --threads all --work runpod/_work --out runpod/_work/s5_ssfm_opticommpy_all.json --timing-only",
+   "process_wall_s": 34.5177856029477
+  },
+  {
+   "scenario": "s5_ssfm",
+   "library": "opticommpy",
+   "threads": "gpu",
+   "quick": false,
+   "timing_only": true,
+   "env": {
+    "OMP_NUM_THREADS": "11",
+    "OPENBLAS_NUM_THREADS": "11",
+    "MKL_NUM_THREADS": "11",
+    "VECLIB_MAXIMUM_THREADS": "11",
+    "NUMBA_NUM_THREADS": "11",
+    "RAYON_NUM_THREADS": "11",
+    "NUMBA_DISABLE_JIT": null
+   },
+   "versions": {
+    "comnum": "0.3.1",
+    "komm": null,
+    "OptiCommPy": "0.11.0",
+    "sionna": "2.2.0",
+    "torch": "2.13.0+cu130",
+    "numba": "0.68.1",
+    "cupy": null,
+    "cupy-cuda12x": null,
+    "cupy-cuda13x": "14.2.0",
+    "llvmlite": "0.50.0",
+    "numpy": "2.5.2",
+    "scipy": "1.18.1"
+   },
+   "wall_s": 3.736087494995445,
+   "threading": {
+    "cpu_count": 96,
+    "cpus_available": 11,
+    "numba_threads": 11,
+    "numba_jit_disabled": false
+   },
+   "cases": [
+    {
+     "case": "ssfm",
+     "variant": "f64",
+     "precision": "float64 (prec = cp.complex128)",
+     "samples": 65536,
+     "device": "cuda",
+     "gpu": "NVIDIA GeForce RTX 4090",
+     "gpu_memory_gb": 23.5,
+     "cuda": "13020",
+     "cupy": "14.2.0",
+     "first_call_s": 0.34175717690959573,
+     "timing": {
+      "warmup_s": 0.1426173911895603,
+      "median_s": 0.14359726710245013,
+      "min_s": 0.1431476608850062,
+      "max_s": 0.1442629210650921,
+      "times_s": [
+       0.14359726710245013,
+       0.1431476608850062,
+       0.14328172616660595,
+       0.1439647600054741,
+       0.1442629210650921
+      ],
+      "repeats": 5,
+      "units": 1,
+      "unit": "propagation",
+      "workload": "65536 samples, 10 x 80 km, 1 km steps"
+     }
+    },
+    {
+     "case": "ssfm",
+     "variant": "f32",
+     "precision": "float32 (prec = cp.complex64)",
+     "samples": 65536,
+     "device": "cuda",
+     "gpu": "NVIDIA GeForce RTX 4090",
+     "gpu_memory_gb": 23.5,
+     "cuda": "13020",
+     "cupy": "14.2.0",
+     "first_call_s": 0.15473145199939609,
+     "timing": {
+      "warmup_s": 0.14327810518443584,
+      "median_s": 0.1436352280434221,
+      "min_s": 0.14210332301445305,
+      "max_s": 0.14412846602499485,
+      "times_s": [
+       0.14294627401977777,
+       0.14412846602499485,
+       0.14210332301445305,
+       0.1436352280434221,
+       0.1439162779133767
+      ],
+      "repeats": 5,
+      "units": 1,
+      "unit": "propagation",
+      "workload": "65536 samples, 10 x 80 km, 1 km steps"
+     }
+    }
+   ],
+   "command": "OMP_NUM_THREADS=11 OPENBLAS_NUM_THREADS=11 MKL_NUM_THREADS=11 VECLIB_MAXIMUM_THREADS=11 NUMBA_NUM_THREADS=11 RAYON_NUM_THREADS=11 python s5_ssfm.py --lib opticommpy --threads gpu --work runpod/_work --out runpod/_work/s5_ssfm_opticommpy_gpu.json --timing-only",
+   "process_wall_s": 4.301705915015191
+  },
+  {
+   "scenario": "s5_ssfm",
+   "library": "sionna",
+   "threads": "1",
+   "quick": false,
+   "timing_only": false,
+   "env": {
+    "OMP_NUM_THREADS": "1",
+    "OPENBLAS_NUM_THREADS": "1",
+    "MKL_NUM_THREADS": "1",
+    "VECLIB_MAXIMUM_THREADS": "1",
+    "NUMBA_NUM_THREADS": "1",
+    "RAYON_NUM_THREADS": "1",
+    "NUMBA_DISABLE_JIT": null
+   },
+   "versions": {
+    "comnum": "0.3.1",
+    "komm": null,
+    "OptiCommPy": "0.11.0",
+    "sionna": "2.2.0",
+    "torch": "2.13.0+cu130",
+    "numba": "0.68.1",
+    "cupy": null,
+    "cupy-cuda12x": null,
+    "cupy-cuda13x": "14.2.0",
+    "llvmlite": "0.50.0",
+    "numpy": "2.5.2",
+    "scipy": "1.18.1"
+   },
+   "wall_s": 100.05957994610071,
+   "threading": {
+    "cpu_count": 96,
+    "cpus_available": 11,
+    "torch_intra_op_threads": 1,
+    "torch_interop_threads": 1,
+    "torch_device": "cpu"
+   },
+   "cases": [
+    {
+     "case": "ssfm",
+     "variant": "single",
+     "precision": "float32 (precision = 'single', the default)",
+     "samples": 65536,
+     "device": "cpu",
+     "torch_intra_op_threads": 1,
+     "torch_interop_threads": 1,
+     "first_call_s": 5.389066020026803,
+     "timing": {
+      "warmup_s": 5.469973071012646,
+      "median_s": 5.357729404000565,
+      "min_s": 5.316502518951893,
+      "max_s": 5.385489697102457,
+      "times_s": [
+       5.385489697102457,
+       5.316502518951893,
+       5.363224046071991,
+       5.357729404000565,
+       5.3232514900155365
+      ],
+      "repeats": 5,
+      "units": 1,
+      "unit": "propagation",
+      "workload": "65536 samples, 10 x 80 km, 1 km steps"
+     }
+    },
+    {
+     "case": "ssfm",
+     "variant": "double",
+     "precision": "float64 (precision = 'double')",
+     "samples": 65536,
+     "device": "cpu",
+     "torch_intra_op_threads": 1,
+     "torch_interop_threads": 1,
+     "first_call_s": 6.403822507010773,
+     "timing": {
+      "warmup_s": 6.650415746029466,
+      "median_s": 6.80248599499464,
+      "min_s": 6.697965130209923,
+      "max_s": 7.134318673051894,
+      "times_s": [
+       6.706931971944869,
+       7.099040644010529,
+       6.697965130209923,
+       6.80248599499464,
+       7.134318673051894
+      ],
+      "repeats": 5,
+      "units": 1,
+      "unit": "propagation",
+      "workload": "65536 samples, 10 x 80 km, 1 km steps"
+     }
+    }
+   ],
+   "command": "OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 VECLIB_MAXIMUM_THREADS=1 NUMBA_NUM_THREADS=1 RAYON_NUM_THREADS=1 python s5_ssfm.py --lib sionna --threads 1 --work runpod/_work --out runpod/_work/s5_ssfm_sionna_1.json",
+   "process_wall_s": 101.11397361499257
+  },
+  {
+   "scenario": "s5_ssfm",
+   "library": "sionna",
+   "threads": "all",
+   "quick": false,
+   "timing_only": true,
+   "env": {
+    "OMP_NUM_THREADS": "11",
+    "OPENBLAS_NUM_THREADS": "11",
+    "MKL_NUM_THREADS": "11",
+    "VECLIB_MAXIMUM_THREADS": "11",
+    "NUMBA_NUM_THREADS": "11",
+    "RAYON_NUM_THREADS": "11",
+    "NUMBA_DISABLE_JIT": null
+   },
+   "versions": {
+    "comnum": "0.3.1",
+    "komm": null,
+    "OptiCommPy": "0.11.0",
+    "sionna": "2.2.0",
+    "torch": "2.13.0+cu130",
+    "numba": "0.68.1",
+    "cupy": null,
+    "cupy-cuda12x": null,
+    "cupy-cuda13x": "14.2.0",
+    "llvmlite": "0.50.0",
+    "numpy": "2.5.2",
+    "scipy": "1.18.1"
+   },
+   "wall_s": 54.53356114006601,
+   "threading": {
+    "cpu_count": 96,
+    "cpus_available": 11,
+    "torch_intra_op_threads": 11,
+    "torch_interop_threads": 96,
+    "torch_device": "cpu"
+   },
+   "cases": [
+    {
+     "case": "ssfm",
+     "variant": "single",
+     "precision": "float32 (precision = 'single', the default)",
+     "samples": 65536,
+     "device": "cpu",
+     "torch_intra_op_threads": 11,
+     "torch_interop_threads": 96,
+     "first_call_s": 1.4630596661008894,
+     "timing": {
+      "warmup_s": 1.5084290918894112,
+      "median_s": 1.509948808932677,
+      "min_s": 1.4899024697951972,
+      "max_s": 1.5781892340164632,
+      "times_s": [
+       1.509948808932677,
+       1.4974079050589353,
+       1.4899024697951972,
+       1.5486810761503875,
+       1.5781892340164632
+      ],
+      "repeats": 5,
+      "units": 1,
+      "unit": "propagation",
+      "workload": "65536 samples, 10 x 80 km, 1 km steps"
+     }
+    },
+    {
+     "case": "ssfm",
+     "variant": "double",
+     "precision": "float64 (precision = 'double')",
+     "samples": 65536,
+     "device": "cpu",
+     "torch_intra_op_threads": 11,
+     "torch_interop_threads": 96,
+     "first_call_s": 5.65976473595947,
+     "timing": {
+      "warmup_s": 6.257820598082617,
+      "median_s": 5.65164583013393,
+      "min_s": 4.32600642205216,
+      "max_s": 6.586448205867782,
+      "times_s": [
+       4.32600642205216,
+       5.65164583013393,
+       6.586448205867782,
+       6.423060271888971,
+       5.003049567807466
+      ],
+      "repeats": 5,
+      "units": 1,
+      "unit": "propagation",
+      "workload": "65536 samples, 10 x 80 km, 1 km steps"
+     }
+    }
+   ],
+   "command": "OMP_NUM_THREADS=11 OPENBLAS_NUM_THREADS=11 MKL_NUM_THREADS=11 VECLIB_MAXIMUM_THREADS=11 NUMBA_NUM_THREADS=11 RAYON_NUM_THREADS=11 python s5_ssfm.py --lib sionna --threads all --work runpod/_work --out runpod/_work/s5_ssfm_sionna_all.json --timing-only",
+   "process_wall_s": 55.54624860314652
+  },
+  {
+   "scenario": "s5_ssfm",
+   "library": "sionna",
+   "threads": "gpu",
+   "quick": false,
+   "timing_only": true,
+   "env": {
+    "OMP_NUM_THREADS": "11",
+    "OPENBLAS_NUM_THREADS": "11",
+    "MKL_NUM_THREADS": "11",
+    "VECLIB_MAXIMUM_THREADS": "11",
+    "NUMBA_NUM_THREADS": "11",
+    "RAYON_NUM_THREADS": "11",
+    "NUMBA_DISABLE_JIT": null
+   },
+   "versions": {
+    "comnum": "0.3.1",
+    "komm": null,
+    "OptiCommPy": "0.11.0",
+    "sionna": "2.2.0",
+    "torch": "2.13.0+cu130",
+    "numba": "0.68.1",
+    "cupy": null,
+    "cupy-cuda12x": null,
+    "cupy-cuda13x": "14.2.0",
+    "llvmlite": "0.50.0",
+    "numpy": "2.5.2",
+    "scipy": "1.18.1"
+   },
+   "wall_s": 7.956413067178801,
+   "threading": {
+    "cpu_count": 96,
+    "cpus_available": 11,
+    "torch_intra_op_threads": 11,
+    "torch_interop_threads": 96,
+    "torch_device": "cuda:0"
+   },
+   "cases": [
+    {
+     "case": "ssfm",
+     "variant": "single",
+     "precision": "float32 (precision = 'single', the default)",
+     "samples": 65536,
+     "device": "cuda:0",
+     "gpu": "NVIDIA GeForce RTX 4090",
+     "gpu_memory_gb": 23.5,
+     "cuda": "13.0",
+     "torch_intra_op_threads": 11,
+     "torch_interop_threads": 96,
+     "first_call_s": 0.3835192518308759,
+     "timing": {
+      "warmup_s": 0.27448100480251014,
+      "median_s": 0.27679594815708697,
+      "min_s": 0.27204114897176623,
+      "max_s": 0.28507884801365435,
+      "times_s": [
+       0.27204114897176623,
+       0.2739088779781014,
+       0.27679594815708697,
+       0.28507884801365435,
+       0.2774387688841671
+      ],
+      "repeats": 5,
+      "units": 1,
+      "unit": "propagation",
+      "workload": "65536 samples, 10 x 80 km, 1 km steps"
+     }
+    },
+    {
+     "case": "ssfm",
+     "variant": "double",
+     "precision": "float64 (precision = 'double')",
+     "samples": 65536,
+     "device": "cuda:0",
+     "gpu": "NVIDIA GeForce RTX 4090",
+     "gpu_memory_gb": 23.5,
+     "cuda": "13.0",
+     "torch_intra_op_threads": 11,
+     "torch_interop_threads": 96,
+     "first_call_s": 0.2774782788474113,
+     "timing": {
+      "warmup_s": 0.2733362400904298,
+      "median_s": 0.2719703270122409,
+      "min_s": 0.270469140028581,
+      "max_s": 0.2767408259678632,
+      "times_s": [
+       0.2723162770271301,
+       0.270469140028581,
+       0.2718936640303582,
+       0.2767408259678632,
+       0.2719703270122409
+      ],
+      "repeats": 5,
+      "units": 1,
+      "unit": "propagation",
+      "workload": "65536 samples, 10 x 80 km, 1 km steps"
+     }
+    }
+   ],
+   "command": "OMP_NUM_THREADS=11 OPENBLAS_NUM_THREADS=11 MKL_NUM_THREADS=11 VECLIB_MAXIMUM_THREADS=11 NUMBA_NUM_THREADS=11 RAYON_NUM_THREADS=11 python s5_ssfm.py --lib sionna --threads gpu --work runpod/_work --out runpod/_work/s5_ssfm_sionna_gpu.json --timing-only",
+   "process_wall_s": 9.034012939082459
+  }
+ ],
+ "agreement": {
+  "nmse": [
+   {
+    "field": "comnum_f32",
+    "nmse_vs_comnum_f64": 1.1432689708624123e-08,
+    "nmse_vs_reference": 7.44730594486954e-08
+   },
+   {
+    "field": "comnum_f64",
+    "nmse_vs_comnum_f64": 0.0,
+    "nmse_vs_reference": 3.69453309780721e-08
+   },
+   {
+    "field": "opticommpy_f64",
+    "nmse_vs_comnum_f64": 2.2360153399479134e-26,
+    "nmse_vs_reference": 3.694533097932818e-08
+   },
+   {
+    "field": "sionna_double",
+    "nmse_vs_comnum_f64": 3.547725685166243e-25,
+    "nmse_vs_reference": 3.6945331125990156e-08
+   },
+   {
+    "field": "sionna_double_plain",
+    "nmse_vs_comnum_f64": 2.02932586815418,
+    "nmse_vs_reference": 2.029343177807552
+   },
+   {
+    "field": "sionna_single",
+    "nmse_vs_comnum_f64": 2.147271746799577e-08,
+    "nmse_vs_reference": 2.4455545904826926e-08
+   },
+   {
+    "field": "sionna_single_plain",
+    "nmse_vs_comnum_f64": 2.0294971650887565,
+    "nmse_vs_reference": 2.02951447555295
+   }
+  ],
+  "reference_step_km": 0.05
+ }
+}

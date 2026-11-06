@@ -1,0 +1,1184 @@
+{
+ "scenario": "s2_rayleigh",
+ "title": "BPSK and QPSK over flat Rayleigh fading",
+ "description": "Scenario 2: BPSK and Gray QPSK over flat Rayleigh fading (one coefficient per symbol, perfectly known at the receiver), BER against the closed form.",
+ "script": "benchmarks/libraries/s2_rayleigh.py",
+ "parameters": {
+  "ebn0_db": [
+   0.0,
+   5.0,
+   10.0,
+   15.0,
+   20.0,
+   25.0,
+   30.0
+  ],
+  "bits_per_point": "10^7 (quick: 2\u00b710^5), in blocks of 10^6 (quick: 10^5)",
+  "channel": "y = h x + w, h ~ CN(0, 1) independent for every symbol, known at the receiver",
+  "timing": "one block of 10^6 bits (quick: 2\u00b710^5) at Eb/N0 = 10 dB",
+  "theory": "BPSK: (1 - sqrt(G / (1 + G))) / 2; Gray QPSK: the same per bit (Proakis & Salehi, 5th ed., Sec. 13.3)"
+ },
+ "quick": false,
+ "generated_utc": "2026-11-06T17:40:57+00:00",
+ "machine": {
+  "platform": "Linux-6.8.0-147-generic-x86_64-with-glibc2.39",
+  "machine": "x86_64",
+  "python": "3.12.3",
+  "cpu": "AMD EPYC 7K62 48-Core Processor",
+  "logical_cores": 96,
+  "cpus_available": 11,
+  "physical_cores": "48",
+  "core_levels": [],
+  "ram_gb": 251.5,
+  "macos": null,
+  "linux": "Ubuntu 24.04.5 LTS",
+  "rustc": null,
+  "gpu": {
+   "name": "NVIDIA GeForce RTX 4090",
+   "memory": "24564 MiB",
+   "driver": "595.91.07"
+  }
+ },
+ "git": {
+  "commit": "45a7c78f80fcfe29dd0fc8b41e22a6d945d9391f",
+  "dirty": false
+ },
+ "versions": {
+  "comnum": "0.3.1",
+  "komm": null,
+  "OptiCommPy": "0.11.0",
+  "sionna": "2.2.0",
+  "torch": "2.13.0+cu130",
+  "numba": "0.68.1",
+  "cupy": null,
+  "cupy-cuda12x": null,
+  "cupy-cuda13x": "14.2.0",
+  "llvmlite": "0.50.0",
+  "numpy": "2.5.2",
+  "scipy": "1.18.1"
+ },
+ "libraries": {
+  "comnum": "comnum from Python: the functions of the comnum package, called block by block",
+  "comnum-spec": "comnum from Python: comnum.run_spec, the parallel Monte Carlo runner of Rust",
+  "opticommpy": "OptiCommPy with numba (its @njit kernels compiled; its CuPy split-step on the GPU in the mode gpu)",
+  "sionna": "Sionna PHY (PyTorch, eager mode; the CPU, or the GPU in the mode gpu)"
+ },
+ "support": {
+  "bpsk": {
+   "comnum": true,
+   "comnum-spec": true,
+   "opticommpy": "no fading channel",
+   "sionna": true
+  },
+  "qpsk": {
+   "comnum": true,
+   "comnum-spec": true,
+   "opticommpy": "no fading channel",
+   "sionna": true
+  }
+ },
+ "thread_modes": [
+  "1",
+  "all",
+  "gpu"
+ ],
+ "commands": [
+  "python run_all.py --scenarios s1_awgn,s2_rayleigh,s3_mimo,s4_coding,s5_ssfm --libs comnum,comnum-spec,opticommpy,sionna --threads 1,all,gpu --results results/runpod --no-rust-build"
+ ],
+ "runs": [
+  {
+   "scenario": "s2_rayleigh",
+   "library": "comnum",
+   "threads": "1",
+   "quick": false,
+   "timing_only": false,
+   "env": {
+    "OMP_NUM_THREADS": "1",
+    "OPENBLAS_NUM_THREADS": "1",
+    "MKL_NUM_THREADS": "1",
+    "VECLIB_MAXIMUM_THREADS": "1",
+    "NUMBA_NUM_THREADS": "1",
+    "RAYON_NUM_THREADS": "1",
+    "NUMBA_DISABLE_JIT": null
+   },
+   "versions": {
+    "comnum": "0.3.1",
+    "komm": null,
+    "OptiCommPy": "0.11.0",
+    "sionna": "2.2.0",
+    "torch": "2.13.0+cu130",
+    "numba": "0.68.1",
+    "cupy": null,
+    "cupy-cuda12x": null,
+    "cupy-cuda13x": "14.2.0",
+    "llvmlite": "0.50.0",
+    "numpy": "2.5.2",
+    "scipy": "1.18.1"
+   },
+   "wall_s": 35.85690225684084,
+   "threading": {
+    "cpu_count": 96,
+    "cpus_available": 11
+   },
+   "cases": [
+    {
+     "case": "bpsk",
+     "precision": "float64",
+     "first_call_s": 0.3169970689341426,
+     "points": [
+      {
+       "errors": 1464603,
+       "total": 10000000,
+       "value": 0.1464603,
+       "lo": 0.14624129266878147,
+       "hi": 0.14667957896273645,
+       "ci": "binomial",
+       "ebn0_db": 0.0,
+       "theory": 0.1464466094067262,
+       "z": 0.12245238884984101
+      },
+      {
+       "errors": 642537,
+       "total": 10000000,
+       "value": 0.0642537,
+       "lo": 0.06410188811673816,
+       "hi": 0.06440584667573045,
+       "ci": "binomial",
+       "ebn0_db": 5.0,
+       "theory": 0.06418268544952299,
+       "z": 0.9163109195013613
+      },
+      {
+       "errors": 233315,
+       "total": 10000000,
+       "value": 0.0233315,
+       "lo": 0.023238120633517302,
+       "hi": 0.023425245600283924,
+       "ci": "binomial",
+       "ebn0_db": 10.0,
+       "theory": 0.023268705377203824,
+       "z": 1.317191120122755
+      },
+      {
+       "errors": 77263,
+       "total": 10000000,
+       "value": 0.0077263,
+       "lo": 0.0076722190709292495,
+       "hi": 0.007780759152654635,
+       "ci": "binomial",
+       "ebn0_db": 15.0,
+       "theory": 0.00772300227202255,
+       "z": 0.1191256505844197
+      },
+      {
+       "errors": 25122,
+       "total": 10000000,
+       "value": 0.0025122,
+       "lo": 0.002481363733124199,
+       "hi": 0.0025434184965554595,
+       "ci": "binomial",
+       "ebn0_db": 20.0,
+       "theory": 0.0024814048950054235,
+       "z": 1.9573674938991559
+      },
+      {
+       "errors": 8084,
+       "total": 10000000,
+       "value": 0.0008084,
+       "lo": 0.0007909752842603095,
+       "hi": 0.0008262082544824622,
+       "ci": "binomial",
+       "ebn0_db": 25.0,
+       "theory": 0.0007886993424678912,
+       "z": 2.2191993348578367
+      },
+      {
+       "errors": 2519,
+       "total": 10000000,
+       "value": 0.0002519,
+       "lo": 0.00024225418116465095,
+       "hi": 0.00026192978514803653,
+       "ci": "binomial",
+       "ebn0_db": 30.0,
+       "theory": 0.00024981265611340175,
+       "z": 0.4176774595507888
+      }
+     ],
+     "sweep_s": 21.585799945984036,
+     "timing": {
+      "warmup_s": 0.3046889042016119,
+      "median_s": 0.3026390851009637,
+      "min_s": 0.3024913240224123,
+      "max_s": 0.3032524238806218,
+      "times_s": [
+       0.3026390851009637,
+       0.30295573989860713,
+       0.3024913240224123,
+       0.3032524238806218,
+       0.302549344021827
+      ],
+      "repeats": 5,
+      "units": 1000000,
+      "unit": "bit",
+      "workload": "1000000 bits at Eb/N0 = 10.0 dB"
+     }
+    },
+    {
+     "case": "qpsk",
+     "precision": "float64",
+     "first_call_s": 0.15580627089366317,
+     "points": [
+      {
+       "errors": 1462140,
+       "total": 10000000,
+       "value": 0.146214,
+       "lo": 0.14599514551619214,
+       "hi": 0.14643312630456295,
+       "ci": "binomial",
+       "ebn0_db": 0.0,
+       "theory": 0.1464466094067262,
+       "z": -2.080521782582747
+      },
+      {
+       "errors": 640946,
+       "total": 10000000,
+       "value": 0.0640946,
+       "lo": 0.06394296355025451,
+       "hi": 0.06424657136445376,
+       "ci": "binomial",
+       "ebn0_db": 5.0,
+       "theory": 0.06418268544952299,
+       "z": -1.136579175745635
+      },
+      {
+       "errors": 233542,
+       "total": 10000000,
+       "value": 0.0233542,
+       "lo": 0.023260776208845823,
+       "hi": 0.023447990007514543,
+       "ci": "binomial",
+       "ebn0_db": 10.0,
+       "theory": 0.023268705377203824,
+       "z": 1.7933503371919417
+      },
+      {
+       "errors": 77699,
+       "total": 10000000,
+       "value": 0.0077699,
+       "lo": 0.007715667342526795,
+       "hi": 0.00782451084755835,
+       "ci": "binomial",
+       "ebn0_db": 15.0,
+       "theory": 0.00772300227202255,
+       "z": 1.6941125509583304
+      },
+      {
+       "errors": 25102,
+       "total": 10000000,
+       "value": 0.0025102,
+       "lo": 0.0024793760554675474,
+       "hi": 0.002541406175748751,
+       "ci": "binomial",
+       "ebn0_db": 20.0,
+       "theory": 0.0024814048950054235,
+       "z": 1.8302455052426008
+      },
+      {
+       "errors": 8016,
+       "total": 10000000,
+       "value": 0.0008016,
+       "lo": 0.0007842494669054827,
+       "hi": 0.0008193340770618629,
+       "ci": "binomial",
+       "ebn0_db": 25.0,
+       "theory": 0.0007886993424678912,
+       "z": 1.453206857071839
+      },
+      {
+       "errors": 2533,
+       "total": 10000000,
+       "value": 0.0002533,
+       "lo": 0.00024362689772754924,
+       "hi": 0.0002633570675094906,
+       "ci": "binomial",
+       "ebn0_db": 30.0,
+       "theory": 0.00024981265611340175,
+       "z": 0.6978174245682752
+      }
+     ],
+     "sweep_s": 11.032610130030662,
+     "timing": {
+      "warmup_s": 0.15550083690322936,
+      "median_s": 0.15553521690890193,
+      "min_s": 0.15529908379539847,
+      "max_s": 0.15599356405436993,
+      "times_s": [
+       0.1557737411931157,
+       0.15529908379539847,
+       0.15599356405436993,
+       0.15553521690890193,
+       0.15543511579744518
+      ],
+      "repeats": 5,
+      "units": 1000000,
+      "unit": "bit",
+      "workload": "1000000 bits at Eb/N0 = 10.0 dB"
+     }
+    }
+   ],
+   "command": "OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 VECLIB_MAXIMUM_THREADS=1 NUMBA_NUM_THREADS=1 RAYON_NUM_THREADS=1 python s2_rayleigh.py --lib comnum --threads 1 --work runpod/_work --out runpod/_work/s2_rayleigh_comnum_1.json",
+   "process_wall_s": 36.015161332907155
+  },
+  {
+   "scenario": "s2_rayleigh",
+   "library": "comnum",
+   "threads": "all",
+   "quick": false,
+   "timing_only": true,
+   "env": {
+    "OMP_NUM_THREADS": "11",
+    "OPENBLAS_NUM_THREADS": "11",
+    "MKL_NUM_THREADS": "11",
+    "VECLIB_MAXIMUM_THREADS": "11",
+    "NUMBA_NUM_THREADS": "11",
+    "RAYON_NUM_THREADS": "11",
+    "NUMBA_DISABLE_JIT": null
+   },
+   "versions": {
+    "comnum": "0.3.1",
+    "komm": null,
+    "OptiCommPy": "0.11.0",
+    "sionna": "2.2.0",
+    "torch": "2.13.0+cu130",
+    "numba": "0.68.1",
+    "cupy": null,
+    "cupy-cuda12x": null,
+    "cupy-cuda13x": "14.2.0",
+    "llvmlite": "0.50.0",
+    "numpy": "2.5.2",
+    "scipy": "1.18.1"
+   },
+   "wall_s": 3.1977020849008113,
+   "threading": {
+    "cpu_count": 96,
+    "cpus_available": 11
+   },
+   "cases": [
+    {
+     "case": "bpsk",
+     "precision": "float64",
+     "first_call_s": 0.3332624479662627,
+     "timing": {
+      "warmup_s": 0.30525930295698345,
+      "median_s": 0.2950632879510522,
+      "min_s": 0.2934240747708827,
+      "max_s": 0.30671847285702825,
+      "times_s": [
+       0.2950632879510522,
+       0.2935086169745773,
+       0.2955848160199821,
+       0.30671847285702825,
+       0.2934240747708827
+      ],
+      "repeats": 5,
+      "units": 1000000,
+      "unit": "bit",
+      "workload": "1000000 bits at Eb/N0 = 10.0 dB"
+     }
+    },
+    {
+     "case": "qpsk",
+     "precision": "float64",
+     "first_call_s": 0.15066924900747836,
+     "timing": {
+      "warmup_s": 0.1512626870535314,
+      "median_s": 0.15090668108314276,
+      "min_s": 0.1506973090581596,
+      "max_s": 0.15161623200401664,
+      "times_s": [
+       0.15161623200401664,
+       0.1506973090581596,
+       0.15090668108314276,
+       0.15124519704841077,
+       0.15087343216873705
+      ],
+      "repeats": 5,
+      "units": 1000000,
+      "unit": "bit",
+      "workload": "1000000 bits at Eb/N0 = 10.0 dB"
+     }
+    }
+   ],
+   "command": "OMP_NUM_THREADS=11 OPENBLAS_NUM_THREADS=11 MKL_NUM_THREADS=11 VECLIB_MAXIMUM_THREADS=11 NUMBA_NUM_THREADS=11 RAYON_NUM_THREADS=11 python s2_rayleigh.py --lib comnum --threads all --work runpod/_work --out runpod/_work/s2_rayleigh_comnum_all.json --timing-only",
+   "process_wall_s": 3.3652079310268164
+  },
+  {
+   "scenario": "s2_rayleigh",
+   "library": "comnum-spec",
+   "threads": "1",
+   "quick": false,
+   "timing_only": false,
+   "env": {
+    "OMP_NUM_THREADS": "1",
+    "OPENBLAS_NUM_THREADS": "1",
+    "MKL_NUM_THREADS": "1",
+    "VECLIB_MAXIMUM_THREADS": "1",
+    "NUMBA_NUM_THREADS": "1",
+    "RAYON_NUM_THREADS": "1",
+    "NUMBA_DISABLE_JIT": null
+   },
+   "versions": {
+    "comnum": "0.3.1",
+    "komm": null,
+    "OptiCommPy": "0.11.0",
+    "sionna": "2.2.0",
+    "torch": "2.13.0+cu130",
+    "numba": "0.68.1",
+    "cupy": null,
+    "cupy-cuda12x": null,
+    "cupy-cuda13x": "14.2.0",
+    "llvmlite": "0.50.0",
+    "numpy": "2.5.2",
+    "scipy": "1.18.1"
+   },
+   "wall_s": 37.14915638510138,
+   "threading": {
+    "cpu_count": 96,
+    "cpus_available": 11
+   },
+   "cases": [
+    {
+     "case": "bpsk",
+     "precision": "float64",
+     "threads_option": 1,
+     "sweep_s": 22.621060482924804,
+     "points": [
+      {
+       "errors": 1463645,
+       "total": 10000000,
+       "value": 0.1463645,
+       "lo": 0.14614555209448687,
+       "hi": 0.1465837196106361,
+       "ci": "binomial",
+       "ebn0_db": 0.0,
+       "theory": 0.1464466094067262,
+       "z": -0.7344088601278927
+      },
+      {
+       "errors": 642199,
+       "total": 10000000,
+       "value": 0.0642199,
+       "lo": 0.06406812536442485,
+       "hi": 0.06437200945401295,
+       "ci": "binomial",
+       "ebn0_db": 5.0,
+       "theory": 0.06418268544952299,
+       "z": 0.48018467676502247
+      },
+      {
+       "errors": 232457,
+       "total": 10000000,
+       "value": 0.0232457,
+       "lo": 0.023152488756985227,
+       "hi": 0.02333927754273783,
+       "ci": "binomial",
+       "ebn0_db": 10.0,
+       "theory": 0.023268705377203824,
+       "z": -0.4825648633372354
+      },
+      {
+       "errors": 77629,
+       "total": 10000000,
+       "value": 0.0077629,
+       "lo": 0.007708691673174221,
+       "hi": 0.007817486522289162,
+       "ci": "binomial",
+       "ebn0_db": 15.0,
+       "theory": 0.00772300227202255,
+       "z": 1.4412476816322388
+      },
+      {
+       "errors": 24613,
+       "total": 10000000,
+       "value": 0.0024613,
+       "lo": 0.002430778890294151,
+       "hi": 0.0024922033784929806,
+       "ci": "binomial",
+       "ebn0_db": 20.0,
+       "theory": 0.0024814048950054235,
+       "z": -1.2778871174104443
+      },
+      {
+       "errors": 7827,
+       "total": 10000000,
+       "value": 0.0007827,
+       "lo": 0.000765557323613022,
+       "hi": 0.0008002262348755662,
+       "ci": "binomial",
+       "ebn0_db": 25.0,
+       "theory": 0.0007886993424678912,
+       "z": -0.6758016473627502
+      },
+      {
+       "errors": 2409,
+       "total": 10000000,
+       "value": 0.0002409,
+       "lo": 0.00023147124553298172,
+       "hi": 0.0002507127292312225,
+       "ci": "binomial",
+       "ebn0_db": 30.0,
+       "theory": 0.00024981265611340175,
+       "z": -1.7834222655866354
+      }
+     ],
+     "timing": {
+      "warmup_s": 0.34716056496836245,
+      "median_s": 0.32201527897268534,
+      "min_s": 0.3202526739332825,
+      "max_s": 0.3295385050587356,
+      "times_s": [
+       0.3204364569392055,
+       0.3295385050587356,
+       0.32630262011662126,
+       0.32201527897268534,
+       0.3202526739332825
+      ],
+      "repeats": 5,
+      "units": 1000000,
+      "unit": "bit",
+      "workload": "1000000 bits at Eb/N0 = 10.0 dB, 40 trials"
+     }
+    },
+    {
+     "case": "qpsk",
+     "precision": "float64",
+     "threads_option": 1,
+     "sweep_s": 11.555291334167123,
+     "points": [
+      {
+       "errors": 1463934,
+       "total": 10000000,
+       "value": 0.1463934,
+       "lo": 0.14617443416413506,
+       "hi": 0.14661263751878345,
+       "ci": "binomial",
+       "ebn0_db": 0.0,
+       "theory": 0.1464466094067262,
+       "z": -0.4759194019289316
+      },
+      {
+       "errors": 641753,
+       "total": 10000000,
+       "value": 0.0641753,
+       "lo": 0.06402357453212941,
+       "hi": 0.06432736032057547,
+       "ci": "binomial",
+       "ebn0_db": 5.0,
+       "theory": 0.06418268544952299,
+       "z": -0.09529551335441197
+      },
+      {
+       "errors": 232924,
+       "total": 10000000,
+       "value": 0.0232924,
+       "lo": 0.02319909720798927,
+       "hi": 0.02338606905585326,
+       "ci": "binomial",
+       "ebn0_db": 10.0,
+       "theory": 0.023268705377203824,
+       "z": 0.497022600853691
+      },
+      {
+       "errors": 77287,
+       "total": 10000000,
+       "value": 0.0077287,
+       "lo": 0.007674610707528683,
+       "hi": 0.007783167514211235,
+       "ci": "binomial",
+       "ebn0_db": 15.0,
+       "theory": 0.00772300227202255,
+       "z": 0.20582217721049387
+      },
+      {
+       "errors": 24998,
+       "total": 10000000,
+       "value": 0.0024998,
+       "lo": 0.0024690402115254235,
+       "hi": 0.0025309420276813993,
+       "ci": "binomial",
+       "ebn0_db": 20.0,
+       "theory": 0.0024814048950054235,
+       "z": 1.1692111642284422
+      },
+      {
+       "errors": 7810,
+       "total": 10000000,
+       "value": 0.000781,
+       "lo": 0.0007638761424057166,
+       "hi": 0.0007985074173890151,
+       "ci": "binomial",
+       "ebn0_db": 25.0,
+       "theory": 0.0007886993424678912,
+       "z": -0.8672997668092465
+      },
+      {
+       "errors": 2465,
+       "total": 10000000,
+       "value": 0.0002465,
+       "lo": 0.00023696013445442997,
+       "hi": 0.00025642383600718387,
+       "ci": "binomial",
+       "ebn0_db": 30.0,
+       "theory": 0.00024981265611340175,
+       "z": -0.662862405516679
+      }
+     ],
+     "timing": {
+      "warmup_s": 0.16173401498235762,
+      "median_s": 0.1655435780994594,
+      "min_s": 0.16048001707531512,
+      "max_s": 0.17473961901850998,
+      "times_s": [
+       0.17473961901850998,
+       0.16778006008826196,
+       0.1655435780994594,
+       0.16360782203264534,
+       0.16048001707531512
+      ],
+      "repeats": 5,
+      "units": 1000000,
+      "unit": "bit",
+      "workload": "1000000 bits at Eb/N0 = 10.0 dB, 40 trials"
+     }
+    }
+   ],
+   "command": "OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 VECLIB_MAXIMUM_THREADS=1 NUMBA_NUM_THREADS=1 RAYON_NUM_THREADS=1 python s2_rayleigh.py --lib comnum-spec --threads 1 --work runpod/_work --out runpod/_work/s2_rayleigh_comnum-spec_1.json",
+   "process_wall_s": 37.32110744388774
+  },
+  {
+   "scenario": "s2_rayleigh",
+   "library": "comnum-spec",
+   "threads": "all",
+   "quick": false,
+   "timing_only": true,
+   "env": {
+    "OMP_NUM_THREADS": "11",
+    "OPENBLAS_NUM_THREADS": "11",
+    "MKL_NUM_THREADS": "11",
+    "VECLIB_MAXIMUM_THREADS": "11",
+    "NUMBA_NUM_THREADS": "11",
+    "RAYON_NUM_THREADS": "11",
+    "NUMBA_DISABLE_JIT": null
+   },
+   "versions": {
+    "comnum": "0.3.1",
+    "komm": null,
+    "OptiCommPy": "0.11.0",
+    "sionna": "2.2.0",
+    "torch": "2.13.0+cu130",
+    "numba": "0.68.1",
+    "cupy": null,
+    "cupy-cuda12x": null,
+    "cupy-cuda13x": "14.2.0",
+    "llvmlite": "0.50.0",
+    "numpy": "2.5.2",
+    "scipy": "1.18.1"
+   },
+   "wall_s": 0.5031652089674026,
+   "threading": {
+    "cpu_count": 96,
+    "cpus_available": 11
+   },
+   "cases": [
+    {
+     "case": "bpsk",
+     "precision": "float64",
+     "threads_option": 0,
+     "timing": {
+      "warmup_s": 0.10919549316167831,
+      "median_s": 0.04885478992946446,
+      "min_s": 0.03887278004549444,
+      "max_s": 0.05116589297540486,
+      "times_s": [
+       0.04885478992946446,
+       0.05116589297540486,
+       0.05108018103055656,
+       0.03887278004549444,
+       0.04586599790491164
+      ],
+      "repeats": 5,
+      "units": 1000000,
+      "unit": "bit",
+      "workload": "1000000 bits at Eb/N0 = 10.0 dB, 40 trials"
+     }
+    },
+    {
+     "case": "qpsk",
+     "precision": "float64",
+     "threads_option": 0,
+     "timing": {
+      "warmup_s": 0.020081964088603854,
+      "median_s": 0.02553598117083311,
+      "min_s": 0.020383188035339117,
+      "max_s": 0.029043270042166114,
+      "times_s": [
+       0.02553598117083311,
+       0.025988807203248143,
+       0.029043270042166114,
+       0.020383188035339117,
+       0.02414471097290516
+      ],
+      "repeats": 5,
+      "units": 1000000,
+      "unit": "bit",
+      "workload": "1000000 bits at Eb/N0 = 10.0 dB, 40 trials"
+     }
+    }
+   ],
+   "command": "OMP_NUM_THREADS=11 OPENBLAS_NUM_THREADS=11 MKL_NUM_THREADS=11 VECLIB_MAXIMUM_THREADS=11 NUMBA_NUM_THREADS=11 RAYON_NUM_THREADS=11 python s2_rayleigh.py --lib comnum-spec --threads all --work runpod/_work --out runpod/_work/s2_rayleigh_comnum-spec_all.json --timing-only",
+   "process_wall_s": 0.6713140739593655
+  },
+  {
+   "scenario": "s2_rayleigh",
+   "library": "sionna",
+   "threads": "1",
+   "quick": false,
+   "timing_only": false,
+   "env": {
+    "OMP_NUM_THREADS": "1",
+    "OPENBLAS_NUM_THREADS": "1",
+    "MKL_NUM_THREADS": "1",
+    "VECLIB_MAXIMUM_THREADS": "1",
+    "NUMBA_NUM_THREADS": "1",
+    "RAYON_NUM_THREADS": "1",
+    "NUMBA_DISABLE_JIT": null
+   },
+   "versions": {
+    "comnum": "0.3.1",
+    "komm": null,
+    "OptiCommPy": "0.11.0",
+    "sionna": "2.2.0",
+    "torch": "2.13.0+cu130",
+    "numba": "0.68.1",
+    "cupy": null,
+    "cupy-cuda12x": null,
+    "cupy-cuda13x": "14.2.0",
+    "llvmlite": "0.50.0",
+    "numpy": "2.5.2",
+    "scipy": "1.18.1"
+   },
+   "wall_s": 59.589614236028865,
+   "threading": {
+    "cpu_count": 96,
+    "cpus_available": 11,
+    "torch_intra_op_threads": 1,
+    "torch_interop_threads": 1,
+    "torch_device": "cpu"
+   },
+   "cases": [
+    {
+     "case": "bpsk",
+     "precision": "float32 (config.precision = 'single')",
+     "device": "cpu",
+     "torch_intra_op_threads": 1,
+     "torch_interop_threads": 1,
+     "first_call_s": 0.4474156410433352,
+     "points": [
+      {
+       "errors": 1465978,
+       "total": 10000000,
+       "value": 0.1465978,
+       "lo": 0.14637870743236917,
+       "hi": 0.1468171640935048,
+       "ci": "binomial",
+       "ebn0_db": 0.0,
+       "theory": 0.1464466094067262,
+       "z": 1.3522897764748383
+      },
+      {
+       "errors": 641671,
+       "total": 10000000,
+       "value": 0.0641671,
+       "lo": 0.0640153835742101,
+       "hi": 0.06431915128479498,
+       "ci": "binomial",
+       "ebn0_db": 5.0,
+       "theory": 0.06418268544952299,
+       "z": -0.20110128821943776
+      },
+      {
+       "errors": 233307,
+       "total": 10000000,
+       "value": 0.0233307,
+       "lo": 0.023237322199567728,
+       "hi": 0.023424444034848148,
+       "ci": "binomial",
+       "ebn0_db": 10.0,
+       "theory": 0.023268705377203824,
+       "z": 1.3004101785519866
+      },
+      {
+       "errors": 77492,
+       "total": 10000000,
+       "value": 0.0077492,
+       "lo": 0.007695039324241454,
+       "hi": 0.00780373888174791,
+       "ci": "binomial",
+       "ebn0_db": 15.0,
+       "theory": 0.00772300227202255,
+       "z": 0.9463550088083466
+      },
+      {
+       "errors": 25184,
+       "total": 10000000,
+       "value": 0.0025184,
+       "lo": 0.002487525565231829,
+       "hi": 0.0025496566596842473,
+       "ci": "binomial",
+       "ebn0_db": 20.0,
+       "theory": 0.0024814048950054235,
+       "z": 2.3514456587345127
+      },
+      {
+       "errors": 7883,
+       "total": 10000000,
+       "value": 0.0007883,
+       "lo": 0.0007710954767191769,
+       "hi": 0.0008058880774668209,
+       "ci": "binomial",
+       "ebn0_db": 25.0,
+       "theory": 0.0007886993424678912,
+       "z": -0.04498431271546035
+      },
+      {
+       "errors": 2432,
+       "total": 10000000,
+       "value": 0.0002432,
+       "lo": 0.0002337254559257998,
+       "hi": 0.0002530585170712691,
+       "ci": "binomial",
+       "ebn0_db": 30.0,
+       "theory": 0.00024981265611340175,
+       "z": -1.3231923230579008
+      }
+     ],
+     "sweep_s": 30.048039885004982,
+     "timing": {
+      "warmup_s": 0.4057853128761053,
+      "median_s": 0.43672628002241254,
+      "min_s": 0.4184438621159643,
+      "max_s": 0.4622380000073463,
+      "times_s": [
+       0.42558588180691004,
+       0.4184438621159643,
+       0.43672628002241254,
+       0.43729556701146066,
+       0.4622380000073463
+      ],
+      "repeats": 5,
+      "units": 1000000,
+      "unit": "bit",
+      "workload": "1000000 bits at Eb/N0 = 10.0 dB"
+     }
+    },
+    {
+     "case": "qpsk",
+     "precision": "float32 (config.precision = 'single')",
+     "device": "cpu",
+     "torch_intra_op_threads": 1,
+     "torch_interop_threads": 1,
+     "first_call_s": 0.3201355719938874,
+     "points": [
+      {
+       "errors": 1464444,
+       "total": 10000000,
+       "value": 0.1464444,
+       "lo": 0.14622540252948413,
+       "hi": 0.1466636691142501,
+       "ci": "binomial",
+       "ebn0_db": 0.0,
+       "theory": 0.1464466094067262,
+       "z": -0.01976153451901478
+      },
+      {
+       "errors": 641653,
+       "total": 10000000,
+       "value": 0.0641653,
+       "lo": 0.06401358555915185,
+       "hi": 0.0643173493012362,
+       "ci": "binomial",
+       "ebn0_db": 5.0,
+       "theory": 0.06418268544952299,
+       "z": -0.22432694611676957
+      },
+      {
+       "errors": 231196,
+       "total": 10000000,
+       "value": 0.0231196,
+       "lo": 0.02302663645313929,
+       "hi": 0.023212929943468883,
+       "ci": "binomial",
+       "ebn0_db": 10.0,
+       "theory": 0.023268705377203824,
+       "z": -3.1276607784223693
+      },
+      {
+       "errors": 76676,
+       "total": 10000000,
+       "value": 0.0076676,
+       "lo": 0.0076137240412071094,
+       "hi": 0.007721854227477143,
+       "ci": "binomial",
+       "ebn0_db": 15.0,
+       "theory": 0.00772300227202255,
+       "z": -2.0013268964786453
+      },
+      {
+       "errors": 24648,
+       "total": 10000000,
+       "value": 0.0024648,
+       "lo": 0.0024342571148744,
+       "hi": 0.002495725151223613,
+       "ci": "binomial",
+       "ebn0_db": 20.0,
+       "theory": 0.0024814048950054235,
+       "z": -1.055423637261452
+      },
+      {
+       "errors": 7925,
+       "total": 10000000,
+       "value": 0.0007925,
+       "lo": 0.0007752492359029062,
+       "hi": 0.0008101343150561487,
+       "ci": "binomial",
+       "ebn0_db": 25.0,
+       "theory": 0.0007886993424678912,
+       "z": 0.42812868827000394
+      },
+      {
+       "errors": 2511,
+       "total": 10000000,
+       "value": 0.0002511,
+       "lo": 0.00024146980575963134,
+       "hi": 0.0002611141611677119,
+       "ci": "binomial",
+       "ebn0_db": 30.0,
+       "theory": 0.00024981265611340175,
+       "z": 0.2575974795407904
+      }
+     ],
+     "sweep_s": 20.668385667027906,
+     "timing": {
+      "warmup_s": 0.29642326780594885,
+      "median_s": 0.2893892889842391,
+      "min_s": 0.2858883289154619,
+      "max_s": 0.29000114696100354,
+      "times_s": [
+       0.2881075800396502,
+       0.2893892889842391,
+       0.29000114696100354,
+       0.2897196018602699,
+       0.2858883289154619
+      ],
+      "repeats": 5,
+      "units": 1000000,
+      "unit": "bit",
+      "workload": "1000000 bits at Eb/N0 = 10.0 dB"
+     }
+    }
+   ],
+   "command": "OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 VECLIB_MAXIMUM_THREADS=1 NUMBA_NUM_THREADS=1 RAYON_NUM_THREADS=1 python s2_rayleigh.py --lib sionna --threads 1 --work runpod/_work --out runpod/_work/s2_rayleigh_sionna_1.json",
+   "process_wall_s": 60.60478710802272
+  },
+  {
+   "scenario": "s2_rayleigh",
+   "library": "sionna",
+   "threads": "all",
+   "quick": false,
+   "timing_only": true,
+   "env": {
+    "OMP_NUM_THREADS": "11",
+    "OPENBLAS_NUM_THREADS": "11",
+    "MKL_NUM_THREADS": "11",
+    "VECLIB_MAXIMUM_THREADS": "11",
+    "NUMBA_NUM_THREADS": "11",
+    "RAYON_NUM_THREADS": "11",
+    "NUMBA_DISABLE_JIT": null
+   },
+   "versions": {
+    "comnum": "0.3.1",
+    "komm": null,
+    "OptiCommPy": "0.11.0",
+    "sionna": "2.2.0",
+    "torch": "2.13.0+cu130",
+    "numba": "0.68.1",
+    "cupy": null,
+    "cupy-cuda12x": null,
+    "cupy-cuda13x": "14.2.0",
+    "llvmlite": "0.50.0",
+    "numpy": "2.5.2",
+    "scipy": "1.18.1"
+   },
+   "wall_s": 10.30449441401288,
+   "threading": {
+    "cpu_count": 96,
+    "cpus_available": 11,
+    "torch_intra_op_threads": 11,
+    "torch_interop_threads": 96,
+    "torch_device": "cpu"
+   },
+   "cases": [
+    {
+     "case": "bpsk",
+     "precision": "float32 (config.precision = 'single')",
+     "device": "cpu",
+     "torch_intra_op_threads": 11,
+     "torch_interop_threads": 96,
+     "first_call_s": 0.4883738891221583,
+     "timing": {
+      "warmup_s": 0.49409294012002647,
+      "median_s": 0.4872930538840592,
+      "min_s": 0.4465116581413895,
+      "max_s": 0.49516019597649574,
+      "times_s": [
+       0.49516019597649574,
+       0.4465116581413895,
+       0.4872930538840592,
+       0.48800699412822723,
+       0.4844817838165909
+      ],
+      "repeats": 5,
+      "units": 1000000,
+      "unit": "bit",
+      "workload": "1000000 bits at Eb/N0 = 10.0 dB"
+     }
+    },
+    {
+     "case": "qpsk",
+     "precision": "float32 (config.precision = 'single')",
+     "device": "cpu",
+     "torch_intra_op_threads": 11,
+     "torch_interop_threads": 96,
+     "first_call_s": 0.30868959007784724,
+     "timing": {
+      "warmup_s": 0.32167673390358686,
+      "median_s": 0.29760564398020506,
+      "min_s": 0.2947053830139339,
+      "max_s": 0.30999936000443995,
+      "times_s": [
+       0.30999936000443995,
+       0.2947053830139339,
+       0.29651184915564954,
+       0.29760564398020506,
+       0.30352764786221087
+      ],
+      "repeats": 5,
+      "units": 1000000,
+      "unit": "bit",
+      "workload": "1000000 bits at Eb/N0 = 10.0 dB"
+     }
+    }
+   ],
+   "command": "OMP_NUM_THREADS=11 OPENBLAS_NUM_THREADS=11 MKL_NUM_THREADS=11 VECLIB_MAXIMUM_THREADS=11 NUMBA_NUM_THREADS=11 RAYON_NUM_THREADS=11 python s2_rayleigh.py --lib sionna --threads all --work runpod/_work --out runpod/_work/s2_rayleigh_sionna_all.json --timing-only",
+   "process_wall_s": 11.613359624985605
+  },
+  {
+   "scenario": "s2_rayleigh",
+   "library": "sionna",
+   "threads": "gpu",
+   "quick": false,
+   "timing_only": true,
+   "env": {
+    "OMP_NUM_THREADS": "11",
+    "OPENBLAS_NUM_THREADS": "11",
+    "MKL_NUM_THREADS": "11",
+    "VECLIB_MAXIMUM_THREADS": "11",
+    "NUMBA_NUM_THREADS": "11",
+    "RAYON_NUM_THREADS": "11",
+    "NUMBA_DISABLE_JIT": null
+   },
+   "versions": {
+    "comnum": "0.3.1",
+    "komm": null,
+    "OptiCommPy": "0.11.0",
+    "sionna": "2.2.0",
+    "torch": "2.13.0+cu130",
+    "numba": "0.68.1",
+    "cupy": null,
+    "cupy-cuda12x": null,
+    "cupy-cuda13x": "14.2.0",
+    "llvmlite": "0.50.0",
+    "numpy": "2.5.2",
+    "scipy": "1.18.1"
+   },
+   "wall_s": 6.087364837061614,
+   "threading": {
+    "cpu_count": 96,
+    "cpus_available": 11,
+    "torch_intra_op_threads": 11,
+    "torch_interop_threads": 96,
+    "torch_device": "cuda:0"
+   },
+   "cases": [
+    {
+     "case": "bpsk",
+     "precision": "float32 (config.precision = 'single')",
+     "device": "cuda:0",
+     "gpu": "NVIDIA GeForce RTX 4090",
+     "gpu_memory_gb": 23.5,
+     "cuda": "13.0",
+     "torch_intra_op_threads": 11,
+     "torch_interop_threads": 96,
+     "first_call_s": 0.38256103498861194,
+     "timing": {
+      "warmup_s": 0.00734565407037735,
+      "median_s": 0.00861122109927237,
+      "min_s": 0.006505272118374705,
+      "max_s": 0.05150179797783494,
+      "times_s": [
+       0.007096600020304322,
+       0.009816569043323398,
+       0.00861122109927237,
+       0.006505272118374705,
+       0.05150179797783494
+      ],
+      "repeats": 5,
+      "units": 1000000,
+      "unit": "bit",
+      "workload": "1000000 bits at Eb/N0 = 10.0 dB"
+     }
+    },
+    {
+     "case": "qpsk",
+     "precision": "float32 (config.precision = 'single')",
+     "device": "cuda:0",
+     "gpu": "NVIDIA GeForce RTX 4090",
+     "gpu_memory_gb": 23.5,
+     "cuda": "13.0",
+     "torch_intra_op_threads": 11,
+     "torch_interop_threads": 96,
+     "first_call_s": 0.003707841970026493,
+     "timing": {
+      "warmup_s": 0.003570440923795104,
+      "median_s": 0.0036738920025527477,
+      "min_s": 0.0036054211668670177,
+      "max_s": 0.0056489098351448774,
+      "times_s": [
+       0.0036738920025527477,
+       0.003692441852763295,
+       0.0036054211668670177,
+       0.0036480810958892107,
+       0.0056489098351448774
+      ],
+      "repeats": 5,
+      "units": 1000000,
+      "unit": "bit",
+      "workload": "1000000 bits at Eb/N0 = 10.0 dB"
+     }
+    }
+   ],
+   "command": "OMP_NUM_THREADS=11 OPENBLAS_NUM_THREADS=11 MKL_NUM_THREADS=11 VECLIB_MAXIMUM_THREADS=11 NUMBA_NUM_THREADS=11 RAYON_NUM_THREADS=11 python s2_rayleigh.py --lib sionna --threads gpu --work runpod/_work --out runpod/_work/s2_rayleigh_sionna_gpu.json --timing-only",
+   "process_wall_s": 7.4885394719894975
+  }
+ ]
+}

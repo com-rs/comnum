@@ -3863,3 +3863,1788 @@ Median of 5 runs, s per propagation; workload: 65536 samples, 10 x 80 km, 1 km s
       OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 VECLIB_MAXIMUM_THREADS=1 NUMBA_NUM_THREADS=1 RAYON_NUM_THREADS=1 python s5_ssfm.py --lib sionna --threads 1 --work h100/_work --out h100/_work/s5_ssfm_sionna_1.json
       OMP_NUM_THREADS=24 OPENBLAS_NUM_THREADS=24 MKL_NUM_THREADS=24 VECLIB_MAXIMUM_THREADS=24 NUMBA_NUM_THREADS=24 RAYON_NUM_THREADS=24 python s5_ssfm.py --lib sionna --threads all --work h100/_work --out h100/_work/s5_ssfm_sionna_all.json --timing-only
       OMP_NUM_THREADS=24 OPENBLAS_NUM_THREADS=24 MKL_NUM_THREADS=24 VECLIB_MAXIMUM_THREADS=24 NUMBA_NUM_THREADS=24 RAYON_NUM_THREADS=24 python s5_ssfm.py --lib sionna --threads gpu --work h100/_work --out h100/_work/s5_ssfm_sionna_gpu.json --timing-only
+
+On another machine: rtx4090 (NVIDIA GeForce RTX 4090)
+=====================================================
+
+The same scripts, run on a second machine (``run_all.py --results results/rtx4090``): Sionna (and, for the split-step, OptiCommPy) on its GPU in the column *GPU*, and every library on its CPU in the other columns. The *Relative* column stays the 1-thread time over that of comnum (functions) on 1 thread of this machine.
+
+Machine and versions
+--------------------
+
+.. list-table::
+   :header-rows: 0
+   :widths: 30 70
+
+   * - CPU
+     - AMD EPYC 7K62 48-Core Processor
+   * - Cores
+     - 96 logical; 11 available to the process (a container's CPU quota: the thread pools of the mode *all threads* are sized to it)
+   * - Memory
+     - 251.5 GB
+   * - GPU
+     - NVIDIA GeForce RTX 4090, 24564 MiB, driver 595.91.07
+   * - System
+     - Ubuntu 24.04.5 LTS
+   * - Python
+     - 3.12.3
+   * - Rust
+     - —
+   * - comnum commit
+     - ``45a7c78f80fc``
+   * - Generated
+     - 2026-11-06T17:38:20+00:00
+   * - comnum
+     - 0.3.1
+   * - komm
+     - not installed
+   * - OptiCommPy
+     - 0.11.0
+   * - sionna
+     - 2.2.0
+   * - torch
+     - 2.13.0+cu130
+   * - numba
+     - 0.68.1
+   * - numpy
+     - 2.5.2
+   * - scipy
+     - 1.18.1
+
+Uncoded QPSK and 16-QAM over AWGN
+---------------------------------
+
+Scenario 1: uncoded Gray QPSK and 16-QAM over AWGN, BER against the exact closed form.
+
+Parameters:
+
+- Eb/N0 (dB): 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10
+- bits per point: 10^7 (quick: 2·10^5), in blocks of 10^6 (quick: 10^5)
+- timing: one block of 10^6 bits (quick: 2·10^5) at Eb/N0 = 6 dB
+- theory: exact BER of Gray square QAM, Cho & Yoon, IEEE Trans. Commun. 50(7), 2002
+
+Script: `benchmarks/libraries/s1_awgn.py <https://github.com/com-rs/comnum/blob/main/benchmarks/libraries/s1_awgn.py>`_.
+
+.. dropdown:: The script
+
+   .. literalinclude:: ../../benchmarks/libraries/s1_awgn.py
+      :language: python
+
+.. rubric:: Support
+
+.. list-table::
+   :header-rows: 1
+
+   * - Case
+     - comnum (functions)
+     - comnum.run_spec
+     - OptiCommPy (numba)
+     - Sionna
+   * - QPSK
+     - yes
+     - yes
+     - yes
+     - yes
+   * - 16-QAM
+     - yes
+     - yes
+     - yes
+     - yes
+
+.. rubric:: QPSK: error rates
+
+.. list-table::
+   :header-rows: 1
+
+   * - Library
+     - Precision
+     - Against
+     - max abs(z), BER
+     - Agrees
+     - BER interval
+   * - comnum (functions)
+     - float64
+     - theory
+     - 1.90
+     - yes
+     - binomial
+   * - comnum.run_spec
+     - float64
+     - theory
+     - 2.53
+     - yes
+     - binomial
+   * - OptiCommPy (numba)
+     - complex64 symbols (its Gray constellation), float64 noise
+     - theory
+     - 3.31
+     - yes
+     - binomial
+   * - Sionna
+     - float32 (config.precision = 'single')
+     - theory
+     - 2.13
+     - yes
+     - binomial
+
+.. dropdown:: BER and its 95 % interval, every point (10,000,000 bits per point)
+
+   .. list-table::
+      :header-rows: 1
+
+      * - Eb/N0 (dB)
+        - theory
+        - comnum (functions)
+        - comnum.run_spec
+        - OptiCommPy (numba)
+        - Sionna
+      * - 0
+        - 7.86e-2
+        - 7.86e-2 [7.84e-2, 7.88e-2]
+        - 7.87e-2 [7.85e-2, 7.89e-2]
+        - 7.86e-2 [7.84e-2, 7.88e-2]
+        - 7.86e-2 [7.84e-2, 7.88e-2]
+      * - 1
+        - 5.63e-2
+        - 5.63e-2 [5.62e-2, 5.65e-2]
+        - 5.63e-2 [5.61e-2, 5.64e-2]
+        - 5.63e-2 [5.61e-2, 5.64e-2]
+        - 5.61e-2 [5.60e-2, 5.63e-2]
+      * - 2
+        - 3.75e-2
+        - 3.75e-2 [3.74e-2, 3.76e-2]
+        - 3.74e-2 [3.73e-2, 3.76e-2]
+        - 3.75e-2 [3.73e-2, 3.76e-2]
+        - 3.76e-2 [3.75e-2, 3.77e-2]
+      * - 3
+        - 2.29e-2
+        - 2.28e-2 [2.27e-2, 2.29e-2]
+        - 2.30e-2 [2.29e-2, 2.31e-2]
+        - 2.29e-2 [2.28e-2, 2.30e-2]
+        - 2.29e-2 [2.28e-2, 2.30e-2]
+      * - 4
+        - 1.25e-2
+        - 1.25e-2 [1.25e-2, 1.26e-2]
+        - 1.25e-2 [1.24e-2, 1.26e-2]
+        - 1.25e-2 [1.24e-2, 1.26e-2]
+        - 1.25e-2 [1.25e-2, 1.26e-2]
+      * - 5
+        - 5.95e-3
+        - 5.95e-3 [5.90e-3, 6.00e-3]
+        - 5.96e-3 [5.92e-3, 6.01e-3]
+        - 5.93e-3 [5.89e-3, 5.98e-3]
+        - 5.93e-3 [5.88e-3, 5.98e-3]
+      * - 6
+        - 2.39e-3
+        - 2.39e-3 [2.36e-3, 2.42e-3]
+        - 2.41e-3 [2.38e-3, 2.44e-3]
+        - 2.43e-3 [2.40e-3, 2.46e-3]
+        - 2.39e-3 [2.36e-3, 2.42e-3]
+      * - 7
+        - 7.73e-4
+        - 7.56e-4 [7.39e-4, 7.73e-4]
+        - 7.77e-4 [7.60e-4, 7.95e-4]
+        - 8.02e-4 [7.84e-4, 8.20e-4]
+        - 7.88e-4 [7.70e-4, 8.05e-4]
+      * - 8
+        - 1.91e-4
+        - 1.84e-4 [1.76e-4, 1.92e-4]
+        - 1.93e-4 [1.84e-4, 2.01e-4]
+        - 1.90e-4 [1.82e-4, 1.99e-4]
+        - 1.82e-4 [1.73e-4, 1.90e-4]
+      * - 9
+        - 3.36e-5
+        - 3.21e-5 [2.88e-5, 3.58e-5]
+        - 3.41e-5 [3.07e-5, 3.79e-5]
+        - 3.42e-5 [3.08e-5, 3.80e-5]
+        - 3.57e-5 [3.22e-5, 3.96e-5]
+      * - 10
+        - 3.87e-6
+        - 4.00e-6 [2.94e-6, 5.45e-6]
+        - 3.20e-6 [2.27e-6, 4.52e-6]
+        - 4.10e-6 [3.02e-6, 5.56e-6]
+        - 3.70e-6 [2.68e-6, 5.10e-6]
+
+.. rubric:: 16-QAM: error rates
+
+.. list-table::
+   :header-rows: 1
+
+   * - Library
+     - Precision
+     - Against
+     - max abs(z), BER
+     - Agrees
+     - BER interval
+   * - comnum (functions)
+     - float64
+     - theory
+     - 2.15
+     - yes
+     - binomial
+   * - comnum.run_spec
+     - float64
+     - theory
+     - 1.64
+     - yes
+     - binomial
+   * - OptiCommPy (numba)
+     - complex64 symbols (its Gray constellation), float64 noise
+     - theory
+     - 1.42
+     - yes
+     - binomial
+   * - Sionna
+     - float32 (config.precision = 'single')
+     - theory
+     - 2.41
+     - yes
+     - binomial
+
+.. dropdown:: BER and its 95 % interval, every point (10,000,000 bits per point)
+
+   .. list-table::
+      :header-rows: 1
+
+      * - Eb/N0 (dB)
+        - theory
+        - comnum (functions)
+        - comnum.run_spec
+        - OptiCommPy (numba)
+        - Sionna
+      * - 0
+        - 1.41e-1
+        - 1.41e-1 [1.41e-1, 1.41e-1]
+        - 1.41e-1 [1.41e-1, 1.41e-1]
+        - 1.41e-1 [1.41e-1, 1.41e-1]
+        - 1.41e-1 [1.41e-1, 1.41e-1]
+      * - 1
+        - 1.19e-1
+        - 1.19e-1 [1.19e-1, 1.19e-1]
+        - 1.19e-1 [1.19e-1, 1.19e-1]
+        - 1.19e-1 [1.19e-1, 1.19e-1]
+        - 1.19e-1 [1.19e-1, 1.19e-1]
+      * - 2
+        - 9.77e-2
+        - 9.78e-2 [9.76e-2, 9.80e-2]
+        - 9.77e-2 [9.75e-2, 9.79e-2]
+        - 9.78e-2 [9.76e-2, 9.80e-2]
+        - 9.75e-2 [9.73e-2, 9.77e-2]
+      * - 3
+        - 7.75e-2
+        - 7.75e-2 [7.74e-2, 7.77e-2]
+        - 7.74e-2 [7.73e-2, 7.76e-2]
+        - 7.75e-2 [7.73e-2, 7.76e-2]
+        - 7.74e-2 [7.73e-2, 7.76e-2]
+      * - 4
+        - 5.86e-2
+        - 5.87e-2 [5.85e-2, 5.88e-2]
+        - 5.86e-2 [5.84e-2, 5.87e-2]
+        - 5.85e-2 [5.84e-2, 5.87e-2]
+        - 5.85e-2 [5.84e-2, 5.87e-2]
+      * - 5
+        - 4.19e-2
+        - 4.18e-2 [4.17e-2, 4.19e-2]
+        - 4.19e-2 [4.17e-2, 4.20e-2]
+        - 4.20e-2 [4.19e-2, 4.21e-2]
+        - 4.20e-2 [4.19e-2, 4.21e-2]
+      * - 6
+        - 2.79e-2
+        - 2.79e-2 [2.78e-2, 2.80e-2]
+        - 2.79e-2 [2.78e-2, 2.80e-2]
+        - 2.78e-2 [2.77e-2, 2.79e-2]
+        - 2.79e-2 [2.78e-2, 2.81e-2]
+      * - 7
+        - 1.70e-2
+        - 1.70e-2 [1.69e-2, 1.71e-2]
+        - 1.70e-2 [1.69e-2, 1.71e-2]
+        - 1.70e-2 [1.69e-2, 1.70e-2]
+        - 1.70e-2 [1.69e-2, 1.71e-2]
+      * - 8
+        - 9.25e-3
+        - 9.24e-3 [9.18e-3, 9.30e-3]
+        - 9.24e-3 [9.18e-3, 9.30e-3]
+        - 9.22e-3 [9.16e-3, 9.28e-3]
+        - 9.24e-3 [9.19e-3, 9.30e-3]
+      * - 9
+        - 4.39e-3
+        - 4.35e-3 [4.30e-3, 4.39e-3]
+        - 4.42e-3 [4.38e-3, 4.47e-3]
+        - 4.40e-3 [4.36e-3, 4.44e-3]
+        - 4.37e-3 [4.33e-3, 4.41e-3]
+      * - 10
+        - 1.75e-3
+        - 1.75e-3 [1.73e-3, 1.78e-3]
+        - 1.78e-3 [1.75e-3, 1.80e-3]
+        - 1.76e-3 [1.73e-3, 1.79e-3]
+        - 1.76e-3 [1.73e-3, 1.78e-3]
+
+.. rubric:: QPSK: time
+
+Median of 5 runs, ns per bit; workload: 1000000 bits at Eb/N0 = 6.0 dB. *Relative*: the 1-thread time over that of comnum (functions) on 1 thread.
+
+.. list-table::
+   :header-rows: 1
+
+   * - Library
+     - Precision
+     - 1 thread
+     - all threads
+     - GPU
+     - Relative
+     - First call
+   * - comnum (functions)
+     - float64
+     - 50.4
+     - 50.7
+     - —
+     - 1.00
+     - 0.0588 s
+   * - comnum.run_spec
+     - float64
+     - 42.2
+     - 8.56
+     - —
+     - 0.836
+     - 0.0421 s
+   * - OptiCommPy (numba)
+     - complex64 symbols (its Gray constellation), float64 noise
+     - 105
+     - 73.0
+     - —
+     - 2.09
+     - 3.3 s
+   * - Sionna
+     - float32 (config.precision = 'single')
+     - 123
+     - 48.4
+     - 0.748
+     - 2.44
+     - 0.148 s
+
+.. rubric:: 16-QAM: time
+
+Median of 5 runs, ns per bit; workload: 1000000 bits at Eb/N0 = 6.0 dB. *Relative*: the 1-thread time over that of comnum (functions) on 1 thread.
+
+.. list-table::
+   :header-rows: 1
+
+   * - Library
+     - Precision
+     - 1 thread
+     - all threads
+     - GPU
+     - Relative
+     - First call
+   * - comnum (functions)
+     - float64
+     - 27.1
+     - 27.2
+     - —
+     - 1.00
+     - 0.0273 s
+   * - comnum.run_spec
+     - float64
+     - 29.0
+     - 5.16
+     - —
+     - 1.07
+     - 0.0271 s
+   * - OptiCommPy (numba)
+     - complex64 symbols (its Gray constellation), float64 noise
+     - 100
+     - 51.0
+     - —
+     - 3.71
+     - 0.108 s
+   * - Sionna
+     - float32 (config.precision = 'single')
+     - 219
+     - 63.1
+     - 0.832
+     - 8.10
+     - 0.25 s
+
+.. dropdown:: The commands of every run
+
+   .. code-block:: bash
+
+      OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 VECLIB_MAXIMUM_THREADS=1 NUMBA_NUM_THREADS=1 RAYON_NUM_THREADS=1 python s1_awgn.py --lib comnum --threads 1 --work runpod/_work --out runpod/_work/s1_awgn_comnum_1.json
+      OMP_NUM_THREADS=11 OPENBLAS_NUM_THREADS=11 MKL_NUM_THREADS=11 VECLIB_MAXIMUM_THREADS=11 NUMBA_NUM_THREADS=11 RAYON_NUM_THREADS=11 python s1_awgn.py --lib comnum --threads all --work runpod/_work --out runpod/_work/s1_awgn_comnum_all.json --timing-only
+      OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 VECLIB_MAXIMUM_THREADS=1 NUMBA_NUM_THREADS=1 RAYON_NUM_THREADS=1 python s1_awgn.py --lib comnum-spec --threads 1 --work runpod/_work --out runpod/_work/s1_awgn_comnum-spec_1.json
+      OMP_NUM_THREADS=11 OPENBLAS_NUM_THREADS=11 MKL_NUM_THREADS=11 VECLIB_MAXIMUM_THREADS=11 NUMBA_NUM_THREADS=11 RAYON_NUM_THREADS=11 python s1_awgn.py --lib comnum-spec --threads all --work runpod/_work --out runpod/_work/s1_awgn_comnum-spec_all.json --timing-only
+      OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 VECLIB_MAXIMUM_THREADS=1 NUMBA_NUM_THREADS=1 RAYON_NUM_THREADS=1 python s1_awgn.py --lib opticommpy --threads 1 --work runpod/_work --out runpod/_work/s1_awgn_opticommpy_1.json
+      OMP_NUM_THREADS=11 OPENBLAS_NUM_THREADS=11 MKL_NUM_THREADS=11 VECLIB_MAXIMUM_THREADS=11 NUMBA_NUM_THREADS=11 RAYON_NUM_THREADS=11 python s1_awgn.py --lib opticommpy --threads all --work runpod/_work --out runpod/_work/s1_awgn_opticommpy_all.json --timing-only
+      OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 VECLIB_MAXIMUM_THREADS=1 NUMBA_NUM_THREADS=1 RAYON_NUM_THREADS=1 python s1_awgn.py --lib sionna --threads 1 --work runpod/_work --out runpod/_work/s1_awgn_sionna_1.json
+      OMP_NUM_THREADS=11 OPENBLAS_NUM_THREADS=11 MKL_NUM_THREADS=11 VECLIB_MAXIMUM_THREADS=11 NUMBA_NUM_THREADS=11 RAYON_NUM_THREADS=11 python s1_awgn.py --lib sionna --threads all --work runpod/_work --out runpod/_work/s1_awgn_sionna_all.json --timing-only
+      OMP_NUM_THREADS=11 OPENBLAS_NUM_THREADS=11 MKL_NUM_THREADS=11 VECLIB_MAXIMUM_THREADS=11 NUMBA_NUM_THREADS=11 RAYON_NUM_THREADS=11 python s1_awgn.py --lib sionna --threads gpu --work runpod/_work --out runpod/_work/s1_awgn_sionna_gpu.json --timing-only
+
+BPSK and QPSK over flat Rayleigh fading
+---------------------------------------
+
+Scenario 2: BPSK and Gray QPSK over flat Rayleigh fading (one coefficient per symbol, perfectly known at the receiver), BER against the closed form.
+
+Parameters:
+
+- Eb/N0 (dB): 0, 5, 10, 15, 20, 25, 30
+- bits per point: 10^7 (quick: 2·10^5), in blocks of 10^6 (quick: 10^5)
+- channel: y = h x + w, h ~ CN(0, 1) independent for every symbol, known at the receiver
+- timing: one block of 10^6 bits (quick: 2·10^5) at Eb/N0 = 10 dB
+- theory: BPSK: (1 - sqrt(G / (1 + G))) / 2; Gray QPSK: the same per bit (Proakis & Salehi, 5th ed., Sec. 13.3)
+
+Script: `benchmarks/libraries/s2_rayleigh.py <https://github.com/com-rs/comnum/blob/main/benchmarks/libraries/s2_rayleigh.py>`_.
+
+.. dropdown:: The script
+
+   .. literalinclude:: ../../benchmarks/libraries/s2_rayleigh.py
+      :language: python
+
+.. rubric:: Support
+
+.. list-table::
+   :header-rows: 1
+
+   * - Case
+     - comnum (functions)
+     - comnum.run_spec
+     - OptiCommPy (numba)
+     - Sionna
+   * - BPSK
+     - yes
+     - yes
+     - not available: no fading channel
+     - yes
+   * - QPSK
+     - yes
+     - yes
+     - not available: no fading channel
+     - yes
+
+.. rubric:: BPSK: error rates
+
+.. list-table::
+   :header-rows: 1
+
+   * - Library
+     - Precision
+     - Against
+     - max abs(z), BER
+     - Agrees
+     - BER interval
+   * - comnum (functions)
+     - float64
+     - theory
+     - 2.22
+     - yes
+     - binomial
+   * - comnum.run_spec
+     - float64
+     - theory
+     - 1.78
+     - yes
+     - binomial
+   * - Sionna
+     - float32 (config.precision = 'single')
+     - theory
+     - 2.35
+     - yes
+     - binomial
+
+.. dropdown:: BER and its 95 % interval, every point (10,000,000 bits per point)
+
+   .. list-table::
+      :header-rows: 1
+
+      * - Eb/N0 (dB)
+        - theory
+        - comnum (functions)
+        - comnum.run_spec
+        - Sionna
+      * - 0
+        - 1.46e-1
+        - 1.46e-1 [1.46e-1, 1.47e-1]
+        - 1.46e-1 [1.46e-1, 1.47e-1]
+        - 1.47e-1 [1.46e-1, 1.47e-1]
+      * - 5
+        - 6.42e-2
+        - 6.43e-2 [6.41e-2, 6.44e-2]
+        - 6.42e-2 [6.41e-2, 6.44e-2]
+        - 6.42e-2 [6.40e-2, 6.43e-2]
+      * - 10
+        - 2.33e-2
+        - 2.33e-2 [2.32e-2, 2.34e-2]
+        - 2.32e-2 [2.32e-2, 2.33e-2]
+        - 2.33e-2 [2.32e-2, 2.34e-2]
+      * - 15
+        - 7.72e-3
+        - 7.73e-3 [7.67e-3, 7.78e-3]
+        - 7.76e-3 [7.71e-3, 7.82e-3]
+        - 7.75e-3 [7.70e-3, 7.80e-3]
+      * - 20
+        - 2.48e-3
+        - 2.51e-3 [2.48e-3, 2.54e-3]
+        - 2.46e-3 [2.43e-3, 2.49e-3]
+        - 2.52e-3 [2.49e-3, 2.55e-3]
+      * - 25
+        - 7.89e-4
+        - 8.08e-4 [7.91e-4, 8.26e-4]
+        - 7.83e-4 [7.66e-4, 8.00e-4]
+        - 7.88e-4 [7.71e-4, 8.06e-4]
+      * - 30
+        - 2.50e-4
+        - 2.52e-4 [2.42e-4, 2.62e-4]
+        - 2.41e-4 [2.31e-4, 2.51e-4]
+        - 2.43e-4 [2.34e-4, 2.53e-4]
+
+.. rubric:: QPSK: error rates
+
+.. list-table::
+   :header-rows: 1
+
+   * - Library
+     - Precision
+     - Against
+     - max abs(z), BER
+     - Agrees
+     - BER interval
+   * - comnum (functions)
+     - float64
+     - theory
+     - 2.08
+     - yes
+     - binomial
+   * - comnum.run_spec
+     - float64
+     - theory
+     - 1.17
+     - yes
+     - binomial
+   * - Sionna
+     - float32 (config.precision = 'single')
+     - theory
+     - 3.13
+     - yes
+     - binomial
+
+.. dropdown:: BER and its 95 % interval, every point (10,000,000 bits per point)
+
+   .. list-table::
+      :header-rows: 1
+
+      * - Eb/N0 (dB)
+        - theory
+        - comnum (functions)
+        - comnum.run_spec
+        - Sionna
+      * - 0
+        - 1.46e-1
+        - 1.46e-1 [1.46e-1, 1.46e-1]
+        - 1.46e-1 [1.46e-1, 1.47e-1]
+        - 1.46e-1 [1.46e-1, 1.47e-1]
+      * - 5
+        - 6.42e-2
+        - 6.41e-2 [6.39e-2, 6.42e-2]
+        - 6.42e-2 [6.40e-2, 6.43e-2]
+        - 6.42e-2 [6.40e-2, 6.43e-2]
+      * - 10
+        - 2.33e-2
+        - 2.34e-2 [2.33e-2, 2.34e-2]
+        - 2.33e-2 [2.32e-2, 2.34e-2]
+        - 2.31e-2 [2.30e-2, 2.32e-2]
+      * - 15
+        - 7.72e-3
+        - 7.77e-3 [7.72e-3, 7.82e-3]
+        - 7.73e-3 [7.67e-3, 7.78e-3]
+        - 7.67e-3 [7.61e-3, 7.72e-3]
+      * - 20
+        - 2.48e-3
+        - 2.51e-3 [2.48e-3, 2.54e-3]
+        - 2.50e-3 [2.47e-3, 2.53e-3]
+        - 2.46e-3 [2.43e-3, 2.50e-3]
+      * - 25
+        - 7.89e-4
+        - 8.02e-4 [7.84e-4, 8.19e-4]
+        - 7.81e-4 [7.64e-4, 7.99e-4]
+        - 7.92e-4 [7.75e-4, 8.10e-4]
+      * - 30
+        - 2.50e-4
+        - 2.53e-4 [2.44e-4, 2.63e-4]
+        - 2.46e-4 [2.37e-4, 2.56e-4]
+        - 2.51e-4 [2.41e-4, 2.61e-4]
+
+.. rubric:: BPSK: time
+
+Median of 5 runs, ns per bit; workload: 1000000 bits at Eb/N0 = 10.0 dB. *Relative*: the 1-thread time over that of comnum (functions) on 1 thread.
+
+.. list-table::
+   :header-rows: 1
+
+   * - Library
+     - Precision
+     - 1 thread
+     - all threads
+     - GPU
+     - Relative
+     - First call
+   * - comnum (functions)
+     - float64
+     - 303
+     - 295
+     - —
+     - 1.00
+     - 0.317 s
+   * - comnum.run_spec
+     - float64
+     - 322
+     - 48.9
+     - —
+     - 1.06
+     - 0.347 s
+   * - Sionna
+     - float32 (config.precision = 'single')
+     - 437
+     - 487
+     - 8.61
+     - 1.44
+     - 0.447 s
+
+.. rubric:: QPSK: time
+
+Median of 5 runs, ns per bit; workload: 1000000 bits at Eb/N0 = 10.0 dB. *Relative*: the 1-thread time over that of comnum (functions) on 1 thread.
+
+.. list-table::
+   :header-rows: 1
+
+   * - Library
+     - Precision
+     - 1 thread
+     - all threads
+     - GPU
+     - Relative
+     - First call
+   * - comnum (functions)
+     - float64
+     - 156
+     - 151
+     - —
+     - 1.00
+     - 0.156 s
+   * - comnum.run_spec
+     - float64
+     - 166
+     - 25.5
+     - —
+     - 1.06
+     - 0.162 s
+   * - Sionna
+     - float32 (config.precision = 'single')
+     - 289
+     - 298
+     - 3.67
+     - 1.86
+     - 0.32 s
+
+.. dropdown:: The commands of every run
+
+   .. code-block:: bash
+
+      OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 VECLIB_MAXIMUM_THREADS=1 NUMBA_NUM_THREADS=1 RAYON_NUM_THREADS=1 python s2_rayleigh.py --lib comnum --threads 1 --work runpod/_work --out runpod/_work/s2_rayleigh_comnum_1.json
+      OMP_NUM_THREADS=11 OPENBLAS_NUM_THREADS=11 MKL_NUM_THREADS=11 VECLIB_MAXIMUM_THREADS=11 NUMBA_NUM_THREADS=11 RAYON_NUM_THREADS=11 python s2_rayleigh.py --lib comnum --threads all --work runpod/_work --out runpod/_work/s2_rayleigh_comnum_all.json --timing-only
+      OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 VECLIB_MAXIMUM_THREADS=1 NUMBA_NUM_THREADS=1 RAYON_NUM_THREADS=1 python s2_rayleigh.py --lib comnum-spec --threads 1 --work runpod/_work --out runpod/_work/s2_rayleigh_comnum-spec_1.json
+      OMP_NUM_THREADS=11 OPENBLAS_NUM_THREADS=11 MKL_NUM_THREADS=11 VECLIB_MAXIMUM_THREADS=11 NUMBA_NUM_THREADS=11 RAYON_NUM_THREADS=11 python s2_rayleigh.py --lib comnum-spec --threads all --work runpod/_work --out runpod/_work/s2_rayleigh_comnum-spec_all.json --timing-only
+      OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 VECLIB_MAXIMUM_THREADS=1 NUMBA_NUM_THREADS=1 RAYON_NUM_THREADS=1 python s2_rayleigh.py --lib sionna --threads 1 --work runpod/_work --out runpod/_work/s2_rayleigh_sionna_1.json
+      OMP_NUM_THREADS=11 OPENBLAS_NUM_THREADS=11 MKL_NUM_THREADS=11 VECLIB_MAXIMUM_THREADS=11 NUMBA_NUM_THREADS=11 RAYON_NUM_THREADS=11 python s2_rayleigh.py --lib sionna --threads all --work runpod/_work --out runpod/_work/s2_rayleigh_sionna_all.json --timing-only
+      OMP_NUM_THREADS=11 OPENBLAS_NUM_THREADS=11 MKL_NUM_THREADS=11 VECLIB_MAXIMUM_THREADS=11 NUMBA_NUM_THREADS=11 RAYON_NUM_THREADS=11 python s2_rayleigh.py --lib sionna --threads gpu --work runpod/_work --out runpod/_work/s2_rayleigh_sionna_gpu.json --timing-only
+
+4 x 4 MIMO, 16-QAM, i.i.d. Rayleigh fading: ZF, MMSE and ML detection
+---------------------------------------------------------------------
+
+Scenario 3: 4 x 4 spatial multiplexing of Gray 16-QAM over i.i.d. Rayleigh fading (one channel matrix per vector, known at the receiver), detected by zero forcing, MMSE and maximum likelihood.
+
+Parameters:
+
+- Eb/N0 (dB): 0, 4, 8, 12, 16
+- vectors per point: linear detectors and sphere: 10^5 (quick: 5·10^3); exhaustive ML: 2·10^4 (quick: 10^3)
+- timing: 10^4 vectors at Eb/N0 = 12 dB (exhaustive ML: 10^3; quick: 2·10^3 and 2·10^2)
+- theory: ZF: 16-QAM over SISO Rayleigh fading (Winters, Salz & Gitlin, IEEE Trans. Commun. 42(2/3/4), 1994)
+
+Script: `benchmarks/libraries/s3_mimo.py <https://github.com/com-rs/comnum/blob/main/benchmarks/libraries/s3_mimo.py>`_.
+
+.. dropdown:: The script
+
+   .. literalinclude:: ../../benchmarks/libraries/s3_mimo.py
+      :language: python
+
+.. rubric:: Support
+
+.. list-table::
+   :header-rows: 1
+
+   * - Case
+     - comnum (functions)
+     - comnum.run_spec
+     - OptiCommPy (numba)
+     - Sionna
+   * - zero forcing
+     - yes
+     - yes
+     - not available: no MIMO detection (only the 2 x 2 adaptive equalisers of polarisation multiplexing)
+     - yes
+   * - MMSE
+     - yes
+     - yes
+     - not available: no MIMO detection (only the 2 x 2 adaptive equalisers of polarisation multiplexing)
+     - yes
+   * - ML (exhaustive)
+     - yes
+     - yes
+     - not available: no MIMO detection (only the 2 x 2 adaptive equalisers of polarisation multiplexing)
+     - yes
+   * - ML (sphere decoder)
+     - yes
+     - yes
+     - not available: no MIMO detection (only the 2 x 2 adaptive equalisers of polarisation multiplexing)
+     - not available: no sphere decoder (its exhaustive ML detector is the case ml)
+
+.. rubric:: zero forcing: error rates
+
+.. list-table::
+   :header-rows: 1
+
+   * - Library
+     - Precision
+     - Against
+     - max abs(z), BER
+     - Agrees
+     - BER interval
+   * - comnum (functions)
+     - float64
+     - theory
+     - 1.88
+     - yes
+     - per-frame
+   * - comnum.run_spec
+     - float64
+     - theory
+     - 2.98
+     - yes
+     - binomial
+   * - Sionna
+     - float32 (config.precision = 'single')
+     - theory
+     - 1.79
+     - yes
+     - per-frame
+
+.. dropdown:: BER and its 95 % interval, every point (1,600,000 bits per point)
+
+   .. list-table::
+      :header-rows: 1
+
+      * - Eb/N0 (dB)
+        - theory
+        - comnum (functions)
+        - comnum.run_spec
+        - Sionna
+      * - 0
+        - 1.98e-1
+        - 1.98e-1 [1.97e-1, 1.99e-1]
+        - 1.98e-1 [1.97e-1, 1.98e-1]
+        - 1.98e-1 [1.97e-1, 1.99e-1]
+      * - 4
+        - 1.20e-1
+        - 1.19e-1 [1.18e-1, 1.20e-1]
+        - 1.19e-1 [1.19e-1, 1.20e-1]
+        - 1.19e-1 [1.19e-1, 1.20e-1]
+      * - 8
+        - 6.20e-2
+        - 6.16e-2 [6.10e-2, 6.23e-2]
+        - 6.14e-2 [6.10e-2, 6.18e-2]
+        - 6.26e-2 [6.19e-2, 6.32e-2]
+      * - 12
+        - 2.83e-2
+        - 2.82e-2 [2.78e-2, 2.87e-2]
+        - 2.81e-2 [2.79e-2, 2.84e-2]
+        - 2.83e-2 [2.78e-2, 2.87e-2]
+      * - 16
+        - 1.20e-2
+        - 1.21e-2 [1.18e-2, 1.24e-2]
+        - 1.19e-2 [1.17e-2, 1.20e-2]
+        - 1.19e-2 [1.16e-2, 1.22e-2]
+
+.. rubric:: MMSE: error rates
+
+.. list-table::
+   :header-rows: 1
+
+   * - Library
+     - Precision
+     - Against
+     - max abs(z), BER
+     - Agrees
+     - BER interval
+   * - comnum (functions)
+     - float64
+     - —
+     - —
+     - —
+     - per-frame
+   * - comnum.run_spec
+     - float64
+     - comnum
+     - 3.63
+     - yes
+     - binomial
+   * - Sionna
+     - float32 (config.precision = 'single')
+     - comnum
+     - 1.57
+     - yes
+     - per-frame
+
+.. dropdown:: BER and its 95 % interval, every point (1,600,000 bits per point)
+
+   .. list-table::
+      :header-rows: 1
+
+      * - Eb/N0 (dB)
+        - comnum (functions)
+        - comnum.run_spec
+        - Sionna
+      * - 0
+        - 1.39e-1 [1.38e-1, 1.40e-1]
+        - 1.38e-1 [1.38e-1, 1.39e-1]
+        - 1.38e-1 [1.38e-1, 1.39e-1]
+      * - 4
+        - 8.27e-2 [8.21e-2, 8.33e-2]
+        - 8.40e-2 [8.36e-2, 8.44e-2]
+        - 8.33e-2 [8.28e-2, 8.39e-2]
+      * - 8
+        - 4.31e-2 [4.26e-2, 4.35e-2]
+        - 4.29e-2 [4.26e-2, 4.32e-2]
+        - 4.32e-2 [4.28e-2, 4.37e-2]
+      * - 12
+        - 1.97e-2 [1.94e-2, 2.00e-2]
+        - 1.99e-2 [1.97e-2, 2.01e-2]
+        - 1.96e-2 [1.93e-2, 1.99e-2]
+      * - 16
+        - 8.42e-3 [8.20e-3, 8.64e-3]
+        - 8.33e-3 [8.19e-3, 8.47e-3]
+        - 8.23e-3 [8.02e-3, 8.45e-3]
+
+.. rubric:: ML (exhaustive): error rates
+
+.. list-table::
+   :header-rows: 1
+
+   * - Library
+     - Precision
+     - Against
+     - max abs(z), BER
+     - Agrees
+     - BER interval
+   * - comnum (functions)
+     - float64
+     - —
+     - —
+     - —
+     - per-frame
+   * - comnum.run_spec
+     - float64
+     - comnum
+     - 2.53
+     - yes
+     - binomial
+   * - Sionna
+     - float32 (config.precision = 'single')
+     - comnum
+     - 1.09
+     - yes
+     - per-frame
+
+.. dropdown:: BER and its 95 % interval, every point (320,000 bits per point)
+
+   .. list-table::
+      :header-rows: 1
+
+      * - Eb/N0 (dB)
+        - comnum (functions)
+        - comnum.run_spec
+        - Sionna
+      * - 0
+        - 1.25e-1 [1.23e-1, 1.26e-1]
+        - 1.25e-1 [1.24e-1, 1.26e-1]
+        - 1.25e-1 [1.23e-1, 1.27e-1]
+      * - 4
+        - 4.03e-2 [3.90e-2, 4.16e-2]
+        - 3.99e-2 [3.92e-2, 4.06e-2]
+        - 4.05e-2 [3.92e-2, 4.17e-2]
+      * - 8
+        - 4.12e-3 [3.68e-3, 4.56e-3]
+        - 4.77e-3 [4.54e-3, 5.02e-3]
+        - 4.47e-3 [4.02e-3, 4.93e-3]
+      * - 12
+        - 2.34e-4 [1.24e-4, 3.45e-4]
+        - 2.28e-4 [1.81e-4, 2.87e-4]
+        - 1.59e-4 [7.61e-5, 2.43e-4]
+      * - 16
+        - 0 [0, 9.38e-6]
+        - 0 [0, 1.20e-5]
+        - 1.25e-5 [0, 3.70e-5]
+
+.. rubric:: ML (sphere decoder): error rates
+
+.. list-table::
+   :header-rows: 1
+
+   * - Library
+     - Precision
+     - Against
+     - max abs(z), BER
+     - Agrees
+     - BER interval
+   * - comnum (functions)
+     - float64
+     - —
+     - —
+     - —
+     - per-frame
+   * - comnum.run_spec
+     - float64
+     - comnum
+     - 2.84
+     - yes
+     - binomial
+
+.. dropdown:: BER and its 95 % interval, every point (1,600,000 bits per point)
+
+   .. list-table::
+      :header-rows: 1
+
+      * - Eb/N0 (dB)
+        - comnum (functions)
+        - comnum.run_spec
+      * - 0
+        - 1.24e-1 [1.23e-1, 1.25e-1]
+        - 1.25e-1 [1.24e-1, 1.25e-1]
+      * - 4
+        - 3.97e-2 [3.92e-2, 4.03e-2]
+        - 4.06e-2 [4.03e-2, 4.09e-2]
+      * - 8
+        - 4.44e-3 [4.23e-3, 4.64e-3]
+        - 4.62e-3 [4.51e-3, 4.73e-3]
+      * - 12
+        - 1.91e-4 [1.49e-4, 2.32e-4]
+        - 1.95e-4 [1.75e-4, 2.18e-4]
+      * - 16
+        - 3.13e-6 [0, 6.37e-6]
+        - 1.25e-5 [8.09e-6, 1.93e-5]
+
+.. rubric:: zero forcing: time
+
+Median of 5 runs, µs per vector; workload: 10000 vectors at Eb/N0 = 12.0 dB. *Relative*: the 1-thread time over that of comnum (functions) on 1 thread.
+
+.. list-table::
+   :header-rows: 1
+
+   * - Library
+     - Precision
+     - 1 thread
+     - all threads
+     - GPU
+     - Relative
+     - First call
+   * - comnum (functions)
+     - float64
+     - 2.99
+     - 2.87
+     - —
+     - 1.00
+     - 0.0328 s
+   * - comnum.run_spec
+     - float64
+     - 2.51
+     - 0.451
+     - —
+     - 0.839
+     - 0.0274 s
+   * - Sionna
+     - float32 (config.precision = 'single')
+     - 5.49
+     - 2.24
+     - 0.162
+     - 1.84
+     - 0.0569 s
+
+.. rubric:: MMSE: time
+
+Median of 5 runs, µs per vector; workload: 10000 vectors at Eb/N0 = 12.0 dB. *Relative*: the 1-thread time over that of comnum (functions) on 1 thread.
+
+.. list-table::
+   :header-rows: 1
+
+   * - Library
+     - Precision
+     - 1 thread
+     - all threads
+     - GPU
+     - Relative
+     - First call
+   * - comnum (functions)
+     - float64
+     - 3.21
+     - 2.87
+     - —
+     - 1.00
+     - 0.0306 s
+   * - comnum.run_spec
+     - float64
+     - 2.53
+     - 0.488
+     - —
+     - 0.789
+     - 0.0362 s
+   * - Sionna
+     - float32 (config.precision = 'single')
+     - 4.66
+     - 2.61
+     - 0.189
+     - 1.45
+     - 0.0545 s
+
+.. rubric:: ML (exhaustive): time
+
+Median of 5 runs, µs per vector; workload: 1000 vectors at Eb/N0 = 12.0 dB. *Relative*: the 1-thread time over that of comnum (functions) on 1 thread.
+
+.. list-table::
+   :header-rows: 1
+
+   * - Library
+     - Precision
+     - 1 thread
+     - all threads
+     - GPU
+     - Relative
+     - First call
+   * - comnum (functions)
+     - float64
+     - 1315
+     - 1335
+     - —
+     - 1.00
+     - 1.59 s
+   * - comnum.run_spec
+     - float64
+     - 1306
+     - 169
+     - —
+     - 0.993
+     - 1.35 s
+   * - Sionna
+     - float32 (config.precision = 'single')
+     - 19059
+     - 5567
+     - 71.3
+     - 14.5
+     - 19 s
+
+.. rubric:: ML (sphere decoder): time
+
+Median of 5 runs, µs per vector; workload: 10000 vectors at Eb/N0 = 12.0 dB. *Relative*: the 1-thread time over that of comnum (functions) on 1 thread.
+
+.. list-table::
+   :header-rows: 1
+
+   * - Library
+     - Precision
+     - 1 thread
+     - all threads
+     - GPU
+     - Relative
+     - First call
+   * - comnum (functions)
+     - float64
+     - 3.27
+     - 3.36
+     - —
+     - 1.00
+     - 0.0359 s
+   * - comnum.run_spec
+     - float64
+     - 3.37
+     - 0.641
+     - —
+     - 1.03
+     - 0.0309 s
+
+.. dropdown:: The commands of every run
+
+   .. code-block:: bash
+
+      OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 VECLIB_MAXIMUM_THREADS=1 NUMBA_NUM_THREADS=1 RAYON_NUM_THREADS=1 python s3_mimo.py --lib comnum --threads 1 --work runpod/_work --out runpod/_work/s3_mimo_comnum_1.json
+      OMP_NUM_THREADS=11 OPENBLAS_NUM_THREADS=11 MKL_NUM_THREADS=11 VECLIB_MAXIMUM_THREADS=11 NUMBA_NUM_THREADS=11 RAYON_NUM_THREADS=11 python s3_mimo.py --lib comnum --threads all --work runpod/_work --out runpod/_work/s3_mimo_comnum_all.json --timing-only
+      OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 VECLIB_MAXIMUM_THREADS=1 NUMBA_NUM_THREADS=1 RAYON_NUM_THREADS=1 python s3_mimo.py --lib comnum-spec --threads 1 --work runpod/_work --out runpod/_work/s3_mimo_comnum-spec_1.json
+      OMP_NUM_THREADS=11 OPENBLAS_NUM_THREADS=11 MKL_NUM_THREADS=11 VECLIB_MAXIMUM_THREADS=11 NUMBA_NUM_THREADS=11 RAYON_NUM_THREADS=11 python s3_mimo.py --lib comnum-spec --threads all --work runpod/_work --out runpod/_work/s3_mimo_comnum-spec_all.json --timing-only
+      OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 VECLIB_MAXIMUM_THREADS=1 NUMBA_NUM_THREADS=1 RAYON_NUM_THREADS=1 python s3_mimo.py --lib sionna --threads 1 --work runpod/_work --out runpod/_work/s3_mimo_sionna_1.json
+      OMP_NUM_THREADS=11 OPENBLAS_NUM_THREADS=11 MKL_NUM_THREADS=11 VECLIB_MAXIMUM_THREADS=11 NUMBA_NUM_THREADS=11 RAYON_NUM_THREADS=11 python s3_mimo.py --lib sionna --threads all --work runpod/_work --out runpod/_work/s3_mimo_sionna_all.json --timing-only
+      OMP_NUM_THREADS=11 OPENBLAS_NUM_THREADS=11 MKL_NUM_THREADS=11 VECLIB_MAXIMUM_THREADS=11 NUMBA_NUM_THREADS=11 RAYON_NUM_THREADS=11 python s3_mimo.py --lib sionna --threads gpu --work runpod/_work --out runpod/_work/s3_mimo_sionna_gpu.json --timing-only
+
+Channel coding over BPSK and AWGN
+---------------------------------
+
+Scenario 4: channel coding over BPSK and AWGN.
+
+Parameters:
+
+- convolutional (133, 171), soft Viterbi: K = 7, (133, 171), k = 1024 + 6 tail bits, soft Viterbi; Eb/N0 = 1, 2, 3, 4 dB
+- 5G NR LDPC (1024, 2048): 5G NR LDPC, k = 1024, n = 2048 (base graph 2, Z = 104), flooding sum-product, 50 iterations; Eb/N0 = 1, 1.5, 2, 2.5 dB
+- LDPC (1024, 512), same LLRs: PEG (1024, 512), flooding sum-product, 50 iterations, identical LLRs; Eb/N0 = 1.5, 2, 2.5, 3 dB
+- frames per point: 2000 (quick: 100)
+- timing: 200 frames (quick: 20) at Eb/N0 = 3 dB (conv) or 2 dB (LDPC); OptiCommPy without numba: 2 frames
+
+Script: `benchmarks/libraries/s4_coding.py <https://github.com/com-rs/comnum/blob/main/benchmarks/libraries/s4_coding.py>`_.
+
+.. dropdown:: The script
+
+   .. literalinclude:: ../../benchmarks/libraries/s4_coding.py
+      :language: python
+
+.. rubric:: Support
+
+.. list-table::
+   :header-rows: 1
+
+   * - Case
+     - comnum (functions)
+     - comnum.run_spec
+     - OptiCommPy (numba)
+     - Sionna
+   * - convolutional (133, 171), soft Viterbi
+     - yes
+     - yes
+     - not available: no convolutional code
+     - yes
+   * - 5G NR LDPC (1024, 2048)
+     - yes
+     - not available: the specification format has no 5G NR LDPC code (NrLdpc: Python and Rust API)
+     - not available: no 5G NR LDPC code (its decoder takes a parity-check matrix: see ldpc_same_llr)
+     - yes
+   * - LDPC (1024, 512), same LLRs
+     - yes
+     - not available: the runner draws its own channel (this case feeds the same LLRs to every decoder)
+     - yes
+     - yes
+
+.. rubric:: convolutional (133, 171), soft Viterbi: error rates
+
+.. list-table::
+   :header-rows: 1
+
+   * - Library
+     - Precision
+     - Against
+     - max abs(z), BER
+     - max abs(z), FER
+     - Agrees
+     - BER interval
+   * - comnum (functions)
+     - float64
+     - —
+     - —
+     - —
+     - —
+     - per-frame
+   * - comnum.run_spec
+     - float64
+     - comnum
+     - 1.35
+     - 1.33
+     - yes
+     - binomial
+   * - Sionna
+     - float32 (config.precision = 'single')
+     - comnum
+     - 1.41
+     - 2.53
+     - yes
+     - per-frame
+
+.. dropdown:: BER and its 95 % interval, every point (2,048,000 bits per point)
+
+   .. list-table::
+      :header-rows: 1
+
+      * - Eb/N0 (dB)
+        - union bound
+        - comnum (functions)
+        - comnum.run_spec
+        - Sionna
+      * - 1
+        - 3.05e-1
+        - 4.02e-2 [3.91e-2, 4.13e-2]
+        - 4.02e-2 [3.99e-2, 4.05e-2]
+        - 4.03e-2 [3.91e-2, 4.14e-2]
+      * - 2
+        - 1.65e-2
+        - 4.97e-3 [4.64e-3, 5.30e-3]
+        - 5.16e-3 [5.06e-3, 5.26e-3]
+        - 5.32e-3 [4.97e-3, 5.67e-3]
+      * - 3
+        - 6.27e-4
+        - 3.31e-4 [2.59e-4, 4.02e-4]
+        - 2.98e-4 [2.76e-4, 3.23e-4]
+        - 3.64e-4 [2.94e-4, 4.34e-4]
+      * - 4
+        - 2.02e-5
+        - 2.54e-5 [8.46e-6, 4.23e-5]
+        - 1.32e-5 [9.06e-6, 1.92e-5]
+        - 3.08e-5 [9.04e-6, 5.25e-5]
+
+.. dropdown:: Frame error rate and its 95 % interval (2,000 frames per point)
+
+   .. list-table::
+      :header-rows: 1
+
+      * - Eb/N0 (dB)
+        - comnum (functions)
+        - comnum.run_spec
+        - Sionna
+      * - 1
+        - 9.73e-1 [9.66e-1, 9.80e-1]
+        - 9.77e-1 [9.69e-1, 9.83e-1]
+        - 9.85e-1 [9.79e-1, 9.89e-1]
+      * - 2
+        - 5.05e-1 [4.84e-1, 5.27e-1]
+        - 4.84e-1 [4.63e-1, 5.06e-1]
+        - 5.13e-1 [4.91e-1, 5.35e-1]
+      * - 3
+        - 5.95e-2 [5.00e-2, 7.07e-2]
+        - 6.05e-2 [5.09e-2, 7.18e-2]
+        - 6.70e-2 [5.69e-2, 7.88e-2]
+      * - 4
+        - 6.00e-3 [3.44e-3, 1.05e-2]
+        - 5.00e-3 [2.72e-3, 9.18e-3]
+        - 5.50e-3 [3.07e-3, 9.82e-3]
+
+.. rubric:: 5G NR LDPC (1024, 2048): error rates
+
+.. list-table::
+   :header-rows: 1
+
+   * - Library
+     - Precision
+     - Against
+     - max abs(z), BER
+     - max abs(z), FER
+     - Agrees
+     - BER interval
+   * - comnum (functions)
+     - float64
+     - —
+     - —
+     - —
+     - —
+     - per-frame
+   * - Sionna
+     - float32 (config.precision = 'single')
+     - comnum
+     - 0.893
+     - 1.21
+     - yes
+     - per-frame
+
+.. dropdown:: BER and its 95 % interval, every point (2,048,000 bits per point)
+
+   .. list-table::
+      :header-rows: 1
+
+      * - Eb/N0 (dB)
+        - comnum (functions)
+        - Sionna
+      * - 1
+        - 8.79e-3 [7.46e-3, 1.01e-2]
+        - 9.30e-3 [7.94e-3, 1.07e-2]
+      * - 1.5
+        - 3.47e-5 [0, 1.03e-4]
+        - 9.38e-5 [0, 2.04e-4]
+      * - 2
+        - 0 [0, 1.46e-6]
+        - 0 [0, 1.46e-6]
+      * - 2.5
+        - 0 [0, 1.46e-6]
+        - 0 [0, 1.46e-6]
+
+.. dropdown:: Frame error rate and its 95 % interval (2,000 frames per point)
+
+   .. list-table::
+      :header-rows: 1
+
+      * - Eb/N0 (dB)
+        - comnum (functions)
+        - Sionna
+      * - 1
+        - 9.40e-2 [8.20e-2, 1.08e-1]
+        - 1.05e-1 [9.28e-2, 1.20e-1]
+      * - 1.5
+        - 5.00e-4 [8.83e-5, 2.83e-3]
+        - 1.50e-3 [5.10e-4, 4.40e-3]
+      * - 2
+        - 0 [0, 1.92e-3]
+        - 0 [0, 1.92e-3]
+      * - 2.5
+        - 0 [0, 1.92e-3]
+        - 0 [0, 1.92e-3]
+
+.. rubric:: LDPC (1024, 512), same LLRs: error rates
+
+.. list-table::
+   :header-rows: 1
+
+   * - Library
+     - Precision
+     - Against
+     - max abs(z), BER
+     - max abs(z), FER
+     - Agrees
+     - BER interval
+   * - comnum (functions)
+     - float64
+     - —
+     - —
+     - —
+     - —
+     - per-frame
+   * - OptiCommPy (numba)
+     - float32 (decodeLDPC default prec = np.float32)
+     - comnum
+     - 0.076
+     - 0
+     - yes
+     - per-frame
+   * - Sionna
+     - float32 (config.precision = 'single')
+     - comnum
+     - 0.0846
+     - 0.0381
+     - yes
+     - per-frame
+
+.. dropdown:: BER and its 95 % interval, every point (2,048,000 bits per point)
+
+   .. list-table::
+      :header-rows: 1
+
+      * - Eb/N0 (dB)
+        - comnum (functions)
+        - OptiCommPy (numba)
+        - Sionna
+      * - 1.5
+        - 1.53e-2 [1.39e-2, 1.66e-2]
+        - 1.53e-2 [1.40e-2, 1.67e-2]
+        - 1.53e-2 [1.40e-2, 1.67e-2]
+      * - 2
+        - 1.37e-3 [9.56e-4, 1.78e-3]
+        - 1.37e-3 [9.55e-4, 1.78e-3]
+        - 1.37e-3 [9.58e-4, 1.78e-3]
+      * - 2.5
+        - 0 [0, 1.46e-6]
+        - 0 [0, 1.46e-6]
+        - 0 [0, 1.46e-6]
+      * - 3
+        - 0 [0, 1.46e-6]
+        - 0 [0, 1.46e-6]
+        - 0 [0, 1.46e-6]
+
+.. dropdown:: Frame error rate and its 95 % interval (2,000 frames per point)
+
+   .. list-table::
+      :header-rows: 1
+
+      * - Eb/N0 (dB)
+        - comnum (functions)
+        - OptiCommPy (numba)
+        - Sionna
+      * - 1.5
+        - 2.21e-1 [2.03e-1, 2.40e-1]
+        - 2.21e-1 [2.03e-1, 2.40e-1]
+        - 2.21e-1 [2.04e-1, 2.40e-1]
+      * - 2
+        - 2.30e-2 [1.73e-2, 3.05e-2]
+        - 2.30e-2 [1.73e-2, 3.05e-2]
+        - 2.30e-2 [1.73e-2, 3.05e-2]
+      * - 2.5
+        - 0 [0, 1.92e-3]
+        - 0 [0, 1.92e-3]
+        - 0 [0, 1.92e-3]
+      * - 3
+        - 0 [0, 1.92e-3]
+        - 0 [0, 1.92e-3]
+        - 0 [0, 1.92e-3]
+
+.. rubric:: Same LLRs: the decisions frame by frame
+
+The decoders received identical LLRs. Over all the points: the frames where a library makes as many bit errors as comnum, and the frames it decodes (or fails to decode) as comnum does.
+
+.. list-table::
+   :header-rows: 1
+
+   * - Library
+     - Points
+     - Frames
+     - Same bit errors
+     - Same frame outcome
+   * - OptiCommPy (numba)
+     - 4
+     - 8000
+     - 7996 (99.95 %)
+     - 8000 (100.00 %)
+   * - Sionna
+     - 4
+     - 8000
+     - 7984 (99.80 %)
+     - 7999 (99.99 %)
+
+.. rubric:: convolutional (133, 171), soft Viterbi: decoder time
+
+Median of 5 runs, ms per frame; workload: decoder only, 200 frames at Eb/N0 = 3.0 dB. *Relative*: the 1-thread time over that of comnum (functions) on 1 thread.
+
+.. list-table::
+   :header-rows: 1
+
+   * - Library
+     - Precision
+     - 1 thread
+     - all threads
+     - GPU
+     - Relative
+     - First call
+   * - comnum (functions)
+     - float64
+     - 0.75
+     - 0.756
+     - —
+     - 1.00
+     - 0.0021 s
+   * - Sionna
+     - float32 (config.precision = 'single')
+     - 4.14
+     - 3.85
+     - 1.26
+     - 5.52
+     - 0.171 s
+
+.. rubric:: 5G NR LDPC (1024, 2048): decoder time
+
+Median of 5 runs, ms per frame; workload: decoder only, 200 frames at Eb/N0 = 2.0 dB. *Relative*: the 1-thread time over that of comnum (functions) on 1 thread.
+
+.. list-table::
+   :header-rows: 1
+
+   * - Library
+     - Precision
+     - 1 thread
+     - all threads
+     - GPU
+     - Relative
+     - First call
+   * - comnum (functions)
+     - float64
+     - 8.53
+     - 8.28
+     - —
+     - 1.00
+     - 0.0173 s
+   * - Sionna
+     - float32 (config.precision = 'single')
+     - 47.3
+     - 12.5
+     - 0.171
+     - 5.55
+     - 0.0652 s
+
+.. rubric:: LDPC (1024, 512), same LLRs: decoder time
+
+Median of 5 runs, ms per frame; workload: decoder only, 200 frames at Eb/N0 = 2.0 dB. *Relative*: the 1-thread time over that of comnum (functions) on 1 thread.
+
+.. list-table::
+   :header-rows: 1
+
+   * - Library
+     - Precision
+     - 1 thread
+     - all threads
+     - GPU
+     - Relative
+     - First call
+   * - comnum (functions)
+     - float64
+     - 1.54
+     - 1.62
+     - —
+     - 1.00
+     - 0.0032 s
+   * - OptiCommPy (numba)
+     - float32 (decodeLDPC default prec = np.float32)
+     - 7.45
+     - 5.00
+     - —
+     - 4.83
+     - 5.59 s
+   * - Sionna
+     - float32 (config.precision = 'single')
+     - 8.59
+     - 2.14
+     - 0.172
+     - 5.57
+     - 0.0275 s
+
+.. rubric:: convolutional (133, 171), soft Viterbi: whole-chain time
+
+Median of 5 runs, ms per frame; workload: whole chain, 200 frames at Eb/N0 = 3.0 dB. *Relative*: the 1-thread time over that of comnum (functions) on 1 thread.
+
+.. list-table::
+   :header-rows: 1
+
+   * - Library
+     - Precision
+     - 1 thread
+     - all threads
+     - GPU
+     - Relative
+     - First call
+   * - comnum (functions)
+     - float64
+     - 0.967
+     - 0.966
+     - —
+     - 1.00
+     - 0.0021 s
+   * - comnum.run_spec
+     - float64
+     - 0.966
+     - 0.202
+     - —
+     - 0.999
+     - 0.192 s
+   * - Sionna
+     - float32 (config.precision = 'single')
+     - 4.65
+     - 4.34
+     - 2.05
+     - 4.81
+     - 0.171 s
+
+.. rubric:: 5G NR LDPC (1024, 2048): whole-chain time
+
+Median of 5 runs, ms per frame; workload: whole chain, 200 frames at Eb/N0 = 2.0 dB. *Relative*: the 1-thread time over that of comnum (functions) on 1 thread.
+
+.. list-table::
+   :header-rows: 1
+
+   * - Library
+     - Precision
+     - 1 thread
+     - all threads
+     - GPU
+     - Relative
+     - First call
+   * - comnum (functions)
+     - float64
+     - 8.72
+     - 8.69
+     - —
+     - 1.00
+     - 0.0173 s
+   * - Sionna
+     - float32 (config.precision = 'single')
+     - 47.8
+     - 12.6
+     - 0.181
+     - 5.47
+     - 0.0652 s
+
+.. rubric:: LDPC (1024, 512), same LLRs: whole-chain time
+
+Median of 5 runs, ms per frame; workload: whole chain, 200 frames at Eb/N0 = 2.0 dB. *Relative*: the 1-thread time over that of comnum (functions) on 1 thread.
+
+.. list-table::
+   :header-rows: 1
+
+   * - Library
+     - Precision
+     - 1 thread
+     - all threads
+     - GPU
+     - Relative
+     - First call
+   * - comnum (functions)
+     - float64
+     - 1.64
+     - 1.68
+     - —
+     - 1.00
+     - 0.0032 s
+   * - OptiCommPy (numba)
+     - float32 (decodeLDPC default prec = np.float32)
+     - 7.08
+     - 4.91
+     - —
+     - 4.32
+     - 5.59 s
+   * - Sionna
+     - float32 (config.precision = 'single')
+     - 9.09
+     - 2.24
+     - 0.357
+     - 5.55
+     - 0.0275 s
+
+.. dropdown:: The commands of every run
+
+   .. code-block:: bash
+
+      OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 VECLIB_MAXIMUM_THREADS=1 NUMBA_NUM_THREADS=1 RAYON_NUM_THREADS=1 python s4_coding.py --lib comnum --threads 1 --work runpod/_work --out runpod/_work/s4_coding_comnum_1.json
+      OMP_NUM_THREADS=11 OPENBLAS_NUM_THREADS=11 MKL_NUM_THREADS=11 VECLIB_MAXIMUM_THREADS=11 NUMBA_NUM_THREADS=11 RAYON_NUM_THREADS=11 python s4_coding.py --lib comnum --threads all --work runpod/_work --out runpod/_work/s4_coding_comnum_all.json --timing-only
+      OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 VECLIB_MAXIMUM_THREADS=1 NUMBA_NUM_THREADS=1 RAYON_NUM_THREADS=1 python s4_coding.py --lib comnum-spec --threads 1 --work runpod/_work --out runpod/_work/s4_coding_comnum-spec_1.json
+      OMP_NUM_THREADS=11 OPENBLAS_NUM_THREADS=11 MKL_NUM_THREADS=11 VECLIB_MAXIMUM_THREADS=11 NUMBA_NUM_THREADS=11 RAYON_NUM_THREADS=11 python s4_coding.py --lib comnum-spec --threads all --work runpod/_work --out runpod/_work/s4_coding_comnum-spec_all.json --timing-only
+      OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 VECLIB_MAXIMUM_THREADS=1 NUMBA_NUM_THREADS=1 RAYON_NUM_THREADS=1 python s4_coding.py --lib opticommpy --threads 1 --work runpod/_work --out runpod/_work/s4_coding_opticommpy_1.json
+      OMP_NUM_THREADS=11 OPENBLAS_NUM_THREADS=11 MKL_NUM_THREADS=11 VECLIB_MAXIMUM_THREADS=11 NUMBA_NUM_THREADS=11 RAYON_NUM_THREADS=11 python s4_coding.py --lib opticommpy --threads all --work runpod/_work --out runpod/_work/s4_coding_opticommpy_all.json --timing-only
+      OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 VECLIB_MAXIMUM_THREADS=1 NUMBA_NUM_THREADS=1 RAYON_NUM_THREADS=1 python s4_coding.py --lib sionna --threads 1 --work runpod/_work --out runpod/_work/s4_coding_sionna_1.json
+      OMP_NUM_THREADS=11 OPENBLAS_NUM_THREADS=11 MKL_NUM_THREADS=11 VECLIB_MAXIMUM_THREADS=11 NUMBA_NUM_THREADS=11 RAYON_NUM_THREADS=11 python s4_coding.py --lib sionna --threads all --work runpod/_work --out runpod/_work/s4_coding_sionna_all.json --timing-only
+      OMP_NUM_THREADS=11 OPENBLAS_NUM_THREADS=11 MKL_NUM_THREADS=11 VECLIB_MAXIMUM_THREADS=11 NUMBA_NUM_THREADS=11 RAYON_NUM_THREADS=11 python s4_coding.py --lib sionna --threads gpu --work runpod/_work --out runpod/_work/s4_coding_sionna_gpu.json --timing-only
+
+Split-step Fourier propagation, 16-QAM, 32 GBd, 10 x 80 km
+----------------------------------------------------------
+
+Scenario 5: single-polarisation split-step Fourier propagation of 32 GBd 16-QAM over 10 x 80 km of standard single-mode fibre, a fixed step of 1 km (80 steps per span), noiseless amplification at the end of every span (gain e^{alpha L}).
+
+Parameters:
+
+- fibre: alpha = 0.2 dB/km, D = 17 ps/nm/km, gamma = 1.3 /W/km, fc = 193.1 THz
+- link: 10 x 80 km, ideal (noiseless) amplification after every span
+- step: 1 km (800 steps); reference: comnum at 0.05 km (16000 steps)
+- signal: 16-QAM, 32 GBd, RRC roll-off 0.1, 4 samples per symbol, 4 dBm; 2^14 symbols (quick: 2^11)
+- timing: one propagation over the 10 spans
+
+Script: `benchmarks/libraries/s5_ssfm.py <https://github.com/com-rs/comnum/blob/main/benchmarks/libraries/s5_ssfm.py>`_.
+
+.. dropdown:: The script
+
+   .. literalinclude:: ../../benchmarks/libraries/s5_ssfm.py
+      :language: python
+
+.. rubric:: Support
+
+.. list-table::
+   :header-rows: 1
+
+   * - Case
+     - comnum (functions)
+     - OptiCommPy (numba)
+     - Sionna
+   * - split-step Fourier
+     - yes
+     - yes
+     - yes
+
+.. rubric:: Output fields
+
+NMSE of the output field, ``sum |a - b|^2 / sum |b|^2``, against comnum in float64 at the same step and against the step-converged reference (comnum, 0.05 km). The NMSE against the reference is the error of the 1 km step itself.
+
+.. list-table::
+   :header-rows: 1
+
+   * - Field
+     - NMSE vs comnum (float64, 1 km)
+     - NMSE vs reference
+   * - comnum, float32
+     - 1.14e-8
+     - 7.45e-8
+   * - comnum, float64
+     - 0
+     - 3.69e-8
+   * - OptiCommPy, float64
+     - 2.24e-26
+     - 3.69e-8
+   * - Sionna, float64
+     - 3.55e-25
+     - 3.69e-8
+   * - Sionna, float64, its own convention (not conjugated)
+     - 2.03e0
+     - 2.03e0
+   * - Sionna, float32
+     - 2.15e-8
+     - 2.45e-8
+   * - Sionna, float32, its own convention (not conjugated)
+     - 2.03e0
+     - 2.03e0
+
+.. rubric:: split-step Fourier: time
+
+Median of 5 runs, s per propagation; workload: 65536 samples, 10 x 80 km, 1 km steps. *Relative*: the 1-thread time over that of comnum (functions) on 1 thread.
+
+.. list-table::
+   :header-rows: 1
+
+   * - Library
+     - Precision
+     - 1 thread
+     - all threads
+     - GPU
+     - Relative
+     - First call
+   * - comnum (functions), f64
+     - float64
+     - 1.29
+     - 1.31
+     - —
+     - 1.00
+     - 1.31 s
+   * - comnum (functions), f32
+     - float32
+     - 0.614
+     - 0.619
+     - —
+     - 0.476
+     - 0.625 s
+   * - OptiCommPy (numba), f64
+     - float64 (prec = np.complex128)
+     - 4.54
+     - 4.51
+     - 0.144
+     - 3.52
+     - 5.28 s
+   * - OptiCommPy (numba), f32
+     - float32 (prec = cp.complex64)
+     - —
+     - —
+     - 0.144
+     - —
+     - 0.155 s
+   * - Sionna, single
+     - float32 (precision = 'single', the default)
+     - 5.36
+     - 1.51
+     - 0.277
+     - 4.16
+     - 5.39 s
+   * - Sionna, double
+     - float64 (precision = 'double')
+     - 6.80
+     - 5.65
+     - 0.272
+     - 5.28
+     - 6.4 s
+
+.. dropdown:: The commands of every run
+
+   .. code-block:: bash
+
+      OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 VECLIB_MAXIMUM_THREADS=1 NUMBA_NUM_THREADS=1 RAYON_NUM_THREADS=1 python s5_ssfm.py --lib comnum --threads 1 --work runpod/_work --out runpod/_work/s5_ssfm_comnum_1.json
+      OMP_NUM_THREADS=11 OPENBLAS_NUM_THREADS=11 MKL_NUM_THREADS=11 VECLIB_MAXIMUM_THREADS=11 NUMBA_NUM_THREADS=11 RAYON_NUM_THREADS=11 python s5_ssfm.py --lib comnum --threads all --work runpod/_work --out runpod/_work/s5_ssfm_comnum_all.json --timing-only
+      OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 VECLIB_MAXIMUM_THREADS=1 NUMBA_NUM_THREADS=1 RAYON_NUM_THREADS=1 python s5_ssfm.py --lib opticommpy --threads 1 --work runpod/_work --out runpod/_work/s5_ssfm_opticommpy_1.json
+      OMP_NUM_THREADS=11 OPENBLAS_NUM_THREADS=11 MKL_NUM_THREADS=11 VECLIB_MAXIMUM_THREADS=11 NUMBA_NUM_THREADS=11 RAYON_NUM_THREADS=11 python s5_ssfm.py --lib opticommpy --threads all --work runpod/_work --out runpod/_work/s5_ssfm_opticommpy_all.json --timing-only
+      OMP_NUM_THREADS=11 OPENBLAS_NUM_THREADS=11 MKL_NUM_THREADS=11 VECLIB_MAXIMUM_THREADS=11 NUMBA_NUM_THREADS=11 RAYON_NUM_THREADS=11 python s5_ssfm.py --lib opticommpy --threads gpu --work runpod/_work --out runpod/_work/s5_ssfm_opticommpy_gpu.json --timing-only
+      OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 VECLIB_MAXIMUM_THREADS=1 NUMBA_NUM_THREADS=1 RAYON_NUM_THREADS=1 python s5_ssfm.py --lib sionna --threads 1 --work runpod/_work --out runpod/_work/s5_ssfm_sionna_1.json
+      OMP_NUM_THREADS=11 OPENBLAS_NUM_THREADS=11 MKL_NUM_THREADS=11 VECLIB_MAXIMUM_THREADS=11 NUMBA_NUM_THREADS=11 RAYON_NUM_THREADS=11 python s5_ssfm.py --lib sionna --threads all --work runpod/_work --out runpod/_work/s5_ssfm_sionna_all.json --timing-only
+      OMP_NUM_THREADS=11 OPENBLAS_NUM_THREADS=11 MKL_NUM_THREADS=11 VECLIB_MAXIMUM_THREADS=11 NUMBA_NUM_THREADS=11 RAYON_NUM_THREADS=11 python s5_ssfm.py --lib sionna --threads gpu --work runpod/_work --out runpod/_work/s5_ssfm_sionna_gpu.json --timing-only
