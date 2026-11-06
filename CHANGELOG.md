@@ -8,6 +8,14 @@ and follow [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Validation of the two nonlinear steps against Table 2 of Shao, Liang & Kumar (*IEEE
+  Photonics J.* 6(4), 2014; the reference of Optilux's step): the error of a single step
+  of 0.5 to 60 km on 32-QAM at 10 and 25 Gbaud (`validation/tests/fiber/shao2014.rs`,
+  card `shao2014_table2`, campaign). The midpoint step reproduces the paper's scheme I
+  within 12 % at 10 Gbaud and a factor 2.7 at 25 Gbaud, with its order in the step; the
+  effective-length step, eq. (21) of the paper as written, has 2 to 4.9 times less error
+  than the paper's scheme II, which is not explained (badge orange). The
+  minimum-area-mismatch step distribution of its Table 1 is not implemented.
 - `comnum_math::nlse::NonlinearStep::EffectiveLength`, a third nonlinear step of the
   split-step engine next to `Midpoint` (the default, unchanged) and `Trapezoidal`:
   Optilux's scheme (Shao, Liang & Kumar, *IEEE Photonics J.* 6(4), 2014, cited by its

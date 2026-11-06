@@ -916,6 +916,15 @@
     - crates/comnum-math/src/nlse/mod.rs::the_fwm_rule_follows_eq_13_of_musetti_and_grows_with_the_loss
   badge: green
   not_covered: "Figs. 3-6 and 8 (27 to 101 channels over 20 spans, the power and bandwidth independence, the complexity); the third-order dispersion. A single channel at high power needs a bound on the nonlinear phase as well (card findings)"
+- id: shao2014
+  area: Optical
+  ref: "J. Shao, X. Liang, S. Kumar, Comparison of split-step Fourier schemes for simulating fiber optic communication systems, IEEE Photonics J. 6(4), 7200515, 2014 (open access)"
+  module: comnum_math::nlse::NonlinearStep
+  tested: "Table 2 (the error of a single step of 0.5 to 60 km, 32-QAM at 10 and 25 Gbaud): scheme I, the loss with the dispersion (the midpoint step), within 12 % at 10 Gbaud and a factor 2.7 at 25 Gbaud; scheme II, the loss with the nonlinearity over the effective length of the step (eq. (21), the effective-length step of Optilux), 2.0 times less error than the table at 10 Gbaud and 2 to 4.9 times less at 25 Gbaud, not explained; the orders in h of both schemes (5.94 to 5.97 against 5.96 to 5.98)"
+  tests:
+    - validation/tests/fiber/shao2014.rs::shao_2014_table_2_single_step_errors
+  badge: orange
+  not_covered: "Table 1 and Fig. 4 (the minimum-area-mismatch step distribution, eqs. (36)-(42)) and scheme IV (MAM with the local error): not implemented; the local-error method (scheme III) and the variable steps of schemes Ib and IIb in the scalar solver; Figs. 3, 5, 6, 8 (FFTs and time against the global error) and Fig. 7 (the local error along the link)"
 - id: radhakrishnan1997
   area: Optical
   ref: "R. Radhakrishnan, M. Lakshmanan, J. Hietarinta, Inelastic collision and switching of coupled bright solitons in optical fibers, Phys. Rev. E 56(2), 2213-2216, 1997 (arXiv solv-int/9703008)"

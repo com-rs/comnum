@@ -194,9 +194,45 @@ and the effective-length steps are within 0.1 % of each other at every step
 (:math:`2.3 \cdot 10^{-4}`, :math:`9.3 \cdot 10^{-4}`, :math:`3.3 \cdot 10^{-3}`,
 :math:`8.8 \cdot 10^{-3}` and :math:`2.1 \cdot 10^{-2}` at 0.25, 0.5, 1, 2 and 4 km),
 and the trapezoidal step smooths the cross-phase modulation (:math:`3.5 \cdot 10^{-3}`
-at 0.25 km, 0.39 at 1 km). The default stays the midpoint step; the comparison of
-Shao et al. on their own systems is not reproduced (their figures are not in the
-references).
+at 0.25 km, 0.39 at 1 km). The default stays the midpoint step.
+
+Table 2 of Shao, Liang & Kumar (*IEEE Photonics J.* 6(4), 2014) gives the error of a
+single step of 0.5 to 60 km for the two steps, on 32-QAM at 10 and 25 Gbaud with a
+raised cosine of roll-off 0.8 (card ``shao2014_table2``, campaign):
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 35 35
+
+   * - Quantity
+     - 10 Gbaud
+     - 25 Gbaud
+   * - scheme I (``midpoint``), comnum against the table
+     - within 12 % at every step (1.44·10⁻¹⁵ to 3.30·10⁻⁴ against 1.29·10⁻¹⁵ to
+       3.07·10⁻⁴)
+     - within a factor 2.7 (3.75·10⁻¹⁵ to 4.04·10⁻⁴ against 5.38·10⁻¹⁵ to 4.14·10⁻⁴)
+   * - scheme II (``effective_length``), comnum against the table
+     - 2.0 times less error at every step (1.82·10⁻¹⁷ to 4.68·10⁻⁶ against 3.43·10⁻¹⁷
+       to 9.79·10⁻⁶)
+     - 2 to 4.9 times less error (2.36·10⁻¹⁵ to 1.63·10⁻⁴ against 4.69·10⁻¹⁵ to
+       4.34·10⁻⁴)
+   * - ratio of the errors, I over II
+     - 70 to 81 here, 31 to 38 in the table
+     - 1.6 to 2.5 here, 0.82 to 1.22 in the table (the table's scheme II is worse than
+       scheme I from 40 km; comnum's never is)
+   * - order in :math:`h` between 0.5 and 1 km
+     - 5.97 and 5.96 against 5.96 and 5.97
+     - 5.94 and 5.92 against 5.98 and 5.98
+
+comnum's midpoint step is the paper's scheme I, eq. (11), and reproduces it; its
+effective-length step is the paper's eq. (21) as written (the phase of the power after
+a lossless half step of dispersion over the effective length, the loss of the step
+after the phase), the step Optilux's ``fiber`` applies (identical fields to
+:math:`10^{-28}`), and it is two to five times more accurate than what the paper
+reports for that scheme; the gap is not explained (a scheme that takes the power at
+the start of the step instead is a hundred times worse than the table at 0.5 km, so
+the table's scheme II is not that). The paper's minimum-area-mismatch step
+distribution (its Table 1 and Fig. 4, scheme IV) is not implemented.
 
 4. The link: perturbation models
 --------------------------------
