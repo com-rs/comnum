@@ -5,12 +5,12 @@ Status: accepted (2026-10-30) — refines `docs/ARCHITECTURE.md` ("Traits", "Per
 ## Context
 
 The guide said that every verb trait has an `_into` method "so hot loops allocate
-nothing". The audit of 29 October 2026 found that no implementation keeps that promise:
+nothing". On 29 October 2026 no implementation kept that promise:
 the `_into` methods build a new container (`Bits::from_streams`, a new `Signal`) and
 replace `out`, and `BlockCode` (`encode_block(&self, …) -> Vec<u8>`,
 `decode_block(&self, …) -> Vec<u8>`) cannot keep a workspace between frames. Keeping the
 promise literally would mean a workspace in every block and a breaking change of
-`BlockCode`; the same audit found that the cost of a trial is dominated by algorithms of
+`BlockCode`; and the cost of a trial was dominated by algorithms of
 the wrong complexity (polar decoding, μ-law companding, the OTFS channel), not by
 allocations.
 

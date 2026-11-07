@@ -120,7 +120,7 @@ comnum/
 ├── tools/                     # generators and checks: API.md, the stub, comnum.blocks,
 │                              # LITERATURE.md, MATURITY.md, the cards, the benchmarks page
 ├── references/                # the documents the code is checked against (local, ignored by git)
-└── docs/                      # this guide, adr/, API.md, LITERATURE.md, MATURITY.md, audit/,
+└── docs/                      # this guide, adr/, API.md, LITERATURE.md, MATURITY.md,
                                # katex-header.html, python/ (Sphinx)
 ```
 
@@ -766,8 +766,7 @@ not change; they import by name (`use super::{Taps, LOS_DOPPLER_RATIO};`, the pr
 - The Python API has the same contract: a renamed or removed name, a changed default
   or return value is a breaking change with a migration note; a new keyword argument
   with a default is not. The names follow `docs/ARCHITECTURE.md` (Naming
-  conventions) and the plan of 30 October 2026 (`docs/plans/`); until 0.2.0 they move
-  without deprecated aliases.
+  conventions); until 0.2.0 they move without deprecated aliases.
 - The specification files carry no version field yet: the schema (`comnum schema`,
   `spec_schema`) is versioned with the crates, and a specification of an older version
   that no longer builds is a breaking change of `comnum-spec`.

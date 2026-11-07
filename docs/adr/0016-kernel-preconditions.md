@@ -4,8 +4,8 @@ Status: accepted (2026-11-03) — refines `docs/ARCHITECTURE.md` ("Errors and pa
 
 ## Context
 
-The guide says that invalid user input returns an error and never panics. The audit of
-3 November 2026 counted 35 panics left in the library code (3 `panic!`, 15
+The guide says that invalid user input returns an error and never panics. On
+3 November 2026 the library code had 35 panics left (3 `panic!`, 15
 `unreachable!`, 17 `assert!`):
 
 - the 15 `unreachable!` and the `panic!` of `Checked` (a debug build only) are broken

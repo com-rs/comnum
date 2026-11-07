@@ -1,8 +1,8 @@
 # The public names defined in several modules that are accepted, with the number of
 # modules (files) that define each and the reason it is not a copy: the same verb on
 # different types (an interface: `decode`, `modulate`, `n`, `k`), or a thin wrapper of
-# one shared kernel (`frequency_correlation`, `ase_psd`). Reviewed with the audits of
-# 29-30 October 2026 and again on 3 November 2026 (no copy left among them).
+# one shared kernel (`frequency_correlation`, `ase_psd`). Reviewed on 29-30 October
+# 2026 and again on 3 November 2026 (no copy left among them).
 #
 # `python3 tools/api_index.py --duplicates --check` (in `just check`) fails on a name
 # defined in several modules that is not listed here, and on a listed name defined in
@@ -14,7 +14,7 @@
 
 # Types (structs, enums, traits; the Python classes apart from the Rust types they
 # wrap). Different things under a generic name, not copies; candidates for a clearer
-# name in the breaking batch (section 5 of the review of 30 October 2026):
+# name in the breaking batch:
 Carrier                 2  # comnum_waveform::ofdm::nr::Carrier (an NR grid, the subcarrier k at (k - K/2) Δf) / ofdm::lte::Carrier (an LTE grid with its empty DC subcarrier, built on the NR one)
 Frame                   2  # comnum_spec::blocks::frame::Frame (a frame of a specification) / hdlc::Frame (an HDLC frame found in a bit stream)
 Estimate                2  # comnum_sim::stats (the estimate of a metric) / comnum_waveform::ofdm::sync (a timing and frequency estimate)

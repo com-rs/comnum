@@ -1183,7 +1183,7 @@ package (0.2.0 is unreleased: the former names are not kept).
 - The palette has one name per colour: `COBALT` (`BLUE`) and `GREY_WARM` (`GREY`) are
   removed.
 
-### Waveforms and hardware (review of 30 October 2026)
+### Waveforms and hardware
 
 - Verb traits: CE-OFDM (its receiver a field) and FBMC (the OQAM staggering inside)
   implement `Modulate` and `Demodulate`; every modem (`Ofdm`, `Ufmc`, `Otfs`, `CeOfdm`,
