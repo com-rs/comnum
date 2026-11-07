@@ -8,6 +8,24 @@ and follow [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- The pump-power optimiser `Raman::design_pumps` (`comnum_channel::optical::raman::design`):
+  the launch powers of pumps at given wavelengths and directions that bring the on-off
+  gain of the signals closest to a target per signal, by the two stages of Perlin &
+  Winful (*J. Lightw. Technol.* 20(2), 2002) at fixed wavelengths (Hu, Marks & Menyuk,
+  *J. Lightw. Technol.* 22(6), 2004): the integrated pump powers that fit the targets
+  (`DesignObjective::LeastSquares`, non-negative least squares, or `Minimax`, the
+  largest gain error, the flatness of both papers), then the launch powers whose
+  solved profiles have these integrals (Newton's method on the logarithms of the powers
+  with a finite-difference Jacobian), alternated until the integrals match within
+  `DESIGN_TOLERANCE`. `PumpDesign` returns the pumps, the target integrals, the profile
+  and the ripple (the peak-to-peak spread of the on-off gain minus its target).
+  `comnum.raman_design` is the Python function. `comnum_math::linalg` gains `nnls`
+  (Lawson & Hanson 1974, ch. 23), `nnls_minimax` (Lawson's iteratively reweighted least
+  squares; Rice & Usow 1968) and `lstsq`. Validated against Hu et al. 2004, Table I,
+  case I (`validation/cards/hu2004_table1.yaml`, the gain and loss profiles of its Fig. 1
+  read from the rasters): 8 of the 9 ripples of its case I within 0.1 dB plus half the value (0.29, 1.35, 0.045, 0.43, 1.82, 0.021, 0.10 and 0.37 dB against 0.180, 1.015, 0.019, 0.435, 1.167, 0.008, 0.080 and 0.255), 2 pumps over 80 nm 5.7 dB against 2.77, not explained; and against Perlin & Winful 2002, Fig. 2
+  (`validation/cards/perlin2002_fig2.yaml`), the 4- and 8-pump designs at the pump
+  wavelengths read on the figure: the 4-pump design within 0.85 dB on every launch power (with the polarisation factor 1, not given by the paper), 503 mW of pump against about 530 and a ripple of 0.86 dB against 0.90; the 8-pump design 0.48 dB against 0.22, its three long-wavelength pumps ill-conditioned at the ±1 nm of the reading.
 - `RamanProfile::noise_figure_db` (Bromage 2004, eq. (9): signal-spontaneous beating
   and shot noise from the spontaneous noise of the solver), `effective_noise_figure_db`
   (eq. (12), the noise figure minus the loss of the span, negative for a pumped span),

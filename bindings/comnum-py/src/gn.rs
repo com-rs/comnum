@@ -8,6 +8,7 @@ use comnum::channel::optical::gn::{
     FormatMoments, GnModel, WdmSpectrum, closed_form_nli_psd, coherence_factor, isrs_closed_form_eta,
     isrs_closed_form_terms,
 };
+use comnum::channel::optical::raman::DesignObjective;
 use comnum::math::dbm2w;
 use numpy::IntoPyArray;
 use pyo3::exceptions::PyValueError;
@@ -230,6 +231,81 @@ fn raman_profile<'py>(
     Ok(d)
 }
 
+/// The pump powers that flatten the on-off gain of the channels over one span: the
+/// pump-power optimiser of Perlin & Winful (*J. Lightw. Technol.* 20(2), 2002) at fixed
+/// pump wavelengths (Hu, Marks & Menyuk, *J. Lightw. Technol.* 22(6), 2004): the
+/// integrated pump powers that fit the targets (non-negative least squares or the
+/// minimax fit of Lawson's iteratively reweighted least squares), then the launch powers
+/// whose profiles have these integrals (Newton's method on the solved profiles), until
+/// the integrals match within ``1e-5``. See ``comnum_channel::optical::raman::design``.
+///
+/// Args:
+///     fiber (FiberParams): the span (length, attenuation, carrier frequency).
+///     freqs (array_like): centre frequencies of the channels relative to the carrier
+///         (Hz).
+///     power_dbm (float | array_like): launch power of every channel (dBm).
+///     raman (dict): the keys of :func:`raman_profile`; the pumps give the wavelengths
+///         and directions, their ``power_mw`` is the initial guess when positive.
+///     target_on_off_db (float | array_like): the target on-off gain of every channel
+///         (dB), one value for all or one per channel (the loss of each over the span for
+///         a flat net gain).
+///     objective (str): ``"minimax"`` (the largest gain error) or ``"least_squares"``.
+///
+/// Returns:
+///     dict: ``pump_power_mw`` (the powers found, in the order of the pumps),
+///     ``pump_freqs_hz``, ``integrals_w_km`` (the target integrated power of every
+///     pump), ``ripple_db`` (the peak-to-peak spread of the on-off gain minus its target
+///     over the channels), ``on_off_gain_db`` and ``net_gain_db`` (per channel) and
+///     ``iterations``.
+///
+/// Raises:
+///     ValueError: for an invalid parameter, no pump, or a design that does not
+///         converge.
+///
+/// Examples:
+///     >>> import comnum
+///     >>> pumps = [{"wavelength_nm": w, "power_mw": 0, "direction": "counter"} for w in (1430, 1460)]
+///     >>> d = comnum.raman_design(comnum.FiberParams(), comnum.wdm_grid(8, 500e9), -10.0,
+///     ...     {"pumps": pumps}, 10.0)
+///     >>> bool(d["ripple_db"] < 1.0)
+///     True
+#[pyfunction]
+#[pyo3(signature = (fiber, freqs, power_dbm, raman, target_on_off_db, objective = "minimax"))]
+fn raman_design<'py>(
+    py: Python<'py>,
+    fiber: &PyFiber,
+    freqs: &Bound<'py, PyAny>,
+    power_dbm: &Bound<'py, PyAny>,
+    raman: &Bound<'py, PyAny>,
+    target_on_off_db: &Bound<'py, PyAny>,
+    objective: &str,
+) -> PyResult<Bound<'py, PyDict>> {
+    let freqs = fvec(freqs)?;
+    let n = freqs.len();
+    let powers = powers_dbm(power_dbm, n)?;
+    let targets = powers_dbm(target_on_off_db, n)?;
+    let objective = match objective {
+        "minimax" => DesignObjective::Minimax,
+        "least_squares" => DesignObjective::LeastSquares,
+        other => {
+            return Err(PyValueError::new_err(format!("objective must be minimax or least_squares, got {other:?}")));
+        }
+    };
+    let r = crate::fiber::raman(py, Some(raman))?.ok_or_else(|| PyValueError::new_err("raman must be a mapping"))?;
+    let f = fiber.inner.clone();
+    let signals: Vec<(f64, f64)> = freqs.iter().zip(&powers).map(|(fr, p)| (f.fc_hz + fr, dbm2w(*p))).collect();
+    let d = py.detach(|| r.design_pumps(&f, &signals, &targets, objective)).py()?;
+    let out = PyDict::new(py);
+    out.set_item("pump_power_mw", farr(py, d.pumps.iter().map(|p| p.power_w * 1e3).collect()))?;
+    out.set_item("pump_freqs_hz", farr(py, d.pumps.iter().map(|p| p.frequency_hz).collect()))?;
+    out.set_item("integrals_w_km", farr(py, d.integrals_w_km.clone()))?;
+    out.set_item("ripple_db", d.ripple_db)?;
+    out.set_item("on_off_gain_db", farr(py, (0..n).map(|k| d.profile.on_off_gain_db(k)).collect()))?;
+    out.set_item("net_gain_db", farr(py, (0..n).map(|k| d.profile.net_gain_db(k)).collect()))?;
+    out.set_item("iterations", d.iterations)?;
+    Ok(out)
+}
+
 /// Poggiolini's closed form of the NLI power spectral density at the centre of
 /// ``n_channels`` rectangular channels spaced by ``spacing`` (incoherent accumulation).
 ///
@@ -359,6 +435,7 @@ pub(crate) fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
         wrap_pyfunction!(gn_model, m)?,
         wrap_pyfunction!(gn_closed_form, m)?,
         wrap_pyfunction!(gn_isrs_closed_form, m)?,
+        wrap_pyfunction!(raman_design, m)?,
         wrap_pyfunction!(raman_profile, m)?,
         wrap_pyfunction!(format_moments, m)?,
         wrap_pyfunction!(wdm_grid, m)?,

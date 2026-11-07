@@ -123,9 +123,11 @@
 //!    Gaussian noise model in the presence of inter-channel stimulated Raman
 //!    scattering," *J. Lightw. Technol.*, 37(9), 1924–1936, 2019.
 
+mod design;
 mod gain;
 mod solver;
 
+pub use design::{DESIGN_MAX_ITERATIONS, DESIGN_TOLERANCE, DesignObjective, PumpDesign};
 pub use gain::RamanGain;
 
 use super::edfa::ase_density;

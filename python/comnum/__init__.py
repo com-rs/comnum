@@ -70,7 +70,7 @@ channels               :func:`awgn`, :func:`awgn_ebn0`, :func:`phase_noise`, :fu
                        :class:`ManakovSsfm`, :func:`gn_model`,
                        :func:`gn_closed_form`, :func:`gn_isrs_closed_form`,
                        :func:`format_moments`,
-                       :func:`raman_profile`, :func:`wdm_grid`
+                       :func:`raman_profile`, :func:`raman_design`, :func:`wdm_grid`
 devices                :func:`laser`, :func:`phase_modulator`, :func:`mzm`, :func:`iqm`,
                        :class:`Photodiode`, :func:`balanced_photodiode`,
                        :func:`hybrid_2x4`, :func:`coherent_receiver`
@@ -427,6 +427,7 @@ from comnum._comnum import (
     psd,
     pulse_shape,
     qfunc,
+    raman_design,
     raman_profile,
     random_delay_correlation,
     rapp_predistort,
@@ -753,6 +754,7 @@ __all__ = [
     "psd",
     "pulse_shape",
     "qfunc",
+    "raman_design",
     "raman_profile",
     "random_delay_correlation",
     "rapp_predistort",

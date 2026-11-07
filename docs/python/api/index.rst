@@ -351,6 +351,7 @@ Fibre and amplification
    ManakovSsfm
    Edfa
    raman_profile
+   raman_design
    gn_model
    gn_closed_form
    gn_isrs_closed_form

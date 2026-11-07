@@ -213,7 +213,7 @@ Optical
      - Carena et al. 2014 Fig. 1(a); GNPy outputs; Semrau, Killey & Bayvel 2019 Figs. 4a, 4b, 5
    * - Raman amplification and ISRS
      - A
-     - Bromage 2004 eqs. (3)–(5), Figs. 7–8; Islam 2002 Figs. 3, 6(b), Sec. II-A; Hu et al. 2004 eq. (2); GNPy outputs; Semrau & Bayvel 2018 eq. (10)
+     - Bromage 2004 eqs. (3)–(5), Figs. 7–8; Islam 2002 Figs. 3, 6(b), Sec. II-A; Hu et al. 2004 eq. (2), Table I; Perlin & Winful 2002 Fig. 2; GNPy outputs; Semrau & Bayvel 2018 eq. (10)
    * - EDFA and PMD
      - A
      - the Maxwellian DGD of Foschini & Poole 1991 Fig. 3; the accumulated ASE; Optilux outputs
