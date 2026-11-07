@@ -98,6 +98,9 @@ code, .mono, .cm-editor .cm-scroller, .terminal {
   font-family: "SF Mono", ui-monospace, SFMono-Regular, Menlo, "Cascadia Code", Consolas, monospace;
 }
 code { font-size: 0.95em; }
+/* every zone scrolls in its own frame: a scroll that reaches the end of a zone stops
+   there, it never moves the page nor triggers the back gesture of the browser */
+.cm-scroller, .terminal, .tree, .sidebar-note, .chain, .error, .tab-strip { overscroll-behavior: contain; }
 a { color: var(--accent); }
 button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; }
 button:disabled { opacity: 0.45; cursor: default; }
@@ -385,12 +388,12 @@ button.tab:hover { color: var(--fg); }
 /* ---------------------------------------------------------------- phones and tablets */
 
 @media (max-width: 900px) {
-  body { overflow: auto; }
-  .app { height: auto; min-height: 100vh; min-height: 100dvh; grid-template-rows: 36px minmax(0, 1fr) 22px; }
+  /* the page still fits the screen: the editor, the plot and the terminal are stacked,
+     each with its share of the height and its own scrolling, the page itself never moves */
   .workbench {
     grid-template-columns: minmax(0, 1fr);
-    grid-template-rows: auto 4px auto;
-    grid-template-areas: "main" "sash" "panel";
+    grid-template-rows: minmax(0, 3fr) minmax(0, 1fr);
+    grid-template-areas: "main" "panel";
   }
   .explorer-toggle { display: inline-flex; }
   .sidebar {
@@ -403,17 +406,11 @@ button.tab:hover { color: var(--fg); }
   .title-links a:not(:last-of-type) { display: none; }
   .title-center { display: none; }
   .page-name, .title-sep { display: none; }
-  .workbench { grid-template-rows: auto auto; grid-template-areas: "main" "panel"; }
-  .editor-area { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto auto; }
+  .editor-area { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) minmax(0, 1fr); }
   .sash { display: none; }
-  /* no flex basis of zero in a column of automatic height: fixed heights instead */
-  .pane-body, .terminal { flex: none; }
-  #editor, .cm-editor { height: 46vh; }
-  .plot-body { height: 60vh; }
   .plot-pane { border-top: 1px solid var(--border); }
   .panel { border-top: 1px solid var(--border); }
-  .terminal { height: 36vh; white-space: pre-wrap; word-break: break-word; padding: 6px 12px; }
-  .statusbar { position: sticky; bottom: 0; }
+  .terminal { white-space: pre-wrap; word-break: break-word; padding: 6px 12px; }
   .status-right .status-item:not(#engine) { display: none; }
   select { max-width: 110px; }
   #share { font-size: 0; gap: 0; padding: 3px 7px; } /* the icon alone on a phone */
