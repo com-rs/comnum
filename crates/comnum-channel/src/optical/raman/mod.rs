@@ -238,6 +238,11 @@ pub struct RamanProfile {
     /// The spontaneous Raman noise of every signal at the end of the span, both
     /// polarisations (W/Hz).
     pub ase_psd: Vec<f64>,
+    /// The spontaneous Raman noise emitted towards $-z$ at the frequency of every
+    /// signal, at the start of the span, both polarisations (W/Hz): $\int_{0}^{L} 2 h f
+    /// \sum_{j} C_{kj} P_{j}(z) (1 + \eta_{kj}) G_{k}(z)\\, dz$, the backward ASE of
+    /// Bromage 2004, eq. (6), which a counter-pumped span sends back to its input.
+    pub ase_backward_psd: Vec<f64>,
     /// The effective Rayleigh reflection coefficient $R_{k}^{2}$ of every signal, the
     /// doubly backscattered power over the signal power at the end of the span (see the
     /// module); 0 without [`Raman::rayleigh_db_km`].
@@ -660,6 +665,51 @@ mod tests {
             * dz;
         let expected = 2.0 * PLANCK * fs * (1.0 + eta) * integral;
         assert!((p.ase_psd[0] / expected - 1.0).abs() < 1e-4, "{} vs {expected}", p.ase_psd[0]);
+    }
+
+    #[test]
+    fn the_backward_spontaneous_noise_of_a_co_pumped_lossless_span_is_the_forward_one_of_a_counter_pumped_one() {
+        // the mirror image: the backward noise of the co-pumped span at z = 0 equals the
+        // forward noise of the counter-pumped span at z = L (same profile reversed)
+        let f = FiberParams { alpha_db_km: 0.0, span_km: 30.0, ..FiberParams::default() };
+        let fs = SPEED_OF_LIGHT / 1550e-9;
+        let noise = |d: Direction| {
+            let pump = RamanPump { alpha_db_km: Some(0.25), ..RamanPump::at_wavelength(1450.0, 0.3, d) };
+            Raman { pumps: vec![pump], ..Raman::default() }.solve(&f, &[(fs, 1e-9)]).unwrap()
+        };
+        let (co, counter) = (noise(Direction::Co), noise(Direction::Counter));
+        assert!((co.ase_backward_psd[0] / counter.ase_psd[0] - 1.0).abs() < 1e-6);
+        assert!((counter.ase_backward_psd[0] / co.ase_psd[0] - 1.0).abs() < 1e-6);
+        // without pump, no noise either way
+        let none = Raman { isrs: false, ..Raman::default() }.solve(&f, &[(fs, 1e-3)]).unwrap();
+        assert_eq!(none.ase_backward_psd, vec![0.0]);
+    }
+
+    #[test]
+    fn the_relaxation_is_second_order_in_the_step_on_a_stiff_span() {
+        // three strong counter-pumps and ISRS over 100 km: the error of the net gains
+        // against the solution at 12.5 m, for steps of 0.8 to 0.05 km, falls by 4 per
+        // halving (the counter waves are linear between the nodes of the forward sweep)
+        let f = fiber(100.0);
+        let pumps: Vec<RamanPump> =
+            [1425.0, 1445.0, 1465.0].iter().map(|w| RamanPump::at_wavelength(*w, 0.5, Direction::Counter)).collect();
+        let signals: Vec<(f64, f64)> = (0..40).map(|k| (188e12 + k as f64 * 250e9, 1e-3)).collect();
+        let solve =
+            |h: f64| Raman { pumps: pumps.clone(), step_km: h, ..Raman::default() }.solve(&f, &signals).unwrap();
+        let reference = solve(0.0125);
+        let errors: Vec<f64> = [0.8, 0.4, 0.2, 0.1, 0.05]
+            .iter()
+            .map(|h| {
+                let p = solve(*h);
+                (0..43).map(|k| (p.net_gain_db(k) - reference.net_gain_db(k)).abs()).fold(0.0, f64::max)
+            })
+            .collect();
+        println!("errors (dB) at 0.8, 0.4, 0.2, 0.1, 0.05 km: {errors:?}");
+        for w in errors.windows(2) {
+            let ratio = w[0] / w[1];
+            assert!(ratio > 3.0 && ratio < 5.5, "{errors:?}");
+        }
+        assert!(errors[3] < 1e-3, "{errors:?}");
     }
 
     #[test]

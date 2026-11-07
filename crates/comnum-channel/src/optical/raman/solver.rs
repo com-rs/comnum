@@ -130,7 +130,8 @@ impl Raman {
                 }
             }
         }
-        let ase_psd = (0..signals.len()).map(|k| self.spontaneous(&waves, &c, &y, k, h)).collect();
+        let ase_psd = (0..signals.len()).map(|k| self.spontaneous(&waves, &c, &y, k, h, true)).collect();
+        let ase_backward_psd = (0..signals.len()).map(|k| self.spontaneous(&waves, &c, &y, k, h, false)).collect();
         let mut profile = RamanProfile {
             z_km: z,
             freqs_hz: waves.iter().map(|w| w.f).collect(),
@@ -139,6 +140,7 @@ impl Raman {
             n_signals: signals.len(),
             log_power: y,
             ase_psd,
+            ase_backward_psd,
             double_rayleigh: vec![0.0; signals.len()],
             iterations,
         };
@@ -148,9 +150,12 @@ impl Raman {
         Ok(profile)
     }
 
-    /// The spontaneous noise of signal `k` at the end of the span (both polarisations),
-    /// by the trapezoidal rule on the grid.
-    fn spontaneous(&self, waves: &[Wave], c: &[Vec<f64>], y: &[Vec<f64>], k: usize, h: f64) -> f64 {
+    /// The spontaneous noise of signal `k` at the end of the span (`forward`) or, for the
+    /// noise emitted towards $-z$, at its start (both polarisations), by the trapezoidal
+    /// rule on the grid: the source $2 h f_{k} \sum_{j} C_{kj} P_{j}(z) (1 + \eta_{kj})$
+    /// amplified by $G_{k}(L)/G_{k}(z)$ to the end, or by $G_{k}(z)$ back to the start
+    /// (the Raman gain is the same in both directions).
+    fn spontaneous(&self, waves: &[Wave], c: &[Vec<f64>], y: &[Vec<f64>], k: usize, h: f64, forward: bool) -> f64 {
         let fk = waves[k].f;
         let sources: Vec<(usize, f64)> = (0..waves.len())
             .filter(|j| waves[*j].f > fk && !waves[*j].signal && c[k][*j] > 0.0)
@@ -165,7 +170,10 @@ impl Raman {
         let yk = &y[k];
         let end = yk[yk.len() - 1];
         let integrand: Vec<f64> = (0..yk.len())
-            .map(|i| sources.iter().map(|(j, cj)| cj * y[*j][i].exp()).sum::<f64>() * (end - yk[i]).exp())
+            .map(|i| {
+                let gain = if forward { end - yk[i] } else { yk[i] - yk[0] };
+                sources.iter().map(|(j, cj)| cj * y[*j][i].exp()).sum::<f64>() * gain.exp()
+            })
             .collect();
         let integral = h * (integrand.iter().sum::<f64>() - (integrand[0] + integrand[integrand.len() - 1]) / 2.0);
         2.0 * PLANCK * fk * integral

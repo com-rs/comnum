@@ -242,6 +242,70 @@ and 16-QAM against the EGN model (within 0.3 dB, where the GN model is up to 1.7
 off). The Raman-amplified links are compared with the generalised GN model in
 ``specs/raman_wdm.yaml`` (within 0.21 dB).
 
+Raman amplification: conventions and convergence
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The Raman solver (``comnum_channel::optical::raman``) follows the conventions of
+J. Bromage (*J. Lightw. Technol.* 22(1), 2004):
+
+- **Gain of depolarised pumps.** The gain efficiency :math:`C_R` of the tables of
+  ``RamanGain`` (GNPy's measured spectrum of standard fibre, 0.42 /(W km) at its peak
+  for 80 µm², or ``RamanGain.flat`` from the single number of a data sheet) is the one
+  measured with a depolarised pump or signal: half the co-polarised gain (Bromage, Sec.
+  III-B, footnote 2; the :math:`1/(2 A_{\mathrm{eff}})` of Hu, Marks & Menyuk 2004).
+  The optimiser validation shows what the factor is worth: the 4-pump design of Perlin &
+  Winful (2002, Fig. 2) needs 939 mW of pump with the factor 2 and 503 mW with the
+  factor 1, against the paper's 530 mW, whose polarisation factor is not given.
+- **Spontaneous noise in both directions.** ``ase_psd`` is the spontaneous Raman noise
+  that reaches the end of the span with the signals (both polarisations, the thermal
+  factor :math:`1 + \eta` of Bromage's eq. (6)); ``ase_backward_psd`` the noise emitted
+  towards the input, which a counter-pumped span sends back to the preceding amplifier.
+  For a lossless undepleted amplifier the forward noise per polarisation is
+  :math:`(G - 1) h \nu (1 + \eta)`: the fully inverted amplifier of Islam (2002, Sec.
+  II-A), whose noise figure :math:`2 - 1/G` the solver gives within :math:`10^{-3}` dB
+  (card ``islam2002_sec2a``).
+- **Noise figures.** ``noise_figure_db`` is Bromage's eq. (9) (signal-spontaneous
+  beating and shot noise), ``effective_noise_figure_db`` the noise figure minus the
+  loss of the span (eq. (12)), negative for a pumped span: a discrete amplifier after
+  an unpumped span would need it to give the same noise. Bromage's Fig. 8 is reproduced
+  within 0.3 dB with a fitted pump loss (``validation/tests/fiber/bromage2004.rs``).
+- **Double Rayleigh backscattering.** ``double_rayleigh`` is the effective Rayleigh
+  reflection coefficient :math:`R^2` of eqs. (13)–(15) on the solved profile, counted
+  as a noise of :math:`(5/9) R^2 P` by the split-step solvers and the GN model (eq.
+  (16)); Islam's Fig. 6(b) within its reading at 16 of 20 points (card
+  ``islam2002_fig6b``).
+
+The solver integrates the logarithms of the powers by RK4 on a uniform grid, forward
+for the co-propagating waves and backward for the counter-propagating ones, with the
+other direction linear between the nodes, so that the scheme is of second order when
+both directions are present. On a stiff span, three counter-pumps of 500 mW at 1425,
+1445 and 1465 nm and 40 channels of 1 mW over 100 km with ISRS, the largest error of
+the net gains against the solution at 12.5 m is
+
+.. list-table::
+   :header-rows: 1
+
+   * - step (km)
+     - 0.8
+     - 0.4
+     - 0.2
+     - 0.1 (default)
+     - 0.05
+   * - error (dB)
+     - :math:`5.1 \cdot 10^{-3}`
+     - :math:`1.3 \cdot 10^{-3}`
+     - :math:`3.2 \cdot 10^{-4}`
+     - :math:`7.9 \cdot 10^{-5}`
+     - :math:`1.9 \cdot 10^{-5}`
+
+a factor 4 per halving (``the_relaxation_is_second_order_in_the_step_on_a_stiff_span``
+of ``raman/mod.rs``). The spontaneous and Rayleigh integrals are trapezoids on the same
+grid: :math:`1.8 \cdot 10^{-3}` dB on the noise figure of a 30 dB amplifier of 10 km
+at 100 m, :math:`1.7 \cdot 10^{-5}` at 10 m. The forward-backward sweeps are
+under-relaxed when they oscillate and, when they do not converge from the loss-only
+guess (a 1 W counter-pump on a 20 mW signal in 5.64 km of DCF, 52 dB of small-signal
+gain, Islam's Fig. 3), the solver continues from a fraction of the pump powers.
+
 5. The system: a published result
 ---------------------------------
 

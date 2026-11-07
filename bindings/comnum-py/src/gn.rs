@@ -179,7 +179,8 @@ fn format_moments(
 ///     dict: ``z_km``, ``freqs_hz`` (absolute, the channels then the pumps),
 ///     ``power_dbm`` (one row per wave), ``net_gain_db`` and ``on_off_gain_db`` (per
 ///     channel), ``ase_psd`` (W/Hz, both polarisations, per channel at the end of the
-///     span), ``double_rayleigh`` (the effective Rayleigh reflection coefficient of every
+///     span), ``ase_backward_psd`` (the spontaneous noise emitted towards the input of
+///     the span, at its start), ``double_rayleigh`` (the effective Rayleigh reflection coefficient of every
 ///     channel, the doubly backscattered power over the signal power at the end of the
 ///     span, linear; 0 without ``rayleigh_db_km``), ``noise_figure_db`` (of the span,
 ///     Bromage 2004 eq. (9)), ``effective_noise_figure_db`` (the noise figure minus the
@@ -224,6 +225,7 @@ fn raman_profile<'py>(
     d.set_item("net_gain_db", farr(py, (0..n).map(|k| p.net_gain_db(k)).collect()))?;
     d.set_item("on_off_gain_db", farr(py, (0..n).map(|k| p.on_off_gain_db(k)).collect()))?;
     d.set_item("ase_psd", farr(py, p.ase_psd.clone()))?;
+    d.set_item("ase_backward_psd", farr(py, p.ase_backward_psd.clone()))?;
     d.set_item("double_rayleigh", farr(py, p.double_rayleigh.clone()))?;
     d.set_item("noise_figure_db", farr(py, (0..n).map(|k| p.noise_figure_db(k)).collect()))?;
     d.set_item("effective_noise_figure_db", farr(py, (0..n).map(|k| p.effective_noise_figure_db(k)).collect()))?;

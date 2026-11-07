@@ -8,6 +8,15 @@ and follow [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- `RamanProfile::ase_backward_psd`, the spontaneous Raman noise emitted towards the
+  input of the span (Bromage 2004, eq. (6) along $-z$), returned by
+  `comnum.raman_profile`; the mirror image of the forward noise of the reversed span
+  (unit test). The conventions of the Raman module (the depolarised gain, the noise in
+  both directions, the noise figures, the double Rayleigh backscattering) and the
+  convergence of its solver (second order in the step: $5 \cdot 10^{-3}$, $1.3 \cdot
+  10^{-3}$, $3.2 \cdot 10^{-4}$, $7.9 \cdot 10^{-5}$ and $1.9 \cdot 10^{-5}$ dB at 0.8,
+  0.4, 0.2, 0.1 and 0.05 km on a span with three 500 mW counter-pumps and 40 channels)
+  are written in the fibre validation guide (section 4).
 - The pump-power optimiser `Raman::design_pumps` (`comnum_channel::optical::raman::design`):
   the launch powers of pumps at given wavelengths and directions that bring the on-off
   gain of the signals closest to a target per signal, by the two stages of Perlin &
