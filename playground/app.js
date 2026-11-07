@@ -1,36 +1,84 @@
-// The page of the playground: a CodeMirror editor of the specification, the menu of
-// the specifications of the repository, a worker that runs the WebAssembly engine, and
-// a Plotly chart of the metric against a variable of the grid, the expected values of
-// the expectations (published curves, closed forms) drawn over the simulated points.
+// The page of the playground: a CodeMirror editor of the specification, an explorer of
+// the specifications of the repository, a worker that runs the WebAssembly engine, a
+// Plotly chart of the metric against a variable of the grid, the expected values of
+// the expectations (published curves, closed forms) drawn over the simulated points,
+// and a terminal that prints the lines of `comnum run` and `comnum verify`.
 
 import { basicSetup, EditorView } from "https://esm.sh/codemirror@6.0.2";
 import { yaml as yamlLanguage } from "https://esm.sh/@codemirror/lang-yaml@6.1.2";
 import { setDiagnostics } from "https://esm.sh/@codemirror/lint@6.8.5";
+import { oneDark } from "https://esm.sh/@codemirror/theme-one-dark@6.1.2";
 
 const $ = (id) => document.getElementById(id);
 const ui = {
-  select: $("spec-select"), run: $("run"), stop: $("stop"), status: $("status"),
+  list: $("spec-list"), run: $("run"), stop: $("stop"), status: $("status"), engine: $("engine"),
   error: $("error"), xAxis: $("x-axis"), metric: $("metric"), logY: $("log-y"),
-  plot: $("plot"), version: $("version"), caption: $("caption"), terminal: $("terminal"), clear: $("clear"),
+  plot: $("plot"), plotTabs: $("plot-tabs"), version: $("version"), caption: $("caption"), terminal: $("terminal"), clear: $("clear"),
+  tabName: $("tab-name"), openName: $("open-name"), theme: $("theme"),
+  sidebar: $("sidebar"), backdrop: $("sidebar-backdrop"), explorerOpen: $("explorer-toggle"), explorerClose: $("explorer-close"),
+  splitH: $("split-h"), splitV: $("split-v"), workbench: document.querySelector(".workbench"), editorArea: document.querySelector(".editor-area"),
 };
+
+// ---------------------------------------------------------------- the theme
+
+const systemDark = matchMedia("(prefers-color-scheme: dark)");
+const isDark = () => {
+  const t = document.documentElement.dataset.theme;
+  return t ? t === "dark" : systemDark.matches;
+};
+
+ui.theme.addEventListener("click", () => {
+  const next = isDark() ? "light" : "dark";
+  document.documentElement.dataset.theme = next;
+  try { localStorage.setItem("comnum-theme", next); } catch (e) { /* no storage */ }
+  onThemeChange();
+});
+systemDark.addEventListener("change", onThemeChange);
+
+function onThemeChange() {
+  rebuildEditor();
+  draw();
+}
+
+// The colours of the page, read from its style sheet so that the plot follows the theme.
+const cssVar = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
 
 // ---------------------------------------------------------------- the editor
 
-const editor = new EditorView({
-  doc: "",
-  extensions: [
-    basicSetup,
-    yamlLanguage(),
-    EditorView.updateListener.of((u) => { if (u.docChanged) onEdit(); }),
-  ],
-  parent: $("editor"),
-});
+let editor = null;
+
+function makeEditor(doc) {
+  return new EditorView({
+    doc,
+    extensions: [
+      basicSetup,
+      yamlLanguage(),
+      ...(isDark() ? [oneDark] : []),
+      EditorView.updateListener.of((u) => { if (u.docChanged) onEdit(); }),
+    ],
+    parent: $("editor"),
+  });
+}
+
+/// A new editor with the same text: the theme of CodeMirror is an extension of the view.
+function rebuildEditor() {
+  const doc = text();
+  editor.destroy();
+  editor = makeEditor(doc);
+  if (lastError) showError(lastError);
+}
+
+editor = makeEditor("");
 
 const text = () => editor.state.doc.toString();
 
 function setText(s) {
   editor.dispatch({ changes: { from: 0, to: editor.state.doc.length, insert: s } });
 }
+
+$("editor").addEventListener("keydown", (e) => {
+  if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) { e.preventDefault(); ui.run.click(); }
+});
 
 /// The span of the editor an error message points at: the line and column of a YAML
 /// error, or the item of the link a block error names, else nothing.
@@ -59,7 +107,10 @@ function errorSpan(message) {
   return null;
 }
 
+let lastError = null;
+
 function showError(message) {
+  lastError = message || null;
   ui.error.hidden = !message;
   ui.error.textContent = message || "";
   const span = message ? errorSpan(message) : null;
@@ -71,6 +122,7 @@ function showError(message) {
 
 let worker = null;
 let specs = [];
+let current = null;     // the specification of the explorer the editor holds
 let inspected = null;   // the last successful inspection of the text
 let inspectId = 0;
 let rows = [];          // the completed conditions of the run in progress
@@ -100,11 +152,9 @@ function onMessage(e) {
     ui.version.textContent = `v${m.version}`;
     if (specs.length === 0) {
       specs = m.specs;
-      fillMenu();
+      fillExplorer();
       const wanted = new URLSearchParams(location.search).get("spec");
-      const first = specs.find((s) => s.path === wanted || s.name === wanted) || specs[0];
-      ui.select.value = first.path;
-      setText(first.text);
+      open(specs.find((s) => s.path === wanted || s.name === wanted) || specs[0], false);
     }
     ui.run.disabled = false;
     setStatus("ready");
@@ -156,6 +206,7 @@ function startProbing() {
   optimised = false;
   probes = [];
   probeStart = performance.now();
+  ui.engine.textContent = "engine: optimising…";
   probeTimer = setInterval(() => {
     if (!running && worker) worker.postMessage({ type: "probe" });
   }, PROBE_EVERY_MS);
@@ -173,41 +224,104 @@ function onProbe(ms) {
   if (probes.length >= 3 && ms < first / 2.5) {
     optimised = true;
     stopProbing();
-    if (!running) setStatus(`ready, engine optimised (${since.toFixed(0)} s after load)`);
+    ui.engine.textContent = `engine optimised (${since.toFixed(0)} s after load)`;
+    if (!running) setStatus("ready, engine optimised");
   } else if (since > PROBE_FOR_S) {
     stopProbing();
+    ui.engine.textContent = "";
     if (!running) setStatus("ready");
   } else if (!running) {
-    setStatus(`ready · the browser is still optimising the engine (${since.toFixed(0)} s)…`);
+    ui.engine.textContent = `engine: optimising… ${since.toFixed(0)} s`;
   }
 }
 
-// ---------------------------------------------------------------- the menu
+// ---------------------------------------------------------------- the explorer
 
-function fillMenu() {
-  const groups = [["Examples", specs.filter((s) => !s.validation)], ["Validation", specs.filter((s) => s.validation)]];
-  ui.select.replaceChildren();
-  for (const [label, items] of groups) {
-    const g = document.createElement("optgroup");
-    g.label = label;
+function fillExplorer() {
+  const groups = [["examples", "specs", specs.filter((s) => !s.validation)], ["validation", "specs/validation", specs.filter((s) => s.validation)]];
+  ui.list.replaceChildren();
+  for (const [key, label, items] of groups) {
+    const head = document.createElement("button");
+    head.className = "tree-group";
+    head.textContent = label;
+    head.setAttribute("aria-expanded", "true");
+    head.addEventListener("click", () => head.setAttribute("aria-expanded", head.getAttribute("aria-expanded") !== "true"));
+    const box = document.createElement("div");
+    box.className = "tree-items";
+    box.dataset.group = key;
     for (const s of items) {
-      const o = document.createElement("option");
-      o.value = s.path;
-      o.textContent = s.description ? `${s.name} — ${s.description}` : s.name;
-      g.appendChild(o);
+      const b = document.createElement("button");
+      b.className = "tree-item";
+      b.dataset.path = s.path;
+      b.title = s.description ? `${s.path}: ${s.description}` : s.path;
+      b.innerHTML = `<span class="name">${esc(s.name)}.yaml</span><span class="desc">${esc(s.description || "")}</span>`;
+      b.addEventListener("click", () => { open(s, true); closeExplorer(); });
+      box.appendChild(b);
     }
-    ui.select.appendChild(g);
+    ui.list.append(head, box);
   }
 }
 
-ui.select.addEventListener("change", () => {
-  const s = specs.find((x) => x.path === ui.select.value);
-  if (s) {
-    rows = [];
-    setText(s.text);
-    history.replaceState(null, "", `?spec=${encodeURIComponent(s.name)}`);
-  }
-});
+/// Load a specification of the explorer into the editor.
+function open(s, pushUrl) {
+  current = s;
+  rows = [];
+  setText(s.text);
+  ui.tabName.textContent = `${s.name}.yaml`;
+  ui.openName.textContent = s.path;
+  for (const b of ui.list.querySelectorAll(".tree-item")) b.setAttribute("aria-current", b.dataset.path === s.path);
+  if (pushUrl) history.replaceState(null, "", `?spec=${encodeURIComponent(s.name)}`);
+}
+
+const openExplorer = () => { ui.sidebar.classList.add("open"); ui.backdrop.hidden = false; };
+const closeExplorer = () => { ui.sidebar.classList.remove("open"); ui.backdrop.hidden = true; };
+ui.explorerOpen.addEventListener("click", openExplorer);
+ui.explorerClose.addEventListener("click", closeExplorer);
+ui.backdrop.addEventListener("click", closeExplorer);
+
+// ---------------------------------------------------------------- the sashes
+
+/// Drag a sash: `apply(delta)` receives the movement in pixels since the pointer went down.
+function sash(el, axis, apply) {
+  el.addEventListener("pointerdown", (e) => {
+    e.preventDefault();
+    el.setPointerCapture(e.pointerId);
+    el.classList.add("dragging");
+    const start = axis === "x" ? e.clientX : e.clientY;
+    const move = (ev) => apply((axis === "x" ? ev.clientX : ev.clientY) - start);
+    const up = () => {
+      el.classList.remove("dragging");
+      el.removeEventListener("pointermove", move);
+      el.removeEventListener("pointerup", up);
+      el.removeEventListener("pointercancel", up);
+      if (ui.plot.data) Plotly.Plots.resize(ui.plot);
+    };
+    el.addEventListener("pointermove", move);
+    el.addEventListener("pointerup", up);
+    el.addEventListener("pointercancel", up);
+  });
+}
+
+sash(ui.splitH, "x", (() => {
+  let base = 0;
+  return (delta) => {
+    if (delta === 0 || base === 0) base = ui.editorArea.querySelector(".editor-pane").getBoundingClientRect().width - delta;
+    const total = ui.editorArea.getBoundingClientRect().width;
+    const w = Math.min(Math.max(base + delta, 240), total - 240);
+    ui.editorArea.style.setProperty("--editor-w", `${w}px`);
+    if (ui.plot.data) Plotly.Plots.resize(ui.plot);
+  };
+})());
+
+sash(ui.splitV, "y", (() => {
+  let base = 0;
+  return (delta) => {
+    if (delta === 0 || base === 0) base = document.querySelector(".panel").getBoundingClientRect().height + delta;
+    const total = ui.workbench.getBoundingClientRect().height;
+    const h = Math.min(Math.max(base - delta, 60), total - 160);
+    ui.workbench.style.setProperty("--panel-h", `${h}px`);
+  };
+})());
 
 // ---------------------------------------------------------------- editing
 
@@ -224,7 +338,7 @@ function onEdit() {
 // ---------------------------------------------------------------- running
 
 ui.run.addEventListener("click", () => {
-  if (running || !worker) return;
+  if (running || !worker || ui.run.disabled) return;
   rows = [];
   running = true;
   runStart = performance.now();
@@ -234,7 +348,7 @@ ui.run.addEventListener("click", () => {
   setStatus("running…", true);
   if (inspected) {
     const n = inspected.conditions.length;
-    log(`$ comnum run ${inspected.name}.yaml --threads 1`, "dim");
+    log(`$ comnum run ${inspected.name}.yaml --threads 1`, "prompt");
     log(`[${inspected.name}] ${n} conditions, seed ${inspected.seed}, 1 thread, stop: ${inspected.stop}`);
   }
   if (!optimised && probeTimer) {
@@ -251,6 +365,7 @@ ui.stop.addEventListener("click", () => {
   ui.run.disabled = true;
   ui.stop.disabled = true;
   setStatus("stopped, reloading the engine…");
+  log("^C stopped", "dim");
   stopProbing();
   startWorker();
 });
@@ -303,7 +418,7 @@ function fillPlotControls() {
   else { ui.metric.value = metrics[0]; ui.logY.checked = RATE.test(metrics[0] || ""); }
 }
 
-for (const el of [ui.xAxis, ui.metric]) el.addEventListener("change", draw);
+ui.xAxis.addEventListener("change", draw);
 ui.metric.addEventListener("change", () => { ui.logY.checked = RATE.test(ui.metric.value); draw(); });
 ui.logY.addEventListener("change", draw);
 
@@ -341,12 +456,17 @@ function draw() {
       s.expected.get(label).points.push({ x: c[x], y: p.expected });
     }
   }
-  const palette = ["#e8590c", "#1f77b4", "#2ca02c", "#9467bd", "#8c564b", "#17becf", "#d62728", "#7f7f7f", "#bcbd22", "#e377c2"];
+  // the six colours of the logo, then four more
+  const palette = ["--blue", "--orange", "--green", "--violet", "--amber", "--red"].map(cssVar)
+    .concat(["#17a2b8", "#8c564b", "#7f7f7f", "#e377c2"]);
+  const keys = [...series.keys()];
+  const colorOf = new Map(keys.map((k, j) => [k, palette[j % palette.length]]));
+  fillPlotTabs(keys, colorOf);
   const traces = [];
   const shown = new Set();   // the expectations already in the legend: one entry each
-  let i = 0;
   for (const s of series.values()) {
-    const color = palette[i++ % palette.length];
+    if (activeSeries !== null && s.key !== activeSeries) continue;
+    const color = colorOf.get(s.key);
     const label = s.key || name;
     s.sim.sort((a, b) => a.x - b.x);
     traces.push({
@@ -374,23 +494,66 @@ function draw() {
       shown.add(elabel);
     }
   }
-  const dark = matchMedia("(prefers-color-scheme: dark)").matches;
-  const fg = dark ? "#e6edf3" : "#1f2328", grid = dark ? "#30363d" : "#e4e8ec";
+  const fg = cssVar("--fg"), grid = cssVar("--grid"), muted = cssVar("--muted");
   const layout = {
-    margin: { l: 56, r: 12, t: 16, b: 48 },
+    margin: { l: 56, r: 16, t: 12, b: 48 },
     paper_bgcolor: "rgba(0,0,0,0)", plot_bgcolor: "rgba(0,0,0,0)", font: { color: fg, size: 12 },
-    xaxis: { title: { text: x }, gridcolor: grid, zeroline: false },
-    yaxis: { title: { text: metric }, type: ui.logY.checked ? "log" : "linear", gridcolor: grid, zeroline: false, exponentformat: "power" },
+    xaxis: { title: { text: x }, gridcolor: grid, zeroline: false, linecolor: grid, tickcolor: muted },
+    yaxis: { title: { text: metric }, type: ui.logY.checked ? "log" : "linear", gridcolor: grid, zeroline: false, exponentformat: "power", linecolor: grid, tickcolor: muted },
     legend: { orientation: "h", y: -0.18, font: { size: 11 } },
     hovermode: "closest",
   };
-  // the mode bar overlaps the title on a phone: zooming by pinch is enough there
+  // the mode bar is in the way on a phone: zooming by pinch is enough there
   const config = { responsive: true, displaylogo: false, displayModeBar: innerWidth >= 700, modeBarButtonsToRemove: ["lasso2d", "select2d"] };
   Plotly.react(ui.plot, traces, layout, config);
 }
 
 addEventListener("resize", () => { if (ui.plot.data) Plotly.Plots.resize(ui.plot); });
-matchMedia("(prefers-color-scheme: dark)").addEventListener("change", draw);
+
+// ---------------------------------------------------------------- the tabs of the plot
+
+let activeSeries = null;   // the key of the series shown alone, null for all of them
+let tabKeys = "";          // the keys the tabs were built for
+
+/// One tab per series when there are several: all the curves, then each one alone.
+function fillPlotTabs(keys, colorOf) {
+  const several = keys.length > 1;
+  if (!several) activeSeries = null;
+  else if (activeSeries !== null && !keys.includes(activeSeries)) activeSeries = null;
+  const signature = several ? keys.join("\u0000") : "";
+  if (signature === tabKeys) { markPlotTabs(); return; }
+  tabKeys = signature;
+  const tabs = [{ key: null, label: several ? "All" : "Plot", color: null }];
+  if (several) for (const k of keys) tabs.push({ key: k, label: k, color: colorOf.get(k) });
+  ui.plotTabs.replaceChildren(...tabs.map((t) => {
+    const b = document.createElement("button");
+    b.className = "tab";
+    b.setAttribute("role", "tab");
+    b.dataset.key = t.key === null ? "" : t.key;
+    if (t.color) {
+      const sw = document.createElement("span");
+      sw.className = "swatch";
+      sw.style.background = t.color;
+      b.append(sw);
+    } else {
+      const ic = document.createElement("span");
+      ic.className = "tab-icon plot";
+      b.append(ic);
+    }
+    b.append(t.label);
+    b.addEventListener("click", () => { activeSeries = t.key; draw(); });
+    return b;
+  }));
+  markPlotTabs();
+}
+
+function markPlotTabs() {
+  for (const b of ui.plotTabs.children) {
+    const on = (b.dataset.key || null) === activeSeries;
+    b.classList.toggle("active", on);
+    b.setAttribute("aria-selected", on);
+  }
+}
 
 // ---------------------------------------------------------------- the terminal
 
@@ -419,6 +582,7 @@ function conditionLine(r, n) {
 function showChecks(checks) {
   if (!checks || checks.length === 0) return;
   const failed = checks.filter((c) => !c.passed).length;
+  log(`$ comnum verify ${inspected ? inspected.name : "spec"}.yaml`, "prompt");
   log(`${inspected ? inspected.name : ""}: ${checks.length} checks, ${failed} failed`, failed ? "fail" : "ok");
   for (const c of checks) {
     const line = `  ${c.passed ? "ok  " : "FAIL"} ${c.name} | ${c.condition} | ${c.metric}: expected ${c.expected.toExponential(4)}, measured ${c.value.toExponential(4)} [${c.lo.toExponential(3)}, ${c.hi.toExponential(3)}]`;
@@ -433,4 +597,4 @@ function showChecks(checks) {
 startWorker();
 
 // A hook for scripts and the browser console: the text of the editor, and a run.
-window.comnumPlayground = { text, setText, run: () => ui.run.click(), results: () => rows };
+window.comnumPlayground = { text, setText, run: () => ui.run.click(), results: () => rows, open: (name) => { const s = specs.find((x) => x.name === name); if (s) open(s, true); } };

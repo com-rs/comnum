@@ -5,70 +5,143 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>comnum playground</title>
   <meta name="description" content="Edit a comnum specification and run the Monte Carlo simulation in your browser: the Rust engine compiled to WebAssembly, the published points of the reference over the curve.">
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Ccircle cx='8' cy='8' r='7' fill='%23e8590c'/%3E%3C/svg%3E">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='-1 -1 2 2'%3E%3Cpath d='M-.95 0H.95M0-.95V.95' stroke='%239a9a9a' stroke-width='.09' stroke-linecap='round' fill='none'/%3E%3Ccircle cx='-.5' cy='-.5' r='.26' fill='%232a78d6'/%3E%3Ccircle cx='.5' cy='-.5' r='.26' fill='%23eb6834'/%3E%3Ccircle cx='-.5' cy='.5' r='.26' fill='%232a78d6'/%3E%3Ccircle cx='.5' cy='.5' r='.26' fill='%232a78d6'/%3E%3C/svg%3E">
   <link rel="stylesheet" href="style.css">
+  <script>
+    // The theme before the first paint: the saved choice, else the system's.
+    try {
+      const t = localStorage.getItem("comnum-theme");
+      if (t === "light" || t === "dark") document.documentElement.dataset.theme = t;
+    } catch (e) { /* storage unavailable: the system scheme */ }
+  </script>
   <script src="https://cdn.jsdelivr.net/npm/plotly.js-basic-dist-min@2.35.2/plotly-basic.min.js" charset="utf-8"></script>
 </head>
 <body>
-  <header>
-    <div class="brand">
-      <span class="dot"></span>
-      <h1>comnum <span class="muted">playground</span></h1>
+  <div class="app">
+    <header class="titlebar">
+      <button id="explorer-toggle" class="icon-button explorer-toggle" title="specifications" aria-label="open the list of specifications">
+        <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M2 3.5h12M2 8h12M2 12.5h12" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+      </button>
+      <a class="brand" href="https://github.com/com-rs/comnum" target="_blank" rel="noopener" title="comnum on GitHub">
+        <svg class="logo" viewBox="-1 -1 2 2" width="22" height="22" aria-hidden="true">
+          <path d="M-.95 0H.95M0-.95V.95" class="logo-axis" stroke-width=".09" stroke-linecap="round" fill="none"/>
+          <circle cx="-.5" cy="-.5" r=".26" fill="#2a78d6"/>
+          <circle cx=".5" cy="-.5" r=".26" fill="#eb6834"/>
+          <circle cx="-.5" cy=".5" r=".26" fill="#2a78d6"/>
+          <circle cx=".5" cy=".5" r=".26" fill="#2a78d6"/>
+        </svg>
+        <span class="wordmark">comnum</span>
+      </a>
+      <span class="title-sep" aria-hidden="true"></span>
+      <span class="page-name">playground</span>
       <span id="version" class="badge" title="version of the library compiled to WebAssembly"></span>
-    </div>
-    <nav>
-      <a href="https://com-rs.github.io/comnum/" target="_blank" rel="noopener">Docs</a>
-      <a href="https://github.com/com-rs/comnum" target="_blank" rel="noopener">GitHub</a>
-      <a href="https://pypi.org/project/comnum/" target="_blank" rel="noopener">PyPI</a>
-    </nav>
-  </header>
-
-  <p class="lead">
-    A comnum specification is a YAML file: a grid of conditions, a link as a list of
-    blocks, metrics and a stopping rule. Pick one, edit it, press <b>Run</b>: the Rust
-    engine, compiled to WebAssembly, runs the Monte Carlo campaign in your browser, on one
-    thread, with the seeds and results of <code>comnum run</code>. The validation
-    specifications draw the published points of their reference over the simulated curve.
-  </p>
-
-  <div class="toolbar">
-    <label>Specification
-      <select id="spec-select" aria-label="specification"></select>
-    </label>
-    <button id="run" class="primary" disabled>Run</button>
-    <button id="stop" disabled>Stop</button>
-    <span id="status" class="status" aria-live="polite">loading the engine…</span>
-  </div>
-
-  <main>
-    <section class="editor-pane">
-      <div id="editor" aria-label="specification editor"></div>
-      <div id="error" class="error" hidden></div>
-    </section>
-    <section class="plot-pane">
-      <div class="plot-controls">
-        <label>x <select id="x-axis"></select></label>
-        <label>y <select id="metric"></select></label>
-        <label><input type="checkbox" id="log-y"> log y</label>
+      <div class="title-center">
+        <span id="open-name" class="open-name"></span>
       </div>
-      <div id="caption" class="caption"></div>
-      <div id="plot"></div>
-    </section>
-  </main>
+      <nav class="title-links">
+        <a href="https://com-rs.github.io/comnum/" target="_blank" rel="noopener">Docs</a>
+        <a href="https://pypi.org/project/comnum/" target="_blank" rel="noopener">PyPI</a>
+        <a href="https://github.com/com-rs/comnum" target="_blank" rel="noopener">GitHub</a>
+        <button id="theme" class="icon-button" title="switch between light and dark" aria-label="switch between light and dark">
+          <svg class="icon-sun" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><circle cx="8" cy="8" r="3.2" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M8 1.5v2M8 12.5v2M1.5 8h2M12.5 8h2M3.4 3.4l1.4 1.4M11.2 11.2l1.4 1.4M3.4 12.6l1.4-1.4M11.2 4.8l1.4-1.4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+          <svg class="icon-moon" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M13.5 10.2A6 6 0 0 1 5.8 2.5a6 6 0 1 0 7.7 7.7z" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg>
+        </button>
+      </nav>
+    </header>
 
-  <section class="terminal" aria-label="terminal">
-    <div class="terminal-title"><span>TERMINAL</span><span class="muted">comnum run / verify</span><button id="clear" class="small" title="clear the terminal">clear</button></div>
-    <pre id="terminal"></pre>
-  </section>
+    <div class="workbench">
+      <aside id="sidebar" class="sidebar" aria-label="specifications">
+        <div class="sidebar-title">
+          <span>Explorer</span>
+          <button id="explorer-close" class="icon-button explorer-toggle" title="close" aria-label="close the list of specifications">
+            <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M3.5 3.5l9 9M12.5 3.5l-9 9" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+          </button>
+        </div>
+        <nav id="spec-list" class="tree" aria-label="specifications"></nav>
+        <div class="sidebar-note">
+          <p>
+            A specification is a YAML file: a grid of conditions, a link as a list of blocks,
+            metrics and a stopping rule. Pick one, edit it, press <b>Run</b>: the Rust engine,
+            compiled to WebAssembly, runs the Monte Carlo campaign in your browser, on one
+            thread, with the seeds and results of <code>comnum run</code>. The validation
+            specifications draw the published points of their reference over the curve.
+          </p>
+          <p>
+            The same files run on every core of your machine with
+            <code>pip install comnum</code> or <code>cargo install comnum-spec</code>.
+            MIT OR Apache-2.0. CodeMirror and Plotly come from a CDN; the simulation never
+            leaves your browser.
+          </p>
+        </div>
+      </aside>
+      <div id="sidebar-backdrop" class="sidebar-backdrop" hidden></div>
 
-  <footer>
-    <p>
-      comnum is MIT OR Apache-2.0. The page loads CodeMirror and Plotly from a CDN; the
-      simulation never leaves your browser. The same specifications run on your machine
-      with <code>pip install comnum</code> (<code>comnum.run_spec</code>) or
-      <code>cargo install comnum-spec</code> (<code>comnum run spec.yaml</code>), on every core.
-    </p>
-  </footer>
+      <main class="editor-area">
+        <section class="pane editor-pane" aria-label="editor">
+          <div class="tabs">
+            <div class="tab active"><span class="tab-icon yaml">Y</span><span id="tab-name">spec.yaml</span></div>
+            <div class="tab-actions">
+              <button id="run" class="action primary" disabled title="run the specification (Ctrl+Enter)">
+                <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M4 2.5v11l9-5.5z" fill="currentColor"/></svg>
+                Run
+              </button>
+              <button id="stop" class="action" disabled title="stop the run">
+                <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><rect x="3.5" y="3.5" width="9" height="9" rx="1.5" fill="currentColor"/></svg>
+                Stop
+              </button>
+            </div>
+          </div>
+          <div id="editor" class="pane-body" aria-label="specification editor"></div>
+          <div id="error" class="error" hidden></div>
+        </section>
+
+        <div id="split-h" class="sash sash-vertical" role="separator" aria-orientation="vertical" aria-label="resize the editor and the plot"></div>
+
+        <section class="pane plot-pane" aria-label="plot">
+          <div class="tabs">
+            <div id="plot-tabs" class="tab-strip" role="tablist" aria-label="curves">
+              <button class="tab active" role="tab" aria-selected="true"><span class="tab-icon plot" aria-hidden="true"></span>Plot</button>
+            </div>
+          </div>
+          <div class="pane-body plot-body">
+            <div class="plot-toolbar">
+              <div id="caption" class="caption"></div>
+              <div class="plot-controls">
+                <label>x <select id="x-axis" aria-label="x axis"></select></label>
+                <label>y <select id="metric" aria-label="metric"></select></label>
+                <label class="check"><input type="checkbox" id="log-y"> log</label>
+              </div>
+            </div>
+            <div id="plot"></div>
+          </div>
+        </section>
+      </main>
+
+      <div id="split-v" class="sash sash-horizontal" role="separator" aria-orientation="horizontal" aria-label="resize the terminal"></div>
+
+      <section class="panel" aria-label="terminal">
+        <div class="tabs panel-tabs">
+          <div class="tab active">Terminal</div>
+          <span class="tab-hint">comnum run · comnum verify</span>
+          <div class="tab-actions">
+            <button id="clear" class="icon-button" title="clear the terminal" aria-label="clear the terminal">
+              <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M3 4.5h10M6.5 4.5V3h3v1.5M4.5 4.5l.6 8.5h5.8l.6-8.5" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+          </div>
+        </div>
+        <pre id="terminal" class="terminal"></pre>
+      </section>
+    </div>
+
+    <footer class="statusbar">
+      <span id="status" class="status" aria-live="polite">loading the engine…</span>
+      <span class="status-right">
+        <span id="engine" class="status-item" title="whether the browser has installed its optimised code for the engine"></span>
+        <span class="status-item">1 thread</span>
+        <span class="status-item">YAML</span>
+      </span>
+    </footer>
+  </div>
 
   <script type="module" src="app.js"></script>
 </body>

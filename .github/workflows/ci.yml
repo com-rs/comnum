@@ -120,6 +120,15 @@ jobs:
           uv sync --locked --group docs
           source .venv/bin/activate
           sphinx-build -W --keep-going -b html docs/python docs/python/_build/html
+      # the browser playground (playground/README.md), served under /playground/ of the
+      # same site: the engine compiled to WebAssembly next to the static page
+      - name: playground
+        run: |
+          rustup target add wasm32-unknown-unknown
+          curl -sSfL https://rustwasm.github.io/wasm-pack/installer/init.sh | sh
+          wasm-pack build bindings/comnum-wasm --target web --release --out-dir ../../playground/pkg --out-name comnum
+          mkdir -p docs/python/_build/html/playground
+          cp -R playground/index.html playground/app.js playground/worker.js playground/style.css playground/pkg docs/python/_build/html/playground/
       - uses: actions/upload-pages-artifact@v3
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         with:

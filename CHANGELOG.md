@@ -146,8 +146,11 @@ and follow [Semantic Versioning](https://semver.org/).
   unchanged (its `.json` names the equation and the layout).
 - Browser playground (`playground/`): a static page where a specification is edited
   (CodeMirror) and run in the browser, the Rust engine compiled to WebAssembly by
-  `wasm-pack` from the new crate `bindings/comnum-wasm` (not published): the menu of the
-  specifications of `specs/` and `specs/validation/`, a Run button, the curves plotted
+  `wasm-pack` from the new crate `bindings/comnum-wasm` (not published), laid out as a
+  workbench (an explorer of the specifications of `specs/` and `specs/validation/`, the
+  editor and the plot side by side, one tab per curve when the grid gives several, a
+  terminal panel, a status bar, light and dark, the
+  colours of the logo), a Run button, the curves plotted
   (Plotly, log scale for the error rates, confidence intervals) as the conditions
   complete in a Web Worker, the published points and closed forms of the expectations
   drawn over the simulated curve, a terminal panel with the lines of `comnum run` and
@@ -155,7 +158,8 @@ and follow [Semantic Versioning](https://semver.org/).
   in the editor, and a probe that tells when the browser has installed its optimised
   code for the module (V8 runs a fresh module in its baseline tier, about five times
   slower, for some twenty seconds). `just playground` builds the
-  module, `just playground-serve` serves the page. The engine is the native one on one
+  module, `just playground-serve` serves the page, and the CI job `docs-python`
+  publishes it under `/playground/` of the documentation site on every push to `main`. The engine is the native one on one
   thread: the runner of `comnum-sim` runs the trials of a batch one after the other on
   `wasm32-unknown-unknown` (no thread there), with the records merged in trial order as
   on every target, and the new module `comnum_sim::clock` (`Stopwatch`, `unix_time_s`,

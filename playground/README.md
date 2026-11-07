@@ -6,7 +6,10 @@ browser: the Rust engine compiled to WebAssembly, the curves plotted as the cond
 complete, and, for the validation specifications of `specs/validation/`, the published
 points of the reference drawn over the simulated curve. A terminal panel prints the
 lines of `comnum run` as the conditions complete and those of `comnum verify` at the
-end.
+end. The page is laid out as a small workbench: an explorer of the specifications of
+`specs/` and `specs/validation/`, the editor and the plot side by side (the sash between
+them drags; when the grid gives several curves, one tab per curve next to **All**), the terminal below (its sash too), a status bar; light and dark, the system
+scheme by default and a switch in the title bar.
 
 The engine is the one of the native build (the same runner, blocks and seeds), on the
 one thread of a Web Worker: a point computed in the page is the point of `comnum run`,
@@ -43,10 +46,19 @@ The page is static, but a module worker needs HTTP (not `file://`):
 just playground-serve        # python3 -m http.server 8765 --directory playground
 ```
 
-then open <http://localhost:8765/>. `?spec=<name>` opens a specification of the menu.
+then open <http://localhost:8765/>. `?spec=<name>` opens a specification of the explorer.
 CodeMirror 6 (the editor) and Plotly (the plot) are loaded from a CDN; everything else
 is in this folder: `index.html`, `style.css`, `app.js` (the page), `worker.js` (the
 worker that loads the module and runs the campaign), `pkg/` (built).
+
+## Deploy
+
+The job `docs-python` of `.github/workflows/ci.yml` builds the module on a push to
+`main` and copies the page and `pkg/` next to the documentation, under `/playground/` of
+the GitHub Pages site (<https://com-rs.github.io/comnum/playground/>): no release step,
+no command to run; the deployment follows the push. The page can be hosted by any
+static server: the four files of this folder and `pkg/`, with `.wasm` served as
+`application/wasm` (every common server does; GitHub Pages does).
 
 ## Files and API
 
