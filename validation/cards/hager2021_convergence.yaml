@@ -1,0 +1,58 @@
+id: hager2021_convergence
+title: The split step against its own solution with fine steps, on the link of Fig. 8
+literature: hager2021
+evidence: [claim]
+source:
+  kind: paper
+  reference: "C. Häger, H. D. Pfister, Physics-based deep learning for fiber-optic communication systems, IEEE J. Sel. Areas Commun. 39(1), 280-294, 2021 (arXiv:2010.14258); the order of the scheme: O. V. Sinkin, R. Holzlöhner, J. Zweck, C. R. Menyuk, J. Lightw. Technol. 21(1), 61-68, 2003, Sec. III-E"
+  locator: "Table I (the link of Fig. 8: 32 GBd, spans of 100 km, 500 logarithmic steps per span); Sinkin et al. Sec. III-E (the symmetric split step is globally second order)"
+  file: fiber/2021_hager_physics-based-deep-learning_jsac_arxiv.pdf
+description: >
+  The link of Fig. 8 of the paper cut to two spans and 256 symbols for CI: Gaussian
+  symbols at 32 GBd, root-raised cosine of roll-off 0.1 at 6 samples per symbol, 4 dBm,
+  spans of 100 km (beta2 = -21.683 ps2/km at 194.6 THz, gamma = 1.3 /(W km), 0.2 dB/km),
+  ideal noiseless amplifiers. The reference is the solver's own solution with 4000
+  uniform steps per span (25 m), the phase at the middle of the step. Measured: the
+  normalised squared error of the field, ||u_K - u_ref||^2 / ||u_ref||^2 in dB, for 10
+  to 1000 steps per span of every technique of comnum::channel::optical::fiber::Ssfm:
+  uniform steps with the midpoint phase (the default), the effective length of Optilux
+  (NonlinearStep::EffectiveLength), the trapezoidal mean of OptiCommPy
+  (NonlinearStep::Trapezoidal), the logarithmic steps of Bosco et al. that the paper uses
+  (StepRule::Logarithmic), and single precision (Precision::F32). The noise of the link
+  is the ASE of the amplifiers in the band of the channel (the symbol rate) relative to
+  the signal. A fine-step solution checks the error of the step only, not the equation
+  (sinkin2003_exact, optilux_ssfm) nor the sampling.
+run:
+  test: validation/tests/fiber/hager2021.rs::the_split_step_converges_to_its_fine_step_solution_on_the_link_of_fig_8
+tier: ci
+duration: "0.5 s on an Apple M6 (test profile)"
+why: >
+  The reference is checked against itself: halving its step changes it by 1.2e-14
+  (-139 dB), so it is 1/16 of that from the limit, 100 dB below the errors compared.
+  The order is that of Sinkin et al. Sec. III-E, 'approximately 2', measured between 50
+  and 100 steps per span (500 and 1000 for the logarithmic steps); 1.8 to 2.2 for the
+  uniform steps, 2.5 for the logarithmic ones, whose order is still settling at 1000
+  steps. Converged means within -90 dB at 1000 steps per span, every scheme tending to
+  the same field. An error E below the noise N moves the SNR by 10 log10(1 + E/N):
+  -26 dB is 0.01 dB, the bound for the paper's steps and the floor of single precision.
+findings:
+  - "the reference: 4000 against 2000 steps per span differ by -139.3 dB. On the full link of Fig. 8 (the gallery example plot_08_split_step_techniques), 500 uniform steps per span are the reference: 2000 steps move the effective SNR with DBP by 1e-7 dB at 6 dBm, and with them the specification of Fig. 8 follows the published curves within 0.04 dB (linear equalisation) and 0.07 dB (DBP, 500 steps) up to 6 dBm; 10 uniform steps per span lose 0.30 dB of DBP SNR at 6 dBm, 10 logarithmic steps 1.07 dB"
+  - "every scheme in double precision is of order 2 and tends to the reference: 2.013 (midpoint), 2.019 (effective length), 2.008 (trapezoidal), 2.10 (logarithmic, 500 to 1000 steps); -125.3, -127.2, -122.3 and -111.7 dB at 1000 steps per span"
+  - "at equal steps the effective length has 1.8 dB less error than the midpoint phase (-86.6 against -84.8 dB at 100 steps per span; 5 dB less on the full link), the trapezoidal mean 2.6 dB more for about four times the time (it iterates)"
+  - "the logarithmic steps have 19.7 dB more field error than uniform steps at 100 steps per span (-65.1 against -84.8 dB) and 13.8 dB more at 500: they are built to keep the spurious four-wave mixing of the split step near 1/K in WDM (Bosco et al. 2000), not to reduce the error of the field of one channel, whose longest steps, at the end of the span, decide it"
+  - "the paper's 500 logarithmic steps per span leave an error 66 dB below the ASE in the band of the channel (-99.1 dB against -32.9 dB): the forward model of Fig. 8 is converged far beyond what its effective SNR needs; uniform steps reach 26 dB below the noise from about 25 steps per span here (-55.9 dB at 20, -72.6 dB at 50)"
+  - "single precision follows double precision down to about -90 dB (200 steps per span), then its rounding accumulates with the number of steps (-77 dB at 1000): its floor is 57 dB below the noise of the link"
+cases:
+  - {inputs: {claim: reference_converged}, expected: {max: -100}}
+  - {inputs: {scheme: midpoint, claim: order}, expected: {min: 1.8, max: 2.2}}
+  - {inputs: {scheme: midpoint, claim: converged}, expected: {max: -90}}
+  - {inputs: {scheme: effective_length, claim: order}, expected: {min: 1.8, max: 2.2}}
+  - {inputs: {scheme: effective_length, claim: converged}, expected: {max: -90}}
+  - {inputs: {claim: effective_length_over_midpoint}, expected: {max: 0}, note: "measured, not a claim of the paper: the effective length is the more accurate at equal steps (Shao, Liang & Kumar 2014 find the same of their scheme II)"}
+  - {inputs: {scheme: trapezoidal, claim: order}, expected: {min: 1.8, max: 2.2}}
+  - {inputs: {scheme: trapezoidal, claim: converged}, expected: {max: -90}}
+  - {inputs: {scheme: logarithmic, claim: order}, expected: {min: 1.8, max: 2.5}}
+  - {inputs: {scheme: logarithmic, claim: converged}, expected: {max: -90}}
+  - {inputs: {claim: paper_steps_below_noise}, expected: {max: -26}}
+  - {inputs: {claim: logarithmic_over_midpoint}, expected: {min: 0}, note: "measured: the logarithmic steps have more field error than uniform steps at 100 steps per span, recorded in the findings"}
+  - {inputs: {scheme: f32, claim: floor_below_noise}, expected: {max: -26}}

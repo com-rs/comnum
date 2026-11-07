@@ -148,6 +148,10 @@ comparisons in full.
        ``nonlinear_length: step`` above 4 dBm
      - within 0.15 dB up to 6 dBm, 0.33 dB at 8 dBm
      - ``specs/validation/hager2021_fig8.yaml`` (150 s)
+   * - Häger & Pfister 2021, Fig. 8 (the forward steps)
+     - the reference, 500 uniform steps per span; every technique against it
+     - within 0.07 dB; 0.01 dB from 22 uniform steps
+     - the gallery (60 s), ``just card hager2021_convergence`` (CI)
    * - Musetti, Serena & Bononi 2018, Fig. 7 (step accuracy)
      - ``step_rule: fwm`` at the figure's four-wave-mixing phase
      - within 2.4 dB from −72 to −7 dB
@@ -229,6 +233,110 @@ curve:
 .. code-block:: bash
 
    comnum verify specs/validation/hager2021_fig8.yaml
+
+How many steps: the forward model of Fig. 8, and the other techniques
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The reference is the split step with uniform steps and many of them: 500 steps per span
+of 200 m on the link of Fig. 8. With an error in :math:`h^2` (Sinkin et al., *J. Lightw.
+Technol.* 21(1), 2003, Sec. III-E), more steps change nothing: 2000 steps per span move
+the effective SNR with DBP by :math:`10^{-7}` dB at 6 dBm. The reference checks the
+steps and nothing else. A wrong sign or unit in the equation converges just as well,
+which is why the solvers are also compared with exact solitons and with the fields of
+Optilux and OptiCommPy.
+
+With this reference in the forward model, the specification of Fig. 8 follows the
+published curves within 0.04 dB with linear equalisation and 0.07 dB with DBP of 500
+steps per span, up to 6 dBm (8 frames per point). With fewer forward steps the DBP curve
+falls, because a back-propagation that knows the fibre exactly cannot undo the error of
+a coarse simulation:
+
+.. list-table::
+   :header-rows: 1
+   :widths: 40 20 20
+
+   * - Forward model
+     - DBP at 6 dBm
+     - DBP at 8 dBm
+   * - 10 uniform steps per span
+     - −0.30 dB
+     - −0.88 dB
+   * - 10 logarithmic steps per span
+     - −1.07 dB
+     - −2.13 dB
+
+Linear equalisation barely sees these errors: its own nonlinear interference is much
+larger. The DBP receiver is the strict test, and it decides how many steps a
+simulation needs. At 6 dBm, the peak of the DBP curve, the SNR lost against the
+reference with every technique, and the computation time of the propagation on the
+machine of the documentation (10 spans, 6144 samples):
+
+.. list-table::
+   :header-rows: 1
+   :widths: 46 18 18 18
+
+   * - Technique
+     - Steps per span for 0.01 dB
+     - Time for 0.01 dB
+     - Lost with 10 steps per span
+   * - uniform, midpoint phase (``nonlinear_step: midpoint``, the default)
+     - about 22
+     - 12 ms
+     - 0.21 dB
+   * - uniform, effective length (``effective_length``, Optilux)
+     - about 20
+     - 10 ms
+     - 0.16 dB
+   * - uniform, single precision (``precision: f32``)
+     - about 22
+     - 7 ms
+     - 0.21 dB
+   * - logarithmic (``steps_per_span``, Bosco; Häger & Pfister)
+     - about 45
+     - 30 ms
+     - 1.12 dB
+   * - uniform, trapezoidal (``trapezoidal``, OptiCommPy)
+     - about 50
+     - 110 ms
+     - 4.13 dB
+   * - four-wave-mixing rule (``manakov``, ``step_rule: fwm``, Musetti et al.)
+     - about 16
+     - 30 ms
+     - adaptive
+   * - nonlinear-phase rule (``manakov``, ``step_rule: nonlinear_phase``, OptiCommPy)
+     - about 100
+     - 420 ms
+     - adaptive
+
+- **The paper's 500 steps are more than enough.** They lose less than
+  :math:`10^{-4}` dB, in 325 ms. Uniform steps reach 0.01 dB with about 22 steps per
+  span, in 12 ms: a twenty-fifth of the computation.
+- **Every technique converges as the square of the step.** Only the constant in front
+  differs, and with it the number of steps.
+- **The effective length is the most accurate fixed step.** It loses a little less than
+  the midpoint phase for the same time. The trapezoidal mean iterates, four times the
+  time per step, and needs more steps.
+- **Logarithmic steps need twice as many steps for one channel.** They keep the spurious
+  four-wave mixing of the split step low in WDM (Bosco et al. 2000). They are not built
+  for the error of one channel, which their long steps at the end of the span decide.
+- **Single precision** costs half the time and has a floor near
+  :math:`2 \cdot 10^{-4}` dB.
+- **The adaptive rules** run in the Manakov solver, which carries two polarisations, so
+  their times are about twice those of the scalar solver per step. The
+  four-wave-mixing rule needs the fewest steps. The default of ``manakov``, 20 rad with
+  at most 0.02 rad per step, takes 107 steps per span and loses less than
+  :math:`10^{-4}` dB.
+
+To compare the techniques on the same noise, this table propagates without noise and
+adds the ASE of the link at the receiver. Its losses with 10 steps per span are those
+of the specification within 0.1 dB (0.21 and 1.12 dB against 0.30 and 1.07 dB). The
+gallery draws both figures: :doc:`../auto_examples/optical/plot_08_split_step_techniques`.
+CI checks the convergence of every technique on two spans of the same link (card
+``hager2021_convergence``):
+
+.. code-block:: bash
+
+   just card hager2021_convergence
 
 Musetti, Serena & Bononi 2018, Fig. 7: how accurate a step rule is
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

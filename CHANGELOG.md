@@ -8,6 +8,21 @@ and follow [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- A convergence card for the split step, `hager2021_convergence` (CI): on the link of
+  Fig. 8 of Häger & Pfister (2021) cut to two spans, every technique of `Ssfm` (the
+  midpoint phase, the effective length, the trapezoidal mean, Bosco's logarithmic steps,
+  single precision) against the solver's own solution with steps of 25 m, which halving
+  the step changes by 1.2e-14 (`validation/tests/fiber/hager2021.rs`). Every scheme is of
+  order 2 (2.01 to 2.10) and tends to the same field; the paper's 500 logarithmic steps
+  per span leave an error 66 dB below the noise of the amplifiers in the band of the
+  channel; logarithmic steps have 20 dB more field error than uniform ones at 100 steps
+  per span. The gallery example `plot_08_split_step_techniques` takes 500 uniform steps
+  per span as the reference on the full link of Fig. 8 (the specification then follows
+  the published curves within 0.07 dB up to 6 dBm) and gives the effective SNR that every
+  technique loses against it with the DBP receiver at 6 dBm, with its computation time:
+  uniform steps lose 0.01 dB with about 22 steps per span (12 ms), the logarithmic steps
+  need about 45, the trapezoidal mean about 50 at four times the time per step; the user
+  guide (optical, "How many steps") gives the table.
 - Validation of the multi-pump Raman solver against Kidorf, Rottwitt, Nissov, Ma &
   Rabarijaona (*IEEE Photon. Technol. Lett.* 11(5), 1999): eight counter-pumps from 1416
   to 1502 nm in 45 km of pure silica core fibre for 100 signals from 1520 to 1619 nm

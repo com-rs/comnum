@@ -11,6 +11,7 @@ mod faruk2017;
 mod fatadin2009;
 mod foschini1991;
 mod gordon2000;
+mod hager2021;
 mod hu2004;
 mod ip2008;
 mod islam2002;
