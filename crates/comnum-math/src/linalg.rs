@@ -15,7 +15,9 @@
 //!   definite), and the systems of [`solve_hpd`], or of [`solve_cholesky`] with the
 //!   factor computed once;
 //! - [`svd`]: $A = U \Sigma V^{H}$ with the singular values in decreasing order;
-//! - [`solve_tridiagonal`]: a tridiagonal system by the Thomas algorithm.
+//! - [`solve_tridiagonal`]: a tridiagonal system by the Thomas algorithm;
+//! - [`lstsq`], [`nnls`], [`nnls_minimax`]: small real least-squares problems, with
+//!   non-negative unknowns and in the minimax sense (the fits of the Raman pump design).
 //!
 //! # Examples
 //! ```
@@ -319,6 +321,168 @@ pub fn solve_tridiagonal(lower: &[f64], diag: &[f64], upper: &[f64], rhs: &[C64]
         d[i] -= next * c[i];
     }
     d
+}
+
+/// The least-squares solution of a small real system `cols · x = b` by the normal
+/// equations and Gaussian elimination with partial pivoting (`None` if singular).
+fn real_lstsq(cols: &[&[f64]], b: &[f64]) -> Option<Vec<f64>> {
+    let n = cols.len();
+    let mut m: Vec<Vec<f64>> = (0..n)
+        .map(|i| {
+            let mut row: Vec<f64> = (0..n).map(|j| cols[i].iter().zip(cols[j]).map(|(u, v)| u * v).sum()).collect();
+            row.push(cols[i].iter().zip(b).map(|(u, v)| u * v).sum());
+            row
+        })
+        .collect();
+    for k in 0..n {
+        let p = (k..n).max_by(|&i, &j| m[i][k].abs().total_cmp(&m[j][k].abs()))?;
+        if m[p][k].abs() < 1e-300 {
+            return None;
+        }
+        m.swap(k, p);
+        for i in k + 1..n {
+            let f = m[i][k] / m[k][k];
+            for j in k..=n {
+                m[i][j] -= f * m[k][j];
+            }
+        }
+    }
+    let mut x = vec![0.0; n];
+    for k in (0..n).rev() {
+        let s: f64 = (k + 1..n).map(|j| m[k][j] * x[j]).sum();
+        x[k] = (m[k][n] - s) / m[k][k];
+    }
+    Some(x)
+}
+
+/// Non-negative least squares: the $x \ge 0$ that minimises $\|A x - b\|_{2}$, by the
+/// active-set algorithm of Lawson & Hanson (*Solving Least Squares Problems*, 1974,
+/// ch. 23): a variable enters the passive set when its gradient is positive, the
+/// unconstrained least-squares solution on the passive set is taken when it is
+/// positive, otherwise the step stops at the first variable that reaches zero, which
+/// leaves the set. `a` is $m \times n$ (rows: observations), `b` has $m$ entries.
+///
+/// # Errors
+/// [`Error::Shape`] when `b` has not as many entries as `a` has rows.
+///
+/// # Examples
+/// ```
+/// use comnum_math::linalg::nnls;
+/// use ndarray::array;
+/// // the unconstrained solution (−1, 2) is clipped to x₁ = 0
+/// let a = array![[1.0, 0.0], [0.0, 1.0], [1.0, 1.0]];
+/// let x = nnls(&a.view(), &[-1.0, 2.0, 1.0])?;
+/// assert!(x[0] == 0.0 && (x[1] - 1.5).abs() < 1e-12);
+/// # Ok::<(), comnum_core::Error>(())
+/// ```
+pub fn nnls(a: &ArrayView2<'_, f64>, b: &[f64]) -> Result<Vec<f64>> {
+    let (m, n) = a.dim();
+    if b.len() != m {
+        return Err(Error::Shape(format!("nnls: {} values for a matrix of {m} rows", b.len())));
+    }
+    let cols: Vec<Vec<f64>> = (0..n).map(|j| a.column(j).to_vec()).collect();
+    let mut x = vec![0.0; n];
+    let mut passive = vec![false; n];
+    let residual =
+        |x: &[f64]| -> Vec<f64> { (0..m).map(|i| b[i] - (0..n).map(|j| cols[j][i] * x[j]).sum::<f64>()).collect() };
+    let scale = b.iter().map(|v| v.abs()).fold(0.0, f64::max).max(1e-300);
+    for _ in 0..3 * n.max(1) {
+        let r = residual(&x);
+        let w: Vec<f64> = (0..n).map(|j| cols[j].iter().zip(&r).map(|(u, v)| u * v).sum()).collect();
+        let Some(j) = (0..n).filter(|&j| !passive[j] && w[j] > 1e-12 * scale).max_by(|&i, &j| w[i].total_cmp(&w[j]))
+        else {
+            break;
+        };
+        passive[j] = true;
+        loop {
+            let set: Vec<usize> = (0..n).filter(|&j| passive[j]).collect();
+            let sub: Vec<&[f64]> = set.iter().map(|&j| cols[j].as_slice()).collect();
+            let Some(z) = real_lstsq(&sub, b) else {
+                passive[j] = false;
+                break;
+            };
+            if z.iter().all(|v| *v > 0.0) {
+                for (q, &j) in set.iter().enumerate() {
+                    x[j] = z[q];
+                }
+                break;
+            }
+            let alpha = set
+                .iter()
+                .zip(&z)
+                .filter(|(_, v)| **v <= 0.0)
+                .map(|(&j, v)| x[j] / (x[j] - v))
+                .fold(f64::INFINITY, f64::min);
+            for (q, &j) in set.iter().enumerate() {
+                x[j] += alpha * (z[q] - x[j]);
+                if x[j] <= 1e-15 * scale {
+                    x[j] = 0.0;
+                    passive[j] = false;
+                }
+            }
+        }
+    }
+    Ok(x)
+}
+
+/// Non-negative minimax fit: the $x \ge 0$ that minimises $\max_{i} |(A x - b)_{i}|$, by
+/// Lawson's iteratively reweighted least squares (C. L. Lawson, *Contributions to the
+/// theory of linear least maximum approximation*, 1961; J. R. Rice and K. H. Usow, "The
+/// Lawson algorithm and extensions," *Math. Comp.* 22, 118–127, 1968): `iters` solves of
+/// [`nnls`] with the rows weighted by $\sqrt{w_{i}}$, the weights updated as $w_{i}
+/// \leftarrow w_{i} |r_{i}| / \sum_{j} w_{j} |r_{j}|$; the solution with the smallest
+/// largest residual is kept.
+///
+/// # Errors
+/// As [`nnls`].
+pub fn nnls_minimax(a: &ArrayView2<'_, f64>, b: &[f64], iters: usize) -> Result<Vec<f64>> {
+    let (m, n) = a.dim();
+    if b.len() != m {
+        return Err(Error::Shape(format!("nnls_minimax: {} values for a matrix of {m} rows", b.len())));
+    }
+    let mut w = vec![1.0 / m.max(1) as f64; m];
+    let mut best: Option<(f64, Vec<f64>)> = None;
+    for _ in 0..iters.max(1) {
+        let mut wa = Array2::<f64>::zeros((m, n));
+        let mut wb = vec![0.0; m];
+        for i in 0..m {
+            let s = w[i].sqrt();
+            wb[i] = s * b[i];
+            for j in 0..n {
+                wa[[i, j]] = s * a[[i, j]];
+            }
+        }
+        let x = nnls(&wa.view(), &wb)?;
+        let r: Vec<f64> = (0..m).map(|i| (b[i] - (0..n).map(|j| a[[i, j]] * x[j]).sum::<f64>()).abs()).collect();
+        let worst = r.iter().copied().fold(0.0, f64::max);
+        if best.as_ref().is_none_or(|(e, _)| worst < *e) {
+            best = Some((worst, x));
+        }
+        let total: f64 = w.iter().zip(&r).map(|(u, v)| u * v).sum();
+        if total <= 0.0 {
+            break;
+        }
+        for (u, v) in w.iter_mut().zip(&r) {
+            *u *= v / total;
+        }
+    }
+    Ok(best.map_or_else(|| vec![0.0; n], |(_, x)| x))
+}
+
+/// The least-squares solution of `a · x = b` for a small real matrix (normal equations
+/// and Gaussian elimination with partial pivoting).
+///
+/// # Errors
+/// [`Error::Shape`] when `b` has not as many entries as `a` has rows,
+/// [`Error::Numerical`] when the normal equations are singular.
+pub fn lstsq(a: &ArrayView2<'_, f64>, b: &[f64]) -> Result<Vec<f64>> {
+    let (m, n) = a.dim();
+    if b.len() != m {
+        return Err(Error::Shape(format!("lstsq: {} values for a matrix of {m} rows", b.len())));
+    }
+    let cols: Vec<Vec<f64>> = (0..n).map(|j| a.column(j).to_vec()).collect();
+    let refs: Vec<&[f64]> = cols.iter().map(Vec::as_slice).collect();
+    real_lstsq(&refs, b).ok_or_else(|| Error::Numerical("lstsq: singular normal equations".into()))
 }
 
 #[cfg(test)]

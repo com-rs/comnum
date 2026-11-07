@@ -16,6 +16,75 @@ and follow [Semantic Versioning](https://semver.org/).
   effective-length step, eq. (21) of the paper as written, has 2 to 4.9 times less error
   than the paper's scheme II, which is not explained (badge orange). The
   minimum-area-mismatch step distribution of its Table 1 is not implemented.
+- `RamanProfile::ase_backward_psd`, the spontaneous Raman noise emitted towards the
+  input of the span (Bromage 2004, eq. (6) along $-z$), returned by
+  `comnum.raman_profile`; the mirror image of the forward noise of the reversed span
+  (unit test). The conventions of the Raman module (the depolarised gain, the noise in
+  both directions, the noise figures, the double Rayleigh backscattering) and the
+  convergence of its solver (second order in the step: $5 \cdot 10^{-3}$, $1.3 \cdot
+  10^{-3}$, $3.2 \cdot 10^{-4}$, $7.9 \cdot 10^{-5}$ and $1.9 \cdot 10^{-5}$ dB at 0.8,
+  0.4, 0.2, 0.1 and 0.05 km on a span with three 500 mW counter-pumps and 40 channels)
+  are written in the fibre validation guide (section 4).
+- The pump-power optimiser `Raman::design_pumps` (`comnum_channel::optical::raman::design`):
+  the launch powers of pumps at given wavelengths and directions that bring the on-off
+  gain of the signals closest to a target per signal, by the two stages of Perlin &
+  Winful (*J. Lightw. Technol.* 20(2), 2002) at fixed wavelengths (Hu, Marks & Menyuk,
+  *J. Lightw. Technol.* 22(6), 2004): the integrated pump powers that fit the targets
+  (`DesignObjective::LeastSquares`, non-negative least squares, or `Minimax`, the
+  largest gain error, the flatness of both papers), then the launch powers whose
+  solved profiles have these integrals (Newton's method on the logarithms of the powers
+  with a finite-difference Jacobian), alternated until the integrals match within
+  `DESIGN_TOLERANCE`. `PumpDesign` returns the pumps, the target integrals, the profile
+  and the ripple (the peak-to-peak spread of the on-off gain minus its target).
+  `comnum.raman_design` is the Python function. `comnum_math::linalg` gains `nnls`
+  (Lawson & Hanson 1974, ch. 23), `nnls_minimax` (Lawson's iteratively reweighted least
+  squares; Rice & Usow 1968) and `lstsq`. Validated against Hu et al. 2004, Table I,
+  case I (`validation/cards/hu2004_table1.yaml`, the gain and loss profiles of its Fig. 1
+  read from the rasters): 8 of the 9 ripples of its case I within 0.1 dB plus half the value (0.29, 1.35, 0.045, 0.43, 1.82, 0.021, 0.10 and 0.37 dB against 0.180, 1.015, 0.019, 0.435, 1.167, 0.008, 0.080 and 0.255), 2 pumps over 80 nm 5.7 dB against 2.77, not explained; and against Perlin & Winful 2002, Fig. 2
+  (`validation/cards/perlin2002_fig2.yaml`), the 4- and 8-pump designs at the pump
+  wavelengths read on the figure: the 4-pump design within 0.85 dB on every launch power (with the polarisation factor 1, not given by the paper), 503 mW of pump against about 530 and a ripple of 0.86 dB against 0.90; the 8-pump design 0.48 dB against 0.22, its three long-wavelength pumps ill-conditioned at the ±1 nm of the reading.
+- `RamanProfile::noise_figure_db` (Bromage 2004, eq. (9): signal-spontaneous beating
+  and shot noise from the spontaneous noise of the solver), `effective_noise_figure_db`
+  (eq. (12), the noise figure minus the loss of the span, negative for a pumped span),
+  `span_loss_db` and `integral_w_km` (the integrated power of a wave, the quantity of the
+  gain identity of Hu, Marks & Menyuk 2004, eq. (2)); `comnum.raman_profile` returns
+  `noise_figure_db` and `effective_noise_figure_db`. The Bromage and Hu tests reuse
+  them. Validated against Islam, *IEEE J. Sel. Topics Quantum Electron.* 8(3), 2002:
+  Sec. II-A (`validation/cards/islam2002_sec2a.yaml`): a lossless undepleted amplifier
+  has the noise figure $2 - 1/G$ of a fully inverted amplifier within 10⁻³ dB (with the
+  thermal factor at 300 K, $(1 + \eta) 2 (G - 1)/G + 1/G$); Fig. 3
+  (`validation/cards/islam2002_fig3.yaml`): the output power of a depleted single-pump
+  DCF amplifier (20 mW of signal, 0.1 to 1.15 W of pump, 13.5 dB/(W·km) over 5.64 km;
+  counter-propagating and 0.63 dB/km of pump loss assumed, the paper gives neither)
+  within 1 mW at 0.1 and 0.2 W and 3 to 5.6 % above the reading beyond, the conversion
+  efficiency within 2.5 points of what the paper's panel (a) implies (its panel (b)
+  reads 8 to 10 points lower at 0.1 and 0.2 W, inconsistent with (a)); a co-propagating
+  pump saturates at 47 % of conversion against the 59 % of the figure.
+- `Raman::solve` converges on strongly depleted amplifiers (a 1 W counter-pump on a
+  20 mW signal in 5.64 km of DCF, 52 dB of small-signal gain): when the sweeps from the
+  loss-only guess do not converge, it continues from a fraction of the pump powers
+  (halved until the sweeps converge, then doubled with the previous solution as the
+  guess). Converged results are unchanged (the sweeps are the same).
+- Double Rayleigh backscattering of the Raman-pumped spans: `Raman::rayleigh_db_km`
+  (the Rayleigh backscatter coupling of the signals, $10 \log_{10}$ of $\kappa = \alpha_{R}
+  S$ in 1/km; `None`, the default, leaves it out) and, on every profile, the effective
+  Rayleigh reflection coefficient `RamanProfile::double_rayleigh` (and
+  `double_rayleigh_at` for another coupling), the closed form of Bromage 2004, eqs.
+  (13)–(15), on the solved gain profile: $\kappa^{2} \int_{0}^{L} G^{-2}(z) \int_{z}^{L}
+  G^{2}(z')\,dz'\,dz$. The links count it as a noise, the co-polarised fraction 5/9 of
+  $R^{2} P$ (Bromage 2004, eq. (16); `MPI_COPOLARISED_FRACTION`): `Ssfm` and
+  `ManakovSsfm` add the multiple-path interference of every slice with the
+  spontaneous Raman noise (`RamanProfile::mpi_psd`), `GnModel::snr` divides by it too
+  (`GnModel::mpi_power`). The `raman` mapping of the specifications and of Python gains
+  the key `rayleigh_db_km`, `comnum.raman_profile` the output `double_rayleigh`.
+  Validated against Islam, *IEEE J. Sel. Topics Quantum Electron.* 8(3), 2002, Fig.
+  6(b) (`validation/cards/islam2002_fig6b.yaml`): the coefficient against the on-off
+  gain of SMF-28 of 80 and 100 km and of two dispersion-compensating fibres within the
+  reading of 1.5 dB at 16 of the 20 points, 1.6 to 3 dB off at four (not explained: the
+  paper's model is not written). `Raman::coefficient` (the signed coefficient
+  $C_{kj}$ of the power equations) and `RamanGain::flat` (a constant efficiency, the
+  single number of the data sheets) are public. No existing result changes: without
+  `rayleigh_db_km` the noise is zero.
 - `comnum_math::nlse::NonlinearStep::EffectiveLength`, a third nonlinear step of the
   split-step engine next to `Midpoint` (the default, unchanged) and `Trapezoidal`:
   Optilux's scheme (Shao, Liang & Kumar, *IEEE Photonics J.* 6(4), 2014, cited by its

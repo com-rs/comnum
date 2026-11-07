@@ -1,0 +1,50 @@
+id: perlin2002_fig2
+title: Flat-gain designs of 4 and 8 backward pumps over 10 THz at the read wavelengths (Perlin & Winful 2002, Fig. 2)
+literature: perlin2002
+evidence: [curve, claim]
+source:
+  kind: paper
+  reference: "V. E. Perlin, H. G. Winful, Optimal design of flat-gain wide-band fiber Raman amplifiers, J. Lightw. Technol. 20(2), 250-254, 2002"
+  locator: "Fig. 2: the net gain ripple printed in panels (g) and (h) (0.0 +- 0.45 and +- 0.11 dB), the launch powers of panels (d) and (e) and the pump wavelengths of (a) and (b) read on the raster (+-0.5 dBm, +-1 nm); Sec. III, text: about 530 mW of pump in every case"
+  file: fiber/2002_perlin_flat-gain-raman-amplifiers_jlt.pdf
+description: >
+  The example of Sec. III: 50 km of standard fibre (A_eff 50 um^2), 100 channels at
+  100 GHz from 186.7 to 196.6 THz at -3 dBm, backward pumps at the wavelengths read on
+  Fig. 2(a) (4 pumps: 1419, 1437, 1454, 1500 nm) and 2(b) (8 pumps: 1417, 1429, 1439,
+  1446, 1458, 1486, 1498, 1514 nm), the gain spectrum of Fig. 1 (read at 0.5 THz,
+  with the polarisation factor K_eff = 1, see the findings) and the loss of its inset (read at 10 nm) for the pumps
+  and the targets (a flat net gain: the target on-off gain of each channel is its
+  loss), the Raman tilt of the signals neglected as in the paper. The pump powers of
+  Raman::design_pumps (minimax); the ripple is the peak-to-peak spread of the net gain
+  (dB), the paper's twice the printed +-; the powers in dBm; the total in mW.
+run:
+  test: validation/tests/fiber/perlin2002.rs::perlin_2002_fig_2_designs_at_the_read_wavelengths
+tier: ci
+duration: "10 s"
+tolerance: {atol: 1.0}
+why: >
+  the launch powers are read to 0.5 dBm and the wavelengths to 1 nm (130 GHz, more than
+  the paper's 100 GHz grid), the profiles are readings of rasters and the paper
+  optimises the wavelengths with the powers: 1 dBm on the powers; the ripple carries the
+  agreement obtained (notes), the total the paper's "about"
+findings:
+  - "K_eff of eq. (1) is not given: with 2 (depolarised pumps, Hu et al. 2004) every power of the 4-pump design is 1.9 to 3.6 dB above the figure and the total 939 mW against the paper's 530; with K_eff = 1 the powers are 23.9, 21.0, 19.5 and 16.2 dBm against 24.2, 20.2, 20.2 and 16.3 read, the total 503 mW: K_eff = 1 is taken"
+  - "4 pumps: ripple 0.86 dB against the printed 0.90 (0.0 +- 0.45), the powers within 0.85 dB"
+  - "8 pumps: ripple 0.48 dB against 0.22, the total 510 mW against 530, the five short-wavelength pumps within 1.5 dB, the three pumps 1486 to 1514 nm off by up to 5.7 dB (8.5, 14.2 and 9.1 dBm against 14.2, 11.2 and 7.9): the split of the power among pumps 12 to 16 nm apart is ill-conditioned at the +-1 nm (130 GHz) of the reading, more than the paper's 100 GHz grid, and the paper optimises the wavelengths with the powers"
+cases:
+  - {inputs: {pumps: 4, quantity: ripple_db}, expected: 0.90, tolerance: {atol: 0.3}, note: "panel (g): 0.0 +- 0.45 dB"}
+  - {inputs: {pumps: 4, quantity: total_mw}, expected: {min: 450, max: 600}, note: "Sec. III: about 530 mW; the readings of (d) sum to 516 mW"}
+  - {inputs: {pumps: 4, quantity: power_dbm, pump: 0}, expected: 24.2}
+  - {inputs: {pumps: 4, quantity: power_dbm, pump: 1}, expected: 20.2}
+  - {inputs: {pumps: 4, quantity: power_dbm, pump: 2}, expected: 20.2}
+  - {inputs: {pumps: 4, quantity: power_dbm, pump: 3}, expected: 16.3}
+  - {inputs: {pumps: 8, quantity: ripple_db}, expected: 0.22, tolerance: {atol: 0.3}, note: "panel (h): 0.0 +- 0.11 dB; the wavelengths read to +-1 nm (findings)"}
+  - {inputs: {pumps: 8, quantity: total_mw}, expected: {min: 450, max: 600}, note: "Sec. III: about 530 mW; the readings of (e) sum to 532 mW"}
+  - {inputs: {pumps: 8, quantity: power_dbm, pump: 0}, expected: 23.8, tolerance: {atol: 1.5}, note: "the wavelengths read to +-1 nm (findings)"}
+  - {inputs: {pumps: 8, quantity: power_dbm, pump: 1}, expected: 20.8, tolerance: {atol: 1.5}, note: "the wavelengths read to +-1 nm (findings)"}
+  - {inputs: {pumps: 8, quantity: power_dbm, pump: 2}, expected: 15.7, tolerance: {atol: 1.5}, note: "the wavelengths read to +-1 nm (findings)"}
+  - {inputs: {pumps: 8, quantity: power_dbm, pump: 3}, expected: 17.4, tolerance: {atol: 1.5}, note: "the wavelengths read to +-1 nm (findings)"}
+  - {inputs: {pumps: 8, quantity: power_dbm, pump: 4}, expected: 15.5, tolerance: {atol: 1.5}, note: "the wavelengths read to +-1 nm (findings)"}
+  - {inputs: {pumps: 8, quantity: power_dbm, pump: 5}, expected: 14.2, tolerance: {atol: 6.0}, note: "ill-conditioned split among the three long-wavelength pumps (findings)"}
+  - {inputs: {pumps: 8, quantity: power_dbm, pump: 6}, expected: 11.2, tolerance: {atol: 6.0}, note: "ill-conditioned split among the three long-wavelength pumps (findings)"}
+  - {inputs: {pumps: 8, quantity: power_dbm, pump: 7}, expected: 7.9, tolerance: {atol: 1.5}, note: "the wavelengths read to +-1 nm (findings)"}

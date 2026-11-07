@@ -831,16 +831,40 @@
     - validation/tests/fiber/bromage2004.rs::bromage_2004_figs_7_8_noise_figure
     - tests/oracle/test_gnpy_oracle.py::test_power_profiles_and_spontaneous_noise_of_multi_pump_spans
   badge: green
-  not_covered: "the pump loss of Figs. 7-8 is not given (0.22 dB/km fits both points of Fig. 8); the broad-band design of Fig. 6 and the second-order pumping of Fig. 19 (NZDF spectrum given as a figure only); double Rayleigh backscattering (Sec. V)"
+  not_covered: "the pump loss of Figs. 7-8 is not given (0.22 dB/km fits both points of Fig. 8); the broad-band design of Fig. 6 and the second-order pumping of Fig. 19 (NZDF spectrum given as a figure only); the OSNR of multiple-path interference of Fig. 11 (its fibre's Rayleigh coupling and losses are not given; the closed form of eqs. (13)-(15) is checked on Islam 2002 Fig. 6(b))"
+- id: islam2002
+  area: Optical
+  ref: "M. N. Islam, Raman amplifiers for telecommunications, JSTQE 8(3), 2002"
+  module: comnum_channel::optical::raman
+  tested: "Fig. 6(b): the effective Rayleigh reflection coefficient of double Rayleigh backscattering against the on-off gain for SMF-28 of 80 and 100 km and two DCF (all fibre parameters given), within the reading of 1.5 dB at 16 of 20 points, 1.6 to 3.0 dB off at four (not explained: the paper's DRS model is not written); Fig. 3: the output power of the depleted single-pump DCF amplifier (20 mW at 1529.5 nm, 1433 nm pump of 0.1 to 1.15 W, counter-propagating and 0.63 dB/km of pump loss assumed) within 1 mW at 0.1 and 0.2 W and 3 to 5.6 % above the reading from 0.45 W, the power conversion efficiency within 2.5 points of the one panel (a) implies; Sec. II-A: the noise figure of a lossless undepleted amplifier is 2 - 1/G (and (1 + eta) 2 (G - 1)/G + 1/G at 300 K) within 1e-3 dB"
+  tests:
+    - validation/tests/fiber/islam2002.rs::islam_2002_fig_6b_double_rayleigh_against_the_on_off_gain
+    - validation/tests/fiber/islam2002.rs::islam_2002_fig_3_depleted_single_pump_amplifier
+    - validation/tests/fiber/islam2002.rs::islam_2002_sec_2a_noise_figure_of_a_fully_inverted_amplifier
+  badge: orange
+  not_covered: "Fig. 3: the EDFA curves (no rate-equation EDFA); Fig. 6(a) (the DSF parameters are not given); the S-band amplifiers and link of Sec. IV (products and an experiment)"
+  remarks:
+    - "Fig. 3: panel (b) is not consistent with panel (a) at low pump powers: (a) gives a PCE of (30 - 20)/100 = 10 % at 0.1 W and 22.5 % at 0.2 W where (b) reads 2 and 13 %, and 2 points more than (b) from 0.45 W on"
+    - "Fig. 3: the pump loss and direction are not given; a co-propagating pump saturates at 47 % of PCE, the figure reaches 59 %: counter-pumped"
+- id: perlin2002
+  area: Optical
+  ref: "V. E. Perlin, H. G. Winful, Optimal design of flat-gain wide-band fiber Raman amplifiers, JLT 20(2), 2002"
+  module: comnum_channel::optical::raman::design
+  tested: "Fig. 2: the designs of 4 and 8 backward pumps over 10 THz (100 channels at 100 GHz, 50 km, net gain 0 dB) at the pump wavelengths read on the figure: the 4-pump design within 0.85 dB on every launch power (K_eff = 1 taken, not given), 503 mW of pump against about 530, a net-gain ripple of 0.86 dB against the printed 0.90; the 8-pump design 0.48 dB against 0.22, 510 mW, the five short-wavelength pumps within 1.5 dB and the three long-wavelength ones ill-conditioned (up to 5.7 dB)"
+  tests:
+    - validation/tests/fiber/perlin2002.rs::perlin_2002_fig_2_designs_at_the_read_wavelengths
+  badge: orange
+  not_covered: "the optimisation of the pump wavelengths (stage 1 of the method, a genetic algorithm: the library fits the powers at given wavelengths), hence the 16-pump design and Fig. 4 (the achievable flatness against the number of pumps)"
 - id: hu2004
   area: Optical
   ref: "J. Hu, B. S. Marks, C. R. Menyuk, Flat-gain fiber Raman amplifiers using equally spaced pumps, JLT 22(6), 2004"
   module: comnum_channel::optical::raman
-  tested: "eq. (2): the gain of every wave equals -alpha L + sum g I_j with the integrated powers of the solution, four counter- and one co-pump, 40 signals, within 1e-3 dB (8.4e-5 dB at most)"
+  tested: "eq. (2): the gain of every wave equals -alpha L + sum g I_j with the integrated powers of the solution, four counter- and one co-pump, 40 signals, within 1e-3 dB (8.4e-5 dB at most); Table I, case I (2, 4 and 8 equally spaced pumps around 1450 nm, bands of 20, 40 and 80 nm, the spacing scanned): 8 of the 9 ripples within 0.1 dB plus half the value (0.29, 1.35, 0.045, 0.43, 1.82, 0.021, 0.10, 0.37 dB against 0.180, 1.015, 0.019, 0.435, 1.167, 0.008, 0.080, 0.255), 2 pumps over 80 nm 5.7 dB against 2.77 (not explained); the profiles are readings of the rasters of Fig. 1, A_eff is not given (50 um^2 taken)"
   tests:
     - validation/tests/fiber/bromage2004.rs::hu_2004_eq_2_gain_from_the_integrated_powers
-  badge: green
-  not_covered: "the ripples of Table I (gain spectrum of Fig. 1 given as a figure only; no pump-power optimiser in the library)"
+    - validation/tests/fiber/hu2004.rs::hu_2004_table_i_case_i_ripple_of_equally_spaced_pumps
+  badge: orange
+  not_covered: "cases II and III of Table I (the central wavelength and the wavelengths optimised: the library fits the powers at given wavelengths); the curves of Fig. 2 against the spacing (not read)"
 - id: semrau2018
   area: Optical
   ref: "D. Semrau, P. Bayvel, The GN model in the presence of inter-channel stimulated Raman scattering, JLT 36(14), 2018"
