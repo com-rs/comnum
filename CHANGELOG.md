@@ -144,6 +144,9 @@ and follow [Semantic Versioning](https://semver.org/).
   Optilux after ten spans. The recorder takes the sampling rate and the number of
   polarisations from the field; the scalar fixture re-recorded by the new script is
   unchanged (its `.json` names the equation and the layout).
+- Playground: a **Share** button puts the specification of the editor, compressed, in
+  the fragment of the address (`#yaml=…`); the link opens it in the editor, to run on
+  **Run**, with nothing stored on a server.
 - Block `scope` (`comnum-spec`): a view of the signal at a point of the link
   (constellation, spectrum, eye or time) taken in one traced trial and nothing in a
   campaign; `Spec::trace(condition, trial)` runs that trial of a campaign (the same

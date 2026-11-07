@@ -6,6 +6,7 @@
 [![CI](https://github.com/com-rs/comnum/actions/workflows/ci.yml/badge.svg)](https://github.com/com-rs/comnum/actions/workflows/ci.yml)
 [![crates.io](https://img.shields.io/crates/v/comnum.svg)](https://crates.io/crates/comnum)
 [![Documentation](https://img.shields.io/badge/docs-com--rs.github.io-blue.svg)](https://com-rs.github.io/comnum/)
+[![Playground](https://img.shields.io/badge/playground-run%20in%20the%20browser-orange.svg)](https://com-rs.github.io/comnum/playground/)
 [![docs.rs](https://img.shields.io/docsrs/comnum)](https://docs.rs/comnum)
 [![PyPI](https://img.shields.io/pypi/v/comnum.svg)](https://pypi.org/project/comnum/)
 [![Licence](https://img.shields.io/badge/licence-MIT%20OR%20Apache--2.0-blue.svg)](https://github.com/com-rs/comnum#licence)

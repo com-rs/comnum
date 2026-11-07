@@ -14,7 +14,7 @@ const ui = {
   list: $("spec-list"), run: $("run"), stop: $("stop"), status: $("status"), engine: $("engine"),
   error: $("error"), xAxis: $("x-axis"), metric: $("metric"), logY: $("log-y"),
   plot: $("plot"), plotTabs: $("plot-tabs"), chain: $("chain"), plotControls: document.querySelector(".plot-controls"), version: $("version"), caption: $("caption"), terminal: $("terminal"), clear: $("clear"),
-  tabName: $("tab-name"), openName: $("open-name"), theme: $("theme"),
+  tabName: $("tab-name"), share: $("share"), openName: $("open-name"), theme: $("theme"),
   sidebar: $("sidebar"), backdrop: $("sidebar-backdrop"), explorerOpen: $("explorer-toggle"), explorerClose: $("explorer-close"),
   splitH: $("split-h"), splitV: $("split-v"), workbench: document.querySelector(".workbench"), editorArea: document.querySelector(".editor-area"),
 };
@@ -155,6 +155,7 @@ function onMessage(e) {
       fillExplorer();
       const wanted = new URLSearchParams(location.search).get("spec");
       open(specs.find((s) => s.path === wanted || s.name === wanted) || specs[0], false);
+      openShared();
     }
     ui.run.disabled = false;
     setStatus("ready");
@@ -291,6 +292,65 @@ const closeExplorer = () => { ui.sidebar.classList.remove("open"); ui.backdrop.h
 ui.explorerOpen.addEventListener("click", openExplorer);
 ui.explorerClose.addEventListener("click", closeExplorer);
 ui.backdrop.addEventListener("click", closeExplorer);
+
+// ---------------------------------------------------------------- sharing
+
+// A link carries the text of the specification in its fragment, `#yaml=<payload>`: the
+// payload is `z` and the text compressed (deflate) in URL-safe base64, or `t` and the
+// text itself in base64 where the browser cannot compress. The fragment never reaches
+// a server; a shared specification opens in the editor and runs only on Run.
+
+const toBase64Url = (bytes) => {
+  let bin = "";
+  for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+  return btoa(bin).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+};
+const fromBase64Url = (s) => Uint8Array.from(atob(s.replace(/-/g, "+").replace(/_/g, "/")), (c) => c.charCodeAt(0));
+
+async function pipe(bytes, stream) {
+  return new Uint8Array(await new Response(new Blob([bytes]).stream().pipeThrough(stream)).arrayBuffer());
+}
+
+async function encodeSpec(yaml) {
+  const bytes = new TextEncoder().encode(yaml);
+  if (typeof CompressionStream === "undefined") return `t${toBase64Url(bytes)}`;
+  return `z${toBase64Url(await pipe(bytes, new CompressionStream("deflate-raw")))}`;
+}
+
+async function decodeSpec(payload) {
+  const bytes = fromBase64Url(payload.slice(1));
+  const raw = payload[0] === "z" ? await pipe(bytes, new DecompressionStream("deflate-raw")) : bytes;
+  return new TextDecoder().decode(raw);
+}
+
+ui.share.addEventListener("click", async () => {
+  const url = `${location.origin}${location.pathname}#yaml=${await encodeSpec(text())}`;
+  history.replaceState(null, "", url);
+  try {
+    await navigator.clipboard.writeText(url);
+    setStatus(`link copied (${url.length} characters): it opens this specification in the editor`);
+  } catch (e) {
+    setStatus("link in the address bar: copy it from there");
+  }
+  log(`share: ${url}`, "dim");
+});
+
+/// Open the specification of the fragment of the address, if it carries one.
+async function openShared() {
+  const m = /^#yaml=([A-Za-z0-9_-]+)$/.exec(location.hash);
+  if (!m) return;
+  try {
+    const yaml = await decodeSpec(m[1]);
+    const name = (/^name:\s*(\S+)/m.exec(yaml) || [])[1] || "shared";
+    open({ path: `shared link: ${name}.yaml`, name, text: yaml }, false);
+    ui.tabName.textContent = `${name}.yaml`;
+    log(`opened a shared specification (${name}); press Run to run it`, "dim");
+  } catch (e) {
+    showError(`the shared link could not be read: ${e.message || e}`);
+  }
+}
+
+addEventListener("hashchange", openShared);
 
 // ---------------------------------------------------------------- the sashes
 

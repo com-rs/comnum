@@ -89,6 +89,10 @@ html_favicon = "_static/logo.svg"
 html_theme_options = {
     "logo": {"text": "comnum", "image_light": "_static/logo.svg", "image_dark": "_static/logo.svg"},
     "github_url": "https://github.com/com-rs/comnum",
+    # the browser playground, published next to this site by the job docs-python
+    "external_links": [
+        {"name": "Playground", "url": "https://com-rs.github.io/comnum/playground/"}
+    ],
     "header_links_before_dropdown": 6,
     "navbar_align": "left",
     "show_toc_level": 2,

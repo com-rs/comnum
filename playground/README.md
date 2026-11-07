@@ -65,6 +65,16 @@ eye of the real part over two symbols, or the real and imaginary parts against t
 `specs/scope_awgn.yaml` is a one-trial example: 16-QAM over AWGN, root-raised-cosine
 at eight samples per symbol, seen before and after the channel.
 
+## Sharing a specification
+
+**Share** puts the text of the specification in the fragment of the address,
+`#yaml=<payload>` (deflate, then URL-safe base64; plain base64 where the browser has no
+`CompressionStream`), and copies the link: about 700 characters for `scope_awgn` with
+its comments. Opening the link loads the specification into the editor, under its
+`name`; it runs only on **Run**. The fragment is never sent to the server, so a shared
+specification needs no storage: a link in a mail or in the text of an exercise is the
+whole of it.
+
 ## Deploy
 
 The job `docs-python` of `.github/workflows/ci.yml` builds the module on a push to

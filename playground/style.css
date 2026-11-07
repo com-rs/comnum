@@ -416,4 +416,5 @@ button.tab:hover { color: var(--fg); }
   .statusbar { position: sticky; bottom: 0; }
   .status-right .status-item:not(#engine) { display: none; }
   select { max-width: 110px; }
+  #share { font-size: 0; gap: 0; padding: 3px 7px; } /* the icon alone on a phone */
 }
