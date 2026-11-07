@@ -865,6 +865,18 @@
     - validation/tests/fiber/hu2004.rs::hu_2004_table_i_case_i_ripple_of_equally_spaced_pumps
   badge: orange
   not_covered: "cases II and III of Table I (the central wavelength and the wavelengths optimised: the library fits the powers at given wavelengths); the curves of Fig. 2 against the spacing (not read)"
+- id: kidorf1999
+  area: Optical
+  ref: "H. Kidorf, K. Rottwitt, M. Nissov, M. Ma, E. Rabarijaona, Pump interactions in a 100-nm bandwidth Raman amplifier, IEEE PTL 11(5), 530-532, 1999"
+  module: comnum_channel::optical::raman
+  tested: "eight counter-pumps from 1416 to 1502 nm in 45 km of pure silica core fibre, 100 signals from 1520 to 1619 nm, the gain spectrum of Fig. 1 read and extrapolated beyond 19.1 THz, the pump loss assumed (Rayleigh scaling of the 0.170 dB/km minimum): Fig. 5, the far-end powers of the pumps 0.49 to 1.05 dB below the figure at every pump (not explained), the pump-to-pump transfer reproduced (spread 20.70 dB against 20.99, the 1502 nm pump peaking at 22.21 dBm against 22.44); Fig. 4 and Sec. IV, a ripple of 1.46 dB against 1.1 (not explained), the mean gain 0.53 dB above the figure, the optical SNR in 100 GHz 34.87 and 39.87 dB against 34.6 and 39.1; Fig. 2, the gain of eight evenly spaced 120 mW pumps spread over 12.57 dB against 10.5 with a mean 2.6 dB above (not explained)"
+  tests:
+    - validation/tests/fiber/kidorf1999.rs::kidorf_1999_fig_5_power_of_the_backward_pumps
+    - validation/tests/fiber/kidorf1999.rs::kidorf_1999_fig_4_gain_and_noise_of_the_optimised_design
+    - validation/tests/fiber/kidorf1999.rs::kidorf_1999_fig_2_evenly_spaced_pumps
+  badge: orange
+  not_covered: "the loss spectrum of the fibre (only its minimum is given) and the gain beyond the 19.1 THz of Fig. 1, both assumed; the Rayleigh scattering of the pumps and the higher-order Stokes waves of the paper's model; the SNR of the EDFA of comparison for the same path-averaged power"
+  remarks: "the depletion term of the paper's equation has the same gain coefficient as the amplification term, without the ratio of the frequencies, and its spontaneous term has no bandwidth; the text gives 130 mW at most per pump while the bars of Fig. 3 read 21.3 dBm (135 mW) for the four shortest; the 1.1 dB ripple of the text is 0.96 dB on the curve of Fig. 4"
 - id: semrau2018
   area: Optical
   ref: "D. Semrau, P. Bayvel, The GN model in the presence of inter-channel stimulated Raman scattering, JLT 36(14), 2018"

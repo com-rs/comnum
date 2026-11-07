@@ -8,6 +8,17 @@ and follow [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Validation of the multi-pump Raman solver against Kidorf, Rottwitt, Nissov, Ma &
+  Rabarijaona (*IEEE Photon. Technol. Lett.* 11(5), 1999): eight counter-pumps from 1416
+  to 1502 nm in 45 km of pure silica core fibre for 100 signals from 1520 to 1619 nm
+  (`validation/tests/fiber/kidorf1999.rs`, cards `kidorf1999_fig5`, `kidorf1999_fig4`,
+  `kidorf1999_fig2`), with the gain spectrum of its Fig. 1 read and extended beyond
+  19.1 THz, and the loss spectrum, which the paper does not give, assumed. The
+  pump-to-pump transfer of Fig. 5 is reproduced (the 1502 nm pump ends 20.70 dB above the
+  1416 nm one against 20.99 read), but every far-end pump power is 0.49 to 1.05 dB below
+  the figure; the optical SNR in 100 GHz is 34.87 and 39.87 dB against 34.6 and 39.1;
+  the ripple is 1.46 dB against 1.1 (Fig. 4) and 12.57 against 10.5 dB for evenly spaced
+  pumps (Fig. 2). These three gaps are not explained (badge orange).
 - Validation of the two nonlinear steps against Table 2 of Shao, Liang & Kumar (*IEEE
   Photonics J.* 6(4), 2014; the reference of Optilux's step): the error of a single step
   of 0.5 to 60 km on 32-QAM at 10 and 25 Gbaud (`validation/tests/fiber/shao2014.rs`,

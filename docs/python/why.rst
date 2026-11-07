@@ -9,8 +9,8 @@ claimed: the numbers below are recomputed by ``tools/highlights.py`` and checked
 
 - **Lightweight**: one run-time dependency in Python (numpy), 9 direct crates in Rust and no C, C++ or Fortran library to build; 27 MB installed with its dependencies (the benchmark's environment: komm 22 MB, OptiCommPy 321 MB, Sionna 1004 MB).
 - **Fast**: compiled Rust, Monte Carlo runs on every core; on one CPU thread, the links of the benchmark take 2.1 to 33 times as long with komm, 2.3 to 4.7 times as long with OptiCommPy and 1.1 to 7.4 times as long with Sionna as with comnum.
-- **Safe**: ``unsafe`` code forbidden in every crate, invalid inputs are errors (one error type), results independent of the thread count; 759 unit tests, 206 validation tests, 284 Python tests.
-- **Validated**: compared with 143 papers, standards and reference tools (88 fully reproduced, 51 partly), 123 inconsistencies found in them; 112 validation cards rerun a comparison without the paper.
+- **Safe**: ``unsafe`` code forbidden in every crate, invalid inputs are errors (one error type), results independent of the thread count; 759 unit tests, 209 validation tests, 284 Python tests.
+- **Validated**: compared with 144 papers, standards and reference tools (88 fully reproduced, 52 partly), 477 inconsistencies found in them; 115 validation cards rerun a comparison without the paper.
 
 Lightweight
 -----------
@@ -128,7 +128,7 @@ Rust checks memory safety at compile time, and ``unsafe`` code is forbidden in e
    * - Unit tests of the crates
      - 759
    * - Validation tests (against papers, standards and tools)
-     - 206
+     - 209
    * - Python tests (functions; many are parametrised)
      - 284
 
@@ -147,17 +147,17 @@ are written as :doc:`validation cards <comparisons>` (``just card <id>``).
    * - Evidence
      - Count
    * - Documents and tools compared
-     - 143
+     - 144
    * - — fully reproduced
      - 88
    * - — partly reproduced
-     - 51
+     - 52
    * - — implemented, not yet compared
      - 4
    * - Inconsistencies found in the documents
-     - 123
+     - 477
    * - Validation cards
-     - 112
+     - 115
    * - Modules at maturity A / B / C
      - 70 / 3 / 2
 

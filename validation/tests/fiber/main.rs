@@ -14,6 +14,7 @@ mod gordon2000;
 mod hu2004;
 mod ip2008;
 mod islam2002;
+mod kidorf1999;
 mod musetti2018;
 mod optilux;
 mod perlin2002;

@@ -1,0 +1,28 @@
+id: kidorf1999_fig2
+title: Gain of eight evenly spaced 120 mW pumps, the pump-to-pump transfer (Kidorf et al. 1999, Fig. 2)
+literature: kidorf1999
+evidence: [table, curve]
+source:
+  kind: paper
+  reference: "H. Kidorf, K. Rottwitt, M. Nissov, M. Ma, E. Rabarijaona, Pump interactions in a 100-nm bandwidth Raman amplifier, IEEE Photon. Technol. Lett. 11(5), 530-532, 1999"
+  locator: "Sec. IV, text: the gain variation of 10.5 dB of eight pumps of 120 mW evenly spaced between 1432 and 1516 nm, verbatim; Fig. 2, the mean of the net gain read from the raster from 1521 to 1619 nm"
+  file: fiber/1999_kidorf_pump-interactions-100nm-raman-amplifier_ptl.pdf
+description: >
+  The link and assumptions of the card kidorf1999_fig5 with eight pumps of 120 mW at
+  1432, 1444, ..., 1516 nm (the direction is not stated: counter-propagating, like the
+  design of Fig. 5). Measured: the peak-to-peak spread of the net gain of the 100
+  signals and its mean.
+run:
+  test: validation/tests/fiber/kidorf1999.rs::kidorf_1999_fig_2_evenly_spaced_pumps
+tier: ci
+duration: "0.3 s in release"
+tolerance: {atol: 1.0}
+why: >
+  the gain variation is printed to 0.1 dB, but the loss spectrum is not given and the
+  gain of the long-wavelength signals depends on the spectrum beyond 19.1 THz,
+  extrapolated (with no gain there the spread is 12.17 dB instead of 12.57): 1 dB
+findings:
+  - "the spread is 12.57 dB against 10.5 dB and the mean gain 4.70 dB against 2.15 dB read: the shape is reproduced (the gain rises from the short to the long wavelengths, the power of the short pumps going to the long ones) but its level and slope are not; not explained: a higher signal loss lowers the mean (3.76 dB at 0.19 dB/km) but not the spread, and co-propagating pumps give 17.8 dB"
+cases:
+  - {inputs: {quantity: ripple_db}, expected: 10.5, tolerance: {atol: 2.5}, note: "not explained (findings): 2.1 dB off"}
+  - {inputs: {quantity: mean_gain_db}, expected: 2.15, tolerance: {atol: 3.0}, note: "not explained (findings): 2.6 dB off"}
