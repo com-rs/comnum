@@ -356,6 +356,10 @@ This comparison found a bug: the back-propagation with coarse steps applied the
 nonlinear phase over the length of the step instead of its effective length. It is
 fixed in ``Ssfm::backpropagate``.
 
+The settings that reproduce this figure, Fig. 8 of the same paper and the other
+published curves, with the commands that run them, are gathered in
+:doc:`optical`, "Reproducing published curves".
+
 6. Other simulators
 -------------------
 

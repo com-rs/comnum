@@ -119,6 +119,231 @@ system (Häger & Pfister 2021) and other simulators: :doc:`fibre_validation` gat
 these comparisons, their results, what they changed in the defaults (with the accuracy
 and time of the defaults against OptiCommPy's scheme) and what is not validated.
 
+Reproducing published curves
+----------------------------
+
+The defaults of the solvers are chosen for accuracy, not to match a given paper. A
+published curve is reproduced when the simulation takes the paper's own choices: its
+step distribution, its nonlinear step, its sampling, its number of runs. Each example
+below gives the link of the paper, the settings that decide the curve, what changes
+with other settings, the agreement obtained and the file that runs it. The numbers come
+from the validation specifications (``specs/validation/``) and cards
+(``validation/cards/``) named in each example; :doc:`fibre_validation` explains the
+comparisons in full.
+
+.. list-table::
+   :header-rows: 1
+   :widths: 22 30 26 22
+
+   * - Paper
+     - The settings that decide the curve
+     - Agreement
+     - Run
+   * - Häger & Pfister 2021, Fig. 5 (DBP, one step per span)
+     - ``dbp`` with ``steps_per_span: 1`` and the default effective length
+     - within 0.20 dB at 25 points
+     - ``specs/validation/hager2021_fig5.yaml`` (CI)
+   * - Häger & Pfister 2021, Fig. 8 (DBP, 2 to 500 steps per span)
+     - ``step_distribution: modified_logarithmic``, ``step_factor: 0.4``;
+       ``nonlinear_length: step`` above 4 dBm
+     - within 0.15 dB up to 6 dBm, 0.33 dB at 8 dBm
+     - ``specs/validation/hager2021_fig8.yaml`` (150 s)
+   * - Musetti, Serena & Bononi 2018, Fig. 7 (step accuracy)
+     - ``step_rule: fwm`` at the figure's four-wave-mixing phase
+     - within 2.4 dB from −72 to −7 dB
+     - ``just card musetti2018_fig7`` (63 s)
+   * - Dar et al. 2014, Sec. 3 (NLI of QPSK and 16-QAM)
+     - ``nonlinear_step: midpoint`` (the default), steps of 0.5 km, 64 runs
+     - 9.95 and 5.78 dB against 10 and 6 dB
+     - ``just card dar2014_ssfm`` (80 s)
+   * - Shao, Liang & Kumar 2014, Table 2 (error of one step)
+     - ``nonlinear_step: midpoint`` (scheme I) or ``effective_length`` (scheme II)
+     - scheme I within 12 % at 10 GBd; scheme II not reproduced
+     - ``just card shao2014_table2`` (3 min)
+   * - Optilux and OptiCommPy (the same field)
+     - Optilux: ``effective_length``; OptiCommPy: ``step_rule: nonlinear_phase``,
+       ``nonlinear_step: trapezoidal``
+     - :math:`10^{-26}` and :math:`10^{-8}`
+     - ``tests/oracle/``
+
+Häger & Pfister 2021, Fig. 5: back-propagation with one step per span
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+C. Häger and H. D. Pfister, *IEEE J. Sel. Areas Commun.* 39(1), 2021, Fig. 5: one
+channel of Gaussian symbols at 10.7 GBd over 25 × 80 km of standard fibre
+(:math:`\beta_2 = -21.683` ps²/km at 194.6 THz, :math:`\gamma = 1.3` /W/km, 0.2 dB/km,
+noise figure 5 dB), root-raised cosine of roll-off 0.1, propagation at 6 samples per
+symbol, receivers at 2. The lines of the link that matter:
+
+.. code-block:: yaml
+
+   fiber: {n_spans: 25, span_km: 80, alpha_db_km: 0.2, gamma_w_km: 1.3, d_ps_nm_km: 17.20934, fc_hz: 194.6e12, nf_db: 5.0}
+   link:
+     - {type: pulse_shape, sps: 6, rolloff: 0.1, n_taps: 6145}
+     - {type: ssfm, step_km: 0.4, precision: f32}
+     - {type: resample, sps: 2}
+     - {type: dbp, steps_per_span: 1, nonlinear: true}   # nonlinear: false, linear equalisation
+
+- The forward propagation is converged: the paper's 500 logarithmic steps per span
+  (``{type: ssfm, steps_per_span: 500}``) move every point by 0.01 dB at most, for six
+  times the computation.
+- The back-propagation with one step takes the nonlinear phase over the effective
+  length of the span, the default. This example found that the coarse step used to take
+  the step length (60 % too much phase with one step per span); it is fixed.
+- Both curves are within 0.20 dB of the 25 points of the figure (0.15 dB below 2 dBm).
+  CI runs the specification; the gallery draws it:
+  :doc:`../auto_examples/optical/plot_03_hager2021_fig5`.
+
+.. code-block:: bash
+
+   comnum verify specs/validation/hager2021_fig5.yaml
+
+Häger & Pfister 2021, Fig. 8: the steps of the back-propagation
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The same paper, Fig. 8: 32 GBd over 10 × 100 km, linear equalisation and DBP with 2, 4
+and 500 steps per span, frames of 1024 symbols, the forward link at 500 logarithmic
+steps per span (its Table I). This figure is the one where the settings decide the
+curve:
+
+.. code-block:: yaml
+
+   link:
+     - {type: ssfm, steps_per_span: 500}
+     - {type: resample, sps: 2}
+     - {type: dbp, steps_per_span: 4, step_distribution: modified_logarithmic, step_factor: 0.4, nonlinear_length: step}
+
+- **The steps of the DBP.** The paper uses the modified logarithmic steps of Zhang, Li &
+  Dong (2013) with the factor 0.4 (its Sec. IV-C). With equal steps the DBP with 2 steps
+  per span falls 2.6 to 4.9 dB below the figure from 2 to 6 dBm, and with Bosco's
+  logarithmic steps 1.7 to 3.1 dB below.
+- **The nonlinear length of a coarse step.** The code of the paper takes the power at
+  the middle of the step times the step, ``nonlinear_length: step``. comnum's default,
+  ``effective``, integrates the power over the step and back-propagates better: with it
+  the DBP with 4 steps is 0.29, 0.54, 1.07 and 1.03 dB above the figure from 5 to 8 dBm.
+  With ``step`` it is within 0.09 dB up to 6 dBm, 0.24 and 0.33 dB above at 7 and 8 dBm.
+- Linear equalisation is within 0.06 dB, the DBP with 2 steps within 0.14 dB, with 500
+  steps within 0.15 dB. The specification runs both conventions (the cases
+  ``dbp2_step`` and ``dbp4_step``); about 150 s on 12 threads, not in CI.
+
+.. code-block:: bash
+
+   comnum verify specs/validation/hager2021_fig8.yaml
+
+Musetti, Serena & Bononi 2018, Fig. 7: how accurate a step rule is
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+S. Musetti, P. Serena and A. Bononi, *J. Lightw. Technol.* 36(23), 2018, Fig. 7: seven
+dual-polarisation 16-QAM channels of 49 GBd spaced by 50 GHz, 0 dBm per channel, one
+span of 100 km, the error of the split step against a reference, for the step rules of
+the paper. The test calls the Manakov solver with the four-wave-mixing rule alone
+(``step_rule: fwm``, the phase ``fwm_phase_rad`` of the figure), the phase at the middle
+of the step and Nyquist pulses without slope (the paper: roll-off 0.01 and a slope of
+0.057 ps/(nm²·km)).
+
+- The error follows the figure within 2.4 dB from −72 to −7 dB: −70.5, −40.2, −21.3 and
+  −7.3 dB at 4.5, 9, 18 and 36 rad against −72, −40, −21 and −7.
+- The rule alone is not enough for one channel at high power: a DP-16QAM channel of
+  32 GBd over 10 × 80 km gets 0.28 to 0.66 dB too much SNR from 2 to 8 dBm with 20 rad.
+  The default of ``manakov`` therefore also bounds the nonlinear phase of a step
+  (``max_nl_phase_rad``, 0.02 rad); keep it when the link is not the paper's.
+
+.. code-block:: bash
+
+   just card musetti2018_fig7
+
+Dar et al. 2014: the nonlinear step in WDM
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+R. Dar, M. Feder, A. Mecozzi and M. Shtaif, *Opt. Express*, 2014, Sec. 3: five channels
+of Nyquist pulses at 32 GBd spaced by 50 GHz, 500 km of lossless fibre, −16 dBm per
+channel, no noise. The paper finds that the GN model overestimates the interference of
+QPSK by about 10 dB, and that QPSK and 16-QAM differ by about 6 dB.
+
+.. code-block:: yaml
+
+   - {type: manakov, step_km: 0.5, nonlinear_step: midpoint}
+
+- With the phase at the middle of the step, the scalar solver gives 9.95 and 5.78 dB,
+  and the Manakov solver follows the GN model within 0.17 dB with Gaussian symbols.
+- With OptiCommPy's trapezoidal step at the same 0.5 km, the Manakov solver finds 0.90
+  dB (Gaussian) and 1.29 dB (QPSK) less interference: the mean of the power at the ends
+  of the step smooths the cross-phase modulation of channels that walk off.
+- The runs matter: 16 samples per symbol, 4096 symbols per channel and 64 runs per
+  format. The first two seeds alone give 5.3 dB instead of 10.
+
+.. code-block:: bash
+
+   just card dar2014_ssfm
+   just card dar2014_manakov
+
+Shao, Liang & Kumar 2014, Table 2: two nonlinear steps
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+J. Shao, X. Liang and S. Kumar, *IEEE Photonics J.* 6(4), 2014, Table 2: the error of a
+single step of 0.5 to 60 km on 32-QAM at 10 and 25 GBd, with the loss in the dispersion
+(scheme I) or in the nonlinearity (scheme II). Scheme I is ``nonlinear_step:
+midpoint``, scheme II ``nonlinear_step: effective_length``, Optilux's.
+
+- Scheme I is within 12 % of the table at every step at 10 GBd and within a factor 2.7
+  at 25 GBd, with the order :math:`h^6` of the table.
+- Scheme II is 2 to 4.9 times more accurate than the table, which is not explained: it
+  is the scheme of the paper's eq. (21), and it gives Optilux's fields to
+  :math:`10^{-28}`. Do not expect this table to come out for scheme II.
+
+.. code-block:: bash
+
+   just card shao2014_table2
+
+Another simulator on the same field
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+To compare with another simulator, take its scheme, its steps and its input field, and
+undo its sign convention:
+
+- **Optilux** (``fiber``): ``nonlinear_step="effective_length"`` at its fixed step
+  (``dzmax``); Optilux writes the equation with the opposite sign, so compare with the
+  conjugate of its output. NMSE :math:`3 \cdot 10^{-26}` after ten spans, and
+  :math:`1.5 \cdot 10^{-8}` with the default midpoint step.
+- **OptiCommPy** (``manakovSSF``): ``Manakov(step_rule="nonlinear_phase",
+  nonlinear_step="trapezoidal")``. Relative difference :math:`10^{-8}`.
+- **Sionna**: the default midpoint step at the same fixed step, on the conjugate field.
+  NMSE :math:`4.8 \cdot 10^{-26}` (:doc:`../benchmarks`).
+
+Not reproduced
+~~~~~~~~~~~~~~
+
+Two published results are not reproduced, and the cards say so:
+
+- **Ip & Kahn 2008, Fig. 12** (``validation/cards/ip2008_fig12.yaml``): the phase error
+  of the paper is larger than comnum's at every distance (linear equalisation 0.114
+  against 0.204 rad at 25 spans), with the model that reproduces Häger & Pfister's Fig. 5.
+- **Sinkin et al. 2003, Fig. 2** (``validation/cards/sinkin2003_fig2.yaml``): the error
+  of constant steps on a soliton collision is 1.5 to 2 times the figure's, with the same
+  order 2; the exact two-soliton solution confirms comnum's values.
+
+When a curve does not match
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Check these, in this order; each one moved a published curve by a decibel or more in
+the examples above:
+
+1. **The steps of the back-propagation**: equal, logarithmic or modified logarithmic
+   (``step_distribution``), and the nonlinear length of a coarse step
+   (``nonlinear_length``).
+2. **The nonlinear step of the forward propagation** (``nonlinear_step``): the
+   trapezoidal mean loses about 1 dB of interference in WDM at steps of 0.5 km.
+3. **The step rule**: a rule on the four-wave mixing alone is too coarse for one
+   channel at high power; a rule on the nonlinear phase alone depends on the power.
+4. **The sampling**: the four-wave mixing that falls on the channel under test needs
+   :math:`\frac{3}{2} B_{\mathrm{WDM}} + \frac{1}{2} B_{\mathrm{CUT}}`; keep
+   ``check_sampling`` on.
+5. **The number of runs**: the interference of a few blocks varies by several decibels.
+6. **The coefficient**: the Manakov equation applies :math:`\frac{8}{9}\gamma`. To
+   reproduce a scalar result with the Manakov solver and one polarisation empty, scale
+   :math:`\gamma` by :math:`\frac{9}{8}`; to compare the scalar solver with a Manakov
+   simulation, give it :math:`\frac{8}{9}\gamma`.
+
 The GN model
 ------------
 
