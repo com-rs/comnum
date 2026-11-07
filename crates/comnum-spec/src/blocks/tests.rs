@@ -123,6 +123,8 @@ fn example(b: &str, p: &str) -> Option<Json> {
         ("ce_ofdm_tx" | "ce_ofdm_rx", "h") => json!(0.1),
         ("ce_ofdm_rx", "unwrap") => json!("stream"),
         ("ce_ofdm_rx", "receiver") => json!("enhanced"),
+        ("scope", "view") => json!("spectrum"),
+        ("scope", "max_samples" | "nfft") => json!(64),
         (_, "h") => json!([[1.0, 0.0]]),
         (_, "t") => json!([1.0, 0.0, 0.0, 1.0]),
         (_, "beta") => json!([0.1, 0.0]),

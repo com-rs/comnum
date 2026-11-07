@@ -1,11 +1,12 @@
 //! WebAssembly bindings of comnum for the browser playground.
 //!
-//! Three functions, exported by `wasm-bindgen` to the page (`playground/`): [`specs`],
+//! Four functions, exported by `wasm-bindgen` to the page (`playground/`): [`specs`],
 //! the specifications of the repository; [`inspect`], what a specification will run,
-//! before it runs (its conditions, its metrics, the published and theoretical points of
-//! its expectations); [`run`], the campaign itself on the calling thread, a JavaScript
-//! callback receiving every condition as it completes and the progress of every batch.
-//! Every value crosses to JavaScript as JSON text.
+//! before it runs (its link, its conditions, its metrics, the published and theoretical
+//! points of its expectations); [`run`], the campaign itself on the calling thread, a
+//! JavaScript callback receiving every condition as it completes and the progress of
+//! every batch; [`trace`], the signals at the `scope` blocks of one trial. Every value
+//! crosses to JavaScript as JSON text.
 //!
 //! The engine is the one of the native build: the same runner of `comnum_sim`, the
 //! same blocks and seeds, so that a point computed in the browser is the point of
@@ -91,7 +92,8 @@ pub fn specs() -> String {
 }
 
 /// What a specification will run, as JSON, before it runs: `name`, `description`,
-/// `seed`, `axes` (the names of the variables of the grid), `conditions` (one object
+/// `seed`, `link` (one object per block: `kind`, `label`, as the profile names it, and
+/// `params`, the mapping of the block without its type and label), `axes` (the names of the variables of the grid), `conditions` (one object
 /// per condition, with `index` and the variables), `metrics` (the names reported),
 /// `stop` (the stopping rule as text), `expectations` (one object per expectation:
 /// `name`, `source`, `metric`, `kind` (`curve`, `theory` or `value`) and `points`, the
@@ -137,6 +139,7 @@ pub fn inspect(yaml: &str) -> Result<String, JsValue> {
         "name": spec.name,
         "description": spec.description,
         "seed": spec.seed,
+        "link": link_json(&spec.link).map_err(js_error)?,
         "axes": axes,
         "conditions": conds,
         "metrics": metrics.names(),
@@ -144,6 +147,67 @@ pub fn inspect(yaml: &str) -> Result<String, JsValue> {
         "expectations": expectations,
     })
     .to_string())
+}
+
+/// The blocks of a link as the page draws them: their type, label and parameters.
+fn link_json(link: &[Json]) -> comnum::core::Result<Json> {
+    let labels = comnum::spec::link_labels(link)?;
+    let blocks = link
+        .iter()
+        .zip(labels)
+        .map(|(b, label)| {
+            let (kind, params) = match b {
+                Json::String(k) => (k.clone(), Map::new()),
+                Json::Object(o) => {
+                    let kind = o.get("type").and_then(Json::as_str).unwrap_or_default().to_string();
+                    let params = o
+                        .iter()
+                        .filter(|(k, _)| *k != "type" && *k != "label")
+                        .map(|(k, v)| (k.clone(), v.clone()))
+                        .collect();
+                    (kind, params)
+                }
+                _ => (String::new(), Map::new()),
+            };
+            json!({"kind": kind, "label": label, "params": params})
+        })
+        .collect();
+    Ok(Json::Array(blocks))
+}
+
+/// The signals at the `scope` blocks of the first trial of condition `condition`, as
+/// JSON: one object per scope, in the order of the link, with `label`, `view`, `sps`,
+/// `symbol_rate`, `streams` (one `{re, im}` per antenna, the first samples) and, for
+/// the view `spectrum`, `spectrum` (`f`, in units of the symbol rate, and `psd`, one
+/// density per stream). The trial is that of a campaign (`comnum_spec::Spec::trace`).
+///
+/// # Errors
+/// The message of a specification that does not parse, of a condition out of the grid
+/// or of an error of the link.
+#[wasm_bindgen]
+pub fn trace(yaml: &str, condition: usize) -> Result<String, JsValue> {
+    let spec = Spec::from_yaml(yaml).map_err(js_error)?;
+    let traces = spec.trace(condition, 0).map_err(js_error)?;
+    let items: Vec<Json> = traces
+        .iter()
+        .map(|t| {
+            let streams: Vec<Json> = t
+                .streams
+                .iter()
+                .map(|x| json!({"re": x.iter().map(|z| z.re).collect::<Vec<_>>(), "im": x.iter().map(|z| z.im).collect::<Vec<_>>()}))
+                .collect();
+            let spectrum = t.spectrum.as_ref().map(|(f, d)| json!({"f": f, "psd": d}));
+            json!({
+                "label": t.label,
+                "view": t.view,
+                "sps": t.sps,
+                "symbol_rate": t.symbol_rate,
+                "streams": streams,
+                "spectrum": spectrum,
+            })
+        })
+        .collect();
+    Ok(Json::Array(items).to_string())
 }
 
 /// The index of a condition in the list (the conditions are compared by their entries).

@@ -57,6 +57,34 @@ impl Spec {
         Ok(Link { blocks, kinds, labels, metrics, profile: self.profile })
     }
 
+    /// The signals of the `scope` blocks in trial `trial` of the condition of index
+    /// `condition`: the frame that trial of a campaign gives (the same random stream,
+    /// `(seed, name, condition, trial)`), its traces in the order of the link.
+    ///
+    /// # Errors
+    /// [`Error::Config`] for a condition out of the grid; the errors of the link.
+    ///
+    /// # Examples
+    /// ```
+    /// let spec = comnum_spec::Spec::from_yaml(
+    ///     "name: t\nlink: [{type: source, n_symbols: 64}, {type: awgn, snr_db: 20}, scope]\nstop: {max_trials: 1}",
+    /// )
+    /// .unwrap();
+    /// let traces = spec.trace(0, 0).unwrap();
+    /// assert_eq!((traces[0].label.as_str(), traces[0].streams[0].len()), ("scope", 64));
+    /// ```
+    pub fn trace(&self, condition: usize, trial: u64) -> Result<Vec<blocks::analysis::ScopeTrace>> {
+        let conds = self.conditions();
+        let cond = conds
+            .get(condition)
+            .ok_or_else(|| Error::Config(format!("condition {condition} out of the {} of the grid", conds.len())))?;
+        let link = self.link_for(cond)?;
+        let mut rng = stream(self.seed, &self.name, condition as u64, trial);
+        let mut rec = Record::for_trial(trial);
+        let s = link.trace(&mut rng, &mut rec)?;
+        Ok(s.traces.unwrap_or_default())
+    }
+
     fn training_rng(&self, cond: &Condition, block: usize) -> Rng {
         stream(self.seed, &format!("{}/train", self.name), fnv1a64(cond.label().as_bytes()), block as u64)
     }
@@ -107,7 +135,19 @@ impl Link {
     /// # Errors
     /// The first error of a block or of the metrics.
     pub fn trial(&self, rng: &mut Rng, rec: &mut Record) -> Result<Frame> {
-        let mut s = Frame { trial: rec.trial(), ..Frame::default() };
+        self.run_frame(Frame { trial: rec.trial(), ..Frame::default() }, rng, rec)
+    }
+
+    /// Run one trial collecting the signals of its `scope` blocks: the frame of
+    /// [`Link::trial`], with its traces.
+    ///
+    /// # Errors
+    /// As [`Link::trial`].
+    pub fn trace(&self, rng: &mut Rng, rec: &mut Record) -> Result<Frame> {
+        self.run_frame(Frame { trial: rec.trial(), traces: Some(Vec::new()), ..Frame::default() }, rng, rec)
+    }
+
+    fn run_frame(&self, mut s: Frame, rng: &mut Rng, rec: &mut Record) -> Result<Frame> {
         let t_link = Stopwatch::start();
         for (i, (b, kind)) in self.blocks.iter().zip(&self.kinds).enumerate() {
             let t = Stopwatch::start();
@@ -174,6 +214,45 @@ mod tests {
         .unwrap();
         let link = spec.link_for(&spec.conditions()[0]).unwrap();
         assert_eq!(link.labels, ["source", "awgn_2", "awgn_3", "last"]);
+    }
+
+    #[test]
+    fn a_trace_is_the_trial_of_the_campaign_and_a_scope_changes_nothing() {
+        let text = "name: scoped\nseed: 4\ngrid: {snr_db: [5, 15]}\nlink: [{type: source, constellation: {kind: qam, m: 16}, n_symbols: 512}, {type: scope, label: tx}, {type: awgn, snr_db: $snr_db}, {type: scope, label: rx}, {type: scope, view: spectrum, nfft: 64}]\nmetrics: {report: [ser]}\nstop: {max_trials: 1}";
+        let spec = Spec::from_yaml(text).unwrap();
+        let traces = spec.trace(1, 0).unwrap();
+        let labels: Vec<_> = traces.iter().map(|t| t.label.as_str()).collect();
+        assert_eq!(labels, ["tx", "rx", "scope"]);
+        // the samples of the scope after the noise are those of the trial of the campaign
+        let cond = &spec.conditions()[1];
+        let link = spec.link_for(cond).unwrap();
+        let mut rng = stream(spec.seed, &spec.name, 1, 0);
+        let s = link.trial(&mut rng, &mut Record::for_trial(0)).unwrap();
+        assert_eq!(traces[1].streams[0], s.samples);
+        assert!(s.traces.is_none());
+        // the transmitted points are those of the constellation, the received ones are not
+        let c = comnum_mapping::constellation::Constellation::from_name("16-QAM").unwrap().normalized();
+        assert!(traces[0].streams[0].iter().all(|z| c.points().iter().any(|p| (z - p).norm() < 1e-12)));
+        assert_ne!(traces[1].streams[0], traces[0].streams[0]);
+        // the spectrum: 64 bins, positive, of one stream
+        let (f, d) = traces[2].spectrum.as_ref().unwrap();
+        assert_eq!((f.len(), d.len(), d[0].len()), (64, 1, 64));
+        assert!(d[0].iter().all(|&v| v > 0.0));
+        // the same specification without its scopes gives the same metrics
+        let plain = Spec::from_yaml(
+            &text
+                .replace(", {type: scope, label: tx}", "")
+                .replace(", {type: scope, label: rx}, {type: scope, view: spectrum, nfft: 64}", ""),
+        )
+        .unwrap();
+        let r = crate::run(&spec, &crate::RunOptions::default()).unwrap();
+        let q = crate::run(&plain, &crate::RunOptions::default()).unwrap();
+        let ser = |row: Vec<(String, comnum_sim::grid::Value)>| {
+            row.into_iter().filter(|(k, _)| k.starts_with("ser")).collect::<Vec<_>>()
+        };
+        assert_eq!(ser(r[1].row(0.95)), ser(q[1].row(0.95)));
+        assert!(ser(r[1].row(0.95)).iter().any(|(k, _)| k == "ser"));
+        assert!(spec.trace(2, 0).is_err());
     }
 
     #[test]

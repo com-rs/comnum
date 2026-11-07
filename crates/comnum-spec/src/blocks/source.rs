@@ -92,6 +92,7 @@ impl Block for Source {
         };
         *s = Frame {
             trial: s.trial,
+            traces: s.traces.take(),
             bits,
             indices: idx,
             samples: x[..self.n].to_vec(),
@@ -216,6 +217,7 @@ impl Block for Capture {
         let n_sym = (self.segment as f64 / sps).floor() as usize;
         *s = Frame {
             trial: s.trial,
+            traces: s.traces.take(),
             samples: self.samples[start..start + self.segment].to_vec(),
             sps,
             symbol_rate: self.symbol_rate,

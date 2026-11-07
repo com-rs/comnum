@@ -86,6 +86,7 @@ impl Block for PasEncode {
         let n_qam = z.len();
         *s = Frame {
             trial: s.trial,
+            traces: s.traces.take(),
             constellation: Some(l.c.clone()),
             pmf: Some(l.pmf()),
             coding: Coding {

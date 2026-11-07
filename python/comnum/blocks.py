@@ -1042,6 +1042,31 @@ class Dump(Native):
         _init(self, "dump", dir=dir, trials=trials, datatype=datatype)
 
 
+class Scope(Native):
+    """View the signal at this point of the link in one traced trial (Spec::trace, the playground): constellation, spectrum, eye or time; nothing in a campaign.
+
+    Needs: samples. Gives: nothing.
+
+    Args:
+        view (str): what to draw: the samples in the complex plane, their power spectral density (Welch, Hann window), the eye of the real part over two symbols, or the real and imaginary parts against time; one of constellation, spectrum, eye, time; default constellation
+        max_samples (int): samples kept per stream, from the first; default 4096
+        nfft (int): segment length of the spectrum (the samples, if fewer); default 256
+    """
+
+    needs = ("samples",)
+    gives = ()
+    param_names = ("view", "max_samples", "nfft")
+
+    def __init__(
+        self,
+        *,
+        view: str | Var = "constellation",
+        max_samples: int | Var = 4096,
+        nfft: int | Var = 256,
+    ) -> None:
+        _init(self, "scope", view=view, max_samples=max_samples, nfft=nfft)
+
+
 class NoiseEstimate(Native):
     """Declare the receiver's posterior: the noise variance of the aligned samples; records sigma2.
 
@@ -1949,6 +1974,7 @@ __all__ = [
     "ReferenceSync",
     "Resample",
     "RxIq",
+    "Scope",
     "Source",
     "Ssfm",
     "Tdl",

@@ -99,6 +99,7 @@ impl Block for Dvbs2Tx {
         let bits_per_symbol = l.link.modcod().modulation().bits_per_symbol();
         *s = Frame {
             trial: s.trial,
+            traces: s.traces.take(),
             coding: Coding {
                 code_rate: Some(data.len() as f64 / (samples.len() * bits_per_symbol) as f64),
                 payload: data,

@@ -144,6 +144,13 @@ and follow [Semantic Versioning](https://semver.org/).
   Optilux after ten spans. The recorder takes the sampling rate and the number of
   polarisations from the field; the scalar fixture re-recorded by the new script is
   unchanged (its `.json` names the equation and the layout).
+- Block `scope` (`comnum-spec`): a view of the signal at a point of the link
+  (constellation, spectrum, eye or time) taken in one traced trial and nothing in a
+  campaign; `Spec::trace(condition, trial)` runs that trial of a campaign (the same
+  random stream) and returns the signals of its scopes (`ScopeTrace`, `Frame::traces`), the
+  spectrum computed by `comnum_dsp::spectrum::psd`. The playground draws one tab per
+  scope and the chain of blocks; `specs/scope_awgn.yaml` is a one-trial example of
+  16-QAM over AWGN.
 - Browser playground (`playground/`): a static page where a specification is edited
   (CodeMirror) and run in the browser, the Rust engine compiled to WebAssembly by
   `wasm-pack` from the new crate `bindings/comnum-wasm` (not published), laid out as a

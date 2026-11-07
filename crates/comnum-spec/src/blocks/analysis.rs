@@ -1,5 +1,6 @@
-//! Measurements in the middle of a link: probes, recordings of the signal (`dump`) and
-//! the declared posterior of a classic receiver.
+//! Measurements in the middle of a link: probes, recordings of the signal (`dump`),
+//! views of the signal of one trial (`scope`, [`ScopeTrace`]) and the declared posterior of
+//! a classic receiver.
 
 use super::{Block, BuildContext, Extension, Frame};
 use crate::io::Datatype;
@@ -8,6 +9,7 @@ use comnum_core::Error;
 use comnum_core::Result;
 use comnum_core::ensure;
 use comnum_core::rng::Rng;
+use comnum_math::C64;
 use std::path::PathBuf;
 
 /// The blocks of this module: their documentation and their builders.
@@ -28,6 +30,14 @@ pub(super) fn blocks() -> Vec<Extension> {
             needs [Samples],
             gives [],
             |q, label, ctx| Ok(Box::new(Dump::new(&q, label, ctx)?)),
+        ),
+        builtin!(
+            "scope",
+            "View the signal at this point of the link in one traced trial (Spec::trace, the playground): constellation, spectrum, eye or time; nothing in a campaign.",
+            ScopeSpec,
+            needs [Samples],
+            gives [],
+            |q, label, _| Ok(Box::new(Scope::new(q, label))),
         ),
         builtin!(
             "noise_estimate",
@@ -166,6 +176,87 @@ impl Block for Dump {
                 "comnum:symbol_rate": s.symbol_rate,
             });
             crate::io::write_sigmf(self.base.join(name), x, self.datatype, s.symbol_rate * s.sps, Some(&global))?;
+        }
+        Ok(())
+    }
+}
+
+// ------------------------------------------------------------------------- scopes
+
+block_params! {
+    struct ScopeSpec {
+        view: String ["constellation"] one_of ["constellation", "spectrum", "eye", "time"],
+            "what to draw: the samples in the complex plane, their power spectral density (Welch, Hann window), the eye of the real part over two symbols, or the real and imaginary parts against time";
+        max_samples: usize [4096] >= 1, "samples kept per stream, from the first";
+        nfft: usize [256] >= 2, "segment length of the spectrum (the samples, if fewer)";
+    }
+}
+
+/// The signal of one trial at a `scope` of the link, for a view to draw it.
+#[derive(Clone, Debug, PartialEq)]
+pub struct ScopeTrace {
+    /// The label of the scope (`scope` by default, numbered when repeated).
+    pub label: String,
+    /// The view: `constellation`, `spectrum`, `eye` or `time`.
+    pub view: String,
+    /// The samples per symbol of the signal at the scope.
+    pub sps: f64,
+    /// The symbol rate at the scope (Hz), 0 where the link does not set one.
+    pub symbol_rate: f64,
+    /// The first samples of every stream (antenna), at most `max_samples` each.
+    pub streams: Vec<Vec<C64>>,
+    /// For the view `spectrum`: the frequencies, in units of the symbol rate, and the
+    /// density of every stream over all its samples (linear, per unit of $f/R_{s}$).
+    pub spectrum: Option<(Vec<f64>, Vec<Vec<f64>>)>,
+}
+
+/// A view of the signal of one trial (`scope`): it takes the samples when the frame
+/// collects traces ([`Frame::traces`], set by `Spec::trace`), and does nothing else.
+struct Scope {
+    label: String,
+    p: ScopeSpec,
+}
+
+impl Scope {
+    fn new(p: ScopeSpec, label: String) -> Scope {
+        Scope { label, p }
+    }
+}
+
+impl Block for Scope {
+    fn apply(&self, s: &mut Frame, _: &mut Rng) -> Result<()> {
+        if s.traces.is_none() {
+            return Ok(());
+        }
+        // frequencies in units of the symbol rate: a sample rate of sps
+        let fs = if s.sps > 0.0 { s.sps } else { 1.0 };
+        let spectrum = if self.p.view == "spectrum" {
+            let mut freqs = Vec::new();
+            let mut psds = Vec::new();
+            for x in s.streams().filter(|x| !x.is_empty()) {
+                let (f, d) =
+                    comnum_dsp::spectrum::psd(x, fs, self.p.nfft.min(x.len())).map_err(|e| e.context("scope"))?;
+                freqs = f;
+                psds.push(d);
+            }
+            Some((freqs, psds))
+        } else {
+            None
+        };
+        let trace = ScopeTrace {
+            label: self.label.clone(),
+            view: self.p.view.clone(),
+            sps: s.sps,
+            symbol_rate: s.symbol_rate,
+            streams: s
+                .streams()
+                .filter(|x| !x.is_empty())
+                .map(|x| x[..x.len().min(self.p.max_samples)].to_vec())
+                .collect(),
+            spectrum,
+        };
+        if let Some(t) = s.traces.as_mut() {
+            t.push(trace);
         }
         Ok(())
     }

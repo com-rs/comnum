@@ -2,7 +2,7 @@
 // page's messages. A run blocks this worker, not the page; the module calls back for
 // every completed condition and for the progress of the batches, relayed as messages.
 
-import init, { inspect, run, specs, version } from "./pkg/comnum.js";
+import init, { inspect, run, specs, trace, version } from "./pkg/comnum.js";
 
 // A short campaign, run on request to measure the speed of the module: V8 starts a
 // module in its baseline tier (Liftoff) and installs the optimised code (TurboFan) in
@@ -33,6 +33,12 @@ onmessage = async (e) => {
       postMessage({ type: "inspect", id, ok: true, data: JSON.parse(inspect(yaml)) });
     } catch (err) {
       postMessage({ type: "inspect", id, ok: false, error: String(err) });
+    }
+  } else if (type === "trace") {
+    try {
+      postMessage({ type: "trace", ok: true, data: JSON.parse(trace(yaml, e.data.condition || 0)) });
+    } catch (err) {
+      postMessage({ type: "trace", ok: false, error: String(err) });
     }
   } else if (type === "probe") {
     const t0 = performance.now();

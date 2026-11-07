@@ -67,6 +67,7 @@ impl Block for Encode {
         }
         *s = Frame {
             trial: s.trial,
+            traces: s.traces.take(),
             bits,
             coding: Coding { payload, n_blocks: c.blocks, code_rate: Some(c.code.code_rate()), ..Coding::default() },
             sps: 1.0,

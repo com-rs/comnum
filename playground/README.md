@@ -8,7 +8,9 @@ points of the reference drawn over the simulated curve. A terminal panel prints 
 lines of `comnum run` as the conditions complete and those of `comnum verify` at the
 end. The page is laid out as a small workbench: an explorer of the specifications of
 `specs/` and `specs/validation/`, the editor and the plot side by side (the sash between
-them drags; when the grid gives several curves, one tab per curve next to **All**), the terminal below (its sash too), a status bar; light and dark, the system
+them drags; when the grid gives several curves, one tab per curve next to **All**; a tab **Chain**
+draws the blocks of the link on one line, the scopes under the arrow where they take the
+signal), the terminal below (its sash too), a status bar; light and dark, the system
 scheme by default and a switch in the title bar.
 
 The engine is the one of the native build (the same runner, blocks and seeds), on the
@@ -51,6 +53,18 @@ CodeMirror 6 (the editor) and Plotly (the plot) are loaded from a CDN; everythin
 is in this folder: `index.html`, `style.css`, `app.js` (the page), `worker.js` (the
 worker that loads the module and runs the campaign), `pkg/` (built).
 
+## Signals along the chain
+
+A `scope` block placed in the link (`{type: scope, view: constellation}`, or `spectrum`,
+`eye`, `time`) takes the signal at that point of one traced trial and does nothing in a
+campaign. When the specification has scopes, **Run** first traces trial 0 of its first
+condition (`Spec::trace` in `comnum-spec`, the same random stream as the campaign) and
+opens one tab per scope: the points in the complex plane, the power spectral density
+(Welch, Hann window, from `comnum-dsp`) against the frequency over the symbol rate, the
+eye of the real part over two symbols, or the real and imaginary parts against time.
+`specs/scope_awgn.yaml` is a one-trial example: 16-QAM over AWGN, root-raised-cosine
+at eight samples per symbol, seen before and after the channel.
+
 ## Deploy
 
 The job `docs-python` of `.github/workflows/ci.yml` builds the module on a push to
@@ -71,7 +85,8 @@ The module exports (see `pkg/comnum.d.ts`):
   points and closed forms the page draws);
 - `run(yaml, on_condition, on_batch)`: the campaign, every completed condition and
   the progress of the batches relayed to the callbacks as JSON, the results and the
-  checks of the expectations returned at the end.
+  checks of the expectations returned at the end;
+- `trace(yaml, condition)`: the signals at the `scope` blocks of trial 0 of a condition.
 
 A long run blocks the worker only; **Stop** terminates it and loads the module again.
 In the console, `comnumPlayground.setText(yaml)` and `comnumPlayground.run()` script

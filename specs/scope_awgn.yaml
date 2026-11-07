@@ -1,0 +1,22 @@
+# One trial of 16-QAM over AWGN, looked at along the chain: the transmitted points, the
+# spectrum and the eye of the root-raised-cosine signal at eight samples per symbol, the
+# received signal after the matched filter, and the points after the decimation. A
+# `scope` block takes the signal of the traced trial (the playground, Spec::trace) and
+# does nothing in a campaign: `comnum run` gives the symbol error rate of this trial.
+name: scope_awgn
+description: One trial of 16-QAM over AWGN seen at every step of the chain
+seed: 1
+link:
+  - {type: source, constellation: 16-QAM, n_symbols: 4096}
+  - {type: scope, label: transmitted}
+  - {type: pulse_shape, sps: 8, rolloff: 0.25}
+  - {type: scope, label: tx_spectrum, view: spectrum, nfft: 512}
+  - {type: scope, label: tx_eye, view: eye}
+  - {type: awgn, snr_db: 18}
+  - {type: matched_filter, rolloff: 0.25}
+  - {type: scope, label: rx_spectrum, view: spectrum, nfft: 512}
+  - {type: scope, label: rx_eye, view: eye}
+  - decimate
+  - {type: scope, label: received}
+metrics: {report: [ser, evm]}
+stop: {max_trials: 1}

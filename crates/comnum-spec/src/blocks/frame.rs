@@ -49,6 +49,9 @@ pub struct Frame {
     pub values: Vec<(String, f64)>,
     /// The metrics measured by the `probe` blocks, merged into the results of the trial.
     pub probes: comnum_sim::scenario::Record,
+    /// The signals taken by the `scope` blocks: `Some` in a traced trial
+    /// ([`crate::Spec::trace`]), `None` (nothing taken) in a campaign.
+    pub traces: Option<Vec<super::analysis::ScopeTrace>>,
 }
 
 /// What the streams of a [`Frame`] are.
