@@ -233,8 +233,9 @@ fn raman_profile<'py>(
     Ok(d)
 }
 
-/// The pump powers that flatten the on-off gain of the channels over one span: the
-/// pump-power optimiser of Perlin & Winful (*J. Lightw. Technol.* 20(2), 2002) at fixed
+/// The pump powers that flatten the on-off gain of the channels over one span.
+///
+/// The pump-power optimiser of Perlin & Winful (*J. Lightw. Technol.* 20(2), 2002) at fixed
 /// pump wavelengths (Hu, Marks & Menyuk, *J. Lightw. Technol.* 22(6), 2004): the
 /// integrated pump powers that fit the targets (non-negative least squares or the
 /// minimax fit of Lawson's iteratively reweighted least squares), then the launch powers
