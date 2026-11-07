@@ -75,6 +75,7 @@ impl OfdmTx {
             dc_null: p.dc_null,
             dft_spread: false,
             sample_rate: Hertz(p.subcarrier_spacing_hz * (p.oversampling * p.n_fft) as f64),
+            weights: None,
         };
         ofdm.check()?;
         let grid = ResourceGrid {

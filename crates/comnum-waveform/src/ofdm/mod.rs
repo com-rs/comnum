@@ -92,6 +92,16 @@ pub struct Ofdm {
     /// spacing): the rate of the [`Signal`] of [`Modulate`], and the rate [`Demodulate`]
     /// expects; 1 Hz by default (time in samples).
     pub sample_rate: Hertz,
+    /// Optional complex weights $w_{k}$ of the $K$ active subcarriers (power loading,
+    /// a precoder per subcarrier): the transmitter sends $w_{k} X_{k}$ instead of
+    /// $X_{k}$ ([`Ofdm::to_time`]) and the receiver divides by $w_{k}$
+    /// ([`Ofdm::to_active`]), so that a round trip returns the data. The average power
+    /// of the samples becomes $\frac{1}{K} \sum_{k} |w_{k}|^{2}$: weights with a mean
+    /// square of 1 (for instance $w_{k} = \sqrt{p_{k}}$ with the powers $p_{k}$ of
+    /// [`comnum_mimo::precoding::water_filling_powers`] for a total of $K$) keep the unit power.
+    /// A zero weight leaves its subcarrier empty, and the receiver returns 0 on it.
+    /// `None` (the default) is $w_{k} = 1$.
+    pub weights: Option<Vec<C64>>,
 }
 
 impl Ofdm {
@@ -109,6 +119,7 @@ impl Ofdm {
             dc_null: false,
             dft_spread: false,
             sample_rate: Hertz(1.0),
+            weights: None,
         };
         o.check()?;
         Ok(o)
@@ -117,13 +128,20 @@ impl Ofdm {
     /// Validate the configuration.
     ///
     /// # Errors
-    /// [`comnum_core::Error::Config`] for an empty or overfull grid, a zero oversampling or a
-    /// sample rate that is not positive and finite.
+    /// [`comnum_core::Error::Config`] for an empty or overfull grid, a zero oversampling, a
+    /// sample rate that is not positive and finite, or weights that are not $K$ finite
+    /// values.
     pub fn check(&self) -> Result<()> {
         ensure(self.n_active >= 1 && self.n_active + usize::from(self.dc_null) <= self.n_fft, || {
             format!("{} active subcarriers do not fit a grid of {}", self.n_active, self.n_fft)
         })?;
         ensure(self.oversampling >= 1, || "the oversampling factor must be at least 1".into())?;
+        if let Some(w) = &self.weights {
+            ensure(w.len() == self.n_active, || {
+                format!("{} weights for {} active subcarriers", w.len(), self.n_active)
+            })?;
+            ensure(w.iter().all(|v| v.re.is_finite() && v.im.is_finite()), || "the weights must be finite".into())?;
+        }
         check_rate(self.sample_rate)
     }
 
@@ -205,33 +223,63 @@ impl Ofdm {
     }
 
     /// The time block (without prefix, $L N$ samples) of the values of the active
-    /// subcarriers.
+    /// subcarriers, each multiplied by its weight $w_{k}$ ([`Ofdm::weights`]).
     ///
     /// # Errors
-    /// [`comnum_core::Error::Shape`] if `active` does not have $K$ values.
+    /// [`comnum_core::Error::Shape`] if `active` does not have $K$ values, or the weights
+    /// do not have $K$ values.
     pub fn to_time(&self, active: &[C64]) -> Result<Vec<C64>> {
         ensure_shape(active.len() == self.n_active, || {
             format!("{} values for {} active subcarriers", active.len(), self.n_active)
         })?;
+        let w = self.checked_weights()?;
         let mut bins = vec![C64::new(0.0, 0.0); self.fft_len()];
         for (i, v) in active.iter().enumerate() {
-            bins[self.bin(i)] = *v;
+            bins[self.bin(i)] = match w {
+                Some(w) => *v * w[i],
+                None => *v,
+            };
         }
         let s = self.scale();
         Ok(fft::ifft(&bins).into_iter().map(|v| v * s).collect())
     }
 
-    /// The values of the active subcarriers of a time block (without prefix).
+    /// The values of the active subcarriers of a time block (without prefix), each
+    /// divided by its weight $w_{k}$ ([`Ofdm::weights`]; 0 where $w_{k} = 0$).
     ///
     /// # Errors
-    /// [`comnum_core::Error::Shape`] if `block` does not have $L N$ samples.
+    /// [`comnum_core::Error::Shape`] if `block` does not have $L N$ samples, or the
+    /// weights do not have $K$ values.
     pub fn to_active(&self, block: &[C64]) -> Result<Vec<C64>> {
         ensure_shape(block.len() == self.fft_len(), || {
             format!("a block of {} samples for an IFFT of {}", block.len(), self.fft_len())
         })?;
+        let w = self.checked_weights()?;
         let bins = fft::fft(block);
         let s = 1.0 / self.scale();
-        Ok((0..self.n_active).map(|i| bins[self.bin(i)] * s).collect())
+        Ok((0..self.n_active)
+            .map(|i| {
+                let v = bins[self.bin(i)] * s;
+                match w {
+                    Some(w) if w[i] == C64::new(0.0, 0.0) => C64::new(0.0, 0.0),
+                    Some(w) => v / w[i],
+                    None => v,
+                }
+            })
+            .collect())
+    }
+
+    /// The weights, checked against $K$ (`None` for unit weights).
+    fn checked_weights(&self) -> Result<Option<&[C64]>> {
+        match &self.weights {
+            Some(w) => {
+                ensure_shape(w.len() == self.n_active, || {
+                    format!("{} weights for {} active subcarriers", w.len(), self.n_active)
+                })?;
+                Ok(Some(w))
+            }
+            None => Ok(None),
+        }
     }
 
     /// Keep only the active subcarriers of a time block (an ideal band-pass filter).
@@ -442,6 +490,57 @@ impl Demodulate for Ofdm {
 mod tests {
     use super::*;
     use comnum_core::rng::Rng;
+
+    /// Weights scale every subcarrier at the transmitter and are divided out at the
+    /// receiver: the round trip returns the data, with and without DFT spreading.
+    #[test]
+    fn weighted_subcarriers_come_back_unweighted() {
+        let mut rng = Rng::new(3);
+        let w: Vec<C64> = (0..12).map(|_| rng.complex_gaussian()).collect();
+        let data: Vec<C64> = (0..36).map(|_| rng.complex_gaussian()).collect();
+        for dft_spread in [false, true] {
+            let ofdm = Ofdm { n_cp: 4, dft_spread, weights: Some(w.clone()), ..Ofdm::new(16, 12).unwrap() };
+            let back = ofdm.demodulate(&ofdm.modulate(&data).unwrap()).unwrap();
+            assert!(back.iter().zip(&data).all(|(a, b)| (a - b).norm() < 1e-10));
+        }
+    }
+
+    /// The weight $w_{k}$ multiplies subcarrier $k$ (read without weights), unit weights
+    /// change nothing, and the power is the mean square of the weights.
+    #[test]
+    fn a_weight_multiplies_its_subcarrier_and_the_power_follows() {
+        let plain = Ofdm::new(16, 8).unwrap();
+        let w: Vec<C64> = (0..8).map(|i| C64::new(0.5 + 0.25 * i as f64, -0.1 * i as f64)).collect();
+        let weighted = Ofdm { weights: Some(w.clone()), ..plain.clone() };
+        let ones = Ofdm { weights: Some(vec![C64::new(1.0, 0.0); 8]), ..plain.clone() };
+        let data = vec![C64::new(1.0, 0.0); 8];
+        let x = weighted.modulate(&data).unwrap();
+        let seen = plain.demodulate(&x).unwrap();
+        assert!(seen.iter().zip(&w).all(|(a, b)| (a - b).norm() < 1e-12));
+        assert_eq!(ones.modulate(&data).unwrap(), plain.modulate(&data).unwrap());
+        let power = x.iter().map(C64::norm_sqr).sum::<f64>() / x.len() as f64;
+        let expected = w.iter().map(C64::norm_sqr).sum::<f64>() / 8.0;
+        assert!((power - expected).abs() < 1e-12);
+    }
+
+    /// A zero weight leaves its subcarrier empty and comes back as 0; weights of another
+    /// length or not finite are errors.
+    #[test]
+    fn a_zero_weight_switches_its_subcarrier_off() {
+        let mut w = vec![C64::new(1.0, 0.0); 8];
+        w[3] = C64::new(0.0, 0.0);
+        let ofdm = Ofdm { weights: Some(w), ..Ofdm::new(16, 8).unwrap() };
+        let data = vec![C64::new(1.0, 1.0); 8];
+        let x = ofdm.modulate(&data).unwrap();
+        assert!(Ofdm::new(16, 8).unwrap().demodulate(&x).unwrap()[3].norm() < 1e-12);
+        let back = ofdm.demodulate(&x).unwrap();
+        assert_eq!(back[3], C64::new(0.0, 0.0));
+        assert!(back.iter().enumerate().filter(|(i, _)| *i != 3).all(|(_, v)| (v - data[0]).norm() < 1e-12));
+        let short = Ofdm { weights: Some(vec![C64::new(1.0, 0.0); 7]), ..Ofdm::new(16, 8).unwrap() };
+        assert!(short.check().is_err() && short.modulate(&data).is_err());
+        let nan = Ofdm { weights: Some(vec![C64::new(f64::NAN, 0.0); 8]), ..Ofdm::new(16, 8).unwrap() };
+        assert!(nan.check().is_err());
+    }
 
     /// The window keeps the FFT part of every block, keeps the length, and the two ramps
     /// of an overlap sum to one; a too-long ramp and a partial block are errors.

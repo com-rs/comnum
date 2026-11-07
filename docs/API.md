@@ -3021,7 +3021,7 @@ one layer down, instead of written again (`docs/ARCHITECTURE.md`, placement).
 - `fn Ofdm::spread(&self, data: &[C64]) -> Vec<C64>` — The values of the active subcarriers of `data` (the identity, or the unitary DFT
 - `fn Ofdm::despread(&self, active: &[C64]) -> Vec<C64>` — The inverse of [`Ofdm::spread`].
 - `fn Ofdm::to_time(&self, active: &[C64]) -> Result<Vec<C64>>` — The time block (without prefix, $L N$ samples) of the values of the active
-- `fn Ofdm::to_active(&self, block: &[C64]) -> Result<Vec<C64>>` — The values of the active subcarriers of a time block (without prefix).
+- `fn Ofdm::to_active(&self, block: &[C64]) -> Result<Vec<C64>>` — The values of the active subcarriers of a time block (without prefix), each
 - `fn Ofdm::filter(&self, block: &[C64]) -> Result<Vec<C64>>` — Keep only the active subcarriers of a time block (an ideal band-pass filter).
 - `fn Ofdm::with_prefix(&self, block: &[C64]) -> Result<Vec<C64>>` — Prepend the cyclic prefix to a time block.
 - `fn Ofdm::windowed(&self, samples: &[C64], ramp: usize) -> Result<Vec<C64>>` — The raised-cosine window of whole blocks of [`Ofdm::block_len`] samples (prefix

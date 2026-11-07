@@ -375,7 +375,7 @@ mod tests {
         let e = cp_ml(&offset(&r, 0.2, n), &ofdm, 1e4).unwrap();
         assert_eq!(e.timing, 30);
         assert!((e.cfo - 0.2).abs() < 1e-3, "{}", e.cfo);
-        assert!(cp_ml(&r, &Ofdm { n_cp: 0, ..ofdm }, 10.0).is_err() && cp_ml(&r[..60], &ofdm, 10.0).is_err());
+        assert!(cp_ml(&r, &Ofdm { n_cp: 0, ..ofdm.clone() }, 10.0).is_err() && cp_ml(&r[..60], &ofdm, 10.0).is_err());
         assert!(moose(&p, 9, &ofdm).is_err());
     }
 

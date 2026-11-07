@@ -8,6 +8,13 @@ and follow [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- `Ofdm` takes optional complex weights of its active subcarriers, `weights` (Rust:
+  `Option<Vec<C64>>`, Python: `Ofdm(..., weights=w)` and the property `Ofdm.weights`), for
+  power loading or a precoder per subcarrier: the transmitter sends $w_{k} X_{k}$
+  (`Ofdm::to_time`), the receiver divides by $w_{k}$ (`Ofdm::to_active`, 0 on a subcarrier of
+  zero weight), the power of the samples is the mean of $|w_{k}|^{2}$. The default, `None`,
+  changes no result; a struct literal that moved a configuration with `..ofdm` and used it
+  afterwards now needs `..ofdm.clone()`.
 - `ofdm_rx` takes `estimation: none`: no equaliser, the channel taken as the identity, so
   that the detector sees the subcarriers as received, $Y_{k} = H_{k} X_{k} + W_{k}$; and
   `tdl` and `rayleigh` take a `seed`, which draws the channel from its own stream, the same

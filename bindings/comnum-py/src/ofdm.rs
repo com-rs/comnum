@@ -27,6 +27,11 @@ use pyo3::types::PyDict;
 ///     n_cp (int): cyclic prefix, in Nyquist-rate samples.
 ///     dc_null (bool): leave the DC subcarrier empty.
 ///     dft_spread (bool): DFT-spread OFDM.
+///     weights (array_like, optional): one complex weight `w_k` per active subcarrier
+///         (power loading, a precoder per subcarrier): `modulate` sends `w_k X_k` and
+///         `demodulate` divides by `w_k` (0 where `w_k = 0`, a subcarrier switched
+///         off). The power of the samples becomes the mean of `|w_k|²`; weights of
+///         mean square 1 keep it at 1. None (the default) is `w_k = 1`.
 ///
 /// Raises:
 ///     ValueError: for an invalid parameter (the message names it).
@@ -38,6 +43,10 @@ use pyo3::types::PyDict;
 ///     (48, (48,))
 ///     >>> d = np.exp(2j * np.pi * np.arange(96) / 7)
 ///     >>> np.allclose(ofdm.demodulate(ofdm.modulate(d)), d)
+///     True
+///     >>> w = np.sqrt(np.linspace(0.5, 1.5, 48))   # power loading, mean power 1
+///     >>> loaded = comnum.Ofdm(64, 48, n_cp=8, weights=w)
+///     >>> np.allclose(loaded.demodulate(loaded.modulate(d)), d)
 ///     True
 #[pyclass(name = "Ofdm", module = "comnum")]
 pub struct PyOfdm {
@@ -97,7 +106,7 @@ impl PyOfdm {
 #[pymethods]
 impl PyOfdm {
     #[new]
-    #[pyo3(signature = (n_fft, n_subcarriers, *, oversampling=4, n_cp=0, dc_null=false, dft_spread=false))]
+    #[pyo3(signature = (n_fft, n_subcarriers, *, oversampling=4, n_cp=0, dc_null=false, dft_spread=false, weights=None))]
     fn new(
         n_fft: usize,
         n_subcarriers: usize,
@@ -105,9 +114,18 @@ impl PyOfdm {
         n_cp: usize,
         dc_null: bool,
         dft_spread: bool,
+        weights: Option<&Bound<'_, PyAny>>,
     ) -> PyResult<Self> {
-        let inner =
-            Ofdm { n_active: n_subcarriers, oversampling, n_cp, dc_null, dft_spread, ..Ofdm::new(n_fft, 1).py()? };
+        let weights = weights.map(cvec).transpose()?;
+        let inner = Ofdm {
+            n_active: n_subcarriers,
+            oversampling,
+            n_cp,
+            dc_null,
+            dft_spread,
+            weights,
+            ..Ofdm::new(n_fft, 1).py()?
+        };
         inner.check().py()?;
         Ok(PyOfdm { inner })
     }
@@ -134,6 +152,13 @@ impl PyOfdm {
     #[getter]
     fn n_cp(&self) -> usize {
         self.inner.n_cp
+    }
+
+    /// numpy.ndarray | None: The complex weights of the active subcarriers, None for unit
+    /// weights.
+    #[getter]
+    fn weights<'py>(&self, py: Python<'py>) -> Option<CArr<'py>> {
+        self.inner.weights.clone().map(|w| carr(py, w))
     }
 
     /// numpy.ndarray: FFT bins of the active subcarriers (int64), for the channel
