@@ -1,0 +1,35 @@
+# One trial of OFDM over a frequency-selective channel, looked at along the chain, with
+# and without an equaliser. 16-QAM on 200 subcarriers of 15 kHz (a grid of 256, 3.84
+# MHz), a cyclic prefix of 32 samples (8.3 µs) longer than the 5 µs of the ETU channel
+# of 3GPP TS 36.101, held constant over the trial (no Doppler) and drawn from its own
+# seed, so that the three receivers see the same channel, and an Eb/N0 of 25 dB.
+# The scopes show the transmitted signal (Gaussian-like samples, a flat band of 200
+# subcarriers), the received spectrum with the notches of the multipath, and the
+# subcarriers after the receiver:
+#   - estimation none: no equaliser, every subcarrier k comes out as H_k X_k + W_k, the
+#     constellation rotated and scaled by a different H_k on every subcarrier, a ring;
+#   - estimation perfect: the zero-forcing equaliser with the channel known, X_k + W_k/H_k,
+#     the 16 points back, spread more on the subcarriers in the notches;
+#   - estimation lmmse: the same equaliser with the channel estimated from the pilots
+#     (lattice every 3 subcarriers and 4 symbols).
+# In the playground the trace follows the condition chosen (one per estimation);
+# `comnum run` gives the symbol error rate of the trial for each.
+name: tutorial_ofdm
+description: OFDM over the ETU channel seen along the chain, with and without an equaliser
+seed: 3
+grid:
+  estimation: [none, perfect, lmmse]
+link:
+  - {type: source, constellation: 16-QAM, n_symbols: 2400}
+  - {type: scope, label: transmitted}
+  - {type: ofdm_tx, n_fft: 256, n_subcarriers: 200, n_cp: 32, pilots: {pattern: lattice, freq: 3, time: 4}}
+  - {type: scope, label: tx_time, view: time, max_samples: 1152}
+  - {type: scope, label: tx_spectrum, view: spectrum, nfft: 256}
+  - {type: tdl, profile: ETU, seed: 7}
+  - {type: awgn_ebn0, ebn0_db: 25}
+  - {type: scope, label: rx_time, view: time, max_samples: 1152}
+  - {type: scope, label: rx_spectrum, view: spectrum, nfft: 256}
+  - {type: ofdm_rx, estimation: $estimation, detector: zf}
+  - {type: scope, label: received}
+metrics: {report: [ser, evm]}
+stop: {max_trials: 1}

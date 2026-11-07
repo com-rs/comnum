@@ -13,7 +13,7 @@ const $ = (id) => document.getElementById(id);
 const ui = {
   list: $("spec-list"), run: $("run"), stop: $("stop"), status: $("status"), engine: $("engine"),
   error: $("error"), xAxis: $("x-axis"), metric: $("metric"), logY: $("log-y"),
-  plot: $("plot"), plotTabs: $("plot-tabs"), chain: $("chain"), plotControls: document.querySelector(".plot-controls"), version: $("version"), caption: $("caption"), terminal: $("terminal"), clear: $("clear"),
+  plot: $("plot"), plotTabs: $("plot-tabs"), chain: $("chain"), plotControls: document.querySelector(".plot-controls:not(#trace-controls)"), version: $("version"), caption: $("caption"), traceControls: $("trace-controls"), traceCondition: $("trace-condition"), terminal: $("terminal"), clear: $("clear"),
   tabName: $("tab-name"), share: $("share"), openName: $("open-name"), theme: $("theme"),
   sidebar: $("sidebar"), backdrop: $("sidebar-backdrop"), explorerOpen: $("explorer-toggle"), explorerClose: $("explorer-close"),
   splitH: $("split-h"), splitV: $("split-v"), workbench: document.querySelector(".workbench"), editorArea: document.querySelector(".editor-area"),
@@ -248,7 +248,11 @@ function onProbe(ms) {
 // ---------------------------------------------------------------- the explorer
 
 function fillExplorer() {
-  const groups = [["examples", "specs", specs.filter((s) => !s.validation)], ["validation", "specs/validation", specs.filter((s) => s.validation)]];
+  const groups = [
+    ["tutorial", "specs/tutorial", specs.filter((s) => s.tutorial)],
+    ["examples", "specs", specs.filter((s) => !s.tutorial && !s.validation)],
+    ["validation", "specs/validation", specs.filter((s) => s.validation)],
+  ];
   ui.list.replaceChildren();
   for (const [key, label, items] of groups) {
     const head = document.createElement("button");
@@ -278,6 +282,7 @@ function open(s, pushUrl) {
   rows = [];
   traces = null;
   traceNote = "";
+  traceCondition = 0;
   picked = false;
   view = { kind: "curves", key: null };
   setText(s.text);
@@ -528,6 +533,7 @@ function draw() {
   ui.chain.hidden = !chain;
   ui.plot.hidden = chain;
   ui.plotControls.hidden = view.kind !== "curves";
+  updateTraceControls(view.kind === "scope");
   if (chain) drawChain();
   else if (view.kind === "scope") drawScope();
   else drawCurves(colorOf);
@@ -627,6 +633,8 @@ let picked = false;        // whether the user chose the tab (else the page choo
 let tabSignature = "";     // what the tabs were built for
 let traces = null;         // the signals of the scopes of the last traced trial
 let traceNote = "";        // the condition traced, or the error of the trace
+let traceCondition = 0;    // the index of the condition traced
+let traceOptions = "";     // the conditions the selector of the traced condition lists
 
 function setView(v, byUser) {
   view = v;
@@ -801,15 +809,41 @@ function drawScope() {
   Plotly.react(ui.plot, data, layout, plotConfig());
 }
 
-/// Trace the first trial of the first condition, before the campaign: the worker
-/// answers in order, so the scopes are drawn before the first point of the curves.
+/// Trace the first trial of the condition chosen (the first by default), before the
+/// campaign: the worker returns the signals of the scopes.
 function requestTrace() {
   if (!inspected || !scopeLabels().length) return;
-  const c = inspected.conditions[0];
-  const label = c ? inspected.axes.map((a) => `${a}=${fmt(c[a])}`).join(", ") : "";
-  traceNote = `trial 0${label ? ` of (${label})` : ""}`;
-  worker.postMessage({ type: "trace", yaml: text(), condition: 0 });
+  if (traceCondition >= inspected.conditions.length) traceCondition = 0;
+  traceNote = `trial 0${conditionLabel(traceCondition) ? ` of (${conditionLabel(traceCondition)})` : ""}`;
+  worker.postMessage({ type: "trace", yaml: text(), condition: traceCondition });
 }
+
+/// The label of condition `i` of the grid, `axis=value, …`.
+function conditionLabel(i) {
+  const c = inspected && inspected.conditions[i];
+  return c ? inspected.axes.map((a) => `${a}=${fmt(c[a])}`).join(", ") : "";
+}
+
+/// The selector of the traced condition, on a scope tab when the grid has several.
+function updateTraceControls(show) {
+  const n = inspected ? inspected.conditions.length : 0;
+  ui.traceControls.hidden = !show || n < 2;
+  if (ui.traceControls.hidden) return;
+  const labels = Array.from({ length: n }, (_, i) => conditionLabel(i));
+  const signature = labels.join("|");
+  if (signature !== traceOptions) {
+    traceOptions = signature;
+    ui.traceCondition.replaceChildren(...labels.map((l, i) => new Option(l, String(i))));
+  }
+  ui.traceCondition.value = String(traceCondition);
+}
+
+ui.traceCondition.addEventListener("change", () => {
+  traceCondition = Number(ui.traceCondition.value);
+  traces = null;           // the signals of the former condition are not this one's
+  requestTrace();
+  draw();
+});
 
 // ---------------------------------------------------------------- the terminal
 

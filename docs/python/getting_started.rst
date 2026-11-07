@@ -84,6 +84,39 @@ A first link
    print(comnum.ber(c.demap_bits(y), bits))            # 1.80e-3
    print(comnum.theory_ber(16, 10.0, "qam"))           # 1.75e-3
 
+.. _getting-started-signals:
+
+Seeing the signals along the chain
+----------------------------------
+
+The specifications of ``specs/tutorial/`` run a single trial and place ``scope`` blocks
+along the link; in the `playground <https://com-rs.github.io/comnum/playground/>`_
+(the group ``specs/tutorial`` of the explorer), **Run** opens one tab per scope, and
+the selector **traced** switches between the receivers of the grid, which all see the
+same channel (the ``seed`` of the channel block):
+
+.. list-table::
+   :header-rows: 1
+   :widths: 25 75
+
+   * - Specification
+     - What it shows
+   * - ``01_awgn.yaml``
+     - 16-QAM over AWGN: the points, the spectrum and the eye of the root-raised-cosine
+       signal, before and after the channel and the matched filter
+   * - ``02_ofdm.yaml``
+     - 16-QAM OFDM over the ETU channel of 3GPP TS 36.101: the notches of the received
+       spectrum, and the subcarriers without an equaliser (``estimation: none``, every
+       one rotated and scaled by its own :math:`H_{k}`), with zero forcing on the known
+       channel, and on the channel estimated by LMMSE from the pilots
+   * - ``03_mimo.yaml``
+     - 4 × 4 spatial multiplexing of 16-QAM over one Rayleigh matrix: the received
+       antennas, each a sum of the four streams, and the points after the detectors
+       ``mr``, ``zf``, ``mmse``, ``zf_sic`` and ``sphere`` (maximum likelihood)
+
+From the command line, ``comnum run specs/tutorial/02_ofdm.yaml`` gives the symbol
+error rate and the EVM of the trial for every receiver.
+
 The :doc:`gallery <auto_examples/index>` turns such snippets into the classical curves,
 and the :doc:`user guide <user_guide/index>` shows how to run them as Monte Carlo
 campaigns with stopping rules and confidence intervals.

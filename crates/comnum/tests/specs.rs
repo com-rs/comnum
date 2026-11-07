@@ -1,4 +1,5 @@
-//! Every specification of `specs/` builds and runs one trial per condition.
+//! Every specification of `specs/` and `specs/tutorial/` builds and runs one trial per
+//! condition.
 #![allow(clippy::unwrap_used, clippy::expect_used, reason = "test code: a failure is a test failure")]
 #![cfg(feature = "spec")]
 
@@ -6,9 +7,10 @@ use comnum::spec::{RunOptions, Spec, run};
 use std::path::PathBuf;
 
 fn specs() -> Vec<PathBuf> {
-    let dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../specs");
-    let mut v: Vec<PathBuf> = std::fs::read_dir(&dir)
-        .unwrap()
+    let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../specs");
+    let mut v: Vec<PathBuf> = [root.clone(), root.join("tutorial")]
+        .iter()
+        .flat_map(|dir| std::fs::read_dir(dir).unwrap())
         .map(|e| e.unwrap().path())
         .filter(|p| p.extension().is_some_and(|e| e == "yaml"))
         .collect();

@@ -73,8 +73,10 @@ which a metric reaches a target — the :math:`E_b/N_0` required for a BER of
 The specifications of the repository
 ------------------------------------
 
-``specs/`` holds the campaigns of the examples and of the user guide, and
-``specs/validation/`` those whose expected results come from the literature (every
+``specs/tutorial/`` holds one-trial specifications that look at the signals along the
+chain (:ref:`getting-started-signals`), ``specs/`` the campaigns of the examples and of
+the user guide, and ``specs/validation/`` those whose expected results come from the
+literature (every
 one has a :doc:`validation card <../validation>`; CI verifies the short ones):
 
 .. list-table::

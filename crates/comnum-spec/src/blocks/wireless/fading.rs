@@ -19,6 +19,8 @@ block_params! {
         k_factor: f64 [0.0] >= 0, "Rician factor K (linear), 0 for Rayleigh fading";
         rx_correlation: f64 [0.0] > -1 < 1, "exponential correlation ρ of the receive antennas";
         tx_correlation: f64 [0.0] > -1 < 1, "exponential correlation ρ of the transmit antennas";
+        seed: Option<u64> [absent "the stream of the trial"],
+            "draw the channel from its own stream: the same realisation in every condition and trial, to compare receivers on one channel";
     }
 }
 
@@ -57,7 +59,10 @@ impl Block for Rayleigh {
             };
             let coh = if self.p.coherence_samples == 0 { n.max(1) } else { self.p.coherence_samples };
             let model = Mimo { n_rx: nr, n_tx: nt, k_factor: self.p.k_factor, los: None, correlation, coherence: coh };
-            let (y, hs) = model.apply(x, rng)?;
+            let (y, hs) = match self.p.seed {
+                Some(seed) => model.apply(x, &mut Rng::new(seed))?,
+                None => model.apply(x, rng)?,
+            };
             Ok((y, Csi::Flat { h: hs, coherence: coh }))
         })
     }
@@ -72,6 +77,8 @@ block_params! {
         delay_spread_s: f64 [100e-9] "s" >= 0, "RMS delay spread of TDL-A to TDL-E (TR 38.901 §7.7.3); the other profiles ignore it";
         doppler_hz: f64 [0.0] "Hz" >= 0, "maximum Doppler shift; 0 for a channel constant over the trial";
         n_rx: usize [1] >= 1, "receive antennas";
+        seed: Option<u64> [absent "the stream of the trial"],
+            "draw the channel from its own stream: the same realisation in every condition and trial, to compare receivers on one channel";
     }
 }
 
@@ -88,6 +95,7 @@ pub(super) struct TdlBlock {
     specular: Option<(f64, f64)>,
     doppler: f64,
     n_rx: usize,
+    seed: Option<u64>,
 }
 
 impl TdlBlock {
@@ -96,7 +104,13 @@ impl TdlBlock {
             Named::Name(name) => name.parse::<Profile>()?.with_delay_spread(p.delay_spread_s),
             Named::Params(e) => Profile::Exponential { rms_delay_s: e.rms_delay_s, resolution_s: e.resolution_s },
         };
-        Ok(TdlBlock { taps: profile.try_taps()?, specular: profile.specular(), doppler: p.doppler_hz, n_rx: p.n_rx })
+        Ok(TdlBlock {
+            taps: profile.try_taps()?,
+            specular: profile.specular(),
+            doppler: p.doppler_hz,
+            n_rx: p.n_rx,
+            seed: p.seed,
+        })
     }
 }
 
@@ -111,7 +125,10 @@ impl Block for TdlBlock {
                 n_rx: self.n_rx,
                 n_tx: x.len(),
             })?;
-            let taps = tdl.draw(x[0].len(), rng);
+            let taps = match self.seed {
+                Some(seed) => tdl.draw(x[0].len(), &mut Rng::new(seed)),
+                None => tdl.draw(x[0].len(), rng),
+            };
             Ok((taps.apply(x)?, Csi::Taps(taps)))
         })
     }

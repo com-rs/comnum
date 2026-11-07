@@ -1,0 +1,33 @@
+# One trial of 4 x 4 spatial multiplexing over one Rayleigh channel matrix, looked at
+# along the chain, with the detectors of mimo_rx. 16-QAM on four transmit antennas
+# (the power split between them), four receive antennas, i.i.d. Rayleigh fading drawn
+# once from its own seed, so that every detector sees the same matrix H, and an Eb/N0
+# of 18 dB. The scopes show the transmitted points, the four received streams (every
+# antenna sums the four transmitted streams: y = H x + w, no constellation left) and
+# the points after the detector:
+#   - mr: maximum ratio, H^H y, the interference of the other streams left in;
+#   - zf: zero forcing, the interference removed and the noise enhanced by (H^H H)^-1;
+#   - mmse: the trade-off of the two, (H^H H + sigma^2 I)^-1 H^H y;
+#   - zf_sic: zero forcing with successive interference cancellation (V-BLAST order);
+#   - sphere: the maximum likelihood decision (the points are the decisions).
+# On this matrix the symbol error rates are 0.76 (mr), 0.068 (zf), 0.053 (mmse), 0.0028
+# (zf_sic) and 0 (sphere); another seed of the channel gives another ranking of zf and
+# mmse, never of mr and sphere.
+# In the playground, the selector "traced" above a scope tab chooses the detector;
+# `comnum run` gives the symbol error rate of the trial for each.
+name: tutorial_mimo
+description: 4 x 4 spatial multiplexing over one Rayleigh matrix, seen with five detectors
+seed: 5
+grid:
+  detector: [mr, zf, mmse, zf_sic, sphere]
+link:
+  - {type: source, constellation: 16-QAM, n_symbols: 4000}
+  - {type: scope, label: transmitted}
+  - {type: mimo_tx, n_tx: 4, scheme: spatial}
+  - {type: rayleigh, n_rx: 4, seed: 14}
+  - {type: awgn_ebn0, ebn0_db: 18}
+  - {type: scope, label: antennas}
+  - {type: mimo_rx, detector: $detector}
+  - {type: scope, label: detected}
+metrics: {report: [ser, evm]}
+stop: {max_trials: 1}

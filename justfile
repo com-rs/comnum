@@ -151,13 +151,13 @@ docs-py: develop
 doc:
     cargo doc --workspace --no-deps --exclude comnum-py --open
 
-# Run every specification of specs/ (reports under target/results/)
+# Run every specification of specs/ and specs/tutorial/ (reports under target/results/)
 specs:
-    cargo run --release -p comnum-spec -- run specs/*.yaml --out target/results
+    cargo run --release -p comnum-spec -- run specs/*.yaml specs/tutorial/*.yaml --out target/results
 
 # Check every specification (one trial per condition)
 check-specs:
-    cargo run --release -p comnum-spec -- check specs/*.yaml
+    cargo run --release -p comnum-spec -- check specs/*.yaml specs/tutorial/*.yaml
 
 # Check the results against the literature (specs/validation)
 validate:

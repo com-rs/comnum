@@ -105,8 +105,8 @@ impl Block for OfdmTx {
 
 block_params! {
     pub(super) struct OfdmRxSpec {
-        estimation: Estimation ["perfect"] one_of ["perfect", "ls", "lmmse"],
-            "perfect (the channel of the channel block), ls (linear interpolation) or lmmse (uniform delay profile over the prefix)";
+        estimation: Estimation ["perfect"] one_of ["perfect", "ls", "lmmse", "none"],
+            "perfect (the channel of the channel block), ls (linear interpolation), lmmse (uniform delay profile over the prefix) or none (no equaliser: the channel taken as the identity, the detector sees the subcarriers as received)";
         detection: DetectorSpec [flatten], "the detector";
     }
 }
@@ -121,6 +121,9 @@ enum Estimation {
     Ls,
     /// LMMSE with a uniform delay profile over the prefix.
     Lmmse,
+    /// No equaliser: the channel taken as the identity, so that a linear detector
+    /// returns the received subcarriers $Y_{k} = H_{k} X_{k} + W_{k}$ as they are.
+    None,
 }
 
 impl ParamType for Estimation {
@@ -147,15 +150,7 @@ fn perfect_channel(s: &Frame, f: &OfdmFrame, nr: usize, g: usize) -> Result<Vec<
     let (k, l_n, nt) = (f.grid.n_subcarriers, f.grid.n_symbols, f.n_ports);
     let mut h = vec![C64::new(0.0, 0.0); k * l_n * nr * nt];
     let Some(csi) = s.channel.csi.as_ref() else {
-        ensure(nr == nt, || {
-            "ofdm_rx: perfect estimation without a channel block needs as many receive as transmit antennas".into()
-        })?;
-        for re in 0..k * l_n {
-            for a in 0..nr {
-                h[(re * nr + a) * nt + a] = C64::new(1.0, 0.0);
-            }
-        }
-        return Ok(h);
+        return identity_channel(f, nr, "perfect estimation without a channel block");
     };
     let bins = f.active_bins();
     for (l, n) in f.symbol_middles(g).into_iter().enumerate() {
@@ -174,6 +169,21 @@ fn perfect_channel(s: &Frame, f: &OfdmFrame, nr: usize, g: usize) -> Result<Vec<
     Ok(h)
 }
 
+/// The identity channel on every resource element of a grid (`[re][rx][tx]`
+/// flattened): what the receiver assumes without a channel block, or without an
+/// equaliser.
+fn identity_channel(f: &OfdmFrame, nr: usize, what: &str) -> Result<Vec<C64>> {
+    let (k, l_n, nt) = (f.grid.n_subcarriers, f.grid.n_symbols, f.n_ports);
+    ensure(nr == nt, || format!("ofdm_rx: {what} needs as many receive as transmit antennas"))?;
+    let mut h = vec![C64::new(0.0, 0.0); k * l_n * nr * nt];
+    for re in 0..k * l_n {
+        for a in 0..nr {
+            h[(re * nr + a) * nt + a] = C64::new(1.0, 0.0);
+        }
+    }
+    Ok(h)
+}
+
 impl Block for OfdmRx {
     fn apply(&self, s: &mut Frame, _: &mut Rng) -> Result<()> {
         let f = s.in_flight.ofdm.take().ok_or_else(|| Error::Config("ofdm_rx needs an ofdm_tx before it".into()))?;
@@ -182,7 +192,7 @@ impl Block for OfdmRx {
         let (nr, nt) = (streams.len(), f.n_ports);
         let noise_var = s.channel.detector_noise_var();
         let method = match self.estimation {
-            Estimation::Perfect => None,
+            Estimation::Perfect | Estimation::None => None,
             Estimation::Ls => Some(FrequencyInterpolation::Linear),
             Estimation::Lmmse => {
                 let max_delay = (f.ofdm.n_cp * f.ofdm.oversampling).max(1);
@@ -195,6 +205,7 @@ impl Block for OfdmRx {
             &streams,
             |g, rx| match &method {
                 Some(m) => f.estimate(rx, noise_var, m),
+                None if self.estimation == Estimation::None => identity_channel(&f, nr, "estimation none"),
                 None => perfect_channel(state, &f, nr, g),
             },
             &receiver,

@@ -151,3 +151,60 @@ fn message_passing_detectors_in_a_link() {
         assert_eq!(hard, s.bits, "{detector}");
     }
 }
+
+#[test]
+fn without_an_equaliser_the_subcarriers_come_out_as_received() {
+    let link = |channel: bool| {
+        let mut b = vec![
+            json!({"type": "source", "constellation": "16-QAM", "n_symbols": 1000}),
+            json!({"type": "ofdm_tx", "n_fft": 64, "n_subcarriers": 48, "n_cp": 8, "n_symbols": 4}),
+        ];
+        if channel {
+            b.push(json!({"type": "tdl", "profile": "EPA"}));
+        }
+        b.push(json!({"type": "ofdm_rx", "estimation": "none", "detector": "zf"}));
+        run(&b, 4)
+    };
+    // no channel: the identity is the channel, the points come back exact
+    assert!(max_error(&link(false)) < 1e-9);
+    // a frequency-selective channel left unequalised: every point is rotated and scaled
+    let s = link(true);
+    assert!(max_error(&s) > 0.5, "{}", max_error(&s));
+}
+
+#[test]
+fn a_seeded_channel_is_the_same_in_every_trial() {
+    let link = |trial_seed: u64| {
+        run(
+            &[
+                json!({"type": "source", "constellation": "QPSK", "n_symbols": 500}),
+                json!({"type": "ofdm_tx", "n_fft": 64, "n_subcarriers": 48, "n_cp": 8, "n_symbols": 4}),
+                json!({"type": "tdl", "profile": "EVA", "seed": 7}),
+                json!({"type": "ofdm_rx", "estimation": "none", "detector": "zf"}),
+            ],
+            trial_seed,
+        )
+    };
+    // the same symbols ask the same received points only if the channel is the same:
+    // compare the ratio of received to sent point, which is H on every subcarrier
+    let ratio = |s: &Frame| -> Vec<_> { s.samples.iter().zip(&s.symbols).map(|(y, x)| y / x).collect() };
+    let (a, b) = (ratio(&link(1)), ratio(&link(2)));
+    let gap = a.iter().zip(&b).map(|(u, v)| (u - v).norm()).fold(0.0, f64::max);
+    assert!(gap < 1e-9, "{gap}");
+}
+
+#[test]
+fn a_seeded_rayleigh_matrix_is_the_same_in_every_trial() {
+    let csi = |trial_seed: u64| {
+        let s = run(
+            &[
+                json!({"type": "source", "constellation": "QPSK", "n_symbols": 64}),
+                json!({"type": "mimo_tx", "n_tx": 2}),
+                json!({"type": "rayleigh", "n_rx": 2, "seed": 3}),
+            ],
+            trial_seed,
+        );
+        format!("{:?}", s.channel.csi)
+    };
+    assert_eq!(csi(1), csi(2));
+}

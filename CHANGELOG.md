@@ -8,6 +8,19 @@ and follow [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- `ofdm_rx` takes `estimation: none`: no equaliser, the channel taken as the identity, so
+  that the detector sees the subcarriers as received, $Y_{k} = H_{k} X_{k} + W_{k}$; and
+  `tdl` and `rayleigh` take a `seed`, which draws the channel from its own stream, the same
+  realisation in every condition and trial, to compare receivers on one channel. The
+  specification `specs/tutorial/02_ofdm.yaml` looks at one trial of 16-QAM OFDM over the ETU
+  channel along the chain, without an equaliser (a symbol error rate of 0.91), with zero
+  forcing on the known channel (an EVM of 8.6e-4, no error out of 2400 symbols) and on
+  the channel estimated by LMMSE (1.1e-3); `specs/tutorial/03_mimo.yaml` looks at 4 x 4
+  spatial multiplexing of 16-QAM over one Rayleigh matrix with the detectors mr, zf,
+  mmse, zf_sic and sphere (symbol error rates of 0.76, 0.068, 0.053, 0.0028 and 0 at
+  18 dB); the playground has a selector of the traced condition above the scope tabs. These
+  one-trial specifications are grouped with `01_awgn` in `specs/tutorial/`, first in the explorer of the playground and listed in Getting
+  started ("Seeing the signals along the chain").
 - A convergence card for the split step, `hager2021_convergence` (CI): on the link of
   Fig. 8 of Häger & Pfister (2021) cut to two spans, every technique of `Ssfm` (the
   midpoint phase, the effective length, the trapezoidal mean, Bosco's logarithmic steps,
@@ -152,7 +165,7 @@ and follow [Semantic Versioning](https://semver.org/).
   campaign; `Spec::trace(condition, trial)` runs that trial of a campaign (the same
   random stream) and returns the signals of its scopes (`ScopeTrace`, `Frame::traces`), the
   spectrum computed by `comnum_dsp::spectrum::psd`. The playground draws one tab per
-  scope and the chain of blocks; `specs/scope_awgn.yaml` is a one-trial example of
+  scope and the chain of blocks; `specs/tutorial/01_awgn.yaml` is a one-trial example of
   16-QAM over AWGN.
 - Browser playground (`playground/`): a static page where a specification is edited
   (CodeMirror) and run in the browser, the Rust engine compiled to WebAssembly by

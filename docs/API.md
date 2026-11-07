@@ -3431,9 +3431,9 @@ one layer down, instead of written again (`docs/ARCHITECTURE.md`, placement).
 - `class MimoTx(Native)` — Spread the symbols over n_tx antennas: spatial multiplexing (power 1/n_tx per antenna) or Alamouti's code.
 - `def MimoTx.__init__(self, *, n_tx: int | Var = 2, scheme: str | Var = "spatial") -> None`
 - `class Rayleigh(Native)` — Flat fading y = H x on every antenna; records the channel for a genie-aided receiver.
-- `def Rayleigh.__init__(self, *, n_rx: int | Var = 1, coherence_samples: int | Var = 0, k_factor: float | Var = 0.0, rx_correlation: float | Var = 0.0, tx_correlation: float | Var = 0.0) -> None`
+- `def Rayleigh.__init__(self, *, n_rx: int | Var = 1, coherence_samples: int | Var = 0, k_factor: float | Var = 0.0, rx_correlation: float | Var = 0.0, tx_correlation: float | Var = 0.0, seed: int | Var | None = None) -> None`
 - `class Tdl(Native)` — Tapped-delay-line multipath fading with Clarke/Jakes Doppler; records the taps for a genie-aided receiver.
-- `def Tdl.__init__(self, *, profile: str | dict | Var = "EPA", delay_spread_s: float | Var = 1e-07, doppler_hz: float | Var = 0.0, n_rx: int | Var = 1) -> None`
+- `def Tdl.__init__(self, *, profile: str | dict | Var = "EPA", delay_spread_s: float | Var = 1e-07, doppler_hz: float | Var = 0.0, n_rx: int | Var = 1, seed: int | Var | None = None) -> None`
 - `class Cdl(Native)` — Clustered delay line of 3GPP TR 38.901 between uniform linear arrays (one tap per cluster, random ray phases and coupling); records the taps for a genie-aided receiver.
 - `def Cdl.__init__(self, *, profile: str | Var = "CDL-A", delay_spread_s: float | Var = 1e-07, n_rx: int | Var = 1, spacing_wavelengths: float | Var = 0.5, velocity_mps: float | Var = 0.0, fc_hz: float | Var = 3500000000.0) -> None`
 - `class OfdmTx(Native)` — Map every antenna's symbols on resource grids with pilots and OFDM-modulate them (power K/(LN) per sample).

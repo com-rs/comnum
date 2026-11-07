@@ -3,7 +3,7 @@
 # received signal after the matched filter, and the points after the decimation. A
 # `scope` block takes the signal of the traced trial (the playground, Spec::trace) and
 # does nothing in a campaign: `comnum run` gives the symbol error rate of this trial.
-name: scope_awgn
+name: tutorial_awgn
 description: One trial of 16-QAM over AWGN seen at every step of the chain
 seed: 1
 link:

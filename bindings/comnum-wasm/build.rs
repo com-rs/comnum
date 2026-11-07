@@ -1,7 +1,7 @@
-//! Embeds the specifications of `specs/` (the examples) and `specs/validation/` (the
-//! validation specifications) in the module, so that the playground lists them without
-//! any build step beyond `wasm-pack`: `SPECS` is a list of `(path, text)`, in the order
-//! of the menu, the validation specifications after the examples. A specification that
+//! Embeds the specifications of `specs/tutorial/` (one trial seen along the chain),
+//! `specs/` (the examples) and `specs/validation/` (the validation specifications) in
+//! the module, so that the playground lists them without any build step beyond
+//! `wasm-pack`: `SPECS` is a list of `(path, text)`, in the order of the menu. A specification that
 //! reads a file (a `capture` block) is left out: the browser has no file.
 
 use std::fs;
@@ -10,7 +10,7 @@ use std::path::Path;
 fn main() {
     let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../specs");
     let mut entries = Vec::new();
-    for dir in ["", "validation"] {
+    for dir in ["tutorial", "", "validation"] {
         let dir = root.join(dir);
         println!("cargo:rerun-if-changed={}", dir.display());
         let mut files: Vec<_> = fs::read_dir(&dir)

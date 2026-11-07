@@ -1345,11 +1345,19 @@ class Rayleigh(Native):
         k_factor (float): Rician factor K (linear), 0 for Rayleigh fading; default 0.0
         rx_correlation (float): exponential correlation ρ of the receive antennas; default 0.0
         tx_correlation (float): exponential correlation ρ of the transmit antennas; default 0.0
+        seed (int): draw the channel from its own stream: the same realisation in every condition and trial, to compare receivers on one channel; default the stream of the trial
     """
 
     needs = ("samples",)
     gives = ("csi",)
-    param_names = ("n_rx", "coherence_samples", "k_factor", "rx_correlation", "tx_correlation")
+    param_names = (
+        "n_rx",
+        "coherence_samples",
+        "k_factor",
+        "rx_correlation",
+        "tx_correlation",
+        "seed",
+    )
 
     def __init__(
         self,
@@ -1359,6 +1367,7 @@ class Rayleigh(Native):
         k_factor: float | Var = 0.0,
         rx_correlation: float | Var = 0.0,
         tx_correlation: float | Var = 0.0,
+        seed: int | Var | None = None,
     ) -> None:
         _init(
             self,
@@ -1368,6 +1377,7 @@ class Rayleigh(Native):
             k_factor=k_factor,
             rx_correlation=rx_correlation,
             tx_correlation=tx_correlation,
+            seed=seed,
         )
 
 
@@ -1381,11 +1391,12 @@ class Tdl(Native):
         delay_spread_s (float): RMS delay spread of TDL-A to TDL-E (TR 38.901 §7.7.3); the other profiles ignore it [s]; default 100e-9
         doppler_hz (float): maximum Doppler shift; 0 for a channel constant over the trial [Hz]; default 0.0
         n_rx (int): receive antennas; default 1
+        seed (int): draw the channel from its own stream: the same realisation in every condition and trial, to compare receivers on one channel; default the stream of the trial
     """
 
     needs = ("samples",)
     gives = ("csi",)
-    param_names = ("profile", "delay_spread_s", "doppler_hz", "n_rx")
+    param_names = ("profile", "delay_spread_s", "doppler_hz", "n_rx", "seed")
 
     def __init__(
         self,
@@ -1394,6 +1405,7 @@ class Tdl(Native):
         delay_spread_s: float | Var = 1e-07,
         doppler_hz: float | Var = 0.0,
         n_rx: int | Var = 1,
+        seed: int | Var | None = None,
     ) -> None:
         _init(
             self,
@@ -1402,6 +1414,7 @@ class Tdl(Native):
             delay_spread_s=delay_spread_s,
             doppler_hz=doppler_hz,
             n_rx=n_rx,
+            seed=seed,
         )
 
 
@@ -1517,7 +1530,7 @@ class OfdmRx(Native):
     Needs: samples, constellation, ofdm. Gives: noise, llr.
 
     Args:
-        estimation (str): perfect (the channel of the channel block), ls (linear interpolation) or lmmse (uniform delay profile over the prefix); one of perfect, ls, lmmse; default perfect
+        estimation (str): perfect (the channel of the channel block), ls (linear interpolation), lmmse (uniform delay profile over the prefix) or none (no equaliser: the channel taken as the identity, the detector sees the subcarriers as received); one of perfect, ls, lmmse, none; default perfect
         detector (str): mr (matched filter), zf, mmse, sic (MMSE-SIC), zf_sic (ZF-SIC), ml, sphere, kbest, amp (LAMA) or oamp (OAMP-LMMSE); one of mr, zf, mmse, sic, zf_sic, ml, sphere, kbest, amp, oamp; default mmse
         k (int): paths of kbest; default 8
         iterations (int): iterations of amp and oamp; default 10

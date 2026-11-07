@@ -7,7 +7,7 @@ complete, and, for the validation specifications of `specs/validation/`, the pub
 points of the reference drawn over the simulated curve. A terminal panel prints the
 lines of `comnum run` as the conditions complete and those of `comnum verify` at the
 end. The page is laid out as a small workbench: an explorer of the specifications of
-`specs/` and `specs/validation/`, the editor and the plot side by side (the sash between
+`specs/tutorial/`, `specs/` and `specs/validation/`, the editor and the plot side by side (the sash between
 them drags; when the grid gives several curves, one tab per curve next to **All**; a tab **Chain**
 draws the blocks of the link on one line, the scopes under the arrow where they take the
 signal), the terminal below (its sash too), a status bar; light and dark, the system
@@ -36,9 +36,9 @@ wasm-pack build bindings/comnum-wasm --target web --release --out-dir ../../play
 
 which writes `playground/pkg/` (not tracked): `comnum.js`, the module loader, and
 `comnum_bg.wasm`, about 2 MB (0.8 MB compressed), optimised by `wasm-opt` when it is
-installed. The specifications of `specs/` and `specs/validation/` are embedded in the
-module by the build script of the crate (`capture_16qam`, which reads a file, is left
-out): rebuild after changing one.
+installed. The specifications of `specs/tutorial/`, `specs/` and `specs/validation/`
+are embedded in the module by the build script of the crate (`capture_16qam`, which
+reads a file, is left out): rebuild after changing one.
 
 ## Serve
 
@@ -62,14 +62,20 @@ condition (`Spec::trace` in `comnum-spec`, the same random stream as the campaig
 opens one tab per scope: the points in the complex plane, the power spectral density
 (Welch, Hann window, from `comnum-dsp`) against the frequency over the symbol rate, the
 eye of the real part over two symbols, or the real and imaginary parts against time.
-`specs/scope_awgn.yaml` is a one-trial example: 16-QAM over AWGN, root-raised-cosine
-at eight samples per symbol, seen before and after the channel.
+When the grid has several conditions, a selector **traced** above a scope tab traces
+trial 0 of another one. `specs/tutorial/01_awgn.yaml` is a one-trial example: 16-QAM over
+AWGN, root-raised-cosine at eight samples per symbol, seen before and after the channel.
+`specs/tutorial/02_ofdm.yaml` shows OFDM over the ETU channel (drawn from the `seed` of the
+`tdl` block, the same in every condition) without an equaliser (`ofdm_rx` with
+`estimation: none`), with zero forcing on the known channel, and on the channel
+estimated by LMMSE from the pilots; `specs/tutorial/03_mimo.yaml`, 4 x 4 spatial
+multiplexing over one Rayleigh matrix (the `seed` of `rayleigh`) with five detectors.
 
 ## Sharing a specification
 
 **Share** puts the text of the specification in the fragment of the address,
 `#yaml=<payload>` (deflate, then URL-safe base64; plain base64 where the browser has no
-`CompressionStream`), and copies the link: about 700 characters for `scope_awgn` with
+`CompressionStream`), and copies the link: about 700 characters for `tutorial_awgn` with
 its comments. Opening the link loads the specification into the editor, under its
 `name`; it runs only on **Run**. The fragment is never sent to the server, so a shared
 specification needs no storage: a link in a mail or in the text of an exercise is the

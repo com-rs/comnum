@@ -69,7 +69,8 @@ pub fn version() -> String {
 }
 
 /// The specifications of the repository, as JSON: a list of objects `path`, `name`,
-/// `description`, `validation` (whether it lives in `specs/validation/`, with
+/// `description`, `tutorial` (whether it lives in `specs/tutorial/`, one trial seen
+/// along the chain), `validation` (whether it lives in `specs/validation/`, with
 /// expectations) and `text`.
 #[wasm_bindgen]
 pub fn specs() -> String {
@@ -83,6 +84,7 @@ pub fn specs() -> String {
                 "path": path,
                 "name": name,
                 "description": description,
+                "tutorial": path.starts_with("specs/tutorial/"),
                 "validation": path.starts_with("specs/validation/"),
                 "text": text,
             })
