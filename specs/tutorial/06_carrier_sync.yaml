@@ -1,0 +1,25 @@
+# Carrier synchronisation: 16-QAM received with a carrier frequency offset of 1e-3 of the
+# symbol rate (the constellation turns by 0.36° per symbol, a full turn every 1000
+# symbols, a ring) and Wiener phase noise (a random walk of 0.01 rad per symbol, which
+# smears every point along an arc), at an SNR of 22 dB. The receiver estimates the
+# offset by the fourth power of the samples (foe: the spectrum of x^4 has a line at four
+# times the offset), which leaves the phase noise, then follows the phase by blind phase
+# search (bps, Pfau, Hoffmann & Noé 2009), which leaves an ambiguity of a multiple of π/2
+# that the known symbols of frame_sync remove.
+name: tutorial_carrier_sync
+description: 16-QAM with a frequency offset and phase noise, before and after the carrier recovery
+seed: 3
+link:
+  - {type: source, constellation: 16-QAM, n_symbols: 8192}
+  - {type: cfo, omega_rad: 6.283e-3}
+  - {type: phase_noise, sigma_rad: 0.01}
+  - {type: awgn, snr_db: 22}
+  - {type: scope, label: received}
+  - {type: foe, m: 4}
+  - {type: scope, label: after_foe}
+  - {type: bps, n: 32, b: 32}
+  - {type: scope, label: after_bps}
+  - {type: frame_sync, start: 0, length: 512, max_delay: 8}
+  - {type: scope, label: aligned}
+metrics: {report: [ser, evm]}
+stop: {max_trials: 1}

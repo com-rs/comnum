@@ -1,0 +1,26 @@
+# Quantisation: 16-QAM with root-raised-cosine pulses at four samples per symbol, at an
+# SNR of 35 dB, sampled by an ADC of 1, 2, 3, 4 or 6 bits per dimension, its full scale
+# set for a Gaussian input (an automatic gain control). The quantisation noise of a
+# uniform quantiser is Δ²/12 per dimension, 6 dB lower for every bit (the 6.02 N + 1.76
+# dB of a full-scale sine wave), plus the clipping of the peaks: at 1 bit only the signs
+# of I and Q are left and the amplitudes of 16-QAM are lost; at 2 bits the time signal is
+# a staircase. The EVM after the matched filter falls from 0.15 (1 bit, half the symbols
+# wrong) to 1.7e-2, 7.8e-3, 2.7e-3 and 5.8e-4 (6 bits), against 3.2e-4 for the noise of
+# the channel alone.
+# In the playground, the selector "traced" above a scope tab chooses the resolution.
+name: tutorial_adc
+description: 16-QAM sampled by an ADC of 2 to 6 bits
+seed: 8
+grid:
+  bits: [1, 2, 3, 4, 6]
+link:
+  - {type: source, constellation: 16-QAM, n_symbols: 4096}
+  - {type: pulse_shape, sps: 4, rolloff: 0.25}
+  - {type: awgn, snr_db: 35}
+  - {type: adc, bits: $bits}
+  - {type: scope, label: quantised, view: time, max_samples: 200}
+  - {type: matched_filter, rolloff: 0.25}
+  - decimate
+  - {type: scope, label: sampled}
+metrics: {report: [ser, evm]}
+stop: {max_trials: 1}

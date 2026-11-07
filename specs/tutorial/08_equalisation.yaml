@@ -1,0 +1,29 @@
+# Single-carrier equalisation: QPSK with root-raised-cosine pulses (roll-off 0.25) at two
+# samples per symbol through a multipath channel of three echoes, one, two and three
+# symbols after the main path (taps 1, 0.5 e^{j0.6}, 0.3 e^{-j1.2} and 0.2, at an SNR of
+# 25 dB). The echoes add to every symbol the tails of its neighbours: the eye is closed
+# and the points sampled at the symbol instants form 4^4 = 256 clusters, intersymbol
+# interference. An adaptive FIR of 15 taps at two samples per symbol, trained blindly by
+# the constant-modulus algorithm (Godard 1980) and then decision-directed LMS, inverts
+# the channel. With a step mu of 1e-9 it stays at its initial centre tap: a plain
+# decimation, the channel left in (a symbol error rate of 0.11 over the second half of
+# the block); with 3e-3 it has converged by the second half, which has no error. Two passes over the block, the metrics on its second half.
+# frame_sync removes the phase that a blind equaliser cannot know.
+# In the playground, the selector "traced" above a scope tab chooses the step.
+name: tutorial_equalisation
+description: QPSK through a multipath channel, with and without an adaptive equaliser
+seed: 5
+grid:
+  mu: [1e-9, 3e-3]
+link:
+  - {type: source, constellation: QPSK, n_symbols: 8192}
+  - {type: pulse_shape, sps: 2, rolloff: 0.25}
+  - {type: fir, h: [[1.0, 0.0], [0.0, 0.0], [0.413, 0.282], [0.0, 0.0], [0.109, -0.280], [0.0, 0.0], [0.2, 0.0]]}
+  - {type: awgn, snr_db: 25}
+  - {type: matched_filter, rolloff: 0.25}
+  - {type: scope, label: eye_received, view: eye}
+  - {type: adaptive_equalizer, algorithm: [[cma, 2000], [dd-lms, 6192]], n_taps: 15, mu: $mu, passes: 2}
+  - {type: scope, label: equalised}
+  - {type: frame_sync, start: 4096, length: 512, max_delay: 32}
+metrics: {report: [ser, evm], skip_start: 4096}
+stop: {max_trials: 1}

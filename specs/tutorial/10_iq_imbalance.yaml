@@ -1,0 +1,22 @@
+# IQ imbalance: 16-QAM through a transmitter whose I and Q branches differ, y = x + β x*
+# (the image of the signal, conjugated, at an image rejection ratio of 1/|β|²), at an
+# SNR of 30 dB. A real β stretches the constellation along one axis and shrinks it along
+# the other (a gain imbalance); an imaginary β shears it (a phase imbalance, the two axes
+# no longer at right angles). The outer points move most; the error added is the image,
+# |β|² of the power: the EVM (a power ratio) goes from 1.0e-3 (the noise) to 1.1e-2 for
+# a gain or a phase imbalance of 0.1 (an image 20 dB down) and 2.1e-2 for both, still
+# without a symbol error at this SNR.
+# In the playground, the selector "traced" above a scope tab chooses β.
+name: tutorial_iq_imbalance
+description: 16-QAM with transmitter IQ imbalance of gain and phase
+seed: 7
+grid:
+  beta_re: [0.0, 0.1]
+  beta_im: [0.0, 0.1]
+link:
+  - {type: source, constellation: 16-QAM, n_symbols: 4096}
+  - {type: tx_iq, beta: [$beta_re, $beta_im]}
+  - {type: awgn, snr_db: 30}
+  - {type: scope, label: received}
+metrics: {report: [ser, evm]}
+stop: {max_trials: 1}

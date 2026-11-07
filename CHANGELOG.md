@@ -18,9 +18,16 @@ and follow [Semantic Versioning](https://semver.org/).
   the channel estimated by LMMSE (1.1e-3); `specs/tutorial/03_mimo.yaml` looks at 4 x 4
   spatial multiplexing of 16-QAM over one Rayleigh matrix with the detectors mr, zf,
   mmse, zf_sic and sphere (symbol error rates of 0.76, 0.068, 0.053, 0.0028 and 0 at
-  18 dB); the playground has a selector of the traced condition above the scope tabs. These
-  one-trial specifications are grouped with `01_awgn` in `specs/tutorial/`, first in the explorer of the playground and listed in Getting
-  started ("Seeing the signals along the chain").
+  18 dB); the playground has a selector of the traced condition above the scope tabs.
+  These one-trial specifications are grouped with `01_awgn` in `specs/tutorial/`, with nine
+  more of the figures of a course in digital communications: `04_nyquist` (the raised
+  cosine, roll-offs from 0.05 to 1), `05_constellations` (BPSK to 64-QAM at the same
+  Eb/N0), `06_carrier_sync` (frequency offset and phase noise, foe and bps),
+  `07_timing_sync` (a clock 100 ppm slow, with and without the Gardner loop),
+  `08_equalisation` (three echoes, CMA then DD-LMS), `09_diversity` (Rayleigh fading
+  on one, two and four antennas), `10_iq_imbalance`, `11_adc` (1 to 6 bits) and
+  `12_cpm` (MSK and GMSK); they are first in the explorer of the playground and listed
+  in Getting started ("Seeing the signals along the chain").
 - A convergence card for the split step, `hager2021_convergence` (CI): on the link of
   Fig. 8 of Häger & Pfister (2021) cut to two spans, every technique of `Ssfm` (the
   midpoint phase, the effective length, the trapezoidal mean, Bosco's logarithmic steps,

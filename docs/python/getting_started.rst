@@ -92,8 +92,9 @@ Seeing the signals along the chain
 The specifications of ``specs/tutorial/`` run a single trial and place ``scope`` blocks
 along the link; in the `playground <https://com-rs.github.io/comnum/playground/>`_
 (the group ``specs/tutorial`` of the explorer), **Run** opens one tab per scope, and
-the selector **traced** switches between the receivers of the grid, which all see the
-same channel (the ``seed`` of the channel block):
+the selector **traced** switches between the conditions of the grid (a receiver, a
+roll-off, a number of antennas…), which all see the same channel when the channel
+block has a ``seed``:
 
 .. list-table::
    :header-rows: 1
@@ -113,9 +114,40 @@ same channel (the ``seed`` of the channel block):
      - 4 × 4 spatial multiplexing of 16-QAM over one Rayleigh matrix: the received
        antennas, each a sum of the four streams, and the points after the detectors
        ``mr``, ``zf``, ``mmse``, ``zf_sic`` and ``sphere`` (maximum likelihood)
+   * - ``04_nyquist.yaml``
+     - the raised cosine for roll-offs from 0.05 to 1: the band it occupies, the eye
+       open at its centre without intersymbol interference, narrower for a small roll-off
+   * - ``05_constellations.yaml``
+     - BPSK, QPSK, 8-PSK, 16-QAM and 64-QAM at the same :math:`E_{b}/N_{0}` of 12 dB, and
+       their symbol error rates against the closed forms
+   * - ``06_carrier_sync.yaml``
+     - a carrier frequency offset (the constellation turns into a ring) and phase noise
+       (arcs), corrected by the fourth-power estimator and the blind phase search
+   * - ``07_timing_sync.yaml``
+     - a sampling clock 100 ppm slow: the drifting eye and points, with and without the
+       Gardner loop
+   * - ``08_equalisation.yaml``
+     - a multipath channel of three echoes: the closed eye of intersymbol interference,
+       and the points after the adaptive equaliser (CMA, then decision-directed LMS)
+   * - ``09_diversity.yaml``
+     - QPSK over Rayleigh fading on one, two and four antennas with maximal-ratio
+       combining
+   * - ``10_iq_imbalance.yaml``
+     - the gain and phase imbalance of the I and Q branches of the transmitter: the
+       stretched and sheared constellation
+   * - ``11_adc.yaml``
+     - an ADC of 1 to 6 bits: the staircase of the time signal and the points after the
+       matched filter
+   * - ``12_cpm.yaml``
+     - MSK and GMSK (BT = 0.5 and 0.3): the constant envelope, the narrower spectrum of the
+       Gaussian pulse, and the maximum-likelihood detector over the phase trellis
 
 From the command line, ``comnum run specs/tutorial/02_ofdm.yaml`` gives the symbol
-error rate and the EVM of the trial for every receiver.
+error rate and the EVM of the trial for every receiver. The classical error-rate curves
+are campaigns of ``specs/`` (:doc:`user_guide/specifications`): ``qam_awgn`` (QAM over
+AWGN against the closed forms), ``mimo_diversity`` (the order of diversity of Alamouti
+and zero forcing), ``ofdm_eva`` (OFDM with estimated channels) and ``bicm_ldpc`` (coded
+against uncoded).
 
 The :doc:`gallery <auto_examples/index>` turns such snippets into the classical curves,
 and the :doc:`user guide <user_guide/index>` shows how to run them as Monte Carlo

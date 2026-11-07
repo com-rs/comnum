@@ -1,0 +1,24 @@
+# Continuous-phase modulation: MSK and GMSK, binary symbols at eight samples per symbol,
+# a constant envelope (the points lie on the unit circle, the transmitter's amplifier
+# can saturate). GMSK filters the frequency of MSK by a Gaussian of bandwidth–time
+# product BT over four symbols: BT = 100 is MSK in practice, BT = 0.5 and 0.3 (the value
+# of GSM) narrow the main lobe and the side lobes of the spectrum, at the cost of
+# intersymbol interference in the phase, which the maximum-likelihood detector over the
+# phase trellis (cpm_rx) handles, at an Eb/N0 of 8 dB: no error out of 4096 bits for
+# BT = 100, 6 and 9 errors for 0.5 and 0.3.
+# In the playground, the selector "traced" above a scope tab chooses BT.
+name: tutorial_cpm
+description: Constant-envelope MSK and GMSK, their spectra and phase trajectories
+seed: 9
+grid:
+  bt: [100.0, 0.5, 0.3]
+link:
+  - {type: source, constellation: BPSK, n_symbols: 4096}
+  - {type: cpm_tx, h: 1/2, pulse: gmsk, length: 4, bt: $bt, sps: 8}
+  - {type: scope, label: spectrum, view: spectrum, nfft: 1024}
+  - {type: scope, label: signal, view: constellation}
+  - {type: scope, label: time, view: time, max_samples: 320}
+  - {type: awgn_ebn0, ebn0_db: 8}
+  - {type: cpm_rx, h: 1/2, pulse: gmsk, length: 4, bt: $bt, sps: 8}
+metrics: {report: [ser]}
+stop: {max_trials: 1}

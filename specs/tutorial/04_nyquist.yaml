@@ -1,0 +1,24 @@
+# The Nyquist criterion and the roll-off: QPSK shaped by a raised-cosine pulse at eight
+# samples per symbol, for roll-offs from 0.05 to 1. The spectrum occupies (1 + α)/2 of
+# the symbol rate on each side of the carrier: the larger the roll-off, the wider the
+# band. The raised cosine is a Nyquist pulse: every symbol is zero at the sampling
+# instants of the others, so the eye is open at its centre whatever α; a small α leaves
+# long tails, and the eye closes quickly away from the centre (a timing error costs more),
+# while α = 1 gives the widest horizontal opening. Without noise, the points sampled at the
+# centre are the transmitted ones (no intersymbol interference).
+# In the playground, the selector "traced" above a scope tab chooses the roll-off.
+name: tutorial_nyquist
+description: Spectrum and eye diagram of the raised cosine for roll-offs from 0.05 to 1
+seed: 1
+grid:
+  rolloff: [0.05, 0.25, 0.5, 1.0]
+link:
+  - {type: source, constellation: QPSK, n_symbols: 4096}
+  - {type: pulse_shape, kind: rc, sps: 8, rolloff: $rolloff}
+  - {type: scope, label: spectrum, view: spectrum, nfft: 1024}
+  - {type: scope, label: eye, view: eye}
+  - {type: scope, label: time, view: time, max_samples: 320}
+  - decimate
+  - {type: scope, label: sampled}
+metrics: {report: [ser, evm]}
+stop: {max_trials: 1}

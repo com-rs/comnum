@@ -1,0 +1,26 @@
+# Fading and diversity: QPSK over flat Rayleigh fading that changes every symbol, at an
+# Eb/N0 of 10 dB, received on one, two or four antennas and combined with the known
+# channel (maximal-ratio combining: zero forcing with one transmit antenna,
+# h^H y / |h|^2). On one antenna, the points scatter along rays (the fading scales and
+# rotates every symbol) and fall into the deep fades, where the noise dominates: a bit
+# error rate of 2.3e-2 by Proakis & Salehi, eq. (13.3-7), against 3.9e-6 without
+# fading. Every antenna added is an independent branch: the combined SNR fades less, the
+# clouds tighten, and the error rate falls (diversity of order n_rx, eq. (13.4-15)):
+# the trial measures bit error rates of 2.3e-2, 3.7e-4 and 0 for one, two and four
+# antennas.
+# In the playground, the selector "traced" above a scope tab chooses the antennas.
+name: tutorial_diversity
+description: QPSK over Rayleigh fading received on one, two and four antennas
+seed: 6
+grid:
+  n_rx: [1, 2, 4]
+link:
+  - {type: source, constellation: QPSK, n_symbols: 4096}
+  - {type: mimo_tx, n_tx: 1}
+  - {type: rayleigh, n_rx: $n_rx, coherence_samples: 1}
+  - {type: awgn_ebn0, ebn0_db: 10}
+  - {type: scope, label: antennas}
+  - {type: mimo_rx, detector: zf}
+  - {type: scope, label: combined}
+metrics: {report: [ser, ber]}
+stop: {max_trials: 1}
