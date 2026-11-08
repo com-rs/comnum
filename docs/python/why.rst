@@ -9,7 +9,7 @@ claimed: the numbers below are recomputed by ``tools/highlights.py`` and checked
 
 - **Lightweight**: one run-time dependency in Python (numpy), 9 direct crates in Rust and no C, C++ or Fortran library to build; 27 MB installed with its dependencies (the benchmark's environment: komm 22 MB, OptiCommPy 321 MB, Sionna 1004 MB).
 - **Fast**: compiled Rust, Monte Carlo runs on every core; on one CPU thread, the links of the benchmark take 2.1 to 33 times as long with komm, 2.3 to 4.7 times as long with OptiCommPy and 1.1 to 7.4 times as long with Sionna as with comnum.
-- **Safe**: ``unsafe`` code forbidden in every crate, invalid inputs are errors (one error type), results independent of the thread count; 766 unit tests, 210 validation tests, 284 Python tests.
+- **Safe**: ``unsafe`` code forbidden in every crate, invalid inputs are errors (one error type), results independent of the thread count; 771 unit tests, 210 validation tests, 285 Python tests.
 - **Validated**: compared with 144 papers, standards and reference tools (88 fully reproduced, 52 partly), 477 inconsistencies found in them; 116 validation cards rerun a comparison without the paper.
 
 Lightweight
@@ -126,11 +126,11 @@ Rust checks memory safety at compile time, and ``unsafe`` code is forbidden in e
    * - Tests
      - Count
    * - Unit tests of the crates
-     - 766
+     - 771
    * - Validation tests (against papers, standards and tools)
      - 210
    * - Python tests (functions; many are parametrised)
-     - 284
+     - 285
 
 Validated
 ---------

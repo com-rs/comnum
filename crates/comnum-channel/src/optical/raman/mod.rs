@@ -18,7 +18,8 @@
 //! efficiency of the fibre
 //!
 //! $$
-//! C_{kj} = \frac{g_{R}(f_{j} - f_{k})}{A_{\mathrm{eff}}} \frac{f_{j}}{f_{\mathrm{ref}}},
+//! C_{kj} = \frac{g_{R}(f_{j} - f_{k})}{A_{kj}} \frac{f_{j}}{f_{\mathrm{ref}}},
+//! \qquad A_{kj} = \frac{A_{\mathrm{eff}}(f_{k}) + A_{\mathrm{eff}}(f_{j})}{2},
 //! \qquad f_{j} > f_{k},
 //! $$
 //!
@@ -26,6 +27,23 @@
 //! scaled with the pump frequency, and the wave of higher frequency loses the photons
 //! that the other gains: $C_{jk} = -(f_{j}/f_{k}) C_{kj}$ (photon-number
 //! conservation; without loss, $\sum_{k} \pm P_{k}/f_{k}$ is constant along $z$).
+//!
+//! # Frequency-dependent loss and effective area
+//!
+//! Over the S, C and L bands the attenuation and the effective area of a fibre change
+//! with the wavelength, and a single value of each leaves out the tilt that they give
+//! over a span. [`Raman::alpha_spectrum_db_km`] gives the
+//! attenuation $\alpha_{k} = \alpha(f_{k})$ of every wave (the signals and the pumps
+//! without their own attenuation) and [`Raman::aeff_spectrum_um2`] the effective area,
+//! both as tables of the frequency, linear between their points and constant beyond.
+//! Two waves couple through the overlap area $A_{kj}$ above, the mean of their effective
+//! areas: the overlap integral $\left(\int I_{k} I_{j}\, dA\right)^{-1}$ of two
+//! Gaussian modes of radii $w_{k}$ and $w_{j}$ is $\pi (w_{k}^{2} + w_{j}^{2})/2$, and
+//! $A_{\mathrm{eff}} = \pi w^{2}$ for each (the `effective_area_overlap` of GNPy). With
+//! empty tables every wave has the attenuation of the fibre and the area
+//! [`Raman::aeff_um2`]. The profile carries the loss of every frequency to the
+//! split-step solvers and to the power profiles of the generalised GN model; the closed
+//! forms of the GN model keep the attenuation of the fibre.
 //!
 //! The co-propagating waves are known at $z = 0$ and the counter-propagating pumps at
 //! $z = L$: a two-point boundary-value problem. [`Raman::solve`] integrates the
@@ -154,7 +172,8 @@ pub struct RamanPump {
     pub power_w: f64,
     /// Direction of propagation.
     pub direction: Direction,
-    /// Attenuation at the pump wavelength (dB/km); that of the fibre if `None`.
+    /// Attenuation at the pump wavelength (dB/km); that of the fibre at the pump
+    /// frequency if `None` ([`Raman::alpha_db_km_at`]).
     pub alpha_db_km: Option<f64>,
 }
 
@@ -177,8 +196,19 @@ pub struct Raman {
     pub pumps: Vec<RamanPump>,
     /// The gain spectrum of the fibre.
     pub gain: RamanGain,
-    /// Effective area of the fibre (µm²).
+    /// Effective area of the fibre (µm²), at every frequency when
+    /// [`Raman::aeff_spectrum_um2`] is empty.
     pub aeff_um2: f64,
+    /// The effective area against frequency: `(frequency (Hz), area (µm²))` points of
+    /// increasing frequency, linear between them and constant beyond; empty: `aeff_um2`
+    /// at every frequency. Two waves couple through the mean of their areas (see the
+    /// module).
+    pub aeff_spectrum_um2: Vec<(f64, f64)>,
+    /// The attenuation of the fibre against frequency: `(frequency (Hz), attenuation
+    /// (dB/km))` points of increasing frequency, linear between them and constant beyond,
+    /// the loss of the signals and of the pumps without their own `alpha_db_km`; empty:
+    /// the attenuation of the fibre ([`FiberParams::alpha_db_km`]) at every frequency.
+    pub alpha_spectrum_db_km: Vec<(f64, f64)>,
     /// Temperature of the fibre (K), for the spontaneous emission.
     pub temperature_k: f64,
     /// The Raman interaction between the signals (ISRS); without it the signals only
@@ -201,7 +231,8 @@ pub struct Raman {
 }
 
 impl Default for Raman {
-    /// No pump, the gain of standard single-mode fibre, 80 µm², 300 K, ISRS, steps of
+    /// No pump, the gain of standard single-mode fibre, 80 µm² and the attenuation of the
+    /// fibre at every frequency, 300 K, ISRS, steps of
     /// 100 m, tolerance $10^{-10}$, at most 500 sweeps, slices of 25 GHz, no double
     /// Rayleigh backscattering.
     fn default() -> Self {
@@ -209,6 +240,8 @@ impl Default for Raman {
             pumps: Vec::new(),
             gain: RamanGain::ssmf(),
             aeff_um2: 80.0,
+            aeff_spectrum_um2: Vec::new(),
+            alpha_spectrum_db_km: Vec::new(),
             temperature_k: 300.0,
             isrs: true,
             step_km: 0.1,
@@ -424,7 +457,7 @@ impl Raman {
     /// $-(f_{k}/f_{j}) C_{jk}$ when `f_j < f_k` (photon-number conservation), 0 at equal
     /// frequencies (see the module).
     pub fn coupling(&self, f_k: f64, f_j: f64) -> f64 {
-        let aeff = self.aeff_um2 * 1e-12;
+        let aeff = (self.aeff_um2_at(f_k) + self.aeff_um2_at(f_j)) / 2.0 * 1e-12;
         if f_j > f_k {
             self.gain.efficiency(f_k, f_j, aeff)
         } else if f_j < f_k {
@@ -432,6 +465,18 @@ impl Raman {
         } else {
             0.0
         }
+    }
+
+    /// The effective area at `f_hz` (µm²): [`Raman::aeff_spectrum_um2`] interpolated,
+    /// or [`Raman::aeff_um2`] when it is empty.
+    pub fn aeff_um2_at(&self, f_hz: f64) -> f64 {
+        piecewise_linear(&self.aeff_spectrum_um2, f_hz).unwrap_or(self.aeff_um2)
+    }
+
+    /// The attenuation of the fibre at `f_hz` (dB/km): [`Raman::alpha_spectrum_db_km`]
+    /// interpolated, or [`FiberParams::alpha_db_km`] when it is empty.
+    pub fn alpha_db_km_at(&self, fiber: &FiberParams, f_hz: f64) -> f64 {
+        piecewise_linear(&self.alpha_spectrum_db_km, f_hz).unwrap_or(fiber.alpha_db_km)
     }
 
     /// The slices of the spectrum of the polarisations `fields` sampled at `fs` around
@@ -466,6 +511,21 @@ impl Raman {
         let interp = profile.interpolator(&freqs);
         Ok(FieldSpan { profile, interp, freqs, length_km: fiber.span_km, slice_hz: self.slice_hz })
     }
+}
+
+/// The value at `x` of the table `points` (increasing abscissae), linear between its
+/// points and constant beyond; `None` for an empty table.
+fn piecewise_linear(points: &[(f64, f64)], x: f64) -> Option<f64> {
+    let (first, last) = (points.first()?, points[points.len() - 1]);
+    if x <= first.0 {
+        return Some(first.1);
+    }
+    if x >= last.0 {
+        return Some(last.1);
+    }
+    let i = points.partition_point(|p| p.0 <= x).clamp(1, points.len() - 1);
+    let ((x0, y0), (x1, y1)) = (points[i - 1], points[i]);
+    Some(y0 + (x - x0) / (x1 - x0) * (y1 - y0))
 }
 
 impl FieldSpan {
@@ -538,7 +598,7 @@ impl FieldSpan {
 mod tests {
     use super::*;
     use comnum_math::nlse::NonlinearStep;
-    use comnum_math::{BOLTZMANN, PLANCK, SPEED_OF_LIGHT};
+    use comnum_math::{BOLTZMANN, PLANCK, SPEED_OF_LIGHT, db2np};
 
     fn fiber(span_km: f64) -> FiberParams {
         FiberParams { span_km, ..FiberParams::default() }
@@ -598,6 +658,84 @@ mod tests {
         assert!((photons(last) / photons(0) - 1.0).abs() < 1e-9);
         // and the pumps transferred power to the signals
         assert!(p.net_gain_db(0) > 3.0);
+    }
+
+    #[test]
+    fn a_frequency_dependent_loss_is_the_loss_of_each_wave() {
+        // no pump, no ISRS: every signal loses α(f) L, interpolated between the points
+        let f = fiber(80.0);
+        let table = vec![(186e12, 0.25), (196e12, 0.19), (206e12, 0.21)];
+        let raman = Raman { isrs: false, alpha_spectrum_db_km: table, ..Raman::default() };
+        let signals = [(180e12, 1e-3), (186e12, 1e-3), (191e12, 1e-3), (201e12, 1e-3), (210e12, 1e-3)];
+        let p = raman.solve(&f, &signals).unwrap();
+        for (k, alpha) in [0.25, 0.25, 0.22, 0.20, 0.21].iter().enumerate() {
+            assert!((p.net_gain_db(k) + alpha * 80.0).abs() < 1e-9, "{k}: {}", p.net_gain_db(k));
+            assert!(p.on_off_gain_db(k).abs() < 1e-9);
+        }
+        // a pump without its own attenuation takes that of the table
+        let pump = RamanPump::at_wavelength(1455.0, 0.1, Direction::Counter);
+        let q = Raman { pumps: vec![pump.clone()], ..raman.clone() }.solve(&f, &signals[..1]).unwrap();
+        let expected = db2np(raman.alpha_db_km_at(&f, pump.frequency_hz));
+        assert!((q.alpha_np_km[1] - expected).abs() < 1e-15);
+        assert!((raman.alpha_db_km_at(&f, 191e12) - 0.22).abs() < 1e-15);
+        assert!((Raman::default().alpha_db_km_at(&f, 191e12) - f.alpha_db_km).abs() < 1e-15);
+    }
+
+    #[test]
+    fn two_waves_couple_through_the_mean_of_their_effective_areas() {
+        let (fs, fp) = (nm2hz(1550.0), nm2hz(1450.0));
+        let raman = Raman { aeff_spectrum_um2: vec![(fs, 85.0), (fp, 75.0)], ..Raman::default() };
+        let gain = RamanGain::ssmf();
+        assert!((raman.coupling(fs, fp) / gain.efficiency(fs, fp, 80e-12) - 1.0).abs() < 1e-12);
+        assert!((raman.coupling(fp, fs) + fp / fs * gain.efficiency(fs, fp, 80e-12)).abs() < 1e-12);
+        assert!((raman.aeff_um2_at(nm2hz(1500.0)) - 80.0).abs() < 0.2);
+        assert!((raman.aeff_um2_at(1.0) - 85.0).abs() < 1e-12 && (raman.aeff_um2_at(1e15) - 75.0).abs() < 1e-12);
+        // empty table: the single area
+        let flat = Raman::default();
+        assert!((flat.coupling(fs, fp) - gain.efficiency(fs, fp, 80e-12)).abs() < 1e-15);
+    }
+
+    #[test]
+    fn photons_are_conserved_across_the_s_c_and_l_bands() {
+        // 146 channels from 1480 to 1625 nm, an area that grows with the wavelength and
+        // co- or counter-pumps from 1365 to 1485 nm, without loss: the photon flux
+        // Σ± P/f is constant, to the error of the scheme (second order with counter-pumps)
+        let f = FiberParams { alpha_db_km: 0.0, span_km: 80.0, ..FiberParams::default() };
+        let signals: Vec<(f64, f64)> = (0..146).map(|k| (nm2hz(1625.0 - k as f64), 1e-3)).collect();
+        let aeff_spectrum_um2 = vec![(nm2hz(1625.0), 86.0), (nm2hz(1365.0), 70.0)];
+        for (direction, tolerance) in [(Direction::Co, 1e-9), (Direction::Counter, 1e-5)] {
+            let pumps = [1365.0, 1395.0, 1425.0, 1455.0, 1485.0]
+                .iter()
+                .map(|w| RamanPump::at_wavelength(*w, 0.15, direction))
+                .collect();
+            let raman = Raman { pumps, aeff_spectrum_um2: aeff_spectrum_um2.clone(), ..Raman::default() };
+            let p = raman.solve(&f, &signals).unwrap();
+            let flux = |i: usize| -> f64 {
+                (0..p.freqs_hz.len())
+                    .map(|k| {
+                        let sign = if p.directions[k] == Direction::Counter { -1.0 } else { 1.0 };
+                        sign * p.log_power[k][i].exp() / p.freqs_hz[k]
+                    })
+                    .sum()
+            };
+            let last = p.z_km.len() - 1;
+            let drift = ((flux(last) - flux(0)) / flux(0)).abs();
+            assert!(drift < tolerance, "{direction:?}: {drift}");
+            assert!(p.net_gain_db(0) > 1.0, "{direction:?}: {}", p.net_gain_db(0));
+        }
+    }
+
+    #[test]
+    fn invalid_spectra_are_rejected() {
+        let f = fiber(80.0);
+        for raman in [
+            Raman { aeff_spectrum_um2: vec![(194e12, 80.0), (193e12, 80.0)], ..Raman::default() },
+            Raman { aeff_spectrum_um2: vec![(193e12, 0.0)], ..Raman::default() },
+            Raman { alpha_spectrum_db_km: vec![(193e12, -0.1)], ..Raman::default() },
+            Raman { alpha_spectrum_db_km: vec![(193e12, f64::NAN)], ..Raman::default() },
+        ] {
+            assert!(raman.solve(&f, &[(193e12, 1e-3)]).is_err(), "{raman:?}");
+        }
     }
 
     #[test]

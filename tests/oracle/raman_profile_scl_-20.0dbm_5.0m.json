@@ -1,0 +1,33 @@
+{
+ "data": {
+  "aeff_um2": {
+   "__npz__": "data.aeff_um2"
+  },
+  "alpha_db_km": {
+   "__npz__": "data.alpha_db_km"
+  },
+  "ase_psd": {
+   "__npz__": "data.ase_psd"
+  },
+  "net_gain_db": {
+   "__npz__": "data.net_gain_db"
+  },
+  "pumps_dbm": {
+   "__array__": {
+    "dtype": "<f8",
+    "shape": [
+     5,
+     2
+    ],
+    "values": [20.791812460476248, -18.858497054010428, -19.558672713642736, 23.979400086720375, -6.368950153756948, 23.010299956639813, 3.3615312700250755, 21.760912590556813, 9.083532183415603, 20.791812460476248]
+   }
+  }
+ },
+ "name": "raman_profile_scl_-20.0dbm_5.0m",
+ "npz": "raman_profile_scl_-20.0dbm_5.0m.npz",
+ "numpy": "2.5.4",
+ "python": "3.12.15",
+ "recorded": "2026-11-08",
+ "tool": "GNPy",
+ "version": "3.0.1"
+}

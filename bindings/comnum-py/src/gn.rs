@@ -167,7 +167,12 @@ fn format_moments(
 ///         polarisations).
 ///     raman (dict): the keys of ``fiber.raman`` in a specification: ``pumps`` (a list of
 ///         ``{wavelength_nm | frequency_thz, power_mw, direction: "co" | "counter",
-///         alpha_db_km}``), ``aeff_um2`` (80), ``temperature_k`` (300), ``isrs`` (True:
+///         alpha_db_km}``), ``aeff_um2`` (80), ``aeff_spectrum`` (``{frequency_thz,
+///         aeff_um2}``, the effective area against frequency, linear between the points;
+///         ``aeff_um2`` everywhere by default), ``alpha_spectrum`` (``{frequency_thz,
+///         alpha_db_km}``, the attenuation of the signals and of the pumps without their
+///         own against frequency; that of ``fiber`` by default), ``temperature_k`` (300),
+///         ``isrs`` (True:
 ///         the channels also exchange power), ``step_km`` (0.1), ``slice_hz`` (25e9, for
 ///         the split-step solvers), ``gain`` (``{offsets_thz, gain_m_w,
 ///         reference_thz}``, the gain spectrum ``g_R A_eff``; standard single-mode fibre

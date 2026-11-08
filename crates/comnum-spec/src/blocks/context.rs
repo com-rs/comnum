@@ -117,6 +117,10 @@ block_params! {
     pub(crate) struct RamanSpec {
         pumps: Vec<Mapping<PumpSpec>> [serde_json::json!([]) => "[]"], "the pumps of every span, any number, co- or counter-propagating";
         aeff_um2: f64 [Raman::default().aeff_um2 => "80.0"] "µm²" > 0, "effective area";
+        aeff_spectrum: Option<Mapping<AeffSpectrumSpec>> [absent "aeff_um2 at every frequency"],
+            "the effective area against frequency (linear between the points, constant beyond); two waves couple through the mean of their areas";
+        alpha_spectrum: Option<Mapping<AlphaSpectrumSpec>> [absent "alpha_db_km of the fibre at every frequency"],
+            "the attenuation against frequency (linear between the points, constant beyond), of the signals and of the pumps without their own alpha_db_km";
         temperature_k: f64 [Raman::default().temperature_k => "300.0"] "K" > 0,
             "temperature, for the spontaneous Raman noise";
         isrs: bool [Raman::default().isrs => "true"], "the channels also exchange power (inter-channel stimulated Raman scattering)";
@@ -141,6 +145,37 @@ block_params! {
 }
 
 block_params! {
+    /// The effective area against frequency of the `raman` mapping.
+    pub(crate) struct AeffSpectrumSpec {
+        frequency_thz: Vec<f64> [required] "THz", "increasing frequencies of the points";
+        aeff_um2: Vec<f64> [required] "µm²", "effective areas at the frequencies";
+    }
+}
+
+block_params! {
+    /// The attenuation against frequency of the `raman` mapping.
+    pub(crate) struct AlphaSpectrumSpec {
+        frequency_thz: Vec<f64> [required] "THz", "increasing frequencies of the points";
+        alpha_db_km: Vec<f64> [required] "dB/km", "attenuations at the frequencies";
+    }
+}
+
+/// The `(Hz, value)` points of a spectrum of the `raman` mapping.
+///
+/// # Errors
+/// [`Error::Config`] when the two lists differ in length.
+fn spectrum_points(name: &str, frequency_thz: &[f64], values: &[f64]) -> Result<Vec<(f64, f64)>> {
+    if frequency_thz.len() != values.len() {
+        return Err(Error::Config(format!(
+            "raman {name}: {} frequencies for {} values",
+            frequency_thz.len(),
+            values.len()
+        )));
+    }
+    Ok(frequency_thz.iter().zip(values).map(|(f, v)| (f * 1e12, *v)).collect())
+}
+
+block_params! {
     /// A measured Raman gain curve of the `raman` mapping.
     pub(crate) struct GainSpec {
         offsets_thz: Vec<f64> [required] "THz", "frequency offsets of the curve";
@@ -161,10 +196,26 @@ impl RamanSpec {
                 RamanGain::new(g.offsets_thz.iter().map(|f| f * 1e12).collect(), g.gain_m_w, g.reference_thz * 1e12)?
             }
         };
+        let aeff_spectrum_um2 = match &self.aeff_spectrum {
+            None => Vec::new(),
+            Some(a) => {
+                let a = a.parse("raman aeff_spectrum")?;
+                spectrum_points("aeff_spectrum", &a.frequency_thz, &a.aeff_um2)?
+            }
+        };
+        let alpha_spectrum_db_km = match &self.alpha_spectrum {
+            None => Vec::new(),
+            Some(a) => {
+                let a = a.parse("raman alpha_spectrum")?;
+                spectrum_points("alpha_spectrum", &a.frequency_thz, &a.alpha_db_km)?
+            }
+        };
         Ok(Raman {
             pumps,
             gain,
             aeff_um2: self.aeff_um2,
+            aeff_spectrum_um2,
+            alpha_spectrum_db_km,
             temperature_k: self.temperature_k,
             isrs: self.isrs,
             step_km: self.step_km,
@@ -215,5 +266,27 @@ mod tests {
         // the choices of a pump are read without case
         let p = PumpSpec::parse("pump", serde_json::json!({"wavelength_nm": 1450, "power_mw": 100, "direction": "CO"}));
         assert_eq!(p.unwrap().pump().unwrap().direction, Direction::Co);
+    }
+
+    #[test]
+    fn the_spectra_of_the_raman_mapping_are_read_in_hertz() {
+        let r = RamanSpec::parse(
+            "raman",
+            serde_json::json!({
+                "aeff_spectrum": {"frequency_thz": [185.0, 220.0], "aeff_um2": [86.0, 72.0]},
+                "alpha_spectrum": {"frequency_thz": [185.0, 193.0, 205.0], "alpha_db_km": [0.2, 0.19, 0.24]}
+            }),
+        )
+        .unwrap()
+        .raman()
+        .unwrap();
+        assert_eq!(r.aeff_spectrum_um2, vec![(185e12, 86.0), (220e12, 72.0)]);
+        assert_eq!(r.alpha_spectrum_db_km, vec![(185e12, 0.2), (193e12, 0.19), (205e12, 0.24)]);
+        // two lists of different lengths
+        let bad = RamanSpec::parse(
+            "raman",
+            serde_json::json!({"alpha_spectrum": {"frequency_thz": [185.0], "alpha_db_km": []}}),
+        );
+        assert!(bad.unwrap().raman().is_err());
     }
 }

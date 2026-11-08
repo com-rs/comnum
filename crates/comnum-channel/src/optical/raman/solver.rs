@@ -29,6 +29,20 @@ impl Raman {
             "raman: tolerance must be positive and max_iterations at least 1".into()
         })?;
         ensure(self.slice_hz > 0.0, || format!("raman: slice_hz must be positive, got {}", self.slice_hz))?;
+        for (name, table, floor) in [
+            ("aeff_spectrum_um2", &self.aeff_spectrum_um2, f64::MIN_POSITIVE),
+            ("alpha_spectrum_db_km", &self.alpha_spectrum_db_km, 0.0),
+        ] {
+            ensure(
+                table.iter().all(|(f, v)| f.is_finite() && *f > 0.0 && v.is_finite() && *v >= floor)
+                    && table.windows(2).all(|w| w[1].0 > w[0].0),
+                || {
+                    format!(
+                        "raman: {name} needs positive, increasing frequencies and finite values (positive areas, non-negative attenuations), got {table:?}"
+                    )
+                },
+            )?;
+        }
         for p in &self.pumps {
             ensure(p.frequency_hz > 0.0 && p.power_w >= 0.0, || {
                 format!("raman: a pump needs a positive frequency and a non-negative power, got {p:?}")
@@ -50,14 +64,14 @@ impl Raman {
         ensure(signals.iter().all(|(f, p)| *f > 0.0 && *p >= 0.0), || {
             "raman: signals need positive frequencies and non-negative powers".into()
         })?;
-        let alpha = fiber.alpha_np_km();
+        let alpha = |f: f64| db2np(self.alpha_db_km_at(fiber, f));
         let mut waves: Vec<Wave> = signals
             .iter()
-            .map(|(f, p)| Wave { f: *f, alpha, p_in: p.max(POWER_FLOOR_W), counter: false, signal: true })
+            .map(|(f, p)| Wave { f: *f, alpha: alpha(*f), p_in: p.max(POWER_FLOOR_W), counter: false, signal: true })
             .collect();
         waves.extend(self.pumps.iter().map(|p| Wave {
             f: p.frequency_hz,
-            alpha: p.alpha_db_km.map_or(alpha, db2np),
+            alpha: p.alpha_db_km.map_or_else(|| alpha(p.frequency_hz), db2np),
             p_in: p.power_w.max(POWER_FLOOR_W),
             counter: p.direction == Direction::Counter,
             signal: false,

@@ -51,6 +51,8 @@
 //!       - {frequency_thz: 205.0, power_mw: 100, direction: co, alpha_db_km: 0.25}
 //!     isrs: true                   # the channels also exchange power (default)
 //!     aeff_um2: 80                 # effective area (default)
+//!     # aeff_spectrum: {frequency_thz: [184.5, 219.6], aeff_um2: [86, 72]}
+//!     # alpha_spectrum: {frequency_thz: [184.5, 193.4, 205.3], alpha_db_km: [0.20, 0.19, 0.24]}
 //!     temperature_k: 300           # for the spontaneous noise (default)
 //!     step_km: 0.1                 # grid of the power equations (default)
 //!     slice_hz: 25e9               # slices of the spectrum of the field (default)

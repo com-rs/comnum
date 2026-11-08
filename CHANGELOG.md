@@ -8,6 +8,21 @@ and follow [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- The Raman solver takes the attenuation and the effective area of the fibre against
+  frequency, `Raman::alpha_spectrum_db_km` and `Raman::aeff_spectrum_um2` (tables of
+  `(Hz, value)` points, linear between them and constant beyond; in a specification and
+  in Python the `raman` keys `alpha_spectrum: {frequency_thz, alpha_db_km}` and
+  `aeff_spectrum: {frequency_thz, aeff_um2}`), and `Raman::alpha_db_km_at` and
+  `Raman::aeff_um2_at`. The attenuation applies to the signals and to the pumps without
+  their own `alpha_db_km`, and two waves couple through the mean of their effective areas
+  (exact for Gaussian modes; GNPy's `effective_area_overlap`). The power profiles carry
+  them to `ssfm`, `manakov`, the generalised GN model and `design_pumps`. Compared with
+  GNPy 3.0.1 on an S+C+L span (161 channels from 1490 to 1620 nm, a co-pump and four
+  counter-pumps, GNPy's attenuation table and effective areas; recorded in
+  `tests/oracle/raman_profile_scl_*`): net gains within 0.0056 dB, pumps within 0.017 dB,
+  spontaneous noise within 0.004 dB at GNPy's step of 5 m, converging at first order to
+  comnum; the photon flux of a lossless S+C+L span is conserved within 1e-9 (co-pumps) and
+  1e-5 (counter-pumps). Empty tables, the default, change no result.
 - `Ofdm` takes optional complex weights of its active subcarriers, `weights` (Rust:
   `Option<Vec<C64>>`, Python: `Ofdm(..., weights=w)` and the property `Ofdm.weights`), for
   power loading or a precoder per subcarrier: the transmitter sends $w_{k} X_{k}$
