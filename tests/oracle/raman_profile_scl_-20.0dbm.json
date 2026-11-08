@@ -1,0 +1,49 @@
+{
+ "data": {
+  "aeff_um2": {
+   "__npz__": "data.aeff_um2"
+  },
+  "alpha_db_km": {
+   "__npz__": "data.alpha_db_km"
+  },
+  "ase_db_coarse": {
+   "__npz__": "data.ase_db_coarse"
+  },
+  "ase_db_fine": {
+   "__npz__": "data.ase_db_fine"
+  },
+  "net_gain_db_coarse": {
+   "__npz__": "data.net_gain_db_coarse"
+  },
+  "net_gain_db_fine": {
+   "__npz__": "data.net_gain_db_fine"
+  },
+  "pumps_dbm_coarse": {
+   "__array__": {
+    "dtype": "<f8",
+    "shape": [
+     5,
+     2
+    ],
+    "values": [20.791812460476248, -18.85010713589071, -19.543572166001326, 23.979400086720375, -6.361838423360503, 23.010299956639813, 3.365090804921074, 21.760912590556813, 9.085621596290913, 20.791812460476248]
+   }
+  },
+  "pumps_dbm_fine": {
+   "__array__": {
+    "dtype": "<f8",
+    "shape": [
+     5,
+     2
+    ],
+    "values": [20.791812460476248, -18.84964124021583, -19.54273371463958, 23.979400086720375, -6.361443451844096, 23.010299956639813, 3.365288516720458, 21.760912590556813, 9.085737650599746, 20.791812460476248]
+   }
+  }
+ },
+ "name": "raman_profile_scl_-20.0dbm",
+ "npz": "raman_profile_scl_-20.0dbm.npz",
+ "numpy": "2.5.4",
+ "python": "3.12.15",
+ "recorded": "2026-11-08",
+ "tool": "GNPy",
+ "version": "3.0.1"
+}

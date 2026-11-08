@@ -1579,7 +1579,7 @@
   area: Reference implementations
   ref: "GNPy 3.0 (recorded outputs)"
   module: comnum_channel::optical::{gn, raman}
-  tested: "the generalised GN model with counter-pumps (0.02 dB); the power profiles and spontaneous noise of multi-pump spans; an S+C+L span (161 channels from 1490 to 1620 nm, a co-pump and four counter-pumps from 1350 to 1470 nm) with GNPy's frequency-dependent attenuation and effective area: the attenuation of every channel within 1e-9, the net gains within 0.0056 dB, the pumps within 0.017 dB and the spontaneous noise within 0.004 dB at GNPy's step of 5 m, converging at first order (Euler) to comnum"
+  tested: "the generalised GN model with counter-pumps (0.02 dB); the power profiles and spontaneous noise of multi-pump spans; an S+C+L span (161 channels from 1490 to 1620 nm, a co-pump and four counter-pumps from 1350 to 1470 nm) with GNPy's frequency-dependent attenuation and effective area: the attenuation of every channel within 1e-9, GNPy's Euler steps of 0.5 and 0.25 m extrapolated to a zero step (Richardson): the net gains and the pumps within 2e-6 dB, the spontaneous noise within 3e-5 dB (GNPy alone at 0.25 m: 3e-4 dB on the gains, 8e-4 dB on the pumps)"
   tests:
     - tests/oracle/test_gnpy_oracle.py
   badge: green

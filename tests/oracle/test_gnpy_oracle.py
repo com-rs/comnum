@@ -10,7 +10,7 @@ gain where comnum conserves the photons (the pump loses ``f_p/f_s`` times that p
 The documented differences are tested as such:
 
 - GNPy integrates by Euler's method: its profiles converge to those of comnum (RK4) at
-  first order in its step;
+  first order in its step (the S+C+L span extrapolates two fine steps to a zero step);
 - the NLI of GNPy converges to that of comnum as its frequency grid is refined (its
   ``dispersion_tolerance`` and ``phase_shift_tolerance``); at its default tolerances it
   underestimates the NLI of counter-pumped spans by about 1 dB;
@@ -183,6 +183,10 @@ def attenuation_spectrum():
     return [f for f, _ in points], [a for _, a in points]
 
 
+SCL_STEPS_M = {"coarse": 0.5, "fine": 0.25}
+"""The two Euler steps of GNPy whose results are extrapolated to a zero step."""
+
+
 def test_power_profiles_of_an_s_c_l_span_with_frequency_dependent_loss_and_area():
     """161 channels from 1490 to 1620 nm, a co-pump and four counter-pumps over 80 km,
     with the attenuation of the table above and the effective area of GNPy's
@@ -203,23 +207,13 @@ def test_power_profiles_of_an_s_c_l_span_with_frequency_dependent_loss_and_area(
     freqs = np.concatenate([abs_ch, [pump_frequency(p) for p in pumps]])
     f_thz, alpha_db_km = attenuation_spectrum()
     fiber = comnum.FiberParams(span_km=length, fc_hz=FC)
-    for p_dbm, step_m in [(0.0, 20.0), (0.0, 5.0), (-20.0, 5.0)]:
+    for p_dbm in [0.0, -20.0]:
 
-        def compute(p_dbm=p_dbm, step_m=step_m):
+        def compute(p_dbm=p_dbm):
             from gnpy.core.elements import Fiber, RamanFiber
             from gnpy.core.parameters import SimParams
             from gnpy.core.science_utils import RamanSolver
 
-            SimParams.set_params(
-                {
-                    "raman_params": {
-                        "flag": True,
-                        "method": "numerical",
-                        "result_spatial_resolution": 1e3,
-                        "solver_spatial_resolution": step_m,
-                    }
-                }
-            )
             params = {
                 "length": length,
                 "length_units": "km",
@@ -243,26 +237,39 @@ def test_power_profiles_of_an_s_c_l_span_with_frequency_dependent_loss_and_area(
                 return np.where(cr < 0, cr * np.outer(f, 1 / f), cr)
 
             span.cr = photon_conserving
-            si = NS(
-                pch=np.full(nch, 1e-3 * 10 ** (p_dbm / 10)),
-                frequency=abs_ch,
-                baud_rate=np.ones(nch),
-                number_of_channels=nch,
-            )
-            srs = RamanSolver.calculate_stimulated_raman_scattering(si, span)
-            ase = RamanSolver.calculate_spontaneous_raman_scattering(si, srs, span)
-            return {
+            out = {
                 "aeff_um2": span.params.effective_area_scaling(freqs) * 1e12,
                 "alpha_db_km": span.alpha(freqs) * 1e3 * 10 * np.log10(np.e),
-                "net_gain_db": 10 * np.log10(srs.loss_profile[:nch, -1]),
-                "pumps_dbm": 10 * np.log10(srs.power_profile[nch:][:, [0, -1]]) + 30,
-                "ase_psd": ase * srs.loss_profile[:nch, -1],
             }
+            for name, step_m in SCL_STEPS_M.items():
+                SimParams.set_params(
+                    {
+                        "raman_params": {
+                            "flag": True,
+                            "method": "numerical",
+                            "result_spatial_resolution": 100.0,
+                            "solver_spatial_resolution": step_m,
+                        }
+                    }
+                )
+                si = NS(
+                    pch=np.full(nch, 1e-3 * 10 ** (p_dbm / 10)),
+                    frequency=abs_ch,
+                    baud_rate=np.ones(nch),
+                    number_of_channels=nch,
+                )
+                srs = RamanSolver.calculate_stimulated_raman_scattering(si, span)
+                ase = RamanSolver.calculate_spontaneous_raman_scattering(si, srs, span)
+                gain = srs.loss_profile[:nch, -1]
+                out[f"net_gain_db_{name}"] = 10 * np.log10(gain)
+                out[f"pumps_dbm_{name}"] = 10 * np.log10(srs.power_profile[nch:][:, [0, -1]]) + 30
+                out[f"ase_db_{name}"] = 10 * np.log10(ase * gain)
+            return out
 
-        ref = oracle(f"raman_profile_scl_{p_dbm}dbm_{step_m}m", compute, tool=TOOL)
+        ref = oracle(f"raman_profile_scl_{p_dbm}dbm", compute, tool=TOOL)
         raman = {
             "pumps": pumps,
-            "step_km": 0.05,
+            "step_km": 0.0125,
             "alpha_spectrum": {"frequency_thz": f_thz, "alpha_db_km": alpha_db_km},
             "aeff_spectrum": {
                 "frequency_thz": list(np.sort(freqs) / 1e12),
@@ -274,17 +281,26 @@ def test_power_profiles_of_an_s_c_l_span_with_frequency_dependent_loss_and_area(
         # the attenuation that GNPy interpolates is that of comnum
         loss = -(ours["net_gain_db"] - ours["on_off_gain_db"]) / length
         np.testing.assert_allclose(loss, ref["alpha_db_km"][:nch], rtol=1e-9)
-        err = np.abs(ours["net_gain_db"] - ref["net_gain_db"]).max()
-        pumps_err = np.abs(ours["power_dbm"][nch:][:, [0, -1]] - ref["pumps_dbm"]).max()
-        ase_err = np.abs(np.log10(ours["ase_psd"] / ref["ase_psd"])).max() * 10
-        print(f"{p_dbm} dBm: gains {err:.2e} dB, pumps {pumps_err:.2e} dB, ASE {ase_err:.2e} dB")
-        # Euler converges at first order (measured at 20, 10, 5 and 2.5 m against comnum
-        # at 12.5 m): the gains by 1.13e-3 dB per metre of step (0.0225 dB at 20 m,
-        # 0.0028 dB at 2.5 m), the pumps by 3.3e-3 (the counter-pump at 1380 nm, the most
-        # depleted), the spontaneous noise from 0.0106 to 0.0023 dB
-        assert err < 1.2e-3 * step_m, (p_dbm, err)
-        assert pumps_err < 3.5e-3 * step_m, (p_dbm, pumps_err)
-        assert ase_err < 1e-3 * step_m, (p_dbm, ase_err)
+
+        # GNPy's Euler steps converge at first order: the Richardson extrapolation
+        # 2 x(h/2) - x(h) of its runs at 0.5 and 0.25 m removes the term in h
+        def extrapolated(key, ref=ref):
+            return 2 * np.asarray(ref[f"{key}_fine"]) - np.asarray(ref[f"{key}_coarse"])
+
+        err = np.abs(ours["net_gain_db"] - extrapolated("net_gain_db")).max()
+        pumps_err = np.abs(ours["power_dbm"][nch:][:, [0, -1]] - extrapolated("pumps_dbm")).max()
+        ase_err = np.abs(10 * np.log10(ours["ase_psd"]) - extrapolated("ase_db")).max()
+        raw_err = np.abs(ours["net_gain_db"] - ref["net_gain_db_fine"]).max()
+        print(
+            f"{p_dbm} dBm: gains {err:.1e} dB (GNPy at 0.25 m: {raw_err:.1e}), "
+            f"pumps {pumps_err:.1e} dB, ASE {ase_err:.1e} dB"
+        )
+        # measured (0 and -20 dBm): 4.9e-7 and 1.0e-6 dB on the gains, 5.0e-7 and 8.1e-7 dB
+        # on the pumps, 1.0e-5 and 9.5e-6 dB on the spontaneous noise (GNPy integrates it on its 100 m output grid); GNPy alone at
+        # 0.25 m is 2.8e-4 dB away on the gains and 8.1e-4 dB on the pumps
+        assert err < 2e-6, (p_dbm, err)
+        assert pumps_err < 2e-6, (p_dbm, pumps_err)
+        assert ase_err < 3e-5, (p_dbm, ase_err)
 
 
 @pytest.mark.parametrize("with_pumps", [False, True])
