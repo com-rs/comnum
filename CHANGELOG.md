@@ -386,7 +386,7 @@ result changes.
   `dbp` block `nonlinear_length: step` and `Ssfm.backpropagate(nonlinear_length="step")`:
   the nonlinear step takes the power at the middle of the step times the step, the
   convention of the code of Häger & Pfister, instead of the power integrated over the
-  step (`effective`, the default, unchanged). It explains the gap of their Fig. 8: the
+  step (`effective`, the default, unchanged). With it their Fig. 8 is reproduced: the
   DBP with 4 steps per span is within 0.09 dB up to 6 dBm and 0.24 and 0.33 dB above at
   7 and 8 dBm, against 0.29 to 1.07 dB above from 5 to 8 dBm with the default.
 

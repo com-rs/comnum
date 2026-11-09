@@ -95,8 +95,9 @@ pub enum NonlinearLength {
     Effective,
     /// The step $\delta$ itself: the power at the middle of the step times the step (the
     /// midpoint rule), the symmetric steps of the code of Häger & Pfister (2021, LDBP,
-    /// `ssfm_parameters`, the attenuation carried by the nonlinear coefficients). It gives
-    /// a long step less phase than it accumulated: 33 % less for 70 km at 0.2 dB/km.
+    /// `ssfm_parameters`, the attenuation carried by the nonlinear coefficients). Both
+    /// conventions agree as the step shrinks; on a step of 70 km at 0.2 dB/km this one
+    /// gives 33 % less phase than `Effective`.
     Step,
 }
 

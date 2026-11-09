@@ -82,11 +82,12 @@ Zhang, Li & Dong (2013) that Häger & Pfister use (*IEEE J. Sel. Areas Commun.* 
 start of the span. On Fig. 8 of Häger & Pfister (32 GBd over 10 × 100 km) it reproduces
 the DBP with 2 and 4 steps per span within 0.15 dB up to 4 dBm, where equal steps and
 Bosco's steps fall 1.7 to 4.9 dB below (``specs/validation/hager2021_fig8.yaml``).
-Above 4 dBm the DBP with 4 steps of comnum is up to 1.1 dB better than the figure: its
-nonlinear step integrates the power over the step, where the code of the paper takes the
-power at the middle of the step times the step. ``nonlinear_length="step"`` selects the
-paper's convention, which reproduces the figure within 0.33 dB up to 8 dBm; the default,
-``"effective"``, is the more accurate one.
+Above 4 dBm the nonlinear step matters: the code published with the paper takes the
+power at the middle of the step times the step, comnum's default the power integrated
+over the step. Both are second-order conventions that agree as the step shrinks.
+``nonlinear_length="step"`` selects the paper's convention, which reproduces the figure
+within 0.33 dB up to 8 dBm; with the default, ``"effective"``, the DBP with 4 steps is
+up to 1.1 dB above the figure.
 
 **The sampling rate** must hold the four-wave mixing that falls on the channel under
 test: at least :math:`\frac{3}{2} B_{\mathrm{WDM}} + \frac{1}{2} B_{\mathrm{CUT}}`, the
@@ -221,10 +222,12 @@ curve:
   Dong (2013) with the factor 0.4 (its Sec. IV-C). With equal steps the DBP with 2 steps
   per span falls 2.6 to 4.9 dB below the figure from 2 to 6 dBm, and with Bosco's
   logarithmic steps 1.7 to 3.1 dB below.
-- **The nonlinear length of a coarse step.** The code of the paper takes the power at
-  the middle of the step times the step, ``nonlinear_length: step``. comnum's default,
-  ``effective``, integrates the power over the step and back-propagates better: with it
-  the DBP with 4 steps is 0.29, 0.54, 1.07 and 1.03 dB above the figure from 5 to 8 dBm.
+- **The nonlinear length of a coarse step.** The code published with the paper takes
+  the power at the middle of the step times the step, ``nonlinear_length: step``.
+  comnum's default, ``effective``, integrates the power over the step; the two
+  conventions agree as the step shrinks and differ with the long steps of the DBP: with
+  the default the DBP with 4 steps is 0.29, 0.54, 1.07 and 1.03 dB above the figure from
+  5 to 8 dBm.
   With ``step`` it is within 0.09 dB up to 6 dBm, 0.24 and 0.33 dB above at 7 and 8 dBm.
 - Linear equalisation is within 0.06 dB, the DBP with 2 steps within 0.14 dB, with 500
   steps within 0.15 dB. The specification runs both conventions (the cases
