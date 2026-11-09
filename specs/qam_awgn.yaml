@@ -2,6 +2,10 @@
 # form of the example `ber_awgn`. A point stops after 200 bit errors (at least 2
 # batches, at most 4000 trials of 4096 symbols); the rest of a sweep is skipped once the
 # BER falls below 1e-6.
+#
+# The plot shows the bit and symbol error rates against Eb/N0 on a logarithmic scale,
+# one curve per constellation: every two more bits per symbol shift the waterfall to the
+# right by several dB.
 name: qam_awgn
 description: BER of 4-, 16- and 64-QAM over AWGN
 seed: 2024

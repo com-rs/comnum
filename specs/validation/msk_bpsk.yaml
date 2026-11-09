@@ -1,3 +1,10 @@
+# Minimum-shift keying (MSK), a constant-envelope modulation, is offset QPSK with
+# half-sinusoid pulses (Proakis & Salehi, Digital Communications, 5th ed., Sec. 3.3-2):
+# with precoding and maximum-likelihood sequence detection over its phase trellis, its
+# bit error rate over AWGN is that of BPSK, Q(sqrt(2 Eb/N0)).
+#
+# The plot shows the simulated bit error rate against Eb/N0 with the BPSK curve drawn
+# over it.
 name: msk_bpsk
 description: MSK over AWGN with precoding and maximum-likelihood sequence detection has the BER of BPSK
 seed: 5

@@ -2,6 +2,12 @@
 # compensation (linear back-propagation) against digital back-propagation with 1, 4 and
 # 20 steps per span. The declarative form of the example `ssfm_dbp` (here every
 # receiver sees its own realisations of the noise).
+#
+# The plot shows the effective SNR and the bit error rate against the launch power, one
+# curve per receiver. At low power the noise of the amplifiers dominates and the
+# receivers agree; at high power the Kerr nonlinearity makes the SNR fall.
+# Back-propagation undoes a part of it: the optimum moves to a higher power and a higher
+# SNR as the steps per span grow.
 name: ssfm_dbp
 description: Effective SNR versus launch power, CDC and DBP, 10 x 80 km
 seed: 11

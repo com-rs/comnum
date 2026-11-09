@@ -3,6 +3,10 @@
 # 2005), a random bit interleaver, 16-QAM over AWGN, exact LLRs and layered
 # sum-product decoding. The waterfall sits about 1.5 dB above the BICM limit of
 # 16-QAM at rate 1/2 (E_b/N_0 near 2.2 dB).
+#
+# The plot shows the bit error rate before and after decoding and the block error rate
+# against Eb/N0: the coded curves fall steeply (the waterfall), and a sweep stops once
+# the block error rate is below 1e-3.
 name: bicm_ldpc
 description: LDPC (1024, 512) BICM with 16-QAM over AWGN
 seed: 6

@@ -3,6 +3,10 @@
 # against their Gauss-Hermite quadratures (the definitions of Alvarado et al., JLT
 # 2018; the quadrature of OptiCommPy theoryMI and theoryGMI, checked against it in the
 # Python tests).
+#
+# The plot shows the estimates against the SNR with the quadratures drawn over them:
+# every curve rises from 0 and saturates at log2 M bits per symbol, the GMI slightly
+# below the mutual information (the loss of decoding the bits separately).
 name: information_rates
 description: MI and GMI of QAM and PSK over AWGN, Monte Carlo against quadrature
 seed: 5

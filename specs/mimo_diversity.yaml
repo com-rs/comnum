@@ -4,6 +4,10 @@
 # antenna pairs; spatial multiplexing with zero forcing keeps n_r - n_t + 1 = 1 branch
 # (Winters, Salz & Gitlin 1994). Both split the power between the transmit antennas:
 # the mean SNR of a branch is E_b/N_0 - 3 dB.
+#
+# The plot shows the bit error rate against Eb/N0 for both schemes, with the theoretical
+# curves drawn over them: Alamouti's curve falls with the slope of four branches of
+# diversity, zero forcing with the slope of one (a factor of 10 for every 10 dB).
 name: mimo_diversity
 description: Alamouti and zero-forcing spatial multiplexing, 2 x 2 Rayleigh, QPSK
 seed: 3

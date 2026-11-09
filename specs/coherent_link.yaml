@@ -5,6 +5,10 @@
 # clock recovery, decimation, fourth-power frequency estimation, blind phase search and
 # frame synchronisation on a preamble of 512 symbols placed after the convergence of the
 # clock loop.
+#
+# The plot shows the bit error rate, the SNR measured after the receiver and the EVM
+# against the SNR of the channel, one curve per fibre length: the gap between the SNR of
+# the channel and the measured SNR is the penalty of the DSP chain.
 name: coherent_link
 description: 16-QAM at 32 GBd over standard fibre, SNR penalty of the receiver DSP
 seed: 7

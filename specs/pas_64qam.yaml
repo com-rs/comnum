@@ -5,6 +5,9 @@
 # signs, bit-metric decoding with the amplitude priors. The AWGN capacity at 3 bits per
 # symbol is reached at an SNR of 8.45 dB; the shaped GMI reaches 3 bits about 0.8 dB
 # before that of uniform 16-QAM. Compare with bicm_ldpc.yaml for the uniform BICM.
+#
+# The plot shows the coded bit and block error rates, the GMI and the entropy of the
+# source against the SNR, with the closed form of the GMI drawn over its estimate.
 name: pas_64qam
 description: PAS of 64-QAM at 3 bits per symbol over AWGN
 seed: 9

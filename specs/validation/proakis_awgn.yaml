@@ -2,6 +2,9 @@
 # rate of square QAM and PAM is exact, that of PSK the nearest-neighbour bound (tight
 # for M ≥ 4); the bit error rate of Gray mapping is the nearest-neighbour approximation
 # P_b ≈ P_s / log2 M of the exact SER, within a few percent above 4 dB.
+#
+# The plot shows the simulated bit and symbol error rates against Eb/N0 with the closed
+# forms drawn over them.
 name: proakis_awgn
 description: BER and SER of Gray QAM, PSK and PAM over AWGN against the closed forms
 seed: 3

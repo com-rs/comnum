@@ -4,6 +4,9 @@
 # exact Q(√(2 Eb/N0)), for QAM the nearest-neighbour approximation, within 0.02 dB of
 # the exact BER at this rate). The check passes when the theory lies in the confidence
 # interval of the search widened by 0.05 dB.
+#
+# The results give, for every constellation, the Eb/N0 found by the search with its
+# confidence interval, next to the inverse of the closed form.
 name: required_snr
 description: Eb/N0 for a BER of 1e-3 of Gray QAM over AWGN, search against the theory
 seed: 7

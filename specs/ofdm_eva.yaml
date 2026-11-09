@@ -4,6 +4,10 @@
 # over Rayleigh fading, Proakis & Salehi eq. (13.3-7)); estimating it from the pilots
 # costs a fraction of a dB, less with LMMSE interpolation (Edfors et al. 1998) than with
 # linear interpolation.
+#
+# The plot shows the bit error rate against Eb/N0 for the three receivers, with the
+# closed form of the known channel drawn over the perfect-estimation curve; the gap
+# between the curves is the cost of estimating the channel.
 name: ofdm_eva
 description: OFDM over EVA, perfect, LMMSE and LS channel estimation
 seed: 4
