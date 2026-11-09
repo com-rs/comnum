@@ -288,21 +288,6 @@ button.tab:hover { color: var(--fg); }
 .error::before { content: "⨯ "; font-weight: 700; }
 
 .plot-body { display: flex; flex-direction: column; }
-/* the comment at the head of the specification, folded on demand */
-.about {
-  flex: none; max-height: 40%; overflow: auto; border-bottom: 1px solid var(--border);
-  padding: 6px 14px 4px; font-size: 12.5px; line-height: 1.5; color: var(--fg);
-}
-.about[hidden] { display: none; }
-.about summary {
-  cursor: pointer; color: var(--muted); font-size: 11px; text-transform: uppercase;
-  letter-spacing: 0.04em; user-select: none;
-}
-.about-text { max-width: 72ch; }
-.about-text p { margin: 6px 0; }
-.about-text ul { margin: 4px 0 6px; padding-left: 18px; }
-.about-text li { margin: 2px 0; }
-.about-text code { font-size: 11.5px; padding: 0 3px; border-radius: 3px; background: var(--hover); }
 .plot-toolbar {
   flex: none; display: flex; align-items: center; gap: 8px 14px; padding: 5px 10px 0 14px; flex-wrap: wrap;
 }

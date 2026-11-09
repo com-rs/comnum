@@ -13,7 +13,7 @@ const $ = (id) => document.getElementById(id);
 const ui = {
   list: $("spec-list"), run: $("run"), stop: $("stop"), status: $("status"), engine: $("engine"),
   error: $("error"), xAxis: $("x-axis"), metric: $("metric"), logY: $("log-y"),
-  plot: $("plot"), plotTabs: $("plot-tabs"), chain: $("chain"), plotControls: document.querySelector(".plot-controls:not(#trace-controls)"), version: $("version"), caption: $("caption"), about: $("about"), aboutText: $("about-text"), traceControls: $("trace-controls"), traceCondition: $("trace-condition"), terminal: $("terminal"), clear: $("clear"),
+  plot: $("plot"), plotTabs: $("plot-tabs"), chain: $("chain"), plotControls: document.querySelector(".plot-controls:not(#trace-controls)"), version: $("version"), caption: $("caption"), traceControls: $("trace-controls"), traceCondition: $("trace-condition"), terminal: $("terminal"), clear: $("clear"),
   tabName: $("tab-name"), share: $("share"), openName: $("open-name"), theme: $("theme"),
   sidebar: $("sidebar"), backdrop: $("sidebar-backdrop"), explorerOpen: $("explorer-toggle"), explorerClose: $("explorer-close"),
   splitH: $("split-h"), splitV: $("split-v"), workbench: document.querySelector(".workbench"), editorArea: document.querySelector(".editor-area"),
@@ -404,52 +404,7 @@ sash(ui.splitV, "y", (() => {
 // ---------------------------------------------------------------- editing
 
 let editTimer = null;
-// ---------------------------------------------------------------- the header comment
-
-/// The comment at the head of a specification (its leading `#` lines), as paragraphs
-/// and lists: a `#` line alone separates two paragraphs, a line `#   - …` starts an item.
-function headerComment(yaml) {
-  const lines = [];
-  for (const l of yaml.split("\n")) {
-    if (!/^\s*#/.test(l)) break;
-    lines.push(l.replace(/^\s*#\s?/, ""));
-  }
-  const blocks = [];
-  let cur = null;
-  for (const l of lines) {
-    if (l.trim() === "") { cur = null; continue; }
-    const item = /^\s*-\s+(.*)$/.exec(l);
-    if (item) {
-      if (!cur || cur.kind !== "list") { cur = { kind: "list", items: [] }; blocks.push(cur); }
-      cur.items.push(item[1]);
-    } else if (cur && cur.kind === "list" && /^\s{2,}/.test(l)) {
-      cur.items[cur.items.length - 1] += ` ${l.trim()}`;
-    } else {
-      if (!cur || cur.kind !== "p") { cur = { kind: "p", text: "" }; blocks.push(cur); }
-      // a word cut at its hyphen at the end of a line is joined back without a space
-      cur.text += (!cur.text || /[A-Za-z]-$/.test(cur.text) ? "" : " ") + l.trim();
-    }
-  }
-  return blocks;
-}
-
-const inline = (s) => esc(s).replace(/`([^`]+)`/g, "<code>$1</code>");
-
-function showAbout() {
-  const blocks = headerComment(text());
-  ui.about.hidden = blocks.length === 0;
-  ui.aboutText.innerHTML = blocks
-    .map((b) => (b.kind === "p" ? `<p>${inline(b.text)}</p>` : `<ul>${b.items.map((i) => `<li>${inline(i)}</li>`).join("")}</ul>`))
-    .join("");
-}
-
-try { if (localStorage.getItem("about-open") === "false") ui.about.open = false; } catch (_) { /* no storage */ }
-ui.about.addEventListener("toggle", () => {
-  try { localStorage.setItem("about-open", String(ui.about.open)); } catch (_) { /* no storage */ }
-});
-
 function onEdit() {
-  showAbout();
   clearTimeout(editTimer);
   editTimer = setTimeout(() => {
     if (!worker) return;
