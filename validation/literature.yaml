@@ -995,9 +995,9 @@
     - validation/tests/fiber/hager2021.rs::the_split_step_converges_to_its_fine_step_solution_on_the_link_of_fig_8
     - crates/comnum-math/src/nlse/mod.rs::hager_2021_example_1_modified_logarithmic_steps
   badge: orange
-  not_covered: "the learned DBP (LDBP, Figs. 5-9), Fig. 9 (WDM), Figs. 6-7"
+  not_covered: "the learned DBP (LDBP, Figs. 5-9), the contribution of the paper: comnum has no trained blocks; Fig. 9 (WDM), Figs. 6-7"
   remarks:
-    - "the text gives the nonlinear step L_eff(delta) = (1 - e^{-alpha delta})/alpha (Sec. III-A), but the code of the paper (github.com/chaeger/LDBP) gives a symmetric step the phase gamma delta P at its middle; with comnum's effective length (the power integrated over the step, 33 % more phase on 70 km) the DBP with 4 steps per span is 0.29 to 1.07 dB above Fig. 8 from 5 to 8 dBm, with the code's convention within 0.33 dB"
+    - "Sec. III-A writes the nonlinear step with L_eff(delta) = (1 - e^{-alpha delta})/alpha; the code published with the paper (github.com/chaeger/LDBP) applies the phase gamma delta P at the middle of a symmetric step, an equivalent second-order convention that differs only with long steps. Fig. 8 is reproduced with the code's convention (DBP with 4 steps per span within 0.33 dB up to 8 dBm); with comnum's default, the power integrated over the step (33 % more phase on a step of 70 km), the DBP with 4 steps is 0.29 to 1.07 dB above it from 5 to 8 dBm"
     - "the steps identify the curves: with uniform or Bosco's logarithmic steps the DBP with 2 steps per span is 2.6 to 4.9 and 1.7 to 3.1 dB below Fig. 8 from 2 to 6 dBm, the modified logarithmic steps within 0.14 dB"
 - id: bosco2000
   area: Optical

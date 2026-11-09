@@ -10,18 +10,18 @@
 # (Sec. IV-C). The published values were read from the vector paths of the figure
 # (about 0.02 dB), at the integer powers it marks, inside its frame (16.5 to 29.5 dB).
 # Found: linear equalisation within 0.06 dB, DBP with 2 steps within 0.14 dB, with 500
-# steps within 0.15 dB, with 4 steps within 0.12 dB up to 4 dBm. From 5 to 8 dBm the DBP
-# with 4 steps of comnum is 0.29, 0.54, 1.07 and 1.03 dB above the figure: its coarse
-# steps take the phase of the power integrated over the step (the effective length
-# 2 sinh(a d/2)/a), where the code of the paper (github.com/chaeger/LDBP, the SSM
-# parameters) takes the power at the middle of the step times the step, 33 % less phase
-# on a step of 70 km. With that convention (`nonlinear_length: step`, the cases *_step)
-# the DBP with 4 steps is within 0.09 dB up to 6 dBm and 0.24 and 0.33 dB above at 7 and
-# 8 dBm, the DBP with 2 steps within 0.14 dB: the gap was the nonlinear step, and
-# comnum's default back-propagates better than the paper's baseline at high power. The
-# steps decide the curves: with uniform or Bosco's logarithmic steps the DBP with 2
-# steps is 2.6 to 4.9 and 1.7 to 3.1 dB below the figure from 2 to 6 dBm. About 150 s
-# on 12 threads: a campaign, not in the CI.
+# steps within 0.15 dB, with 4 steps within 0.12 dB up to 4 dBm. The nonlinear step
+# matters with the long steps of the DBP: the code published with the paper
+# (github.com/chaeger/LDBP, the SSM parameters) takes the power at the middle of the
+# step times the step, where comnum's default takes the power integrated over the step
+# (the effective length 2 sinh(a d/2)/a, 33 % more phase on a step of 70 km). Both are
+# second-order conventions and agree as the step shrinks. With the code's convention
+# (`nonlinear_length: step`, the cases *_step) the DBP with 4 steps is within 0.09 dB
+# up to 6 dBm and 0.24 and 0.33 dB at 7 and 8 dBm, the DBP with 2 steps within
+# 0.14 dB; with comnum's default the DBP with 4 steps is 0.29, 0.54, 1.07 and 1.03 dB
+# above the figure from 5 to 8 dBm. The steps decide the curves: with uniform or
+# Bosco's logarithmic steps the DBP with 2 steps is 2.6 to 4.9 and 1.7 to 3.1 dB below
+# the figure from 2 to 6 dBm. About 150 s on 12 threads: a campaign, not in the CI.
 name: hager2021_fig8
 description: Häger & Pfister (2021) Fig. 8, linear equalisation and DBP with 2, 4 and 500 steps per span, 32 GBd over 10 x 100 km
 seed: 8
