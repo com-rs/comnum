@@ -56,7 +56,8 @@ use comnum_core::{Result, ensure};
 /// The sequence of a linear-feedback shift register of order `order`: the first
 /// `order` bits are `init` (zero-padded), then $x_{i + \mathrm{order}} = \sum_{t} x_{i + t}
 /// \bmod 2$ over the `taps`, up to `len` bits in all (the Fibonacci form of every
-/// m-sequence, Gold sequence and PRBS of the standards).
+/// m-sequence, Gold sequence and PRBS of the standards). The taps are below `order`:
+/// a tap at `order` or beyond, which is not a bit of the register, is left out.
 ///
 /// # Examples
 /// ```
@@ -64,6 +65,7 @@ use comnum_core::{Result, ensure};
 /// // x³ + x + 1: the m-sequence of period 7
 /// let x = lfsr(&[0, 1], 3, &[1, 0, 0], 10);
 /// assert_eq!(x, vec![1, 0, 0, 1, 0, 1, 1, 1, 0, 0]);
+/// assert_eq!(lfsr(&[0, 1, 5], 3, &[1, 0, 0], 10), x);
 /// ```
 pub fn lfsr(taps: &[usize], order: usize, init: &[u8], len: usize) -> Vec<u8> {
     let mut x = vec![0u8; len.max(order)];
@@ -71,7 +73,7 @@ pub fn lfsr(taps: &[usize], order: usize, init: &[u8], len: usize) -> Vec<u8> {
         *v = b & 1;
     }
     for i in 0..len.saturating_sub(order) {
-        x[i + order] = taps.iter().fold(0, |acc, &t| acc ^ x[i + t]);
+        x[i + order] = taps.iter().filter(|&&t| t < order).fold(0, |acc, &t| acc ^ x[i + t]);
     }
     x.truncate(len);
     x

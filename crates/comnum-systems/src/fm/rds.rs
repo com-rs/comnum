@@ -260,7 +260,7 @@ pub fn demodulate(mpx: &[f64], fs: f64) -> Result<Vec<f64>> {
     // unit power: the gains of the clock loop assume it
     let power = z.iter().map(C64::norm_sqr).sum::<f64>() / z.len().max(1) as f64;
     let z: Vec<C64> = z.iter().map(|v| v / power.sqrt().max(1e-300)).collect();
-    let clock = GardnerLoop { nyquist: false, ..GardnerLoop::default() }.run(&z);
+    let clock = GardnerLoop { nyquist: false, ..GardnerLoop::default() }.run(&z)?;
     let s = &clock.signal;
     // the phase of the samples that are the symbols: the larger energy
     let energy = |p: usize| s.iter().skip(p).step_by(2).map(C64::norm_sqr).sum::<f64>();

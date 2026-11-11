@@ -223,7 +223,8 @@ fn decimate<'py>(py: Python<'py>, x: &Bound<'py, PyAny>, sps_in: usize, sps_out:
 ///     ValueError: for an input that is not an array of numbers of the expected shape.
 #[pyfunction]
 fn resample_fft<'py>(py: Python<'py>, x: &Bound<'py, PyAny>, n_out: i64) -> PyResult<CArr<'py>> {
-    Ok(carr(py, resample::resample_fft(&cvec(x)?, count(n_out, "n_out")?)))
+    let (x, n_out) = (cvec(x)?, count(n_out, "n_out")?);
+    Ok(carr(py, py.detach(|| resample::resample_fft(&x, n_out))))
 }
 
 /// One channel of a capture brought to baseband at the rate of its receiver: the mean of
@@ -934,7 +935,7 @@ fn gardner_clock_recovery<'py>(
     max_ppm: f64,
 ) -> PyResult<(CArr<'py>, FArr<'py>)> {
     let x = cvec(x)?;
-    let out = py.detach(|| GardnerLoop { kp, ki, nyquist, max_ppm }.run(&x));
+    let out = py.detach(|| GardnerLoop { kp, ki, nyquist, max_ppm }.run(&x)).py()?;
     Ok((carr(py, out.signal), farr(py, out.timing)))
 }
 

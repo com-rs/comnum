@@ -333,7 +333,8 @@ impl QuadrantQam {
     /// The hard decision of a received symbol: its quadrant and its inner label.
     fn decide(&self, r: C64) -> (usize, usize) {
         let edge = (self.side - 1) as f64;
-        let level = |x: f64| (2.0 * (x / 2.0).floor() + 1.0).clamp(-edge, edge);
+        // a sample that is not a number is decided as the level next to zero
+        let level = |x: f64| if x.is_nan() { 1.0 } else { (2.0 * (x / 2.0).floor() + 1.0).clamp(-edge, edge) };
         let z = C64::new(level(r.re / self.scale), level(r.im / self.scale));
         let q = match (z.re > 0.0, z.im > 0.0) {
             (true, true) => 0,
@@ -366,6 +367,13 @@ impl QuadrantQam {
 mod tests {
     use super::*;
     use comnum_core::rng::Rng;
+
+    #[test]
+    fn a_sample_that_is_not_a_number_is_decided_without_panic() {
+        let q = QuadrantQam::new(16).unwrap();
+        let r = vec![C64::new(1.0, 1.0), C64::new(f64::NAN, 1.0), C64::new(f64::NAN, f64::NAN), C64::new(-3.0, 1.0)];
+        assert_eq!(q.demap_bits(&r).unwrap().len(), 3 * q.bits_per_symbol());
+    }
 
     #[test]
     fn the_detections_are_read_by_name() {

@@ -127,7 +127,7 @@ impl Scenario for CoherentLink {
         // DSP
         let r = comnum::dsp::compensation::cd::cdc(&r, link.fiber.beta2_s2_km(), length_km, fs);
         let r = filter::fir_filter(&link.rrc, &r);
-        let mut r = GardnerLoop { kp: 3e-3, ki: 1e-5, ..GardnerLoop::default() }.run(&signal::pnorm(&r)).signal;
+        let mut r = GardnerLoop { kp: 3e-3, ki: 1e-5, ..GardnerLoop::default() }.run(&signal::pnorm(&r))?.signal;
         r.truncate(r.len() / SPS * SPS);
         let z = signal::pnorm(&resample::decimate(&r, SPS, 1)?);
         let fo = carrier::fourth_power_foe_refined(&z, RS, 4)?;

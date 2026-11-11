@@ -127,6 +127,8 @@ pub struct InformationRates {
 /// source: $\mathrm{GMI} = H(X) - \sum_{k} E \log_{2}(1 + e^{(2b_{k} - 1) L_{k}})$,
 /// Böcherer 2014), so they converge to
 /// [`theory_mi`](crate::theory_mi) and [`theory_gmi`](crate::theory_gmi) over AWGN.
+/// A real constellation (PAM, OOK) is observed on its axis: the real part of $y/a$,
+/// the variance of the real noise, and the SNR over that variance, as in `theory_mi`.
 ///
 /// [`monte_carlo_mi`] and [`monte_carlo_gmi`] follow OptiCommPy instead: they normalise
 /// the power of the noisy sequence, which shrinks the signal by $1/\sqrt{1 + 1/\mathrm{SNR}}$ and
@@ -171,8 +173,20 @@ pub fn information_rates(
     let err: f64 = rx.iter().zip(&x).map(|(y, x)| (y - a * x).norm_sqr()).sum();
     ensure(a.norm() > 0.0, || "the received sequence is uncorrelated with the transmitted one".into())?;
     // floored so that a noiseless input gives log2 M instead of 0/0
-    let sigma2 = (err / rx.len() as f64 / a.norm_sqr()).max(f64::MIN_POSITIVE);
-    let y: Vec<C64> = rx.iter().map(|v| v / a).collect();
+    let mut sigma2 = (err / rx.len() as f64 / a.norm_sqr()).max(f64::MIN_POSITIVE);
+    let mut y: Vec<C64> = rx.iter().map(|v| v / a).collect();
+    let mut snr = a.norm_sqr() * ex / err.max(f64::MIN_POSITIVE);
+    if c.kind().is_real() {
+        // a real constellation is observed on its axis: the real part of the samples and
+        // the variance N of the real noise, the metric e^{-(y-x)²/2N} (the channel of
+        // `theory_mi`); the other quadrature carries no signal
+        for v in &mut y {
+            v.im = 0.0;
+        }
+        let n: f64 = y.iter().zip(&x).map(|(y, x)| (y.re - x.re).powi(2)).sum::<f64>() / rx.len() as f64;
+        snr = ex / rx.len() as f64 / n.max(f64::MIN_POSITIVE);
+        sigma2 = (2.0 * n).max(f64::MIN_POSITIVE);
+    }
     let h = entropy(&p);
     // MI = H(X) - mean[-log2 p(x|y)], p(x|y) = p(x) e^{-|y-x|²/σ²} / Σ_j p_j e^{-|y-x_j|²/σ²}
     let mut metric = SymbolMetric::new(cn.points(), &lp, sigma2);
@@ -182,7 +196,7 @@ pub fn information_rates(
     let bits = comnum_mapping::constellation::indices_to_bits(indices, b);
     let llr = cn.llr(&y, sigma2, Some(&p), Jacobian::Exact)?;
     let gmi = gmi_from_llr(&llr, &bits, b, h);
-    let snr_db = comnum_math::lin2db(a.norm_sqr() * ex / err.max(f64::MIN_POSITIVE));
+    let snr_db = comnum_math::lin2db(snr);
     Ok(InformationRates { mi, gmi, ngmi: gmi / h, snr_db, entropy: h })
 }
 
@@ -428,6 +442,32 @@ mod tests {
         let w = rng.complex_noise(x.len(), power(&x) / db2lin(snr_db));
         let y = x.iter().zip(&w).map(|(a, b)| a + b).collect();
         (idx, x, y)
+    }
+
+    #[test]
+    fn the_rates_of_a_real_constellation_are_those_of_the_real_channel() {
+        // 4-PAM over real noise of variance 1/SNR, then over complex noise of the same
+        // variance in its real part: the theory at the SNR the function reports (the
+        // complex metric gave 0.8175 against 0.9866 at 5 dB)
+        use comnum_mapping::constellation::{Constellation, ConstellationKind};
+        let c = Constellation::pam(4).unwrap().normalized();
+        for snr_db in [5.0, 10.0, 15.0] {
+            let mut rng = Rng::new(7);
+            let (idx, x) = comnum_mapping::source::symbols(&c, 200_000, None, &mut rng).unwrap();
+            let n0 = power(&x) / db2lin(snr_db);
+            for complex in [false, true] {
+                let y: Vec<C64> = x
+                    .iter()
+                    .map(|v| v + C64::new(rng.gaussian(), if complex { rng.gaussian() } else { 0.0 }) * n0.sqrt())
+                    .collect();
+                let r = information_rates(&y, &idx, &c, None).unwrap();
+                assert!((r.snr_db - snr_db).abs() < 0.05, "{snr_db} dB: {}", r.snr_db);
+                let mi = crate::theory_mi(ConstellationKind::Pam, 4, snr_db, None, 40).unwrap();
+                let gmi = crate::theory_gmi(ConstellationKind::Pam, 4, snr_db, None, 40).unwrap();
+                assert!((r.mi - mi).abs() < 0.01, "{snr_db} dB: MI {} against {mi}", r.mi);
+                assert!((r.gmi - gmi).abs() < 0.01, "{snr_db} dB: GMI {} against {gmi}", r.gmi);
+            }
+        }
     }
 
     #[test]

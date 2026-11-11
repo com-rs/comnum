@@ -166,9 +166,18 @@ fn run_spec<'py>(
     if base_dir.is_some() {
         spec.base_dir = base_dir;
     }
-    let opts =
-        RunOptions { threads, batch, fast_dev_run, progress: Some(progress), profile, csv: csv_path, json: json_path };
-    let results = py.detach(|| run(&spec, &opts)).py()?;
+    let cancel = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
+    let opts = RunOptions {
+        threads,
+        batch,
+        fast_dev_run,
+        progress: Some(progress),
+        profile,
+        csv: csv_path,
+        json: json_path,
+        cancel: Some(cancel.clone()),
+    };
+    let results = crate::interruptible(py, &cancel, || run(&spec, &opts))?.py()?;
     let items = results.iter().map(|r| result(py, r, spec.confidence)).collect::<PyResult<Vec<_>>>()?;
     results_of(py, PyList::new(py, items)?, &spec.source)
 }
@@ -371,9 +380,10 @@ fn verify_spec<'py>(
     report_path: Option<PathBuf>,
 ) -> PyResult<Bound<'py, PyDict>> {
     let spec = load(py, spec)?;
-    let opts = RunOptions { threads, progress: Some(progress), ..RunOptions::default() };
+    let cancel = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
+    let opts = RunOptions { threads, progress: Some(progress), cancel: Some(cancel.clone()), ..RunOptions::default() };
     let out = PyDict::new(py);
-    let (ran, checks) = py.detach(|| verify::verify_spec(&spec, &opts)).py()?;
+    let (ran, checks) = crate::interruptible(py, &cancel, || verify::verify_spec(&spec, &opts))?.py()?;
     let items = match &ran {
         verify::Verified::Search(found) => found.iter().map(|r| search_result(py, r)).collect::<PyResult<Vec<_>>>()?,
         verify::Verified::Run(results) => {
@@ -469,15 +479,17 @@ fn search_spec<'py>(
     json_path: Option<PathBuf>,
 ) -> PyResult<Bound<'py, PyList>> {
     let spec = load(py, spec)?;
+    let cancel = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
     let opts = RunOptions {
         threads,
         batch,
         progress: Some(progress),
         csv: csv_path,
         json: json_path,
+        cancel: Some(cancel.clone()),
         ..RunOptions::default()
     };
-    let found = py.detach(|| search::search(&spec, &opts)).py()?;
+    let found = crate::interruptible(py, &cancel, || search::search(&spec, &opts))?.py()?;
     let items = found.iter().map(|r| search_result(py, r)).collect::<PyResult<Vec<_>>>()?;
     PyList::new(py, items)
 }

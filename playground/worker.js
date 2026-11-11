@@ -21,12 +21,20 @@ stop: {max_trials: 8}
 // browser's caches (to measure a cold start).
 const params = new URLSearchParams(self.location.search);
 const wasmUrl = new URL("./pkg/comnum_bg.wasm" + (params.get("nocache") ? `?v=${Date.now()}` : ""), import.meta.url);
-const ready = init({ module_or_path: wasmUrl }).then(() => {
-  postMessage({ type: "ready", version: version(), specs: JSON.parse(specs()) });
-});
+// A module that does not load (not found, served with another type, out of memory) is
+// told to the page: the rejection of a promise does not reach `Worker.onerror`.
+const ready = init({ module_or_path: wasmUrl })
+  .then(() => {
+    postMessage({ type: "ready", version: version(), specs: JSON.parse(specs()) });
+    return true;
+  })
+  .catch((err) => {
+    postMessage({ type: "failed", error: String(err) });
+    return false;
+  });
 
 onmessage = async (e) => {
-  await ready;
+  if (!(await ready)) return;
   const { type, yaml, id } = e.data;
   if (type === "inspect") {
     try {
@@ -42,8 +50,13 @@ onmessage = async (e) => {
     }
   } else if (type === "probe") {
     const t0 = performance.now();
-    run(PROBE, () => {}, () => {});
-    postMessage({ type: "probe", ms: performance.now() - t0 });
+    try {
+      run(PROBE, () => {}, () => {});
+      postMessage({ type: "probe", ms: performance.now() - t0 });
+    } catch (err) {
+      // a probe that fails measures nothing: the page stops probing
+      postMessage({ type: "probe", failed: true });
+    }
   } else if (type === "run") {
     try {
       const out = run(

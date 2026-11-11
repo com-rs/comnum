@@ -148,7 +148,11 @@ function setStatus(message, busy = false) {
 
 function onMessage(e) {
   const m = e.data;
-  if (m.type === "ready") {
+  if (m.type === "failed") {
+    // the WebAssembly module did not load: say so, Run stays disabled
+    setStatus(`the engine failed to load: ${m.error}`);
+    showError(`the engine failed to load: ${m.error}`);
+  } else if (m.type === "ready") {
     ui.version.textContent = `v${m.version}`;
     if (specs.length === 0) {
       specs = m.specs;
@@ -162,7 +166,7 @@ function onMessage(e) {
     startProbing();
     onEdit();
   } else if (m.type === "probe") {
-    onProbe(m.ms);
+    if (m.failed) stopProbing(); else onProbe(m.ms);
   } else if (m.type === "trace") {
     if (m.ok) {
       traces = m.data;
@@ -322,9 +326,31 @@ async function encodeSpec(yaml) {
   return `z${toBase64Url(await pipe(bytes, new CompressionStream("deflate-raw")))}`;
 }
 
+/// The largest specification a link may carry, once inflated (the embedded ones are
+/// below 10 kB): a crafted link does not fill the memory of the page.
+const MAX_SHARED_BYTES = 1 << 20;
+
 async function decodeSpec(payload) {
+  if (payload.length > 2 * MAX_SHARED_BYTES) throw new Error("the link is too long");
   const bytes = fromBase64Url(payload.slice(1));
-  const raw = payload[0] === "z" ? await pipe(bytes, new DecompressionStream("deflate-raw")) : bytes;
+  if (payload[0] !== "z") return new TextDecoder().decode(bytes);
+  // inflated chunk by chunk, up to the limit
+  const reader = new Blob([bytes]).stream().pipeThrough(new DecompressionStream("deflate-raw")).getReader();
+  const chunks = [];
+  let total = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    total += value.length;
+    if (total > MAX_SHARED_BYTES) {
+      await reader.cancel();
+      throw new Error("the specification of the link is larger than 1 MB");
+    }
+    chunks.push(value);
+  }
+  const raw = new Uint8Array(total);
+  let at = 0;
+  for (const c of chunks) { raw.set(c, at); at += c.length; }
   return new TextDecoder().decode(raw);
 }
 
@@ -407,6 +433,7 @@ let editTimer = null;
 function onEdit() {
   clearTimeout(editTimer);
   editTimer = setTimeout(() => {
+    editTimer = null;
     if (!worker) return;
     inspectId += 1;
     worker.postMessage({ type: "inspect", id: inspectId, yaml: text() });
@@ -433,6 +460,14 @@ ui.run.addEventListener("click", () => {
     log("note: the browser has not finished optimising the engine: this run uses its baseline compiler, about five times slower", "dim");
   }
   requestTrace();
+  // an edit still waiting for its inspection is inspected first: the run is drawn
+  // against the grid of the text it runs, not of the text before the edit
+  if (editTimer) {
+    clearTimeout(editTimer);
+    editTimer = null;
+    inspectId += 1;
+    worker.postMessage({ type: "inspect", id: inspectId, yaml: text() });
+  }
   worker.postMessage({ type: "run", yaml: text() });
   draw();
 });
@@ -571,7 +606,10 @@ function drawCurves(colorOf) {
   for (const s of series.values()) {
     if (view.key !== null && s.key !== view.key) continue;
     const color = colorOf.get(s.key) || palette()[0];
-    const label = s.key || name;
+    // Plotly renders a subset of HTML in its texts (links among it): the names that
+    // come from the specification are escaped
+    const label = esc(s.key || name);
+    const [xName, metricName] = [esc(x), esc(metric)];
     s.sim.sort((a, b) => a.x - b.x);
     traces.push({
       name: label, legendgroup: label, x: s.sim.map((p) => p.x), y: s.sim.map((p) => p.y),
@@ -583,9 +621,10 @@ function drawCurves(colorOf) {
         arrayminus: s.sim.map((p) => (ui.logY.checked && !(p.lo > 0) ? 0 : p.y - p.lo)),
         color, thickness: 1,
       },
-      hovertemplate: `${label}<br>${x}=%{x}<br>${metric}=%{y:.4g}<extra></extra>`,
+      hovertemplate: `${label}<br>${xName}=%{x}<br>${metricName}=%{y:.4g}<extra></extra>`,
     });
-    for (const [elabel, e] of s.expected) {
+    for (const [rawLabel, e] of s.expected) {
+      const elabel = esc(rawLabel);
       e.points.sort((a, b) => a.x - b.x);
       const theory = e.kind === "theory";
       traces.push({
@@ -593,7 +632,7 @@ function drawCurves(colorOf) {
         mode: theory ? "lines" : "markers", type: "scatter",
         line: { color, width: 1.5, dash: "dash" },
         marker: { color, size: 10, symbol: "diamond-open", line: { width: 2, color } },
-        hovertemplate: `${elabel}${s.key ? ` (${s.key})` : ""}<br>${e.source || ""}<br>${x}=%{x}<br>${metric}=%{y:.4g}<extra></extra>`,
+        hovertemplate: `${elabel}${s.key ? ` (${label})` : ""}<br>${esc(e.source || "")}<br>${xName}=%{x}<br>${metricName}=%{y:.4g}<extra></extra>`,
       });
       shown.add(elabel);
     }
@@ -601,8 +640,8 @@ function drawCurves(colorOf) {
   const layout = {
     ...baseLayout(),
     margin: { l: 56, r: 16, t: 12, b: 48 },
-    xaxis: { ...axisStyle(), title: { text: x } },
-    yaxis: { ...axisStyle(), title: { text: metric }, type: ui.logY.checked ? "log" : "linear", exponentformat: "power" },
+    xaxis: { ...axisStyle(), title: { text: esc(x) } },
+    yaxis: { ...axisStyle(), title: { text: esc(metric) }, type: ui.logY.checked ? "log" : "linear", exponentformat: "power" },
   };
   Plotly.react(ui.plot, traces, layout, plotConfig());
 }
@@ -753,7 +792,7 @@ function drawScope() {
   const colors = palette();
   const n = t.streams[0] ? t.streams[0].re.length : 0;
   const multi = t.streams.length > 1;
-  const name = (j) => (multi ? `stream ${j}` : t.label);
+  const name = (j) => (multi ? `stream ${j}` : esc(t.label));
   const sps = t.sps > 0 ? t.sps : 1;
   const where = `${t.label} · ${t.view} · ${n} samples, ${fmt(sps)} per symbol${traceNote ? ` · ${traceNote}` : ""}`;
   ui.caption.textContent = where;

@@ -153,11 +153,14 @@ impl Rapp {
     /// (Saul, *Proc. IEEE VTC2004-Fall*, 2004, eq. (3)), $\tilde{s}$ the output of the
     /// amplifier driven by `x` times the returned scale: the mean output power of a block
     /// grows with its scale towards $A_{\mathrm{sat}}^{2}$, so the scale is found by
-    /// bisection (100 steps). A positive back-off is reachable by every nonzero block.
+    /// bisection (100 steps). The mean output power cannot exceed $A_{\mathrm{sat}}^{2}$
+    /// times the part of the samples that are not zero: a block with silent samples (a
+    /// burst and its guard) does not reach a back-off below that part.
     ///
     /// # Errors
-    /// [`Error::Config`] for a back-off that is not positive, [`Error::Shape`] for an
-    /// empty or silent block, and the errors of [`Rapp::check`].
+    /// [`Error::Config`] for a back-off that is not positive or that the block cannot
+    /// reach, [`Error::Shape`] for an empty or silent block, and the errors of
+    /// [`Rapp::check`].
     ///
     /// # Examples
     /// ```
@@ -181,6 +184,15 @@ impl Rapp {
         let mut hi = self.saturation_input() / rms;
         while output_power(hi) < target {
             hi *= 2.0;
+            ensure(hi.is_finite() && output_power(hi).is_finite(), || {
+                let active = x.iter().filter(|s| s.norm_sqr() > 0.0).count() as f64 / x.len() as f64;
+                format!(
+                    "an output back-off of {obo_db} dB is out of reach: {:.1} % of the samples are not zero, \
+                     the back-off is at least {:.2} dB",
+                    100.0 * active,
+                    -comnum_math::lin2db(active)
+                )
+            })?;
         }
         Ok(comnum_math::bisect(|v| output_power(v) < target, 0.0, hi, 100))
     }
@@ -384,6 +396,17 @@ impl Impair for MemoryPolynomial {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_back_off_that_a_burst_cannot_reach_is_an_error() {
+        // half the samples silent: the mean output power stays 3 dB under the saturation
+        let mut x = vec![C64::new(0.3, 0.1); 64];
+        x.extend(vec![C64::new(0.0, 0.0); 64]);
+        let pa = Rapp::default();
+        assert!(matches!(pa.scale_for_output_backoff(&x, 1.0), Err(Error::Config(_))));
+        let v = pa.scale_for_output_backoff(&x, 6.0).unwrap();
+        assert!(v.is_finite() && v > 0.0);
+    }
 
     #[test]
     fn rapp_is_linear_then_saturates_and_its_inverse_is_exact() {

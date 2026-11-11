@@ -701,6 +701,10 @@ impl Sphere {
             c.sort_by(|a, b| a.0.total_cmp(&b.0));
             c
         };
+        if n == 0 {
+            // a channel without transmit stream: nothing to detect
+            return Vec::new();
+        }
         frames.push((candidates(n - 1, &x, Vec::with_capacity(pts.len())), 0, 0.0));
         while !frames.is_empty() {
             let k = n - frames.len();

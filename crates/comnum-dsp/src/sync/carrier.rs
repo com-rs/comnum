@@ -175,7 +175,9 @@ pub fn tone_outlier_probability(n: usize, snr: f64) -> f64 {
             let others = (-(-(0.5 * a * x * x)).exp_m1()).powi(n as i32 - 1);
             others * a * x * (-(0.5 * a) * (x - 1.0) * (x - 1.0)).exp() * comnum_math::bessel_i0e(a * x)
         },
-        0.0,
+        // the Rician magnitude of the bin of the tone lies within 12 of its standard
+        // deviations of 1 (e^{-72} beyond): the panels follow its width at any N and SNR
+        (1.0 - 12.0 * s).max(0.0),
         1.0 + 12.0 * s,
         4000,
     );
@@ -337,6 +339,11 @@ mod tests {
         let q = tone_outlier_probability(16, 1e-6);
         assert!((q - 15.0 / 16.0).abs() < 1e-3, "{q}");
         assert!(tone_outlier_probability(64, db2lin(10.0)) < 1e-12);
+        // long blocks: the peak of the integrand, of width 1/sqrt(2 rho N), is narrower
+        // than a panel of a fixed grid (which gave 2.3e-3, 4.2e-2 and 0.648 here)
+        for (n, snr) in [(1 << 20, 10.0), (1 << 22, 10.0), (1 << 24, 1.0), (1 << 24, 100.0)] {
+            assert!(tone_outlier_probability(n, snr) < 1e-12, "N = {n}, SNR = {snr}");
+        }
         let rms = tone_frequency_rms(64, db2lin(10.0), 4000.0);
         // above the threshold, the bound (q is accurate to about 1e-13 absolute)
         assert!((rms / (4000.0 * tone_frequency_crb(64, db2lin(10.0)).sqrt()) - 1.0).abs() < 1e-6);

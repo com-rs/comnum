@@ -179,8 +179,12 @@ impl Lmmse {
 /// # Errors
 /// As [`lmmse`]; [`Error::Shape`] unless `r_qq_diag` has one variance per row of `r_qp`.
 pub fn lmmse_mse(r_qp: &CMat, r_pp: &CMat, noise_to_pilot: f64, r_qq_diag: &[f64]) -> Result<Vec<f64>> {
+    ensure(noise_to_pilot >= 0.0, || "negative noise".into())?;
     ensure_shape(r_qq_diag.len() == r_qp.nrows(), || {
         format!("{} variances for {} estimated positions", r_qq_diag.len(), r_qp.nrows())
+    })?;
+    ensure_shape(r_pp.nrows() == r_pp.ncols() && r_qp.ncols() == r_pp.nrows(), || {
+        format!("correlations of {}x{} between pilots for {} pilots", r_pp.nrows(), r_pp.ncols(), r_qp.ncols())
     })?;
     let rpq = hermitian(&r_qp.view());
     let z = solve_hpd(&regularized(r_pp, noise_to_pilot).view(), &rpq.view())?;
@@ -325,6 +329,18 @@ impl LowRank {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn the_error_of_the_lmmse_checks_its_shapes() {
+        use comnum_math::linalg::CMat;
+        let one = C64::new(1.0, 0.0);
+        let r_qp = CMat::from_elem((2, 3), one);
+        // correlations between pilots that are not square, or of another size
+        assert!(matches!(lmmse_mse(&r_qp, &CMat::from_elem((3, 2), one), 0.1, &[1.0, 1.0]), Err(Error::Shape(_))));
+        assert!(matches!(lmmse_mse(&r_qp, &CMat::eye(2), 0.1, &[1.0, 1.0]), Err(Error::Shape(_))));
+        assert!(lmmse_mse(&r_qp, &CMat::eye(3), -0.1, &[1.0, 1.0]).is_err());
+        assert!(lmmse_mse(&r_qp, &CMat::eye(3), 0.1, &[1.0, 1.0]).is_ok());
+    }
 
     #[test]
     #[should_panic(expected = "frequency_correlation: one power per delay")]

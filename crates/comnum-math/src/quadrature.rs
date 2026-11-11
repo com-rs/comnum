@@ -64,6 +64,13 @@ pub fn simpson_weight(k: usize, n: usize) -> f64 {
 /// decreasing order. An expectation over `X ~ N(0, s²)` is
 /// `E f(X) ≈ Σ_k w_k f(√2 s t_k) / √π`.
 ///
+/// Beyond 198 points the initial guesses of that method make Newton's iteration
+/// converge twice to the same root: the roots are then separated by bisection on the
+/// number of sign changes of the recurrence (a Sturm sequence: it counts the roots
+/// above a point) before Newton's method, on a recurrence rescaled at every term so
+/// that it does not overflow. The weights of the outer nodes of a large rule are below
+/// the smallest double and come out as 0.
+///
 /// # Examples
 /// ```
 /// use comnum_math::gauss_hermite;
@@ -73,9 +80,16 @@ pub fn simpson_weight(k: usize, n: usize) -> f64 {
 /// // E X⁴ = 3 for X ~ N(0, 1)
 /// let m4: f64 = t.iter().zip(&w).map(|(t, w)| w * (2f64.sqrt() * t).powi(4)).sum::<f64>() / pi.sqrt();
 /// assert!((m4 - 3.0).abs() < 1e-10);
+/// // a large rule
+/// let (t, w) = gauss_hermite(400);
+/// assert!((w.iter().sum::<f64>() - pi.sqrt()).abs() < 1e-12);
+/// assert!(t.windows(2).all(|p| p[0] > p[1]));
 /// ```
 pub fn gauss_hermite(n: usize) -> (Vec<f64>, Vec<f64>) {
     const PIM4: f64 = 0.751_125_544_464_942_5; // π^(-1/4)
+    if n > 198 {
+        return gauss_hermite_large(n);
+    }
     let mut x = vec![0.0; n];
     let mut w = vec![0.0; n];
     let nf = n as f64;
@@ -107,6 +121,68 @@ pub fn gauss_hermite(n: usize) -> (Vec<f64>, Vec<f64>) {
         x[i] = z;
         x[n - 1 - i] = -z;
         w[i] = 2.0 / (pp * pp);
+        w[n - 1 - i] = w[i];
+    }
+    (x, w)
+}
+
+/// The orthonormal Hermite recurrence at `z`, rescaled at every term: the last two
+/// terms $(\tilde h_{n}, \tilde h_{n-1})$ up to the common factor $e^{s}$, `s` returned
+/// third, and the number of sign changes of the sequence (the roots of $H_{n}$ above `z`).
+fn hermite_scaled(n: usize, z: f64) -> (f64, f64, f64, usize) {
+    const PIM4: f64 = 0.751_125_544_464_942_5; // π^(-1/4)
+    let (mut p1, mut p2, mut scale, mut changes) = (PIM4, 0.0f64, 0.0f64, 0usize);
+    for j in 0..n {
+        let jf = j as f64;
+        let p3 = p2;
+        p2 = p1;
+        p1 = z * (2.0 / (jf + 1.0)).sqrt() * p2 - (jf / (jf + 1.0)).sqrt() * p3;
+        // a zero term takes the sign opposite to the term before it
+        if (p1 < 0.0) != (p2 < 0.0) || p1 == 0.0 {
+            changes += 1;
+        }
+        let m = p1.abs().max(p2.abs());
+        if m > 0.0 {
+            p1 /= m;
+            p2 /= m;
+            scale += m.ln();
+        }
+    }
+    (p1, p2, scale, changes)
+}
+
+/// [`gauss_hermite`] for a large `n`: every positive root isolated by bisection on the
+/// number of roots above a point, then Newton's method.
+pub(crate) fn gauss_hermite_large(n: usize) -> (Vec<f64>, Vec<f64>) {
+    let nf = n as f64;
+    let mut x = vec![0.0; n];
+    let mut w = vec![0.0; n];
+    // every root lies below sqrt(2n + 1)
+    let top = (2.0 * nf + 1.0).sqrt();
+    for i in 0..n.div_ceil(2) {
+        let mut z = if n % 2 == 1 && i == n / 2 {
+            0.0
+        } else {
+            // the root number i from the top: i roots above hi, more than i above lo
+            let (mut lo, mut hi) = (0.0f64, top);
+            for _ in 0..60 {
+                let mid = 0.5 * (lo + hi);
+                if hermite_scaled(n, mid).3 > i { lo = mid } else { hi = mid }
+            }
+            0.5 * (lo + hi)
+        };
+        let mut log_pp = 0.0;
+        for it in 0..4 {
+            let (p1, p2, scale, _) = hermite_scaled(n, z);
+            let pp = (2.0 * nf).sqrt() * p2;
+            log_pp = pp.abs().ln() + scale;
+            if it < 3 && z != 0.0 && pp != 0.0 {
+                z -= p1 / pp;
+            }
+        }
+        x[i] = z;
+        x[n - 1 - i] = -z;
+        w[i] = 2.0 * (-2.0 * log_pp).exp();
         w[n - 1 - i] = w[i];
     }
     (x, w)

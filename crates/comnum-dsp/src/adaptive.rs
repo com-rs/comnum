@@ -130,7 +130,8 @@ impl ErrorLaw for RadiusDirected {
     }
 }
 
-/// The data-aided criterion: $e = s - y$ with the known symbols $s$ of every stream.
+/// The data-aided criterion: $e = s - y$ with the known symbols $s$ of every stream. Past
+/// the end of the known symbols the error is zero: the taps stay as they are.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Reference<'a> {
     /// The transmitted symbols of every stream.
@@ -139,8 +140,13 @@ pub struct Reference<'a> {
 
 impl ErrorLaw for Reference<'_> {
     fn error(&self, y: C64, stream: usize, k: usize) -> (C64, f64) {
-        let d = self.symbols[stream][k] - y;
-        (d, d.norm_sqr())
+        match self.symbols.get(stream).and_then(|s| s.get(k)) {
+            Some(s) => {
+                let d = s - y;
+                (d, d.norm_sqr())
+            }
+            None => (C64::new(0.0, 0.0), 0.0),
+        }
     }
 }
 

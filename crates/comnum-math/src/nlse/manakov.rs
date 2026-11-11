@@ -228,8 +228,10 @@ impl ManakovSplitStep {
             total_power_of(fields, &mut w.p0);
             total_power_of(&w.c, &mut w.p1);
             trapezoid(&w.p0, &w.p1, k, &mut w.phi);
-            let h = self.step_length(&w.phi, z, stretch_end - z, length_km, previous, bandwidth)?;
-            previous = Some(h);
+            let (h, rule) = self.step_length(&w.phi, z, stretch_end - z, length_km, previous, bandwidth)?;
+            // the step of the rule and the length advanced: a step cut at the end of a
+            // section of the birefringence does not restart the rule from the cut step
+            previous = Some((rule, h));
             self.half_steps(&mut w, z, h, section, options);
             for (o, u) in w.h.iter_mut().zip(fields.iter()) {
                 o.copy_from_slice(u);
@@ -491,6 +493,9 @@ impl ManakovSplitStep {
     /// propagation of `length_km`, and the phase `phi` (rad/km) of the step. A fixed step
     /// `h` covers the rest of the stretch with $\lceil \text{rest} / h \rceil$ equal steps;
     /// a logarithmic step ends at the next boundary of the steps of the whole length.
+    /// Returns the step and the step of the rule before the end of the stretch cut it
+    /// (the same but for [`StepRule::Fwm`], which grows its next step from `previous`:
+    /// the last step of the rule and the length then advanced).
     ///
     /// # Errors
     /// [`Error::Numerical`] for a step that does not advance `z`.
@@ -500,9 +505,10 @@ impl ManakovSplitStep {
         z: f64,
         rest: f64,
         length_km: f64,
-        previous: Option<f64>,
+        previous: Option<(f64, f64)>,
         bandwidth: f64,
-    ) -> Result<f64> {
+    ) -> Result<(f64, f64)> {
+        let mut rule = None;
         let h = match self.rule {
             StepRule::Fixed(hf) => equal_steps(rest, hf).1,
             StepRule::Logarithmic(n) => {
@@ -515,28 +521,31 @@ impl ManakovSplitStep {
                 (next - z).min(rest)
             }
             StepRule::NonlinearPhase(rot) => {
-                let m = phi.iter().copied().fold(0.0, f64::max);
+                let m = phi.iter().fold(0.0, |m: f64, p| m.max(p.abs()));
                 if m > 0.0 && rest >= rot / m { rot / m } else { rest }
             }
             StepRule::Fwm { phase_rad, update, max_nl_phase_rad, .. } => {
                 let a = self.medium.alpha_np_km;
                 let h = match previous {
                     None => self.fwm_first_step(phase_rad, bandwidth),
-                    Some(hk) if a <= 0.0 => hk,
-                    Some(hk) => match update {
-                        StepUpdate::ConstantLocalError => hk * (a * hk / 3.0).exp(),
+                    Some((hk, _)) if a <= 0.0 => hk,
+                    // `dz`, the length advanced since the step `hk` of the rule (`hk`
+                    // itself but after a step cut at the end of a stretch)
+                    Some((hk, dz)) => match update {
+                        StepUpdate::ConstantLocalError => hk * (a * dz / 3.0).exp(),
                         StepUpdate::NonlinearPhase => {
-                            // L_eff(h') = L_eff(h) e^{α h}, h' = -ln(1 - α L_eff(h')) / α
-                            let l = (1.0 - (-a * hk).exp()) / a * (a * hk).exp();
+                            // L_eff(h') = L_eff(h) e^{α dz}, h' = -ln(1 - α L_eff(h')) / α
+                            let l = (1.0 - (-a * hk).exp()) / a * (a * dz).exp();
                             if a * l < 1.0 { -(1.0 - a * l).ln() / a } else { f64::INFINITY }
                         }
                     },
                 };
-                let m = phi.iter().copied().fold(0.0, f64::max);
+                let m = phi.iter().fold(0.0, |m: f64, p| m.max(p.abs()));
                 let nl = match max_nl_phase_rad {
                     Some(rot) if m > 0.0 => rot / m,
                     _ => f64::INFINITY,
                 };
+                rule = Some(h.min(nl));
                 h.min(nl).min(rest)
             }
         };
@@ -545,7 +554,7 @@ impl ManakovSplitStep {
         if z + h <= z || h.is_nan() {
             return Err(Error::Numerical(format!("the split step vanishes at z = {z} km (step {h} km)")));
         }
-        Ok(h)
+        Ok((h, rule.unwrap_or(h)))
     }
 }
 

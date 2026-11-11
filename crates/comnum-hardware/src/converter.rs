@@ -231,7 +231,8 @@ fn granular_mse(d: f64, a: f64, levels: usize) -> f64 {
 /// bits.
 pub fn gaussian_mse(q: &Quantizer, sigma: f64) -> f64 {
     let (d, a) = (q.step() / sigma, q.full_scale / sigma);
-    let levels = 1usize << q.bits;
+    // beyond the bits of an index (the fields are public) the levels are as many as fit
+    let levels = 1usize.checked_shl(q.bits).unwrap_or(usize::MAX);
     // the overload cells beyond ±(A - Δ), of level ±(A - Δ/2), are symmetric
     let (c, y) = (a - d, a - d / 2.0);
     let (phi_c, pdf_c) = normal(c);

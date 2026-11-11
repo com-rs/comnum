@@ -120,7 +120,15 @@ pub struct ClockRecoveryOutput {
 
 impl GardnerLoop {
     /// Recover the clock of a signal at (about) two samples per symbol.
-    pub fn run(&self, x: &[C64]) -> ClockRecoveryOutput {
+    ///
+    /// The error of the detector grows as the power of the signal (its square for the
+    /// Nyquist detector): the gains assume a signal of about unit power.
+    ///
+    /// # Errors
+    /// [`comnum_core::Error::Numerical`] for a loop that diverges (a timing that is no
+    /// longer finite, or that stops advancing in the signal): a signal far from unit
+    /// power, or gains too large.
+    pub fn run(&self, x: &[C64]) -> comnum_core::Result<ClockRecoveryOutput> {
         let mut sig = x.to_vec();
         sig.push(C64::new(0.0, 0.0));
         let n_samples = sig.len();
@@ -128,10 +136,23 @@ impl GardnerLoop {
         let mut out = vec![C64::new(0.0, 0.0); ln];
         let mut timing = vec![0.0; ln];
         let mut filter = ProportionalIntegral::new(self.kp, self.ki);
-        let mut t_nco = 0.0;
+        let mut t_nco = 0.0f64;
         let (mut n, mut m) = (2usize, 2usize);
         let mut last = 0;
+        // a locked loop takes one iteration per sample, and a few more for the samples
+        // it takes again: one that takes four times as many no longer advances
+        let mut budget = 4 * n_samples;
+        let diverged = |t: f64| {
+            comnum_core::Error::Numerical(format!(
+                "the clock recovery diverges (timing {t:e} samples): its gains assume a signal of about unit power"
+            ))
+        };
         while n + 1 < ln && m + 2 < n_samples {
+            // a locked loop keeps its timing within a sample of zero
+            if !t_nco.is_finite() || t_nco.abs() > 8.0 || budget == 0 {
+                return Err(diverged(t_nco));
+            }
+            budget -= 1;
             out[n] = lagrange_cubic(&[sig[m - 2], sig[m - 1], sig[m], sig[m + 1]], t_nco);
             if n % 2 == 0 {
                 let w = [out[n - 2], out[n - 1], out[n]];
@@ -158,7 +179,10 @@ impl GardnerLoop {
         }
         out.truncate(last.min(ln));
         timing.truncate(last.min(ln));
-        ClockRecoveryOutput { signal: out, timing }
+        if !t_nco.is_finite() || t_nco.abs() > 8.0 {
+            return Err(diverged(t_nco));
+        }
+        Ok(ClockRecoveryOutput { signal: out, timing })
     }
 }
 
@@ -174,9 +198,32 @@ mod tests {
         // the error of the detector grows as the power: 10⁴ makes it jump back at once
         let x: Vec<C64> = (0..400).map(|i| C64::new(if (i / 2) % 3 == 0 { 1e4 } else { -1e4 }, 0.0)).collect();
         for nyquist in [true, false] {
-            let out = GardnerLoop { nyquist, ..GardnerLoop::default() }.run(&x);
-            assert!(out.signal.len() <= x.len());
+            // no panic: an output no longer than the input, or the error of a loop that diverges
+            if let Ok(out) = (GardnerLoop { nyquist, ..GardnerLoop::default() }).run(&x) {
+                assert!(out.signal.len() <= x.len());
+            }
         }
+    }
+
+    #[test]
+    fn a_loop_that_diverges_is_an_error_and_returns() {
+        // noise far from unit power: the loop used to return NaN samples (amplitudes of
+        // 5 to 20) or never to return (40 and more, the timing pinned on its first samples)
+        let mut r = Rng::new(3);
+        let noise: Vec<C64> = (0..20_000).map(|_| r.complex_gaussian()).collect();
+        for amplitude in [1.0, 2.0] {
+            let x: Vec<C64> = noise.iter().map(|v| v * amplitude).collect();
+            let out = GardnerLoop::default().run(&x).unwrap();
+            assert!(out.signal.iter().all(|v| v.re.is_finite() && v.im.is_finite()));
+        }
+        for amplitude in [5.0, 10.0, 20.0, 40.0, 100.0, 1000.0, 1e160] {
+            let x: Vec<C64> = noise.iter().map(|v| v * amplitude).collect();
+            let e = GardnerLoop::default().run(&x).unwrap_err();
+            assert!(matches!(e, comnum_core::Error::Numerical(_)), "{amplitude}: {e}");
+        }
+        // gains that are too large
+        let x: Vec<C64> = noise.iter().take(2000).copied().collect();
+        assert!(GardnerLoop { kp: 10.0, ki: 1e9, ..GardnerLoop::default() }.run(&x).is_err());
     }
 
     #[test]
@@ -189,7 +236,7 @@ mod tests {
         let mut x = fir_filter(&h, &upsample(&s, 2));
         x = fir_filter(&h, &x);
         let x = delay_fft(&x, 0.4, 1.0); // 0.4 sample timing offset
-        let out = GardnerLoop { kp: 5e-3, ki: 1e-5, nyquist: false, ..GardnerLoop::default() }.run(&x);
+        let out = GardnerLoop { kp: 5e-3, ki: 1e-5, nyquist: false, ..GardnerLoop::default() }.run(&x).unwrap();
         // the loop converges to a constant fractional instant
         let t = &out.timing[6000..7000];
         let mean = t.iter().sum::<f64>() / t.len() as f64;

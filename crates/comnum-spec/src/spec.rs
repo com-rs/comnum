@@ -1,7 +1,7 @@
 //! The specification: its parsing ([`Spec`]), its grid and its stopping rule.
 
 use crate::{params, search, verify};
-use comnum_core::{Error, Result};
+use comnum_core::{Error, Result, ensure};
 use comnum_sim::callbacks::SkipAfter;
 use comnum_sim::grid::{Condition, Grid, Value};
 use comnum_sim::stopping::{Stop, check_confidence};
@@ -137,6 +137,14 @@ impl StopSpec {
         }
         if targets.is_empty() && caps.is_empty() {
             caps.push(Stop::max_trials(self.min_trials.unwrap_or(100).max(1)));
+        } else if let (true, Some(least), Some(most)) = (targets.is_empty(), self.min_trials, self.max_trials) {
+            // without a target the run stops at max_trials: a larger min_trials would be
+            // left out without a word
+            if least > most {
+                return Err(Error::Config(format!(
+                    "stop: min_trials ({least}) exceeds max_trials ({most}), which stops the run"
+                )));
+            }
         }
         let mut any = Vec::new();
         if !targets.is_empty() {
@@ -370,14 +378,34 @@ impl<'de> serde::de::Visitor<'de> for UniqueVisitor {
     }
 }
 
+/// The largest number of values of an axis written as a range, and of conditions of a
+/// grid: a typing error in a range (a step of 0.001 for 1000) is refused instead of
+/// filling the memory.
+const MAX_AXIS_VALUES: usize = 1_000_000;
+
 fn grid_axis(name: &str, v: &Json) -> Result<Vec<Value>> {
+    let too_many = |n: f64| {
+        Error::Config(format!("grid {name:?}: {n:e} values on an axis, at most {MAX_AXIS_VALUES} are allowed"))
+    };
     match v {
         Json::Array(a) => a.iter().map(|x| params::from_json(name, x)).collect(),
         Json::Object(o) => {
+            let unknown: Vec<&String> =
+                o.keys().filter(|k| !["linspace", "from", "to", "step"].contains(&k.as_str())).collect();
+            ensure(unknown.is_empty() && !(o.contains_key("linspace") && o.len() > 1), || {
+                format!(
+                    "grid {name:?}: an axis is a list, {{from, to, step}} or {{linspace: [start, stop, count]}}, got the keys {:?}",
+                    o.keys().collect::<Vec<_>>()
+                )
+            })?;
             if let Some(Json::Array(l)) = o.get("linspace") {
                 let f: Vec<f64> = l.iter().filter_map(Json::as_f64).collect();
-                if f.len() != 3 || f[2] < 1.0 {
+                // three numbers, the last a whole number of values
+                if f.len() != 3 || l.len() != 3 || f[2] < 1.0 || f[2].fract() != 0.0 {
                     return Err(Error::Config(format!("grid {name:?}: linspace is [start, stop, count]")));
+                }
+                if f[2] > MAX_AXIS_VALUES as f64 {
+                    return Err(too_many(f[2]));
                 }
                 let n = f[2] as usize;
                 return Ok((0..n)
@@ -387,7 +415,11 @@ fn grid_axis(name: &str, v: &Json) -> Result<Vec<Value>> {
             let get = |k: &str| o.get(k).and_then(Json::as_f64);
             match (get("from"), get("to"), get("step")) {
                 (Some(a), Some(b), Some(st)) if st != 0.0 && (b - a) / st >= 0.0 => {
-                    let n = ((b - a) / st + 1e-9).floor() as usize + 1;
+                    let count = ((b - a) / st + 1e-9).floor() + 1.0;
+                    if count.is_nan() || count > MAX_AXIS_VALUES as f64 {
+                        return Err(too_many(count));
+                    }
+                    let n = count as usize;
                     let ints =
                         [a, b, st].iter().all(|v| v.fract() == 0.0) && o.values().all(|v| v.is_i64() || v.is_u64());
                     Ok((0..n)
@@ -408,8 +440,14 @@ fn grid_axis(name: &str, v: &Json) -> Result<Vec<Value>> {
 
 /// `grid` with one axis per entry of `axes` (the last varying fastest), checked.
 fn with_axes(mut grid: Grid, axes: &Map<String, Json>) -> Result<Grid> {
+    let mut conditions = 1usize;
     for (k, v) in axes {
-        grid = grid.axis(k, grid_axis(k, v)?);
+        let values = grid_axis(k, v)?;
+        conditions = conditions.saturating_mul(values.len());
+        ensure(conditions <= MAX_AXIS_VALUES, || {
+            format!("the grid has more than {MAX_AXIS_VALUES} conditions (with the axis {k:?})")
+        })?;
+        grid = grid.axis(k, values);
     }
     grid.check()?;
     Ok(grid)
@@ -466,6 +504,16 @@ impl Spec {
             Grid::from_conditions(conds)
         };
         let grid = with_axes(grid, &raw.grid)?;
+        if let Some(s) = &raw.callbacks.skip_below {
+            // a name that is not swept would disable the shortcut without a word
+            let swept = raw.grid.contains_key(&s.along) || raw.cases.iter().any(|c| c.contains_key(&s.along));
+            ensure(swept, || {
+                format!(
+                    "callbacks: skip_below sweeps along {:?}, which is not a variable of the grid or of the cases",
+                    s.along
+                )
+            })?;
+        }
         if raw.link.is_empty() {
             return Err(Error::Config("the link has no block".into()));
         }
@@ -626,6 +674,29 @@ mod tests {
             .run(&crate::SpecScenario::new(&spec), &spec.grid)
             .unwrap_err();
         assert!(e.to_string().contains("between 0 and 1"), "{e}");
+    }
+
+    #[test]
+    fn an_axis_written_wrong_is_refused_before_anything_is_allocated() {
+        let axis = |text: &str| Spec::from_yaml(&format!("name: g\nlink: [source]\ngrid:\n  x: {text}\n"));
+        for text in [
+            "{linspace: [0, 1, 1e300]}", // it used to panic (capacity overflow)
+            "{linspace: [0, 1, 1e10]}",
+            "{from: 0, to: 1e300, step: 1}", // no condition at all in a release build
+            "{from: 0, to: 1.0e19, step: 1}",
+            "{linspace: [0, 10, 2.9]}",           // 2 points, silently
+            "{linspace: [0, foo, 10, 3]}",        // read as [0, 10, 3]
+            "{from: 0, to: 4, step: 2, stpe: 1}", // a key that is not one of an axis
+            "{from: 0, to: 4, step: 2, linspace: [0, 1, 3]}",
+        ] {
+            assert!(matches!(axis(text), Err(Error::Config(_))), "{text}");
+        }
+        assert_eq!(axis("{linspace: [0, 1, 1000000]}").unwrap().conditions().len(), 1_000_000);
+        // the product of the axes is bounded too
+        let e = Spec::from_yaml(
+            "name: g\nlink: [source]\ngrid:\n  x: {linspace: [0, 1, 2000]}\n  y: {linspace: [0, 1, 2000]}\n",
+        );
+        assert!(matches!(e, Err(Error::Config(_))));
     }
 
     #[test]

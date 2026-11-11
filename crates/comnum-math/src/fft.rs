@@ -242,7 +242,7 @@ pub fn centred_bin(i: usize, k: usize, n: usize) -> usize {
 }
 
 /// Swap the two halves of a spectrum so that the zero frequency is in the middle
-/// (`numpy.fft.fftshift`): the bin `(i + ⌊N/2⌋) mod N` moves to `i`.
+/// (`numpy.fft.fftshift`): the bin `(i + ⌈N/2⌉) mod N` moves to `i`.
 ///
 /// # Examples
 /// ```

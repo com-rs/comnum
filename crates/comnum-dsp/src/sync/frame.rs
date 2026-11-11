@@ -211,8 +211,8 @@ pub fn periodic_offset(
     let p = reference.len();
     ensure_shape(p > 0, || "the reference is empty".into())?;
     let l = window.min(p);
-    ensure_shape(l > 0 && start + l <= z.len(), || {
-        format!("the window {start}..{} is outside the {} received symbols", start + l, z.len())
+    ensure_shape(l > 0 && start <= z.len() && l <= z.len() - start, || {
+        format!("the window of {l} symbols from {start} is outside the {} received symbols", z.len())
     })?;
     // c(k) = Σ_t a[t] conj(r[(start + t + k) mod P]) = conj(IFFT(conj(A) · FFT(r'))[k])
     let mut a = vec![C64::new(0.0, 0.0); p];
@@ -357,6 +357,14 @@ pub fn locate_sync_word(r: &[f64], sync: &[f64], rule: SyncRule, ambiguous: bool
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_start_beyond_every_index_is_a_shape_error() {
+        let x: Vec<C64> = (0..20).map(|k| C64::from_polar(1.0, 0.7 * f64::from(k))).collect();
+        assert!(matches!(periodic_offset(&x, &x, usize::MAX, 4, None), Err(comnum_core::Error::Shape(_))));
+        assert!(matches!(periodic_offset(&x, &x, 18, 4, None), Err(comnum_core::Error::Shape(_))));
+        assert!(periodic_offset(&x, &x, 16, 4, None).is_ok());
+    }
 
     #[test]
     fn a_window_outside_the_received_block_is_a_shape_error_in_both_synchronisations() {

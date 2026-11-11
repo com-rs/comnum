@@ -24,6 +24,9 @@ pub struct RunOptions {
     pub csv: Option<PathBuf>,
     /// JSON output.
     pub json: Option<PathBuf>,
+    /// A flag that ends the run when another thread raises it (an interruption of the
+    /// front end): see [`comnum_sim::callbacks::Cancel`].
+    pub cancel: Option<std::sync::Arc<std::sync::atomic::AtomicBool>>,
 }
 
 impl Spec {
@@ -32,14 +35,18 @@ impl Spec {
     /// JSON report), the options overriding the batch and the threads, and
     /// `fast_dev_run` (what [`search`](crate::search::search) evaluates every point with).
     pub(crate) fn bare_runner(&self, opts: &RunOptions) -> Runner {
-        Runner::new()
+        let r = Runner::new()
             .seed(self.seed)
             .batch(opts.batch.unwrap_or(self.batch))
             .threads(opts.threads.unwrap_or(self.threads))
             .stop(self.stop.clone())
             .confidence(self.confidence)
             .config(self.source.to_string())
-            .fast_dev_run(opts.fast_dev_run)
+            .fast_dev_run(opts.fast_dev_run);
+        match &opts.cancel {
+            Some(flag) => r.callback(comnum_sim::callbacks::Cancel(flag.clone())),
+            None => r,
+        }
     }
 
     /// The runner of the specification: its seed, batch, threads, stopping rule,
@@ -65,7 +72,8 @@ impl Spec {
             bar.confidence = self.confidence;
             r = r.callback(bar);
         }
-        if let Some(skip) = &self.skip_below {
+        // one trial per condition measures no error floor: a dry run sets every condition up
+        if let Some(skip) = self.skip_below.as_ref().filter(|_| !opts.fast_dev_run) {
             r = r.callback(skip.clone());
         }
         if let Some(p) = opts.csv.as_ref().or(self.csv.as_ref()) {

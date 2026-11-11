@@ -202,8 +202,11 @@ pub fn imp_powers(two_pi_h: f64, n: usize) -> Vec<f64> {
 /// paper approximates them by a Gaussian for $i \ge 3$. It tends to `fraction` for a
 /// small `sigma` (narrowband phase modulation, $B_{y} = 2B_{m}$) and grows as `sigma`.
 ///
+/// The cost grows as $\sigma^{4}$ (the number of convolutions times their length):
+/// `sigma` is at most 30 rad.
+///
 /// # Errors
-/// [`comnum_core::Error::Config`] unless `sigma > 0` and `0 < fraction < 1`.
+/// [`comnum_core::Error::Config`] unless `0 < sigma ≤ 30` and `0 < fraction < 1`.
 ///
 /// # Examples
 /// ```
@@ -213,7 +216,7 @@ pub fn imp_powers(two_pi_h: f64, n: usize) -> Vec<f64> {
 /// assert!((b - 2.0).abs() < 0.15, "{b}");
 /// ```
 pub fn occupied_bandwidth(sigma: f64, fraction: f64) -> Result<f64> {
-    ensure(sigma > 0.0 && sigma.is_finite(), || format!("the standard deviation must be positive, got {sigma}"))?;
+    ensure(sigma > 0.0 && sigma <= 30.0, || format!("the standard deviation must be in (0, 30] rad, got {sigma}"))?;
     ensure(fraction > 0.0 && fraction < 1.0, || format!("the fraction must lie in (0, 1), got {fraction}"))?;
     let v = sigma * sigma;
     // the Poisson weights of the products i ≥ 1, up to a negligible tail

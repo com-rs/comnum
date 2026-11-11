@@ -261,6 +261,10 @@ impl Amplification {
         match self {
             Amplification::Edfa => {
                 let amp = fiber.span_edfa();
+                if amp.gain_db == 0.0 {
+                    // a span without loss: nothing to restore, with or without a generator
+                    return Ok(());
+                }
                 match rng {
                     Some(r) => amp.apply(e, fs, r)?,
                     None => amp.apply_noiseless(e),
@@ -378,8 +382,8 @@ pub struct Ssfm {
     /// every propagator of the engine (`docs/adr/0014-one-fibre-propagator.md`), such as
     /// `StepRule::FWM_DEFAULT` or the logarithmic steps of Bosco et al.,
     /// `StepRule::Logarithmic(n)`; the back-propagation keeps its own steps
-    /// ([`Ssfm::dbp`]), and the single-precision path the fixed steps (it refuses the
-    /// logarithmic ones).
+    /// ([`Ssfm::dbp`]), and the single-precision path has the fixed steps only (it
+    /// refuses a rule).
     pub rule: Option<StepRule>,
     /// The nonlinear step of the engine: the phase of the power at the middle of the step
     /// ([`NonlinearStep::Midpoint`], the default, OptiCommPy's `ssfm`), Optilux's phase of
@@ -540,13 +544,17 @@ impl Ssfm {
     /// precision only).
     pub fn propagate_f32(&self, x: &mut Vec<C64>, fs: f64, rng: Option<&mut Rng>) -> Result<()> {
         ensure(self.raman.is_none(), || "the Raman amplification is simulated in double precision only".into())?;
-        ensure(!matches!(self.rule, Some(StepRule::Logarithmic(_))), || {
-            "the logarithmic steps are simulated in double precision only".into()
+        ensure(self.rule.is_none(), || {
+            "a step rule is simulated in double precision only (single precision takes the fixed steps of step_km)"
+                .into()
         })?;
         ensure(self.nonlinear == NonlinearStep::Midpoint, || {
             "only the midpoint nonlinear step is simulated in single precision".into()
         })?;
         let (n_steps, h) = self.steps()?;
+        if self.check_sampling {
+            self.sampling_check(x, fs).ensure()?;
+        }
         let n = x.len();
         if n == 0 {
             return Ok(());

@@ -63,7 +63,22 @@ pub fn decimate(x: &[C64], sps_in: usize, sps_out: usize) -> Result<Vec<C64>> {
     Ok((0..len / factor).map(|k| x[(k * factor + best.1) % len]).collect())
 }
 
-/// Exact band-limited resampling of a periodic block to `n_out` samples.
+/// Exact band-limited resampling of a periodic block to `n_out` samples: the bins of
+/// the DFT below the smaller of the two Nyquist frequencies are kept. The bin at that
+/// Nyquist frequency of an even length stands for both signs of the frequency, as in
+/// `scipy.signal.resample`: when the block gets longer it is shared between the two
+/// bins $\pm N/2$, when it gets shorter the two bins are added, so that a real block
+/// stays real.
+///
+/// # Examples
+/// ```
+/// use comnum_dsp::resample::resample_fft;
+/// use comnum_math::C64;
+/// // a real block with a component at half the sampling rate
+/// let x: Vec<C64> = (0..8).map(|n| C64::new(if n % 2 == 0 { 1.0 } else { -0.5 }, 0.0)).collect();
+/// assert!(resample_fft(&x, 16).iter().all(|v| v.im.abs() < 1e-15));
+/// assert!(resample_fft(&x, 6).iter().all(|v| v.im.abs() < 1e-15));
+/// ```
 pub fn resample_fft(x: &[C64], n_out: usize) -> Vec<C64> {
     let n_in = x.len();
     if n_in == 0 || n_out == 0 {
@@ -77,6 +92,18 @@ pub fn resample_fft(x: &[C64], n_out: usize) -> Vec<C64> {
         let inside = n_in >= n_out || (k >= -((n_in / 2) as i64) && k < n_in.div_ceil(2) as i64);
         if inside {
             *v = xs[k.rem_euclid(n_in as i64) as usize] * scale;
+        }
+    }
+    // the bin at the Nyquist frequency of the shorter length
+    let n = n_in.min(n_out);
+    if n % 2 == 0 && n_in != n_out {
+        let h = n / 2;
+        if n_out > n_in {
+            let half = xs[h] * (0.5 * scale);
+            ys[h] = half;
+            ys[n_out - h] = half;
+        } else {
+            ys[h] = (xs[h] + xs[n_in - h]) * scale;
         }
     }
     fft::plan(n_out).inverse(&mut ys);

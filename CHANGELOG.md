@@ -254,6 +254,125 @@ and follow [Semantic Versioning](https://semver.org/).
   of the example's formula, the BER within 3 % of the formula; the example re-draws the
   noise of the last span only, so its own BER estimates are biased (noted on the card).
 
+### Changed
+
+- `GardnerLoop::run` returns a `Result`: a loop that diverges (a signal far from unit
+  power, gains too large) is `Error::Numerical` instead of samples that are not numbers
+  or a call that never returns (Python: `gardner_clock_recovery` raises `ArithmeticError`).
+- `resample_fft` treats the bin at the Nyquist frequency of the shorter length as
+  `scipy.signal.resample` does: shared between the two bins $\pm N/2$ when the block
+  gets longer, the two bins added when it gets shorter. A real block stays real (the
+  imaginary part reached 0.85 on a block of 8 samples with a component at half the
+  sampling rate); a block without energy in that bin is unchanged.
+- `information_rates` observes a real constellation (PAM, OOK) on its axis: the real
+  part of the samples, the variance of the real noise in the metric $e^{-(y-x)^{2}/2N}$
+  and in the SNR it reports, the channel of `theory_mi`. 4-PAM at 5 dB over real noise:
+  an MI of 0.9866 against the theory, where the complex metric gave 0.8175. QAM and PSK
+  are unchanged.
+- `ManakovPmd` with `coarse_steps` takes the nonlinear phase of a section on the power
+  at its start, $(8/9) \gamma P(0) L_{\mathrm{eff}}$: it took it on the power after the
+  loss of the section, $e^{-\alpha L_{c}}$ too little (0.0061 rad instead of 0.2446 for
+  10 mW over one section of 80 km, 0.234 with 80 sections). `backpropagate_with_pmd`
+  inverts the same steps. `ManakovPmd::propagate` now refuses PMD sections that do not
+  cover the span (those of `PmdLink::with_mean_dgd`, of unit length, simulated 10 km of
+  a span of 80 km without a word).
+- Two blocks of the same type without a `label` record their values under their own
+  names (`probe_3.snr_db` and `probe_5.snr_db`, the names of the profile): they were
+  merged under `probe.snr_db`, the mean of the two. Blocks with a `label` are unchanged.
+- A specification refuses: an expectation whose `interval` is not a level between 0 and
+  1; a `min_trials` above `max_trials` without a target (it was left out); a
+  `skip_below` along a name that is not swept; an axis of the grid of more than a
+  million values, a `linspace` that is not three numbers with a whole count, a key that
+  is not one of an axis; a closed form of an order above 65536 or of more than 10000
+  points. `comnum check` and `--fast-dev-run` set every condition up (the `skip_below`
+  shortcut is not installed for one trial), and `check` refuses a `skip_below` on a
+  metric that the link does not report. `comnum verify` and `check` refuse the options
+  they do not take (`--fast-dev-run`, `--profile`; `--threads`, `--max-seconds`), and
+  `verify --json` lists the conditions that the time budget cut short (`time_limited`).
+- The CSV report is written again under a wider header when a later condition brings a
+  column the first did not have (a metric that some cases only report): the value was
+  left out of its row.
+- `Ssfm::propagate_f32` checks the sampling as `propagate` does and refuses any step
+  rule (it took the fixed steps without a word). The amplifier of a span without loss
+  does nothing with or without a generator (it was an error with one).
+- `Rapp::scale_for_output_backoff` is an error for a back-off that the block cannot
+  reach (a burst with silent samples), where it returned an infinite scale.
+- `sequences::lfsr` leaves out a tap at or beyond its order (it read past the register
+  or panicked); `LdpcCode::from_rows`, `without_encoder` and `from_core_rows` refuse a
+  variable listed twice in a check; `Trellis::feedforward` refuses more than 30
+  generators; `Pdsch::check` is public and the Python `NrPdsch` checks its parameters
+  when it is built; `ce_ofdm::theory::occupied_bandwidth` takes `sigma` up to 30 rad.
+- Python: the functions that take bits refuse a value that is not 0 or 1 before the
+  cast to `uint8` (`ber([256, 257, 0, 1], [0, 1, 0, 1])` returned 0.0), those that take
+  indices a value that the cast to integers changes. `run_spec`, `verify_spec` and
+  `search_spec` stop on Ctrl-C after the batch under way (`RunOptions::cancel`,
+  `comnum_sim::callbacks::Cancel`); the block of a chain, `information_rates`,
+  `monte_carlo_gmi` and `resample_fft` release the GIL.
+
+### Fixed
+
+- The step rule `StepRule::Fwm` (the default of `ManakovPmd`) restarted from the step
+  cut at the end of a section of the birefringence: the steps shrank at every section
+  and did not recover. 80 km of standard fibre in ten sections: 46142 steps, 80 without
+  sections; with 16 sections the propagation did not end. The rule now grows from its
+  own last step over the length advanced. Without birefringence the steps, and every
+  result, are unchanged to the last bit.
+- The bound on the nonlinear phase of a step (`StepRule::NonlinearPhase`, and
+  `max_nl_phase_rad` of `StepRule::Fwm`) is on the magnitude of the phase: a medium of
+  negative $\gamma$ (`Medium::negated`, a back-propagation) took the whole length in one
+  step.
+- `PolarCode::new`: the check node of the Gaussian approximation, written
+  $1 - (1 - \phi)^{2}$, is exactly 0 once the mean LLR exceeds 140, and its inverse the
+  largest LLR: channels were ranked above better ones (`PolarCode::new(8, 4, 16.0)` gave
+  the positions 2, 4, 5, 6 instead of 3, 5, 6, 7; 389 pairs out of order for
+  $N = 4096$, $K = 2048$ at a design of 6 dB). The codes designed at 0 to 4 dB for
+  $N$ = 64 to 4096 and the rates 1/4, 1/2 and 3/4 keep their positions, but one position
+  of $(4096, 1024)$ at 4 dB; the NR codes take their table and are unchanged.
+- The min-sum rules of the LDPC decoder gave posteriors that are not numbers for
+  infinite channel LLRs (known bits): 21 to 23 wrong blocks out of 300 with the flooding
+  schedule. An infinite LLR is taken as $\pm 10^{30}$.
+- `comnum verify` passed an expectation whose expected value was infinite under `rtol`
+  (`expected inf, measured 6.96`: ok), and one checked by `interval` on a mean of fewer
+  than two values (an interval without bounds).
+- `gauss_hermite(n)` returned repeated nodes and wrong weights from 199 points (weights
+  that are not numbers at 1000): the roots are now separated by a Sturm count before
+  Newton's method. Up to 198 points the nodes and weights are unchanged to the last bit.
+- `gamma_p(a, x)` and `beta_inc` truncated their series for large parameters
+  (`gamma_p(1e8, 1e8)` = 0.341 instead of 0.500); `hyp1f2` returned the rounding errors
+  of its alternating terms for a large negative argument ($-6 \cdot 10^{4}$ at
+  $z = -987$, where the value is 0.032) and now returns NaN when fewer than six digits
+  are left; `tone_outlier_probability` integrated a peak narrower than its panels for
+  $2 \rho N$ above $10^{7}$ (0.648 instead of 0 for $N = 2^{24}$ at 20 dB);
+  `fresnel` of an infinite argument is $\pm(1/2, 1/2)$; `effective_length` of a negative
+  attenuation (a gain) is the integral, not the length.
+- Panics on inputs that are now errors or handled: `ofdm_rx` after a channel block
+  placed before `ofdm_tx` (an index past the realisation), `resample` to more than
+  $10^{9}$ samples, a `capture` offset or a `periodic_offset` start near the largest
+  integer, `--max-seconds` beyond a duration, a batch of more trials than the memory
+  holds (a batch has at most $2^{20}$ trials; the results do not depend on it),
+  `LdpcCode::from_alist` with sizes its file does not hold, `QuadrantQam::demap_bits`
+  and `Sphere::detect` on a sample that is not a number or a channel without column,
+  `lmmse_mse` with correlations that are not square, `run_with` with a reference shorter
+  than the signal, `linear` and `LowPassInterpolator::new` with positions that do not
+  increase, `rational_ratio` with a rate below 1 Hz, `gaussian_mse` with 64 bits or
+  more, `Ofdm::papr_db_per_block` and `Pts::factors` with fields that `check` refuses.
+  `Cumulants::features` stays finite when the noise variance reaches the measured
+  power, `gain_limited` on a zero pilot, `NormalApproximation::bsc(0)`,
+  `Constellation::normalized` without energy, `GnModel::ase_psd` without loss,
+  `los_probability` of an InF scenario with clutter below the terminal (above 1).
+- The playground says when its engine does not load (it stayed on "loading the
+  engine…"), inflates the specification of a shared link up to 1 MB only, escapes the
+  names of a specification in the texts of the plots (Plotly renders links there), and
+  inspects an edit before the run that follows it within 300 ms.
+- `tools/api_index.py` stopped at the first `#[cfg(test)]` of a file: the public items
+  after a test-only item (`parse_constellation`, `Mapping`, `NameOr`,
+  `CeOfdm::received_phase`, …) were missing from `docs/API.md` and from the check of the
+  duplicated names. The check of the KaTeX headers of `just check-rust` looked at the
+  last crate only. The release publishes the crates after the wheels are built and the
+  installed wheel has run a link, installs that wheel without the index, and
+  `tools/publish_crates.sh` no longer takes any `429` of the output of cargo for a rate
+  limit.
+
 ## [0.3.1] — 2026-11-06
 
 ### Fixed

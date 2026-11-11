@@ -48,7 +48,9 @@ pub fn apply_budget(spec: &mut Spec, seconds: f64) -> Stop {
     let original = spec.stop.clone();
     let evaluations = spec.search.as_ref().map_or(1, |s| s.max_evaluations);
     let n = (spec.conditions().len() * evaluations).max(1);
-    spec.stop = original.clone().or(Stop::max_time(Duration::from_secs_f64(seconds / n as f64)));
+    // a budget beyond what a duration holds is no bound
+    let share = Duration::try_from_secs_f64(seconds / n as f64).unwrap_or(Duration::MAX);
+    spec.stop = original.clone().or(Stop::max_time(share));
     original
 }
 

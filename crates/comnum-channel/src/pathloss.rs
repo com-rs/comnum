@@ -356,7 +356,8 @@ pub fn los_probability(scenario: &Scenario, d2d_out_m: f64, h_ut_m: f64, h_bs_m:
                 InfSubScenario::SparseLow | InfSubScenario::DenseLow => k,
                 InfSubScenario::SparseHigh | InfSubScenario::DenseHigh => k * (h_bs_m - h_ut_m) / (c.height_m - h_ut_m),
             };
-            (-d / k).exp()
+            // a probability: clutter below the terminal (a negative k) leaves the line of sight
+            if k > 0.0 { (-d / k).exp().min(1.0) } else { 1.0 }
         }
     }
 }

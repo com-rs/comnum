@@ -261,7 +261,7 @@ impl Block for Gardner {
     fn apply(&self, s: &mut Frame, _: &mut Rng) -> Result<()> {
         ensure(s.int_sps("gardner")? == 2, || "gardner needs 2 samples per symbol".into())?;
         let g = GardnerLoop { kp: self.kp, ki: self.ki, nyquist: self.nyquist, max_ppm: 500.0 };
-        let mut y = g.run(&signal::pnorm(&s.samples)).signal;
+        let mut y = g.run(&signal::pnorm(&s.samples))?.signal;
         y.truncate(y.len() / 2 * 2);
         s.samples = y;
         Ok(())
@@ -520,7 +520,12 @@ block_params! {
 
 impl Block for Resample {
     fn apply(&self, s: &mut Frame, _: &mut Rng) -> Result<()> {
-        let n_out = (s.samples.len() as f64 * self.sps / s.sps).round() as usize;
+        let n = s.samples.len() as f64 * self.sps / s.sps;
+        // a rate that a typing error makes huge is refused before the block is allocated
+        ensure(n.is_finite() && n <= 1e9, || {
+            format!("resample: {} samples at {} per symbol would become {n:e} samples", s.samples.len(), self.sps)
+        })?;
+        let n_out = n.round() as usize;
         s.samples = resample::resample_fft(&s.samples, n_out);
         s.sps = self.sps;
         Ok(())

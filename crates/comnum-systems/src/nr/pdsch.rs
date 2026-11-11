@@ -99,8 +99,14 @@ impl Pdsch {
         SUBCARRIERS_PER_RB * self.n_rb_grid
     }
 
-    fn check(&self) -> Result<()> {
-        ensure(self.n_prb >= 1 && self.prb_start + self.n_prb <= self.n_rb_grid, || {
+    /// Check the parameters (every method that maps or receives does).
+    ///
+    /// # Errors
+    /// [`comnum_core::Error::Config`] for an allocation outside the grid or the slot, a
+    /// number of ports other than 1 or 2, a DM-RS configuration other than type 1 or a
+    /// PRG without PRB.
+    pub fn check(&self) -> Result<()> {
+        ensure(self.n_prb >= 1 && self.prb_start.checked_add(self.n_prb).is_some_and(|e| e <= self.n_rb_grid), || {
             format!("the allocation {}+{} leaves the grid of {} RBs", self.prb_start, self.n_prb, self.n_rb_grid)
         })?;
         ensure(self.first_symbol + self.n_symbols <= SYMBOLS_PER_SLOT && self.n_symbols >= 1, || {
@@ -165,7 +171,7 @@ impl Pdsch {
 
     /// The number of PRGs of the allocation (the precoders [`Pdsch::transmit`] takes).
     pub fn n_prgs(&self) -> usize {
-        self.prgs().len()
+        if self.prg_size == 0 { 0 } else { self.prgs().len() }
     }
 
     fn precoder(&self, n: usize) -> Vec<C64> {

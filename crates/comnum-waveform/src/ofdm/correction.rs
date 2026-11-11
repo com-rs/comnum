@@ -65,13 +65,20 @@ use comnum_math::{C64, erf, expint_e1};
 /// Gain-limited correction of eq. (16): $\hat{D} = R / (\max(|Z_{p}|, \varepsilon)
 /// e^{j \arg Z_{p}})$ for every sample of `r` and of the pilot envelope `pilot`
 /// (`eps`: the limit, an amplitude relative to the RMS gain; 0 for unlimited
-/// correction). A zero pilot with no limit gives a non-finite sample.
+/// correction). A zero pilot with no limit gives a non-finite sample; with a limit it
+/// has no phase, and the sample is divided by `eps`.
 pub fn gain_limited(r: &[C64], pilot: &[C64], eps: f64) -> Vec<C64> {
     r.iter()
         .zip(pilot)
         .map(|(r, p)| {
             let a = p.norm();
-            if a >= eps { r / p } else { r / (p * (eps / a)) }
+            if a >= eps {
+                r / p
+            } else if a > 0.0 {
+                r / (p * (eps / a))
+            } else {
+                r / eps
+            }
         })
         .collect()
 }
@@ -127,6 +134,13 @@ mod tests {
         let mean = v.iter().sum::<f64>() / n as f64;
         let sd = (v.iter().map(|x| (x - mean).powi(2)).sum::<f64>() / (n * (n - 1)) as f64).sqrt();
         (mean, sd)
+    }
+
+    #[test]
+    fn a_zero_pilot_is_limited_as_the_others() {
+        let r = [C64::new(1.0, 2.0)];
+        let d = gain_limited(&r, &[C64::new(0.0, 0.0)], 0.1);
+        assert!((d[0] - r[0] / 0.1).norm() < 1e-12);
     }
 
     #[test]

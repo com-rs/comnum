@@ -185,6 +185,11 @@ pub struct RunReport {
     pub wall_s: f64,
 }
 
+/// The largest number of trials of a batch: the records of a batch are held together
+/// before they are merged, and a rule on the time is looked at between two batches. The
+/// results do not depend on the size of the batches.
+pub const MAX_BATCH: u64 = 1 << 20;
+
 /// The campaign runner (builder; see the module documentation).
 pub struct Runner {
     seed: u64,
@@ -235,7 +240,7 @@ impl Runner {
 
     /// Trials per batch (at least 1): the stopping rule is checked after every batch.
     pub fn batch(mut self, n: u64) -> Runner {
-        self.batch = n.max(1);
+        self.batch = n.clamp(1, MAX_BATCH);
         self
     }
 
@@ -432,7 +437,10 @@ impl Runner {
         // the last batch ends at the bound on the trials (one batch, whole, for a dev run)
         let limit = if self.fast_dev_run { None } else { self.stop.trial_limit() };
         let status = loop {
-            let end = limit.map_or(trials + self.batch, |n| (trials + self.batch).min(n).max(trials + 1));
+            let batch = self.batch.clamp(1, MAX_BATCH);
+            let end = limit.map_or(trials.saturating_add(batch), |n| {
+                trials.saturating_add(batch).min(n).max(trials.saturating_add(1))
+            });
             let range = trials..end;
             let seed = self.seed;
             let recs = pool.trials(range, |t| {

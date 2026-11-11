@@ -254,8 +254,11 @@ impl PyLinkBlock {
     ///
     /// Raises:
     ///     ValueError: for an invalid parameter (the message names it).
-    fn apply(&self, frame: &mut PyFrame, mut rng: PyRefMut<'_, PyRng>) -> PyResult<()> {
-        self.inner.apply(&mut frame.inner, &mut rng.inner).py()
+    fn apply(&self, py: Python<'_>, frame: &mut PyFrame, mut rng: PyRefMut<'_, PyRng>) -> PyResult<()> {
+        // without the GIL: the native blocks of a chain that also has Python blocks run
+        // in parallel, and another Python thread is not held for the time of a block
+        let (frame, rng) = (&mut frame.inner, &mut rng.inner);
+        py.detach(|| self.inner.apply(frame, rng)).py()
     }
 }
 

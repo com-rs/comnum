@@ -164,6 +164,11 @@ fn ebn0_of(ebn0_db: Option<f64>, snr_db: Option<f64>, m: usize, name: &str) -> R
         .ok_or_else(|| Error::Config(format!("expectation {name:?}: the theory needs ebn0_db or snr_db")))
 }
 
+/// The largest order of a constellation and the largest number of quadrature points or
+/// diversity branches of a closed form.
+const MAX_ORDER: usize = 1 << 16;
+const MAX_POINTS: usize = 10_000;
+
 impl Theory {
     /// The value of the closed form (`name`: the expectation, for the messages).
     pub(super) fn value(&self, name: &str) -> Result<f64> {
@@ -172,6 +177,15 @@ impl Theory {
             Theory::Ber(t) => metrics::theory_ber(t.kind, t.m, ebn0_of(t.ebn0_db, t.snr_db, t.m, name)?)?,
             Theory::Ser(t) => metrics::theory_ser(t.kind, t.m, ebn0_of(t.ebn0_db, t.snr_db, t.m, name)?)?,
             Theory::Mi(t) | Theory::Gmi(t) => {
+                // sizes that a closed form is evaluated with: a typing error is refused
+                // instead of a computation without end
+                ensure(t.m <= MAX_ORDER && t.points <= MAX_POINTS, || {
+                    format!(
+                        "expectation {name:?}: an order of at most {MAX_ORDER} and at most {MAX_POINTS} quadrature \
+                         points, got m = {} and points = {}",
+                        t.m, t.points
+                    )
+                })?;
                 // Maxwell-Boltzmann priors on the unit-energy uniform constellation, as
                 // the source with mb_lambda
                 let px = match t.mb_lambda {
@@ -195,6 +209,9 @@ impl Theory {
             Theory::BerRayleigh(t) => {
                 ensure(t.m <= 4 && matches!(t.kind, ConstellationKind::Qam | ConstellationKind::Psk), || {
                     format!("expectation {name:?}: ber_rayleigh is for BPSK and QPSK")
+                })?;
+                ensure(t.branches <= MAX_POINTS, || {
+                    format!("expectation {name:?}: at most {MAX_POINTS} branches, got {}", t.branches)
                 })?;
                 theory::ber_rayleigh_mrc(db2lin(ebn0_of(t.ebn0_db, t.snr_db, t.m, name)? + t.offset_db), t.branches)?
             }

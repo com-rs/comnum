@@ -80,6 +80,49 @@ pub trait Callback: Send {
     fn on_run_end(&mut self, _results: &[ConditionResult]) {}
 }
 
+/// End the run when a flag is raised (by another thread: a front end that receives an
+/// interruption): the condition under way stops after its batch, no other one starts.
+///
+/// # Examples
+/// ```
+/// use comnum_sim::callbacks::Cancel;
+/// use comnum_sim::prelude::*;
+/// use comnum_sim::scenario::from_fn;
+/// use std::sync::Arc;
+/// use std::sync::atomic::{AtomicBool, Ordering};
+/// let flag = Arc::new(AtomicBool::new(false));
+/// let raise = flag.clone();
+/// let s = from_fn("coin", move |_, rng, rec| {
+///     rec.errors("p", rng.bit() as u64, 1);
+///     raise.store(true, Ordering::Relaxed);
+///     Ok(())
+/// });
+/// let grid = Grid::new().axis("n", [1usize, 2, 3]);
+/// let r = Runner::new().batch(4).stop(Stop::max_trials(1000)).callback(Cancel(flag)).run(&s, &grid).unwrap();
+/// // the first condition stops after its batch, the others run no trial
+/// assert_eq!(r.iter().map(|c| c.trials).collect::<Vec<_>>(), [4, 0, 0]);
+/// ```
+#[derive(Clone, Debug)]
+pub struct Cancel(pub std::sync::Arc<std::sync::atomic::AtomicBool>);
+
+impl Cancel {
+    fn raised(&self) -> bool {
+        self.0.load(std::sync::atomic::Ordering::Relaxed)
+    }
+}
+
+impl Callback for Cancel {
+    fn on_condition_start(&mut self, _index: usize, _condition: &Condition) -> Action {
+        if self.raised() { Action::Skip } else { Action::Continue }
+    }
+    fn on_batch_end(&mut self, _progress: &Progress<'_>) -> Action {
+        if self.raised() { Action::StopCondition } else { Action::Continue }
+    }
+    fn on_condition_end(&mut self, _result: &ConditionResult) -> Action {
+        if self.raised() { Action::StopRun } else { Action::Continue }
+    }
+}
+
 /// Progress lines on the standard error.
 #[derive(Clone, Debug)]
 pub struct ProgressBar {

@@ -299,7 +299,8 @@ impl Constellation {
 
 /// The LLRs $2 y / \sigma^{2}$ of real BPSK symbols ([`crate::constellation::bpsk`],
 /// $0 \mapsto +1$) received in real Gaussian noise of variance `noise_var` per
-/// dimension.
+/// dimension. The variance is not checked: a zero variance gives infinite LLRs, and
+/// no value for a sample at zero.
 ///
 /// # Examples
 /// ```

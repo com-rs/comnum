@@ -115,7 +115,12 @@ impl NormalApproximation {
     /// The binary symmetric channel of crossover probability `delta`.
     pub fn bsc(delta: f64) -> NormalApproximation {
         let h = comnum_math::entropy(&[delta, 1.0 - delta]);
-        let v = delta * (1.0 - delta) * ((1.0 - delta) / delta).log2().powi(2);
+        // the limit at a channel without errors (or that flips every bit) is 0
+        let v = if delta <= 0.0 || delta >= 1.0 {
+            0.0
+        } else {
+            delta * (1.0 - delta) * ((1.0 - delta) / delta).log2().powi(2)
+        };
         NormalApproximation { capacity: 1.0 - h, dispersion: v, half_log: true }
     }
 

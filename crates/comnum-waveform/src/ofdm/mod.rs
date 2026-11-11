@@ -380,7 +380,8 @@ impl Ofdm {
     /// ([`comnum_math::papr_db`] of the useful part).
     pub fn papr_db_per_block(&self, samples: &[C64]) -> Vec<f64> {
         let cp = self.oversampling * self.n_cp;
-        samples.chunks_exact(self.block_len()).map(|b| comnum_math::papr_db(&b[cp..])).collect()
+        // a block of no sample (parameters that `check` refuses) has no block to measure
+        samples.chunks_exact(self.block_len().max(1)).map(|b| comnum_math::papr_db(&b[cp.min(b.len())..])).collect()
     }
 
     /// Modulate with a PAPR reduction technique: the samples and the side information

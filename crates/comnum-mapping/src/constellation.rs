@@ -392,9 +392,11 @@ impl Constellation {
         Ok(self.scaled(1.0 / es.sqrt()))
     }
 
-    /// The same constellation scaled to unit average energy.
+    /// The same constellation scaled to unit average energy (as it is when it has no
+    /// energy: every point at zero).
     pub fn normalized(&self) -> Constellation {
-        self.scaled(1.0 / self.energy().sqrt())
+        let es = self.energy();
+        if es > 0.0 { self.scaled(1.0 / es.sqrt()) } else { self.clone() }
     }
 
     /// The same constellation with every point multiplied by `s`.

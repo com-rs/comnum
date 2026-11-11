@@ -92,6 +92,27 @@ pub const DEFAULT_PEG_SEED: u64 = 1;
 /// 10^{-12}) \approx 28.3$).
 const TANH_BOUND: f64 = 0.999_999_999_999;
 
+/// The largest magnitude of a channel LLR in the decoder: an infinite LLR (a known bit)
+/// is bounded to it, so that the extrinsic message `posterior - message` of the min-sum
+/// rules is never $\infty - \infty$.
+const LLR_BOUND: f64 = 1e30;
+
+/// The channel LLRs bounded to [`LLR_BOUND`].
+fn bounded(llr: &[f64]) -> Vec<f64> {
+    llr.iter().map(|l| l.clamp(-LLR_BOUND, LLR_BOUND)).collect()
+}
+
+/// Every check lists a variable once: a variable repeated in a row cancels in the
+/// parity-check matrix (and in the encoder) but would be two edges of the decoder.
+fn distinct_variables(rows: &[Vec<usize>]) -> Result<()> {
+    for (c, row) in rows.iter().enumerate() {
+        let mut sorted = row.clone();
+        sorted.sort_unstable();
+        ensure(sorted.windows(2).all(|w| w[0] != w[1]), || format!("check {c} lists a variable twice"))?;
+    }
+    Ok(())
+}
+
 /// The check-node rule of the decoder.
 #[derive(Clone, Copy, Debug, PartialEq)]
 #[non_exhaustive]
@@ -218,6 +239,7 @@ impl LdpcCode {
     /// information bits.
     pub fn from_rows(n: usize, rows: Vec<Vec<usize>>) -> Result<LdpcCode> {
         ensure(rows.iter().flatten().all(|v| *v < n), || "a check refers to a missing variable".into())?;
+        distinct_variables(&rows)?;
         // the reduced parity-check matrix: every pivot (parity) bit is a sum of
         // information bits
         let mut m = gf2::Matrix::from_rows(n, &rows);
@@ -245,6 +267,7 @@ impl LdpcCode {
     /// out of range, repeated or absent.
     pub fn without_encoder(n: usize, rows: Vec<Vec<usize>>, info: Vec<usize>) -> Result<LdpcCode> {
         ensure(rows.iter().flatten().all(|v| *v < n), || "a check refers to a missing variable".into())?;
+        distinct_variables(&rows)?;
         ensure(!info.is_empty() && info.iter().all(|&v| v < n), || {
             "the information positions are out of range".into()
         })?;
@@ -296,6 +319,7 @@ impl LdpcCode {
         let m = rows.len();
         ensure(k > 0 && k + m == n && core <= m, || format!("{m} checks, {core} in the core, for k = {k}, n = {n}"))?;
         ensure(rows.iter().flatten().all(|v| *v < n), || "a check refers to a missing variable".into())?;
+        distinct_variables(&rows)?;
         for (r, row) in rows.iter().enumerate() {
             let top = row.iter().copied().max().unwrap_or(0);
             if r < core {
@@ -518,14 +542,16 @@ impl LdpcCode {
     }
 
     /// Decode a block of $n$ channel LLRs: the a posteriori LLRs of the coded bits and
-    /// the number of iterations used.
+    /// the number of iterations used. An infinite LLR (a known bit) is taken as $\pm
+    /// 10^{30}$.
     ///
     /// # Errors
     /// [`Error::Shape`] if `llr` does not have $n$ values.
     pub fn decode_llr(&self, llr: &[f64]) -> Result<(Vec<f64>, usize)> {
         expect_len(llr.len(), self.n, "LLRs")?;
-        let mut post = llr.to_vec();
-        let it = self.propagate(llr, &mut post);
+        let channel = bounded(llr);
+        let mut post = channel.clone();
+        let it = self.propagate(&channel, &mut post);
         Ok((post, it))
     }
 
@@ -661,18 +687,22 @@ fn farthest_checks(v: usize, check_vars: &[Vec<usize>], var_checks: &[Vec<usize>
 /// The number of columns and the rows (0-based column indices, in the order of the
 /// file) of an `alist` text; the message of the error names what is wrong.
 fn parse_alist(text: &str) -> std::result::Result<(usize, Vec<Vec<usize>>), String> {
-    let mut it = alist_numbers(text)?.into_iter();
+    let numbers = alist_numbers(text)?;
+    let total = numbers.len();
+    let mut it = numbers.into_iter();
     let mut next = |what: &str| it.next().ok_or_else(|| format!("the file ends before {what}"));
     let (n, m) = (next("the number of columns")?, next("the number of rows")?);
     if n == 0 || m == 0 {
         return Err(format!("a matrix of {m} × {n}"));
     }
     let (max_col, max_row) = (next("the largest column degree")?, next("the largest row degree")?);
-    let mut col_deg = Vec::with_capacity(n);
+    // the sizes are those of the file: nothing is allocated beyond what it holds
+    let padded_len = n.checked_mul(max_col).and_then(|a| m.checked_mul(max_row).and_then(|b| a.checked_add(b)));
+    let mut col_deg = Vec::with_capacity(n.min(total));
     for _ in 0..n {
         col_deg.push(next("the column degrees")?);
     }
-    let mut row_deg = Vec::with_capacity(m);
+    let mut row_deg = Vec::with_capacity(m.min(total));
     for _ in 0..m {
         row_deg.push(next("the row degrees")?);
     }
@@ -687,7 +717,7 @@ fn parse_alist(text: &str) -> std::result::Result<(usize, Vec<Vec<usize>>), Stri
     }
     let rest: Vec<usize> = it.collect();
     // the lists are padded with zeros up to the largest degree, or not
-    let padded = if rest.len() == n * max_col + m * max_row {
+    let padded = if Some(rest.len()) == padded_len {
         true
     } else if rest.len() == 2 * edges {
         false
@@ -695,7 +725,7 @@ fn parse_alist(text: &str) -> std::result::Result<(usize, Vec<Vec<usize>>), Stri
         return Err(format!(
             "{} numbers after the degrees: {} with zero padding or {} without",
             rest.len(),
-            n * max_col + m * max_row,
+            padded_len.map_or_else(|| "too many".to_string(), |v| v.to_string()),
             2 * edges
         ));
     };
@@ -836,7 +866,7 @@ impl SoftDecode for LdpcCode {
     fn app_into(&self, llr: &[f64], apriori: Option<&[f64]>, out: &mut [f64]) -> Result<usize> {
         expect_len(llr.len(), self.n, "LLRs")?;
         expect_len(out.len(), self.k(), "a posteriori LLRs")?;
-        let mut channel = llr.to_vec();
+        let mut channel = bounded(llr);
         if let Some(a) = apriori {
             expect_len(a.len(), self.k(), "a priori LLRs")?;
             for (&p, a) in self.info.iter().zip(a) {
@@ -923,6 +953,44 @@ mod tests {
             }
         }
         check_vars
+    }
+
+    #[test]
+    fn infinite_llrs_of_known_bits_do_not_break_the_min_sum_rules() {
+        // every bit known but eight weak ones: the min-sum messages were infinite and
+        // the extrinsic `posterior - message` not a number (21 to 23 wrong blocks of 300
+        // with the flooding schedule)
+        let mut rng = comnum_core::rng::Rng::new(5);
+        for rule in [CheckRule::NormalizedMinSum(0.8), CheckRule::OffsetMinSum(0.3), CheckRule::SumProduct] {
+            for layered in [false, true] {
+                let mut code = LdpcCode::peg(96, 48, 3, 1).unwrap();
+                code.decoder = LdpcDecoder { rule, layered, ..code.decoder };
+                for _ in 0..100 {
+                    let info: Vec<u8> = (0..48).map(|_| rng.bit()).collect();
+                    let word = code.encode_block(&info).unwrap();
+                    let mut llr: Vec<f64> =
+                        word.iter().map(|&b| if b == 0 { f64::INFINITY } else { f64::NEG_INFINITY }).collect();
+                    for _ in 0..8 {
+                        let v = rng.below(96);
+                        llr[v] = 0.3 * rng.gaussian();
+                    }
+                    let (post, _) = code.decode_llr(&llr).unwrap();
+                    assert!(post.iter().all(|l| !l.is_nan()), "{rule:?}, layered {layered}");
+                    let hard: Vec<u8> = post.iter().map(|&l| u8::from(l < 0.0)).collect();
+                    assert_eq!(hard, word, "{rule:?}, layered {layered}");
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn a_variable_listed_twice_in_a_check_and_a_malformed_alist_are_refused() {
+        assert!(LdpcCode::from_rows(4, vec![vec![0, 1, 1], vec![1, 2, 3]]).is_err());
+        assert!(LdpcCode::without_encoder(4, vec![vec![0, 1, 1], vec![1, 2, 3]], vec![0, 1]).is_err());
+        // sizes that the file does not hold: an error, not an allocation
+        for text in ["18446744073709551615 3\n3 4\n", "4611686018427387904 3\n3 4\n", "1000000000 3\n3 4\n1 1 1\n"] {
+            assert!(matches!(LdpcCode::from_alist(text), Err(Error::Config(_))), "{text}");
+        }
     }
 
     #[test]

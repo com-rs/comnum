@@ -146,8 +146,59 @@ pub(crate) fn fvec(x: &Bound<'_, PyAny>) -> PyResult<Vec<f64>> {
     Ok(a.readonly().as_array().to_vec())
 }
 
+/// Run `work` without the GIL on another thread while this one watches for an
+/// interruption (Ctrl-C, the stop button of a notebook): the flag `cancel`, which the
+/// work must look at ([`comnum::spec::RunOptions::cancel`]), is raised, the work ends
+/// after its batch of trials and the `KeyboardInterrupt` is returned.
+pub(crate) fn interruptible<T: Send>(
+    py: Python<'_>,
+    cancel: &std::sync::Arc<std::sync::atomic::AtomicBool>,
+    work: impl FnOnce() -> T + Send,
+) -> PyResult<T> {
+    use std::sync::{Condvar, Mutex, PoisonError};
+    let state = (Mutex::new(false), Condvar::new());
+    std::thread::scope(|scope| {
+        let handle = scope.spawn(|| {
+            let out = work();
+            *state.0.lock().unwrap_or_else(PoisonError::into_inner) = true;
+            state.1.notify_all();
+            out
+        });
+        let mut interrupted = None;
+        loop {
+            // woken by the end of the work, or every 100 ms to look at the signals
+            let ended = py.detach(|| {
+                let done = state.0.lock().unwrap_or_else(PoisonError::into_inner);
+                let wait = std::time::Duration::from_millis(100);
+                *state.1.wait_timeout_while(done, wait, |d| !*d).unwrap_or_else(PoisonError::into_inner).0
+            });
+            if ended || handle.is_finished() {
+                break;
+            }
+            if let Err(e) = py.check_signals() {
+                cancel.store(true, std::sync::atomic::Ordering::Relaxed);
+                interrupted = Some(e);
+                break;
+            }
+        }
+        let out = py.detach(|| handle.join());
+        match (interrupted, out) {
+            (Some(e), _) => Err(e),
+            (None, Ok(v)) => Ok(v),
+            (None, Err(panic)) => std::panic::resume_unwind(panic),
+        }
+    })
+}
+
 /// A 1-D array-like of bits (`0`/`1`).
 pub(crate) fn bvec(x: &Bound<'_, PyAny>) -> PyResult<Vec<u8>> {
+    // the values are checked before they are cast: 256 and 0.9 would become 0, 257 and 1.9 a 1
+    let np = x.py().import("numpy")?;
+    let raw = np.call_method1("asarray", (x,))?;
+    let binary: bool = np.call_method1("isin", (&raw, (0, 1)))?.call_method0("all")?.extract()?;
+    if !binary {
+        return Err(PyValueError::new_err("bits must be 0 or 1"));
+    }
     let a = as_numpy(x, "uint8")?;
     let a = a.cast::<PyArray1<u8>>().map_err(|_| PyValueError::new_err("expected a 1-D array of bits"))?;
     let v = a.readonly().as_array().to_vec();
@@ -168,6 +219,12 @@ pub(crate) fn bytevec(x: &Bound<'_, PyAny>) -> PyResult<Vec<u8>> {
 /// A 1-D array-like of non-negative integers.
 pub(crate) fn uvec(x: &Bound<'_, PyAny>) -> PyResult<Vec<usize>> {
     let a = as_numpy(x, "int64")?;
+    // a value that the cast changed (1.9, 2**70) is not an index
+    let np = x.py().import("numpy")?;
+    let same: bool = np.call_method1("array_equal", (&a, np.call_method1("asarray", (x,))?))?.extract()?;
+    if !same {
+        return Err(PyValueError::new_err("expected a 1-D array of integers"));
+    }
     let a = a.cast::<PyArray1<i64>>().map_err(|_| PyValueError::new_err("expected a 1-D array of integers"))?;
     a.readonly()
         .as_array()

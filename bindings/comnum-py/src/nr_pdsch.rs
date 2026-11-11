@@ -298,6 +298,10 @@ impl PyNrHarqProcess {
 /// Raises:
 ///     ValueError: for an invalid configuration (when used).
 ///
+/// Raises:
+///     ValueError: for an allocation outside the grid or the slot, a number of ports
+///         other than 1 or 2, or a PRG without PRB.
+///
 /// Examples:
 ///     >>> import comnum
 ///     >>> p = comnum.NrPdsch(52, 23, 6, 2, dmrs_additional_position=1)
@@ -338,7 +342,7 @@ impl PyNrPdsch {
         dmrs_n_id: u32,
         slot: u32,
         subcarrier_spacing_hz: f64,
-    ) -> Self {
+    ) -> PyResult<Self> {
         let dmrs = PdschDmrs {
             config_type: 1,
             type_a_position: dmrs_type_a_position,
@@ -346,22 +350,23 @@ impl PyNrPdsch {
             n_id: dmrs_n_id,
             slot,
         };
-        PyNrPdsch {
-            inner: Pdsch {
-                n_rb_grid,
-                prb_start,
-                n_prb,
-                first_symbol,
-                n_symbols,
-                dmrs,
-                n_ports,
-                prg_size,
-                qm,
-                rnti,
-                n_id,
-                subcarrier_spacing_hz,
-            },
-        }
+        let inner = Pdsch {
+            n_rb_grid,
+            prb_start,
+            n_prb,
+            first_symbol,
+            n_symbols,
+            dmrs,
+            n_ports,
+            prg_size,
+            qm,
+            rnti,
+            n_id,
+            subcarrier_spacing_hz,
+        };
+        // an invalid configuration is refused when it is built, not at its first use
+        inner.check().py()?;
+        Ok(PyNrPdsch { inner })
     }
 
     /// int: The precoding resource block groups of the allocation.

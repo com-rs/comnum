@@ -38,9 +38,12 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - name: the tag equals the version of the workspace
         working-directory: release
+        # the tag through the environment, never pasted into the script
+        env:
+          TAG: ${{ inputs.tag }}
         run: |
           version=$(python3 -c "import tomllib; print(tomllib.load(open('Cargo.toml', 'rb'))['workspace']['package']['version'])")
-          test "${{ inputs.tag }}" = "v${version}" || { echo "::error::tag ${{ inputs.tag }} but version ${version}"; exit 1; }
+          test "${TAG}" = "v${version}" || { echo "::error::tag ${TAG} but version ${version}"; exit 1; }
       - name: publish the crates of the tag with the script of the branch
         working-directory: release
         run: bash ../tools-branch/tools/publish_crates.sh

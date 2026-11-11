@@ -10,8 +10,8 @@ and of types) defined in more than one module, the candidates for a shared helpe
 a name that `docs/api-duplicates.txt` does not accept.
 
 The Rust parser is deliberately simple (line-based): it understands the style of this
-repository (one item per `pub` line, `///` documentation above it, `#[cfg(test)]`
-closing the public part of a file), not the whole Rust grammar. The Python files are
+repository (one item per `pub` line, `///` documentation above it, the test module
+`#[cfg(test)] mod … {` closing the public part of a file), not the whole Rust grammar. The Python files are
 read by the parser of Python (`ast`), so that a signature is never cut.
 """
 
@@ -44,21 +44,37 @@ RUST_MACRO_ITEM = re.compile(
 def rust_items(path: Path) -> list[tuple[str, str, str]]:
     """`(kind, signature, doc)` of the public items of a Rust file, methods prefixed by
     their type (`Ssfm::propagate`); the private items of `impl` blocks of public types
-    are left out, and so is everything after `#[cfg(test)]`."""
+    are left out, and so are an item compiled for the tests only and everything after the
+    test module (`#[cfg(test)] mod … {`)."""
     lines = path.read_text(encoding="utf-8").splitlines()
     out = []
     impl_type: str | None = None
     impl_indent = 0
     doc: list[str] = []
     in_block_params = False
+    skip_item = False
     for i, line in enumerate(lines):
         stripped = line.strip()
         if stripped.startswith("#[cfg(test)]"):
-            break
+            # the test module that closes the file ends its public part; a single item
+            # compiled for the tests (a helper, `mod tests;`) is left out, and the items
+            # after it are read
+            following = next(
+                (x.strip() for x in lines[i + 1 :] if x.strip() and not x.strip().startswith("#[")),
+                "",
+            )
+            if re.match(r"(pub(\([a-z]+\))?\s+)?mod\s+\w+\s*\{", following):
+                break
+            skip_item = True
+            continue
         if stripped.startswith("///"):
             doc.append(stripped[3:].strip())
             continue
         if stripped.startswith("//!") or stripped.startswith("#["):
+            continue
+        if skip_item:
+            skip_item = False
+            doc = []
             continue
         if stripped.startswith("block_params!"):
             in_block_params = True

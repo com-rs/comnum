@@ -956,6 +956,7 @@ fn run_chain<'py>(
         profile: None,
         csv: csv_path,
         json: json_path,
+        cancel: None,
     };
     let mut runner = spec.runner(&opts);
     if let Some(s) = stop {

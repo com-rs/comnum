@@ -156,7 +156,18 @@ fn perfect_channel(s: &Frame, f: &OfdmFrame, nr: usize, g: usize) -> Result<Vec<
     let bins = f.active_bins();
     for (l, n) in f.symbol_middles(g).into_iter().enumerate() {
         let resp = match csi {
-            Csi::Taps(t) => t.frequency_response(n, &bins, f.ofdm.fft_len()),
+            Csi::Taps(t) => {
+                // the realisation is that of the samples the channel block saw: a channel
+                // before `ofdm_tx` has the length of the symbols, not of the waveform
+                ensure(n < t.n_samples(), || {
+                    format!(
+                        "ofdm_rx: the channel was drawn for {} samples and the OFDM symbol {l} is at sample {n} \
+                         (the channel block goes after ofdm_tx)",
+                        t.n_samples()
+                    )
+                })?;
+                t.frequency_response(n, &bins, f.ofdm.fft_len())
+            }
             Csi::Flat { .. } => {
                 let m = csi.flat(n).ok_or_else(|| Error::Config("ofdm_rx: empty channel".into()))?;
                 (0..k).flat_map(|_| m.iter().copied()).collect()

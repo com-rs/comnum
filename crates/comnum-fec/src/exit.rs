@@ -151,8 +151,12 @@ impl ExitCurve {
     /// $T(I)$ by linear interpolation on the grid (clamped at its ends).
     pub fn transfer(&self, i: f64) -> f64 {
         let x = &self.apriori;
-        if i <= x[0] {
-            return self.extrinsic[0];
+        // a curve without points (the fields are public) has no value
+        let (Some(&first), Some(&e0)) = (x.first(), self.extrinsic.first()) else {
+            return f64::NAN;
+        };
+        if i <= first {
+            return e0;
         }
         for k in 1..x.len() {
             if i <= x[k] {

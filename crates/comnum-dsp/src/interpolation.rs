@@ -45,9 +45,11 @@ use comnum_math::linalg::{CMat, cholesky, solve_cholesky};
 /// `0..n` (constant beyond the first and last positions).
 ///
 /// # Errors
-/// [`comnum_core::Error::Shape`] if `positions` is empty or of another length than `values`.
+/// [`comnum_core::Error::Shape`] if `positions` is empty or of another length than `values`,
+/// [`comnum_core::Error::Config`] unless the positions increase.
 pub fn linear(positions: &[usize], values: &[C64], n: usize) -> Result<Vec<C64>> {
     ensure_known(positions, values)?;
+    ensure(positions.windows(2).all(|w| w[1] > w[0]), || "the positions must increase".into())?;
     let mut out = Vec::with_capacity(n);
     let mut j = 0;
     for i in 0..n {
@@ -282,10 +284,9 @@ impl LowPassInterpolator {
             let points = vec![Point::Known(0); n];
             return Ok(LowPassInterpolator { n_known: 1, width: 1, factor: CMat::zeros((0, 0)), points });
         }
+        ensure(positions.windows(2).all(|w| w[1] > w[0]), || "the positions must increase".into())?;
         let spacing = positions[1] - positions[0];
-        ensure(spacing > 0 && positions.windows(2).all(|w| w[1] - w[0] == spacing), || {
-            "unevenly spaced positions".into()
-        })?;
+        ensure(positions.windows(2).all(|w| w[1] - w[0] == spacing), || "unevenly spaced positions".into())?;
         let corr = |d: f64| C64::new(comnum_math::sinc(alpha * d / spacing as f64), 0.0);
         let width = (2 * half).min(np);
         // the differences of positions in a window are multiples of the spacing, whatever
@@ -364,6 +365,15 @@ pub fn lagrange_cubic(x: &[C64; 4], t: f64) -> C64 {
 mod tests {
     use super::*;
     use comnum_core::rng::Rng;
+
+    #[test]
+    fn positions_that_do_not_increase_are_refused() {
+        let v = [C64::new(1.0, 0.0); 4];
+        assert!(linear(&[5, 3], &v[..2], 8).is_err());
+        assert!(linear(&[3, 3], &v[..2], 8).is_err());
+        assert!(LowPassInterpolator::new(&[9, 6, 3, 0], 12, 2, 1.0).is_err());
+        assert!(LowPassInterpolator::new(&[0, 3, 6, 9], 12, 2, 1.0).is_ok());
+    }
 
     #[test]
     fn linear_is_exact_on_lines_and_constant_beyond_the_ends() {

@@ -510,6 +510,17 @@ mod tests {
     use comnum_core::rng::Rng;
 
     #[test]
+    fn a_reference_shorter_than_the_signal_stops_the_training() {
+        use crate::adaptive::{Reference, UpdateRule};
+        let x: Vec<C64> = (0..64).map(|n| C64::from_polar(1.0, 0.7 * f64::from(n))).collect();
+        let symbols = vec![x[..4].to_vec()];
+        let eq = AdaptiveEqualizer { n_taps: 5, sps: 1, mu: 1e-2, ..AdaptiveEqualizer::new(Algorithm::Nlms) };
+        let out = eq.run_with(&[x], &Reference { symbols: &symbols }, UpdateRule::Normalized).unwrap();
+        assert_eq!(out.symbols[0].len(), 64);
+        assert!(out.symbols[0].iter().all(|v| v.re.is_finite() && v.im.is_finite()));
+    }
+
+    #[test]
     fn nlms_converges_to_the_inverse_and_dd_lms_tracks() {
         // 16-QAM, unit energy
         let c: Vec<C64> =

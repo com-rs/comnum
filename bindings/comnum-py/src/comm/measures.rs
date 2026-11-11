@@ -134,13 +134,15 @@ fn evm(symbols: &Bound<'_, PyAny>, constellation: &PyConstellation, tx: Option<&
 #[pyfunction]
 #[pyo3(signature = (rx, tx, constellation, *, px = None))]
 fn monte_carlo_gmi(
+    py: Python<'_>,
     rx: &Bound<'_, PyAny>,
     tx: &Bound<'_, PyAny>,
     constellation: &PyConstellation,
     px: Option<&Bound<'_, PyAny>>,
 ) -> PyResult<(f64, f64)> {
     let px = px.map(crate::fvec).transpose()?;
-    metrics::monte_carlo_gmi(&cvec(rx)?, &cvec(tx)?, &constellation.inner, px.as_deref()).map(|g| (g.gmi, g.ngmi)).py()
+    let (rx, tx, c) = (cvec(rx)?, cvec(tx)?, &constellation.inner);
+    py.detach(|| metrics::monte_carlo_gmi(&rx, &tx, c, px.as_deref())).map(|g| (g.gmi, g.ngmi)).py()
 }
 
 /// Symbol-wise mutual information for a Gaussian channel of the measured noise
@@ -250,7 +252,8 @@ fn information_rates<'py>(
     px: Option<&Bound<'py, PyAny>>,
 ) -> PyResult<Bound<'py, pyo3::types::PyDict>> {
     let px = px.map(crate::fvec).transpose()?;
-    let r = metrics::information_rates(&cvec(rx)?, &uvec(indices)?, &constellation.inner, px.as_deref()).py()?;
+    let (rx, indices, c) = (cvec(rx)?, uvec(indices)?, &constellation.inner);
+    let r = py.detach(|| metrics::information_rates(&rx, &indices, c, px.as_deref())).py()?;
     let d = pyo3::types::PyDict::new(py);
     d.set_item("mi", r.mi)?;
     d.set_item("gmi", r.gmi)?;

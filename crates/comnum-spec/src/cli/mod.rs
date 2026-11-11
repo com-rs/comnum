@@ -15,7 +15,8 @@
 //! every metric with its confidence interval (for a specification with a `search`, the
 //! operating point of every combination of the other axes); `--profile` adds the mean
 //! time of every block ([`profile`](crate::profile)). `check` builds the link of every
-//! condition and runs one trial of each, without writing anything (for a specification
+//! condition and runs one trial of each, without writing its reports (a block that
+//! writes files, `dump`, writes its own; for a specification
 //! with a `search`, at the lower end of its range for every combination of the other
 //! axes). `verify` runs the specifications and checks their expected results (closed
 //! forms, published curves), prints every check, writes the reports of the run and
@@ -111,6 +112,20 @@ fn parse_args(args: impl IntoIterator<Item = String>) -> Result<Args, String> {
             "-" => a.files.push(PathBuf::from("-")),
             s => a.files.push(PathBuf::from(s)),
         }
+    }
+    // an option that a command does not take is refused, not left out without a word
+    let refused: &[(&str, bool)] = match a.command.as_str() {
+        "verify" => &[("--fast-dev-run", a.fast_dev_run), ("--profile", a.profile)],
+        "check" => &[
+            ("--fast-dev-run", a.fast_dev_run),
+            ("--profile", a.profile),
+            ("--threads", a.threads.is_some()),
+            ("--max-seconds", a.max_seconds.is_some()),
+        ],
+        _ => &[],
+    };
+    if let Some((flag, _)) = refused.iter().find(|(_, given)| *given) {
+        return Err(format!("{} does not take {flag}\n\n{USAGE}", a.command));
     }
     Ok(a)
 }
@@ -233,10 +248,19 @@ fn run_one(path: &PathBuf, a: &Args) -> comnum_core::Result<()> {
 
 /// Run a specification and check its expectations; returns the number of failures.
 fn verify_one(path: &PathBuf, a: &Args) -> comnum_core::Result<usize> {
-    let (spec, _) = budgeted(path, a)?;
+    let (spec, original) = budgeted(path, a)?;
     // the reports of the run, as with `run`
     let opts = report_options(&spec, a);
-    let (_, checks) = verify::verify_spec(&spec, &opts)?;
+    let (verified, checks) = verify::verify_spec(&spec, &opts)?;
+    // the conditions that the time budget cut before the rule of the specification
+    let time_limited: Vec<String> = match &verified {
+        verify::Verified::Run(results) => results
+            .iter()
+            .filter(|r| agent::condition(r, spec.confidence, original.as_ref())["time_limited"] == json!(true))
+            .map(|r| r.condition.label())
+            .collect(),
+        verify::Verified::Search(_) => Vec::new(),
+    };
     let failed = checks.iter().filter(|c| !c.passed).count();
     let report = a.out.join(format!("{}.verify.json", spec.name));
     verify::write_report(&report, &spec, &opts, &checks)?;
@@ -248,6 +272,7 @@ fn verify_one(path: &PathBuf, a: &Args) -> comnum_core::Result<usize> {
             "provenance": agent::provenance(&spec, &opts),
             "budget_s": agent::budget(a.max_seconds, a.json),
             "checks": checks.iter().map(agent::check_json).collect::<Vec<_>>(),
+            "time_limited": time_limited,
             "failed": failed,
             "report": report.display().to_string(),
         });
@@ -255,6 +280,9 @@ fn verify_one(path: &PathBuf, a: &Args) -> comnum_core::Result<usize> {
         return Ok(failed);
     }
     println!("{}: {} checks, {} failed", spec.name, checks.len(), failed);
+    if !time_limited.is_empty() {
+        println!("  the time budget cut {} conditions before their stopping rule", time_limited.len());
+    }
     for c in &checks {
         println!(
             "  {} {} | {} | {}: expected {:.4e}, measured {:.4e} [{:.3e}, {:.3e}]",
@@ -280,6 +308,14 @@ fn check_one(path: &PathBuf, json_out: bool) -> comnum_core::Result<()> {
     let opts = RunOptions { fast_dev_run: true, batch: Some(1), progress: Some(false), ..RunOptions::default() };
     let r = run(&spec, &opts)?;
     let names: Vec<&String> = r.first().map(|c| c.record.iter().map(|(k, _)| k).collect()).unwrap_or_default();
+    if let Some(skip) = &spec.skip_below {
+        comnum_core::ensure(names.iter().any(|n| **n == skip.metric), || {
+            format!(
+                "callbacks: skip_below watches the metric {:?}, which the link does not report ({names:?})",
+                skip.metric
+            )
+        })?;
+    }
     if json_out {
         let doc = json!({
             "ok": true,

@@ -109,10 +109,13 @@ impl Trellis {
     /// `generators` (octal digits written as integers, e.g. `0o133`).
     ///
     /// # Errors
-    /// [`comnum_core::Error::Config`] for a constraint length outside 1 to 24 or no generator.
+    /// [`comnum_core::Error::Config`] for a constraint length outside 1 to 24, no
+    /// generator or more than 30 (the outputs of a branch are packed in a word).
     pub fn feedforward(constraint: u32, generators: &[u32]) -> Result<Trellis> {
         let m = Self::memory(constraint)?;
-        ensure(!generators.is_empty(), || "a convolutional code needs at least one generator".into())?;
+        ensure(!generators.is_empty() && generators.len() < 31, || {
+            format!("a convolutional code needs 1 to 30 generators, got {}", generators.len())
+        })?;
         let states = 1usize << m;
         let mut next = Vec::with_capacity(states);
         let mut out = Vec::with_capacity(states);
@@ -606,6 +609,13 @@ mod tests {
     use crate::block::testing::awgn_llr;
     use comnum_core::rng::Rng;
     use comnum_core::signal::hard_decisions;
+
+    #[test]
+    fn more_generators_than_a_word_holds_are_refused() {
+        assert!(Trellis::feedforward(3, &[0o7; 40]).is_err());
+        assert!(Trellis::feedforward(3, &[0o7; 31]).is_err());
+        assert!(Trellis::feedforward(3, &[0o7; 30]).is_ok());
+    }
 
     #[test]
     fn the_k7_code_has_free_distance_10() {

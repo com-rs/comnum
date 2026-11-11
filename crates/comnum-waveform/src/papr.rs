@@ -294,9 +294,11 @@ impl Pts {
     pub fn factors(&self, index: usize) -> Vec<C64> {
         let mut f = vec![C64::new(1.0, 0.0)];
         let mut rest = index;
+        // no phase to choose from (parameters that the reduction refuses): the factor 1
+        let phases = self.phases.max(1);
         for _ in 1..self.subblocks {
-            f.push(cis(2.0 * PI * (rest % self.phases) as f64 / self.phases as f64));
-            rest /= self.phases;
+            f.push(cis(2.0 * PI * (rest % phases) as f64 / phases as f64));
+            rest /= phases;
         }
         f
     }

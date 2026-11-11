@@ -26,15 +26,23 @@ impl Spec {
         let mut blocks: Vec<Box<dyn Block>> = Vec::with_capacity(self.link.len());
         let mut kinds = Vec::with_capacity(self.link.len());
         let mut labels = Vec::with_capacity(self.link.len());
-        for (i, b) in self.link.iter().enumerate() {
+        let mut parts = Vec::with_capacity(self.link.len());
+        for b in &self.link {
             let (kind, label, p) = params::split_block(&params::substitute(b, cond)?)?;
             labels.push(label.clone().unwrap_or_else(|| kind.clone()));
-            let block = blocks::build_parts(kind.clone(), label, p, &ctx)
+            parts.push((kind, label, p));
+        }
+        // a block without a `label` is built with its unique name: two blocks of a type
+        // record their values under `probe_3` and `probe_5`, not both under `probe` (a
+        // `label` is kept as it is written: a probe may share that of the block it follows)
+        let labels = number_labels(&labels);
+        for (i, ((kind, given, p), numbered)) in parts.into_iter().zip(&labels).enumerate() {
+            let label = given.unwrap_or_else(|| numbered.clone());
+            let block = blocks::build_parts(kind.clone(), Some(label), p, &ctx)
                 .map_err(|e| e.context(format!("link block {}", i + 1)))?;
             blocks.push(block);
             kinds.push(kind);
         }
-        let labels = number_labels(&labels);
         blocks::with_registry(|registry| {
             if registry.iter().any(|b| b.starts && b.name == kinds[0]) {
                 return Ok(());
@@ -253,6 +261,28 @@ mod tests {
         assert_eq!(ser(r[1].row(0.95)), ser(q[1].row(0.95)));
         assert!(ser(r[1].row(0.95)).iter().any(|(k, _)| k == "ser"));
         assert!(spec.trace(2, 0).is_err());
+    }
+
+    #[test]
+    fn two_blocks_of_a_type_without_label_record_under_their_own_names() {
+        // 20 dB after the first noise, about 2 dB after the second: one metric each (they
+        // were merged into one `probe.snr_db`, the mean of the two)
+        let spec = Spec::from_yaml(
+            "name: t\nseed: 1\nstop: {max_trials: 4}\nlink:\n  - {type: source, constellation: QPSK, n_symbols: 2000}\n  - {type: awgn, snr_db: 20}\n  - {type: probe, metrics: [snr_db]}\n  - {type: awgn, snr_db: 0}\n  - {type: probe, metrics: [snr_db]}\n",
+        )
+        .unwrap();
+        let r = crate::run(&spec, &crate::RunOptions::default()).unwrap();
+        let row: std::collections::BTreeMap<String, f64> = r[0]
+            .row(0.95)
+            .into_iter()
+            .filter_map(|(k, v)| match v {
+                comnum_sim::grid::Value::F64(x) => Some((k, x)),
+                _ => None,
+            })
+            .collect();
+        assert!(!row.contains_key("probe.snr_db"), "{row:?}");
+        assert!((row["probe_3.snr_db"] - 20.0).abs() < 0.5, "{row:?}");
+        assert!(row["probe_5.snr_db"] < 4.0, "{row:?}");
     }
 
     #[test]

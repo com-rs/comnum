@@ -202,7 +202,10 @@ impl PmdLink {
 ///
 /// Each PMD section is one asymmetric split step: in the frequency domain the scalar
 /// loss and dispersion and the section `D_k(ω) R_k`, then the nonlinear rotation
-/// `u ← u e^{j(8/9)γ L_eff ‖u‖²}` with `L_eff = (1 - e^{-αL_c})/α`; after every span the
+/// `u ← u e^{j(8/9)γ L_eff ‖u₀‖²}` with `L_eff = (1 - e^{-αL_c})/α` and `‖u₀‖²` the power
+/// at the start of the section (`e^{αL_c}` times that of the attenuated field, so that a
+/// constant field accumulates `(8/9)γ P L_eff` of the span whatever the number of
+/// sections); after every span the
 /// field is amplified by [`ManakovPmd::amplification`] (with the ASE of an EDFA when a
 /// generator is given). [`ManakovPmd::backpropagate_with_pmd`] is the exact inverse (the upper bound of
 /// a receiver that knows the PMD), [`ManakovPmd::equalize_pmd`] the lumped ideal MIMO
@@ -328,7 +331,9 @@ impl ManakovPmd {
         let f = &self.fiber;
         let a = f.alpha_np_km();
         let dz = self.pmd.section_km;
-        let l_eff = effective_length(a, dz);
+        // the field has the loss of the section already: its power is e^{-α L_c} times
+        // that at the start, of which the phase is γ L_eff P(0); (e^{α L_c} - 1)/α here
+        let l_eff = effective_length(-a, dz);
         manakov_rotation(x, y, sign * 8.0 / 9.0 * f.gamma_w_km * l_eff);
     }
 
@@ -337,8 +342,21 @@ impl ManakovPmd {
     /// # Errors
     /// [`Error::Shape`] if the PMD link does not match the number of spans; the errors of
     /// the engine.
+    ///
+    /// # Errors
+    /// [`comnum_core::Error::Shape`] unless the PMD link has the sections of every span,
+    /// [`comnum_core::Error::Config`] unless they cover the span (the links of
+    /// [`PmdLink::random`] and [`PmdLink::none`] do; that of [`PmdLink::with_mean_dgd`],
+    /// of unit sections, is a lumped model for [`PmdLink::apply`]); as the engine.
     pub fn propagate(&self, u: &mut DualPol, fs: f64, rng: Option<&mut Rng>) -> Result<()> {
         let per_span = self.pmd.sections_per_span;
+        let covered = per_span as f64 * self.pmd.section_km;
+        ensure((covered - self.fiber.span_km).abs() <= 1e-9 * self.fiber.span_km, || {
+            format!(
+                "the {per_span} PMD sections of {} km cover {covered} km of a span of {} km",
+                self.pmd.section_km, self.fiber.span_km
+            )
+        })?;
         ensure_shape(self.pmd.sections.len() == self.fiber.n_spans * per_span, || {
             format!(
                 "the PMD link has {} sections for {} spans of {} sections",
@@ -416,6 +434,38 @@ mod tests {
     use super::*;
     use crate::optical::fiber::linear_fiber_channel;
     use crate::optical::fiber::tests::signal;
+
+    #[test]
+    fn the_coarse_steps_accumulate_the_nonlinear_phase_of_the_span() {
+        // a constant field without dispersion: (8/9) gamma P L_eff of the span, whatever
+        // the number of sections (the phase taken on the attenuated power gave 0.0061,
+        // 0.154 and 0.234 rad for 1, 8 and 80 sections against 0.2446)
+        let fiber =
+            FiberParams { n_spans: 1, span_km: 80.0, d_ps_nm_km: 0.0, slope_ps_nm2_km: 0.0, ..FiberParams::default() };
+        let p0 = 10e-3;
+        let a = fiber.alpha_np_km();
+        let exact = 8.0 / 9.0 * fiber.gamma_w_km * p0 * (1.0 - (-a * 80.0).exp()) / a;
+        for sections in [1usize, 8, 80] {
+            let pmd = PmdLink::none(&fiber, sections).unwrap();
+            let m = ManakovPmd {
+                coarse_steps: true,
+                amplification: Amplification::None,
+                ..ManakovPmd::new(fiber.clone(), pmd)
+            };
+            let half = (p0 / 2.0).sqrt();
+            let mut u = DualPol::new(vec![C64::new(half, 0.0); 64], vec![C64::new(half, 0.0); 64]).unwrap();
+            m.propagate(&mut u, 64e9, None).unwrap();
+            assert!((u.x[0].arg() - exact).abs() < 1e-12, "{sections} sections: {} against {exact}", u.x[0].arg());
+        }
+        // sections that do not cover the span (the unit sections of a lumped model)
+        let mut rng = Rng::new(1);
+        let lumped = PmdLink::with_mean_dgd(1e-12, 10, &mut rng);
+        for coarse_steps in [true, false] {
+            let m = ManakovPmd { coarse_steps, ..ManakovPmd::new(fiber.clone(), lumped.clone()) };
+            let mut u = DualPol::new(vec![C64::new(0.01, 0.0); 64], vec![C64::new(0.01, 0.0); 64]).unwrap();
+            assert!(matches!(m.propagate(&mut u, 64e9, None), Err(comnum_core::Error::Config(_))));
+        }
+    }
 
     #[test]
     fn manakov_round_trip_and_pmd_equaliser() {

@@ -109,7 +109,7 @@ bind                    2
 bit_map                 2
 bits_per_symbol         3
 block_len               4
-check                  20
+check                  21
 code                    5
 conditions              2
 config                  2

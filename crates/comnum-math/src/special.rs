@@ -318,6 +318,9 @@ pub fn normal_pdf(x: f64) -> f64 {
 /// method. $C$ and $S$ are odd.
 pub fn fresnel(x: f64) -> (f64, f64) {
     let ax = x.abs();
+    if ax.is_infinite() {
+        return (0.5f64.copysign(x), 0.5f64.copysign(x));
+    }
     let v = if ax < 1.5 {
         let a = C64::new(0.0, std::f64::consts::FRAC_PI_2 * ax * ax);
         series(C64::new(ax, 0.0), C64::new(ax, 0.0), 60, |k| a / k as f64, |k| (2 * k + 1) as f64)
@@ -526,7 +529,9 @@ pub fn gamma_p(a: f64, x: f64) -> f64 {
             ap += 1.0;
             x / ap
         };
-        series(1.0 / a, 1.0 / a, 10_001, ratio, |_| 1.0) * ln_front.exp()
+        // near x = a the terms decay as e^{-k²/(2a)}: about 9 sqrt(a) of them
+        let terms = 10_001 + (10.0 * a.sqrt()) as usize;
+        series(1.0 / a, 1.0 / a, terms, ratio, |_| 1.0) * ln_front.exp()
     } else {
         // Q(a, x) = e^{-x} x^a / Γ(a) · 1/(x+1-a- 1·(1-a)/(x+3-a- 2(2-a)/(x+5-a- …)))
         let mut b = x + 1.0 - a;
@@ -610,7 +615,9 @@ pub fn beta_inc(a: f64, b: f64, x: f64) -> f64 {
         };
         (d, 1.0)
     };
-    ln_front.exp() / (a * lentz(1.0, 1.0, 0.0, 10_000, term))
+    // the fraction needs about sqrt(a + b) terms near the mean of the distribution
+    let terms = 10_000 + (20.0 * (a + b).sqrt()) as usize;
+    ln_front.exp() / (a * lentz(1.0, 1.0, 0.0, terms, term))
 }
 
 /// The inverse of [`beta_inc`] in $x$: the $q$ quantile of $\mathrm{Beta}(a, b)$, by
@@ -667,7 +674,10 @@ pub fn expint_e1(x: f64) -> f64 {
 /// The generalized hypergeometric function
 /// $_{1}F_{2}(a; b_{1}, b_{2}; z) = \sum_{k \ge 0} \frac{(a)_{k}}{(b_{1})_{k} (b_{2})_{k}}
 /// \frac{z^{k}}{k!}$ by its power series, which converges for every $z$ ($(x)_{k}$ the
-/// rising factorial; $b_{1}, b_{2}$ not zero or negative integers). The ICI of OFDM under
+/// rising factorial; $b_{1}, b_{2}$ not zero or negative integers). For a large negative
+/// $z$ the terms alternate and cancel: the sum is NaN when its largest term leaves it
+/// fewer than six significant digits (about $z < -250$ for the parameters below)
+/// instead of a value without meaning. The ICI of OFDM under
 /// Jakes' fading is $1 - {}_{1}F_{2}(\tfrac{1}{2}; \tfrac{3}{2}, 2; -(\pi f_{D} T_{u})^{2})$
 /// (Robertson & Kaiser 1999; Nissel, Schwarz & Rupp 2017, eq. (42)).
 ///
@@ -679,13 +689,21 @@ pub fn expint_e1(x: f64) -> f64 {
 /// assert!((hyp1f2(0.5, 1.5, 2.0, -x * x) - (1.0 - x * x / 6.0 + x.powi(4) / 60.0)).abs() < 1e-8);
 /// // 0F1-like limit: 1F2(a; a, 1; z) = 0F1(; 1; z) = I0(2 sqrt z)
 /// assert!((hyp1f2(1.0, 1.0, 1.0, 1.0) - 2.279_585_302_336_067).abs() < 1e-12);
+/// // the cancellation of a large negative argument is reported, not returned
+/// assert!(hyp1f2(0.5, 1.5, 2.0, -3000.0).is_nan());
 /// ```
 pub fn hyp1f2(a: f64, b1: f64, b2: f64, z: f64) -> f64 {
-    let ratio = |k: usize| {
+    let (mut term, mut sum, mut largest) = (1.0f64, 1.0f64, 1.0f64);
+    for k in 1..10_000 {
         let j = (k - 1) as f64;
-        (a + j) / ((b1 + j) * (b2 + j)) * z / k as f64
-    };
-    series(1.0, 1.0, 10_000, ratio, |_| 1.0)
+        term *= (a + j) / ((b1 + j) * (b2 + j)) * z / k as f64;
+        sum += term;
+        largest = largest.max(term.abs());
+        if term.abs() < SERIES_TOLERANCE * sum.abs() {
+            break;
+        }
+    }
+    if largest * f64::EPSILON > 1e-6 * sum.abs() { f64::NAN } else { sum }
 }
 
 /// The physicists' Hermite polynomial $H_{n}(x)$, by the recurrence

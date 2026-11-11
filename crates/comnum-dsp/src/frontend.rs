@@ -49,7 +49,7 @@ const WINDOW_DB: f64 = 80.0;
 
 /// The integer of a rate in hertz, if it is one.
 fn hertz(fs: f64, name: &str) -> Result<u64> {
-    ensure(fs.is_finite() && fs > 0.0 && fs < 1e12 && (fs - fs.round()).abs() < 1e-6, || {
+    ensure(fs.is_finite() && fs.round() >= 1.0 && fs < 1e12 && (fs - fs.round()).abs() < 1e-6, || {
         format!("{name} must be a positive whole number of hertz, got {fs}")
     })?;
     Ok(fs.round() as u64)
@@ -179,6 +179,8 @@ mod tests {
         assert!((power(&r) - 1.0).abs() < 1e-3);
         assert!(resample_rational(&r, 1.92e6, 1e6, 0.6e6, 9).is_err());
         assert!(rational_ratio(1.5, 1.0).is_err() && rational_ratio(-1.0, 1.0).is_err());
+        // a rate that rounds to zero hertz (it used to divide by zero)
+        assert!(rational_ratio(1e-9, 1e-9).is_err() && rational_ratio(1e6, 1e-9).is_err());
         let x = tone(0.0, 1e6, 10);
         assert!(select_channel(&x, 1e6, 6e5, 1e6, 1e5, 9).is_err());
         assert!(select_channel(&x, 1e6, 0.0, 1e6, 6e5, 9).is_err());

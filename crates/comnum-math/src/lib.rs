@@ -118,10 +118,10 @@ pub fn sinc(x: f64) -> f64 {
 }
 
 /// The effective length `(1 - e^{-αL})/α` of an attenuation `α` over `length` (`L`
-/// itself when `αL` is negligible).
+/// itself when `αL` is negligible; a negative `α`, a gain, gives more than `L`).
 #[inline]
 pub fn effective_length(alpha: f64, length: f64) -> f64 {
-    if alpha * length < 1e-12 { length } else { (1.0 - (-alpha * length).exp()) / alpha }
+    if (alpha * length).abs() < 1e-12 { length } else { (1.0 - (-alpha * length).exp()) / alpha }
 }
 
 /// The frequency $f = c / \lambda$ (Hz) of the vacuum wavelength `wavelength_nm` (nm), $c$
@@ -300,6 +300,48 @@ mod tests {
         ] {
             assert!((bessel_j0(x) - v).abs() < 1e-14, "J0({x}) = {} vs {v}", bessel_j0(x));
         }
+    }
+
+    #[test]
+    fn the_audit_cases_of_the_special_functions() {
+        // Gauss-Hermite beyond the 198 points of the Newton guesses: distinct decreasing
+        // nodes, the weights sum to sqrt(pi) and integrate t^2 e^{-t^2} to sqrt(pi)/2
+        let rpi = std::f64::consts::PI.sqrt();
+        for n in [198usize, 199, 200, 256, 301, 400, 1000] {
+            let (t, w) = gauss_hermite(n);
+            assert!(t.windows(2).all(|p| p[0] > p[1]), "n = {n}");
+            assert!((w.iter().sum::<f64>() / rpi - 1.0).abs() < 1e-12, "n = {n}");
+            let m2: f64 = t.iter().zip(&w).map(|(t, w)| w * t * t).sum();
+            assert!((m2 / (rpi / 2.0) - 1.0).abs() < 1e-11, "n = {n}: {m2}");
+        }
+        // the two methods agree where both hold
+        let (t, w) = gauss_hermite(150);
+        let (tl, wl) = quadrature::gauss_hermite_large(150);
+        for k in 0..150 {
+            assert!((t[k] - tl[k]).abs() < 1e-12 && (w[k] - wl[k]).abs() < 1e-12 * w[k].max(1e-290), "{k}");
+        }
+        // P(a, a) tends to 1/2 from above: 1/2 + 1/(3 sqrt(2 pi a)); the logarithm of the
+        // gamma function limits the accuracy of a large a (its absolute error grows as a)
+        for a in [1e5f64, 1e7, 1e8, 1e9] {
+            let expected = 0.5 + 1.0 / (3.0 * (std::f64::consts::TAU * a).sqrt());
+            assert!((gamma_p(a, a) - expected).abs() < 1e-5, "a = {a}: {}", gamma_p(a, a));
+        }
+        // I_{1/2}(a, a) = 1/2
+        for a in [1e3f64, 1e6, 1e9] {
+            assert!((beta_inc(a, a, 0.5) - 0.5).abs() < 1e-5, "a = {a}: {}", beta_inc(a, a, 0.5));
+        }
+        // the Fresnel integrals at infinity
+        assert_eq!(fresnel(f64::INFINITY), (0.5, 0.5));
+        assert_eq!(fresnel(f64::NEG_INFINITY), (-0.5, -0.5));
+        // a gain: the effective length exceeds the length
+        assert!((effective_length(-0.1, 10.0) - (1f64.exp() - 1.0) / 0.1).abs() < 1e-12);
+        assert_eq!(effective_length(0.0, 10.0), 10.0);
+        // 1F2(1/2; 3/2, 2; z) summed with 400 digits: exact while the alternating terms
+        // leave six digits, NaN beyond instead of the rounding errors of the terms
+        for (z, v) in [(-10.0, 3.068_026e-1), (-100.0, 9.915_457e-2), (-200.0, 7.096_729e-2)] {
+            assert!((hyp1f2(0.5, 1.5, 2.0, z) / v - 1.0).abs() < 1e-6, "z = {z}");
+        }
+        assert!(hyp1f2(0.5, 1.5, 2.0, -987.0).is_nan());
     }
 
     #[test]

@@ -117,7 +117,9 @@ impl Tolerance {
     /// assert!(t.accepts(1.9e-3, 1e-3) && !t.accepts(2.1e-3, 1e-3));
     /// ```
     pub fn accepts(&self, v: f64, e: f64) -> bool {
+        // an expected value that is not finite accepts nothing (`rtol |e|` would be infinite)
         let by_tol = (self.atol.is_some() || self.rtol.is_some())
+            && e.is_finite()
             && (v - e).abs() <= self.atol.unwrap_or(0.0) + self.rtol.unwrap_or(0.0) * e.abs();
         let by_factor = self.factor.is_some_and(|f| e > 0.0 && v >= e / f && v <= e * f);
         by_tol || by_factor
@@ -251,6 +253,9 @@ impl Expectation {
         ensure(!matches!(spec.factor, Some(f) if f < 1.0), || {
             format!("expectation {:?}: factor must be at least 1", spec.name)
         })?;
+        if let Some(c) = spec.interval {
+            comnum_sim::stopping::check_confidence(c, &format!("expectation {:?}: interval", spec.name))?;
+        }
         if let Some(c) = &spec.curve {
             ensure(c.x.len() == c.y.len() && !c.x.is_empty(), || {
                 format!("expectation {:?}: the curve needs as many x as y", spec.name)
@@ -395,9 +400,10 @@ impl Expectation {
                 continue;
             }
             let (lo, hi) = est.interval(confidence);
+            // an interval without bounds (a mean of fewer than two values) contains nothing
             let by_interval = s.interval.is_some_and(|c| {
                 let (a, b) = est.interval(c);
-                a <= e && e <= b
+                a.is_finite() && b.is_finite() && a <= e && e <= b
             });
             out.push(Check {
                 name: s.name.clone(),
@@ -603,6 +609,17 @@ mod tests {
             wall_s: 0.0,
             record,
         }
+    }
+
+    #[test]
+    fn an_expected_value_that_is_not_finite_and_an_interval_without_bounds_accept_nothing() {
+        let t = Tolerance { rtol: Some(0.1), ..Tolerance::default() };
+        assert!(!t.accepts(6.96, f64::INFINITY) && !t.accepts(6.96, f64::NEG_INFINITY) && !t.accepts(6.96, f64::NAN));
+        assert!(t.accepts(1.05, 1.0));
+        // a level of confidence written in percent
+        let e = Expectation::from_json(&json!({"metric": "ber", "value": 0.03, "interval": 99.9})).unwrap_err();
+        assert!(e.to_string().contains("between 0 and 1"), "{e}");
+        assert!(Expectation::from_json(&json!({"metric": "ber", "value": 0.03, "interval": 0.999})).is_ok());
     }
 
     #[test]

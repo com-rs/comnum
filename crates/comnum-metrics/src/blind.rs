@@ -89,8 +89,9 @@ use comnum_math::C64;
 use comnum_math::stats::Moments;
 
 /// The floor of the signal power $C_{21} - N$ that normalises the cumulants of
-/// [`Cumulants::features`], so that an estimate at or below the noise stays finite.
-const POWER_FLOOR: f64 = 1e-300;
+/// [`Cumulants::features`], as a part of the measured power $C_{21}$ (an SNR of
+/// $-60$ dB), so that an estimate at or below the noise stays finite.
+const POWER_FLOOR: f64 = 1e-6;
 
 /// The cumulants of order two and four of a zero-mean complex signal (see the module).
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -153,7 +154,7 @@ impl Cumulants {
     /// The phase-invariant features $(|\tilde{C}_{40}|, \tilde{C}_{42})$, with the signal
     /// power $C_{21} - N$ when the noise variance `noise_var` is known.
     pub fn features(&self, noise_var: Option<f64>) -> (f64, f64) {
-        let s = (self.c21 - noise_var.unwrap_or(0.0)).max(POWER_FLOOR);
+        let s = (self.c21 - noise_var.unwrap_or(0.0)).max(POWER_FLOOR * self.c21).max(f64::MIN_POSITIVE.sqrt());
         (self.c40.norm() / (s * s), self.c42 / (s * s))
     }
 }
@@ -373,6 +374,17 @@ pub fn snr_crb_nmse(snr_lin: f64, n_symbols: usize, sps: usize, real: bool) -> R
 mod tests {
     use super::*;
     use comnum_core::rng::Rng;
+
+    #[test]
+    fn the_features_stay_finite_when_the_noise_exceeds_the_measured_power() {
+        let mut rng = comnum_core::rng::Rng::new(2);
+        let r: Vec<C64> = (0..4000).map(|_| rng.complex_gaussian()).collect();
+        let c = Cumulants::estimate(&r).unwrap();
+        for noise in [0.5 * c.c21, c.c21, 2.0 * c.c21, 1e6 * c.c21] {
+            let (a, b) = c.features(Some(noise));
+            assert!(a.is_finite() && b.is_finite(), "noise {noise}: ({a}, {b})");
+        }
+    }
 
     #[test]
     fn the_bound_needs_symbols_and_samples() {

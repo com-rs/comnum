@@ -40,7 +40,7 @@ check-rust:
     cargo fmt --all --check
     cargo clippy --workspace --all-targets -- -D warnings
     RUSTDOCFLAGS="--html-in-header {{justfile_directory()}}/docs/katex-header.html -D warnings" cargo doc --workspace --no-deps --exclude comnum-py
-    for c in crates/*/; do cmp docs/katex-header.html "$c/katex-header.html"; done
+    for c in crates/*/; do cmp docs/katex-header.html "$c/katex-header.html" || exit 1; done
 
 # The Rust tests and the validation specifications of ci_specs (CI: job test)
 check-tests: && verify-ci

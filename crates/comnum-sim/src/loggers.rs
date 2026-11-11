@@ -100,7 +100,10 @@ pub fn create_parent_dir(path: &Path) -> Result<()> {
 /// complete.
 ///
 /// The header is written with the first condition that ran trials (skipped conditions
-/// before it are held back and written right after the header). The values of the
+/// before it are held back and written right after the header). A later condition that
+/// brings a column the header does not have (a metric that only some cases report, a
+/// mean whose first values were not finite, cases with other keys) has the file written
+/// again with the wider header: no value is left out. The values of the
 /// condition are written as they are, the wall time to the microsecond, the estimates
 /// and their intervals in scientific notation (empty when not finite), the counts as
 /// integers.
@@ -111,6 +114,8 @@ pub struct CsvLogger {
     keys: Vec<String>,
     columns: Vec<String>,
     pending: Vec<(ConditionResult, f64)>,
+    /// The rows written, kept to write the file again under a wider header.
+    written: Vec<(ConditionResult, f64)>,
 }
 
 impl CsvLogger {
@@ -124,7 +129,44 @@ impl CsvLogger {
             keys: Vec::new(),
             columns: Vec::new(),
             pending: Vec::new(),
+            written: Vec::new(),
         }
+    }
+
+    /// The keys of the condition and the metric columns of `r` that the header lacks.
+    fn missing(&self, r: &ConditionResult, confidence: f64) -> (Vec<String>, Vec<String>) {
+        let keys = r.condition.keys().filter(|k| !self.keys.iter().any(|h| h == k)).map(str::to_string).collect();
+        let n_head = 4 + r.condition.entries().len();
+        let metrics = &self.columns[(4 + self.keys.len()).min(self.columns.len())..];
+        let columns = r
+            .row(confidence)
+            .into_iter()
+            .skip(n_head)
+            .map(|(k, _)| k)
+            .filter(|k| !metrics.iter().any(|h| h == k))
+            .collect();
+        (keys, columns)
+    }
+
+    /// Write the file again with the keys and the metric columns `keys` and `columns`
+    /// added to its header, and every row written so far.
+    fn widen(&mut self, keys: Vec<String>, columns: Vec<String>) -> Result<()> {
+        let n_keys = self.keys.len();
+        // index, the keys, status, trials, wall_s, then the metrics
+        let tail = self.columns.split_off(1 + n_keys);
+        self.columns.extend(keys.iter().cloned());
+        self.columns.extend(tail);
+        self.columns.extend(columns);
+        self.keys.extend(keys);
+        self.out = Some(BufWriter::new(File::create(&self.path)?));
+        let header: Vec<String> = self.columns.iter().map(|k| csv_field(k)).collect();
+        if let Some(out) = self.out.as_mut() {
+            writeln!(out, "{}", header.join(","))?;
+        }
+        for (r, c) in std::mem::take(&mut self.written) {
+            self.write_row(&r, c)?;
+        }
+        Ok(())
     }
 
     fn write_header(&mut self, r: &ConditionResult, confidence: f64) -> Result<()> {
@@ -174,6 +216,7 @@ impl CsvLogger {
             writeln!(out, "{}", row.join(","))?;
             out.flush()?;
         }
+        self.written.push((r.clone(), confidence));
         Ok(())
     }
 }
@@ -184,6 +227,7 @@ impl Logger for CsvLogger {
         self.out = Some(BufWriter::new(File::create(&self.path)?));
         self.header = false;
         self.pending.clear();
+        self.written.clear();
         Ok(())
     }
 
@@ -196,6 +240,12 @@ impl Logger for CsvLogger {
             self.write_header(r, confidence)?;
             for (p, c) in std::mem::take(&mut self.pending) {
                 self.write_row(&p, c)?;
+            }
+        }
+        if r.trials > 0 {
+            let (keys, columns) = self.missing(r, confidence);
+            if !keys.is_empty() || !columns.is_empty() {
+                self.widen(keys, columns)?;
             }
         }
         self.write_row(r, confidence)
@@ -333,6 +383,31 @@ mod tests {
     use super::*;
     use crate::prelude::*;
     use crate::scenario::from_fn;
+
+    #[test]
+    fn a_metric_that_appears_in_a_later_condition_widens_the_csv() {
+        // the header came from the first condition alone, and the `ser` of the second was
+        // left out of its row
+        let dir = std::env::temp_dir().join(format!("comnum-widen-{}", std::process::id()));
+        let path = dir.join("r.csv");
+        let s = from_fn("cases", |c, _, rec| {
+            rec.errors(if c.get("n") == Some(&Value::I64(1)) { "ber" } else { "ser" }, 1, 4);
+            Ok(())
+        });
+        let grid = Grid::new().axis("n", [1i64, 2, 1]);
+        Runner::new().stop(Stop::max_trials(2)).logger(CsvLogger::new(&path)).run(&s, &grid).unwrap();
+        let csv = std::fs::read_to_string(&path).unwrap();
+        let lines: Vec<&str> = csv.lines().collect();
+        assert_eq!(lines.len(), 4, "{csv}");
+        let header: Vec<&str> = lines[0].split(',').collect();
+        assert_eq!(&header[..5], ["index", "n", "status", "trials", "wall_s"]);
+        let col = |name: &str| header.iter().position(|h| *h == name).unwrap();
+        let cell = |row: usize, name: &str| lines[row].split(',').nth(col(name)).unwrap().to_string();
+        assert_eq!((cell(1, "ber"), cell(1, "ser")), ("2.5e-1".to_string(), String::new()));
+        assert_eq!((cell(2, "ber"), cell(2, "ser")), (String::new(), "2.5e-1".to_string()));
+        assert_eq!(cell(3, "ber"), "2.5e-1");
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
 
     #[test]
     fn the_json_report_lists_the_dropped_values() {

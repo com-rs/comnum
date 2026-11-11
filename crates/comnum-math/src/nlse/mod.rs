@@ -966,14 +966,14 @@ mod tests {
             },
             ..ManakovSplitStep::new(m)
         };
-        let h1 = s.step_length(&[0.0], 0.0, 100.0, 100.0, None, 350e9).unwrap();
+        let h1 = s.step_length(&[0.0], 0.0, 100.0, 100.0, None, 350e9).unwrap().0;
         assert!((h1 - 20.0 / (2.1683e-23 * (2.0 * std::f64::consts::PI * 350e9).powi(2))).abs() < 1e-12);
         assert!((h1 - 0.190).abs() < 0.001, "{h1}");
         // the constant local error stretches the step by e^{α h / 3}; without loss it stays
-        let h2 = s.step_length(&[0.0], h1, 100.0, h1 + 100.0, Some(h1), 350e9).unwrap();
+        let h2 = s.step_length(&[0.0], h1, 100.0, h1 + 100.0, Some((h1, h1)), 350e9).unwrap().0;
         assert!((h2 / h1 - (m.alpha_np_km * h1 / 3.0).exp()).abs() < 1e-12);
         let lossless = ManakovSplitStep { medium: Medium { alpha_np_km: 0.0, ..m }, ..s };
-        assert_eq!(lossless.step_length(&[0.0], h1, 100.0, h1 + 100.0, Some(h1), 350e9).unwrap(), h1);
+        assert_eq!(lossless.step_length(&[0.0], h1, 100.0, h1 + 100.0, Some((h1, h1)), 350e9).unwrap().0, h1);
         // the nonlinear-phase update keeps L_eff(h) e^{-α z}: it grows faster
         let nlp = ManakovSplitStep {
             rule: StepRule::Fwm {
@@ -984,7 +984,7 @@ mod tests {
             },
             ..s
         };
-        let h2n = nlp.step_length(&[0.0], h1, 100.0, h1 + 100.0, Some(h1), 350e9).unwrap();
+        let h2n = nlp.step_length(&[0.0], h1, 100.0, h1 + 100.0, Some((h1, h1)), 350e9).unwrap().0;
         let leff = |h: f64| (1.0 - (-m.alpha_np_km * h).exp()) / m.alpha_np_km;
         assert!((leff(h2n) / leff(h1) - (m.alpha_np_km * h1).exp()).abs() < 1e-12);
         assert!(h2n > h2);
@@ -1088,6 +1088,60 @@ mod tests {
         let (mut a, mut b2, mut c) = (x0.clone(), x0.clone(), x0);
         assert!(engine.run_fields(&mut [&mut a, &mut b2, &mut c], 1.0, fs, &PropagationOptions::default()).is_err());
         assert!(engine.run_fields(&mut [], 1.0, fs, &PropagationOptions::default()).is_err());
+    }
+
+    #[test]
+    fn the_fwm_rule_keeps_its_step_across_the_sections_of_the_birefringence() {
+        // a step cut at the end of a section does not restart the rule from the cut step:
+        // sections with identity rotations and no DGD leave the number of steps near that
+        // of the span without sections (one cut step per section at most), and the field
+        let m = Medium { alpha_np_km: 0.046, beta2_s2_km: -2.17e-23, gamma_w_km: 1.3, beta3_s3_km: 0.0 };
+        let (n, fs) = (1024, 256e9);
+        let (x0, y0) = dual_field(n);
+        let one = C64::new(1.0, 0.0);
+        let zero = C64::new(0.0, 0.0);
+        for update in [StepUpdate::ConstantLocalError, StepUpdate::NonlinearPhase] {
+            for alpha in [0.046, 0.0] {
+                let m = Medium { alpha_np_km: alpha, ..m };
+                let rule = StepRule::Fwm { phase_rad: 20.0, bandwidth_hz: Some(200e9), update, max_nl_phase_rad: None };
+                let engine = ManakovSplitStep { rule, ..ManakovSplitStep::new(m) };
+                let (mut x, mut y) = (x0.clone(), y0.clone());
+                let plain = engine.run(&mut x, &mut y, 80.0, fs).unwrap();
+                for sections in [10usize, 16, 80] {
+                    let rotations = vec![[one, zero, zero, one]; sections];
+                    let dgd = vec![0.0; sections];
+                    let b =
+                        Birefringence { section_km: 80.0 / sections as f64, rotations: &rotations, dgd_s_per_km: &dgd };
+                    let options = PropagationOptions { gain: None, birefringence: Some(b) };
+                    let (mut u, mut v) = (x0.clone(), y0.clone());
+                    let steps = engine.run_fields(&mut [&mut u, &mut v], 80.0, fs, &options).unwrap();
+                    assert!(steps <= plain + sections, "{update:?} alpha {alpha}: {steps} steps against {plain}");
+                    let e: f64 = x.iter().chain(&y).map(C64::norm_sqr).sum();
+                    let d: f64 = u.iter().zip(&x).chain(v.iter().zip(&y)).map(|(a, b)| (a - b).norm_sqr()).sum();
+                    assert!((d / e).sqrt() < 2e-2, "{}", (d / e).sqrt());
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn the_nonlinear_phase_bounds_the_step_of_a_negated_medium() {
+        // the bound is on the magnitude of the phase: the medium of a back-propagation
+        // (negative gamma) is bounded as the forward one
+        let m = Medium { alpha_np_km: 0.046, beta2_s2_km: -2.17e-23, gamma_w_km: 1.3, beta3_s3_km: 0.0 };
+        let (x0, y0) = dual_field(1024);
+        for rule in [StepRule::NonlinearPhase(2e-2), StepRule::FWM_DEFAULT] {
+            let forward = ManakovSplitStep { rule, ..ManakovSplitStep::new(m) };
+            let backward = ManakovSplitStep { rule, ..ManakovSplitStep::new(Medium { gamma_w_km: -1.3, ..m }) };
+            let step = |phi: f64| forward.step_length(&[0.0, phi], 0.0, 80.0, 80.0, None, 10e9).unwrap().0;
+            assert_eq!(step(-0.5), step(0.5));
+            assert!((step(-0.5) - 0.04).abs() < 1e-15, "{}", step(-0.5));
+            let (mut x, mut y) = (x0.clone(), y0.clone());
+            let f = forward.run(&mut x, &mut y, 20.0, 256e9).unwrap();
+            let (mut x, mut y) = (x0.clone(), y0.clone());
+            let b = backward.run(&mut x, &mut y, 20.0, 256e9).unwrap();
+            assert!(f > 20 && b > f / 4, "{rule:?}: {f} steps forward, {b} with the negated medium");
+        }
     }
 
     #[test]

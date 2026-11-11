@@ -193,8 +193,8 @@ impl Capture {
             Json::Number(n) => {
                 let o =
                     n.as_u64().ok_or_else(|| Error::Config("capture: offset must be random or an integer".into()))?;
-                ensure(o as usize + segment <= samples.len(), || "capture: the segment ends after the file".into())?;
-                Some(o as usize)
+                let o = usize::try_from(o).ok().filter(|o| o.checked_add(segment).is_some_and(|e| e <= samples.len()));
+                Some(o.ok_or_else(|| Error::Config("capture: the segment ends after the file".into()))?)
             }
             other => return Err(Error::Config(format!("capture: offset must be random or an integer, got {other}"))),
         };

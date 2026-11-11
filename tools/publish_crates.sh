@@ -63,6 +63,7 @@ for crate in "${CRATES[@]}"; do
     continue
   fi
   attempt=0
+  limited=0
   while true; do
     attempt=$((attempt + 1))
     echo "== $crate $v: publishing (attempt $attempt)"
@@ -75,7 +76,15 @@ for crate in "${CRATES[@]}"; do
       break
     fi
     echo "$out" | tail -5
-    if echo "$out" | grep -q "429"; then
+    # the status of the answer, not any 429 of the output (a version, a line number);
+    # a crate that stays rate-limited after 30 waits fails the job instead of its timeout
+    if echo "$out" | grep -qE "status 429|429 Too Many Requests"; then
+      limited=$((${limited:-0} + 1))
+      if [ "$limited" -gt 30 ]; then
+        echo "   still rate-limited after 30 waits: giving up on $crate" >&2
+        exit 1
+      fi
+      attempt=$((attempt - 1))
       wait_s=$(wait_seconds "$out")
       echo "   rate-limited: waiting ${wait_s}s"
       sleep "$wait_s"

@@ -88,6 +88,21 @@ fn phi_inv(y: f64) -> f64 {
     comnum_math::bisect(|x| phi(x) > y, lo, hi, 100)
 }
 
+/// The check node of the Gaussian approximation, $\phi^{-1}(1 - (1 - \phi(\mu))^{2})$.
+/// Once $\phi$ is below the precision of 1 ($\mu$ above 140) that expression is exactly
+/// 0, and its inverse the largest LLR instead of one just below $\mu$: a small $\phi$
+/// takes the equal form $\phi^{-1}(\phi (2 - \phi))$, and a $\phi$ that underflows its
+/// asymptote $\phi(\mu') = 2\phi(\mu)$, $\mu' = \mu - 4 \ln 2$.
+fn check_node(mu: f64) -> f64 {
+    if mu > 2000.0 {
+        return mu - 4.0 * std::f64::consts::LN_2;
+    }
+    let p = phi(mu);
+    // the first form where it keeps eight digits: the reliabilities of the designs it
+    // served are unchanged to the last bit
+    if p > 1e-8 { phi_inv(1.0 - (1.0 - p).powi(2)) } else { phi_inv(p * (2.0 - p)) }
+}
+
 /// The mean LLR of every synthetic channel of a transform of size `n` (a power of two)
 /// whose channels have the mean LLR `mu`.
 ///
@@ -101,7 +116,7 @@ fn reliabilities(n: usize, mu: f64) -> Vec<f64> {
     let mut v = vec![mu];
     while v.len() < n {
         // prefix p (the high bits of the index) becomes 2p (bit 0) and 2p + 1 (bit 1)
-        v = v.iter().flat_map(|&m| [phi_inv(1.0 - (1.0 - phi(m)).powi(2)), 2.0 * m]).collect();
+        v = v.iter().flat_map(|&m| [check_node(m), 2.0 * m]).collect();
     }
     v
 }
@@ -715,6 +730,68 @@ mod tests {
     use comnum_core::rng::Rng;
 
     #[test]
+    fn the_construction_respects_the_order_of_the_channels_at_any_design_snr() {
+        // a channel whose index has all the ones of another is the better of the two
+        // (Mori & Tanaka): among the channels that carry a reliability (not the dead
+        // ones, all 0), no information position below a frozen one. The check node
+        // written 1 - (1 - phi)^2 broke it from 6 dB (389 pairs for N = 4096, K = 2048)
+        for (n, k) in [(8usize, 4usize), (256, 128), (1024, 512), (4096, 2048), (4096, 3072)] {
+            for design in [0.0, 2.0, 4.0, 6.0, 8.0, 10.0, 16.0, 20.0, 40.0] {
+                let code = PolarCode::new(n, k, design).unwrap();
+                let r = reliabilities(n, 4.0 * k as f64 / n as f64 * db2lin(design));
+                let info = code.info_positions();
+                let mut chosen = vec![false; n];
+                for &i in info {
+                    chosen[i] = true;
+                }
+                let broken =
+                    info.iter().filter(|&&i| (0..n).any(|j| j != i && j & i == i && !chosen[j] && r[j] > 0.0)).count();
+                assert_eq!(broken, 0, "N = {n}, K = {k}, design {design} dB");
+                // and the reliabilities themselves follow the order
+                for i in 0..n {
+                    for b in 0..n.trailing_zeros() {
+                        let j = i | (1 << b);
+                        assert!(r[j] >= r[i], "N = {n}, design {design} dB: {i} ({}) above {j} ({})", r[i], r[j]);
+                    }
+                }
+            }
+        }
+        let positions = |d: f64| PolarCode::new(8, 4, d).unwrap().info_positions().to_vec();
+        assert_eq!(positions(16.0), [3, 5, 6, 7]);
+        assert_eq!(positions(20.0), [3, 5, 6, 7]);
+    }
+
+    #[test]
+    fn the_rewritten_check_node_keeps_the_codes_of_low_design_snrs() {
+        // the former expression of the check node: the same information positions for
+        // the designs at 0 to 4 dB, but one position of one code
+        let former = |n: usize, mu: f64| -> Vec<f64> {
+            let mut v = vec![mu];
+            while v.len() < n {
+                v = v.iter().flat_map(|&m| [phi_inv(1.0 - (1.0 - phi(m)).powi(2)), 2.0 * m]).collect();
+            }
+            v
+        };
+        for n in [64usize, 256, 1024, 4096] {
+            for k in [n / 4, n / 2, 3 * n / 4] {
+                for design in [0.0, 1.0, 2.0, 3.0, 4.0] {
+                    let mu = 4.0 * k as f64 / n as f64 * db2lin(design);
+                    let mut order: Vec<(f64, usize)> = former(n, mu).into_iter().zip(0..n).collect();
+                    order.sort_by(|x, y| y.0.total_cmp(&x.0).then(y.1.cmp(&x.1)));
+                    let mut pos: Vec<usize> = order.iter().take(k).map(|o| o.1).collect();
+                    pos.sort_unstable();
+                    let code = PolarCode::new(n, k, design).unwrap();
+                    let moved = code.info_positions().iter().filter(|i| !pos.contains(i)).count();
+                    // one code of the sweep changes: the former check node already ranked
+                    // channel 3696 above 1518 there
+                    let expected = usize::from((n, k, design) == (4096, 1024, 4.0));
+                    assert_eq!(moved, expected, "N = {n}, K = {k}, design {design} dB");
+                }
+            }
+        }
+    }
+
+    #[test]
     fn the_transform_is_an_involution_and_sc_decodes_noiseless_words() {
         let mut r = Rng::new(1);
         let mut u: Vec<u8> = (0..64).map(|_| r.bit()).collect();
@@ -891,7 +968,7 @@ mod tests {
         if n == 1 {
             return mu;
         }
-        let m = if i < n / 2 { phi_inv(1.0 - (1.0 - phi(mu)).powi(2)) } else { 2.0 * mu };
+        let m = if i < n / 2 { check_node(mu) } else { 2.0 * mu };
         former_reliability(i % (n / 2), n / 2, m)
     }
 

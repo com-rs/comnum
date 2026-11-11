@@ -297,7 +297,9 @@ impl GnModel {
     /// The ASE power spectral density at the receiver, both polarisations (W/Hz), of
     /// the EDFAs alone (without [`GnModel::raman`]).
     pub fn ase_psd(&self) -> f64 {
-        2.0 * self.fiber.n_spans as f64 * self.fiber.span_edfa().ase_psd()
+        let amp = self.fiber.span_edfa();
+        // a span without loss has no amplifier (the formula of the EDFA has no value at a gain of 1)
+        if amp.gain_db == 0.0 { 0.0 } else { 2.0 * self.fiber.n_spans as f64 * amp.ase_psd() }
     }
 
     /// The noise power spectral density at the receiver at channel `ch`, both

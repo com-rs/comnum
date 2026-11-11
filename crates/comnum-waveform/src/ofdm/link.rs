@@ -135,7 +135,8 @@ pub struct FrameDetection {
 }
 
 impl Default for FrameDetection {
-    /// Unit gain, spatial multiplexing, no noise.
+    /// Unit gain, spatial multiplexing, and a noise variance of zero to be set: every
+    /// detector needs a positive one.
     fn default() -> FrameDetection {
         FrameDetection { gain: 1.0, alamouti: false, noise_var: 0.0 }
     }
