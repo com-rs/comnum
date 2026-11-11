@@ -295,6 +295,12 @@ and follow [Semantic Versioning](https://semver.org/).
 - `Ssfm::propagate_f32` checks the sampling as `propagate` does and refuses any step
   rule (it took the fixed steps without a word). The amplifier of a span without loss
   does nothing with or without a generator (it was an error with one).
+- The scalar split step (`Ssfm`, the `ssfm` block) with Raman amplification gives its
+  field the spontaneous Raman noise of one polarisation, half of
+  `RamanProfile::ase_psd`: it gave it the noise of both, 3 dB more than a polarisation
+  of the Manakov solver and than the ASE of its own EDFA, which is that of one
+  polarisation. The Manakov solver, the generalised GN model and the profiles compared
+  with GNPy (which counts both polarisations against the power of both) are unchanged.
 - `Rapp::scale_for_output_backoff` is an error for a back-off that the block cannot
   reach (a burst with silent samples), where it returned an infinite scale.
 - `sequences::lfsr` leaves out a tap at or beyond its order (it read past the register

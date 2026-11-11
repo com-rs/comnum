@@ -549,8 +549,10 @@ impl FieldSpan {
     }
 
     /// The end of the span on one of the `pols` polarisations, `x`: the spontaneous
-    /// Raman noise and the multiple-path interference of double Rayleigh backscattering
-    /// (each a share `1/pols` of the power spectral density of the slices), then the
+    /// Raman noise of one polarisation (half of [`RamanProfile::ase_psd`], whatever
+    /// `pols`: a scalar field is one polarisation, as for the ASE of its EDFA), the
+    /// multiple-path interference of double Rayleigh backscattering (a share `1/pols`
+    /// of that of the slices, which follows the power of the signal), then the
     /// amplifier, and its ASE where its gain exceeds 1 (`Edfa`, noise figure `nf_db`):
     /// the noise is drawn from `rng`, none without one.
     pub(crate) fn amplify(
@@ -587,7 +589,9 @@ impl FieldSpan {
                     Amplification::Edfa if g[b] > 1.0 => ase_density(g[b], nf, self.freqs[b]),
                     _ => 0.0,
                 };
-                *v += wb * (((ase[b] + mpi[b]) * share * g[b] + edfa) * fs).sqrt();
+                // two polarisations: the expression of the results recorded so far
+                let raman = if pols == 2 { (ase[b] + mpi[b]) * share } else { 0.5 * ase[b] + mpi[b] * share };
+                *v += wb * ((raman * g[b] + edfa) * fs).sqrt();
             }
         }
         p.inverse(x);
@@ -914,6 +918,30 @@ mod tests {
         let r2 = 1e-4 * 50.0 * 50.0 / 2.0;
         let expected = MPI_COPOLARISED_FRACTION * r2 * 1e-3;
         assert!((noise / expected - 1.0).abs() < 0.05, "{noise} vs {expected}");
+    }
+
+    #[test]
+    fn a_polarisation_gets_half_the_spontaneous_noise_whatever_their_number() {
+        // a scalar field is one polarisation: half of the noise of both (it used to get
+        // all of it, 3 dB more than a polarisation of the Manakov solver)
+        let fiber = fiber(80.0);
+        let (fs, n) = (64e9, 1 << 14);
+        let x = tones(n, fs, &[(0.0, 1e-3)]);
+        let raman = Raman {
+            pumps: vec![RamanPump::at_wavelength(1450.0, 0.5, Direction::Counter)],
+            rayleigh_db_km: None,
+            ..Raman::default()
+        };
+        let span = raman.field_span(&fiber, &[&x], fs).unwrap();
+        let ase = span.profile.ase_at(&span.interp);
+        let expected = 0.5 * ase.iter().sum::<f64>() / ase.len() as f64 * fs;
+        assert!(expected > 0.0);
+        for pols in [1usize, 2] {
+            let mut e = x.clone();
+            span.amplify(&mut e, fs, pols, &Amplification::None, fiber.nf_db, Some(&mut Rng::new(9)));
+            let noise = e.iter().zip(&x).map(|(u, v)| (u - v).norm_sqr()).sum::<f64>() / n as f64;
+            assert!((noise / expected - 1.0).abs() < 0.05, "{pols} polarisations: {noise} vs {expected}");
+        }
     }
 
     fn tones(n: usize, fs: f64, offsets: &[(f64, f64)]) -> Vec<C64> {
