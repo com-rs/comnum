@@ -303,6 +303,128 @@ def test_power_profiles_of_an_s_c_l_span_with_frequency_dependent_loss_and_area(
         assert ase_err < 3e-5, (p_dbm, ase_err)
 
 
+YANKOV_STEPS_M = {"coarse": 1.0, "fine": 0.5}
+"""The two Euler steps of GNPy whose results are extrapolated to a zero step."""
+
+
+def test_on_off_gain_of_four_counter_pumps_against_the_load():
+    """The backward amplifier of Fig. 5 of Yankov et al. (J. Lightw. Technol. 41(2),
+    2023): 100 km of standard fibre at 0.2 dB/km, four counter-pumps of 21 dBm at 206.1,
+    207.5, 209.0 and 210.6 THz, 40 channels at 191.69 + 0.1 k THz with a flat load of 0
+    and 20 dBm in all; the on-off gain of their eq. (3), the net gain plus alpha L.
+    GNPy's own fibre: its gain spectrum, its effective areas against frequency and its
+    solver; only the depletion of the higher frequency is that of comnum (the photon
+    conservation). The figure of the paper is not reproduced by either tool: with these
+    pumps both give 10 to 18 dB where it shows 5.2 to 10.5 dB, its source (simulation or
+    measurement) and the power of the pumps in the fibre being unstated
+    (`validation/literature.yaml`, `yankov2023`)."""
+    length, alpha = 100.0, 0.2
+    freqs = 191.69e12 + 0.1e12 * np.arange(40)
+    pumps_thz = [206.1, 207.5, 209.0, 210.6]
+    pump_mw = 10**2.1
+    allf = np.concatenate([freqs, np.array(pumps_thz) * 1e12])
+    fiber = comnum.FiberParams(span_km=length, alpha_db_km=alpha, fc_hz=FC)
+    for total_dbm in [0.0, 20.0]:
+
+        def compute(total_dbm=total_dbm):
+            from gnpy.core.elements import Fiber, RamanFiber
+            from gnpy.core.parameters import SimParams
+            from gnpy.core.science_utils import RamanSolver
+
+            params = {
+                "length": length,
+                "length_units": "km",
+                "loss_coef": alpha,
+                "dispersion": 16.7e-6,
+                "effective_area": 80e-12,
+                "pmd_coef": 0.0,
+                "con_in": 0,
+                "con_out": 0,
+                "att_in": 0,
+                "ref_frequency": C0 / 1550e-9,
+            }
+            span = RamanFiber(
+                uid="span",
+                params=params,
+                operational={
+                    "temperature": 300,
+                    "raman_pumps": [
+                        {
+                            "power": pump_mw * 1e-3,
+                            "frequency": f * 1e12,
+                            "propagation_direction": "counterprop",
+                        }
+                        for f in pumps_thz
+                    ],
+                },
+            )
+
+            def photon_conserving(f):
+                cr = Fiber.cr(span, f)
+                return np.where(cr < 0, cr * np.outer(f, 1 / f), cr)
+
+            out = {"aeff_um2": span.params.effective_area_scaling(allf) * 1e12}
+            for conserving in [False, True]:
+                span.cr = (
+                    photon_conserving if conserving else (lambda f, span=span: Fiber.cr(span, f))
+                )
+                for name, step_m in YANKOV_STEPS_M.items():
+                    SimParams.set_params(
+                        {
+                            "raman_params": {
+                                "flag": True,
+                                "method": "numerical",
+                                "result_spatial_resolution": 100.0,
+                                "solver_spatial_resolution": step_m,
+                            }
+                        }
+                    )
+                    n = len(freqs)
+                    si = NS(
+                        pch=np.full(n, 1e-3 * 10 ** (total_dbm / 10) / n),
+                        frequency=freqs,
+                        baud_rate=np.ones(n),
+                        number_of_channels=n,
+                    )
+                    srs = RamanSolver.calculate_stimulated_raman_scattering(si, span)
+                    key = "photon" if conserving else "native"
+                    out[f"on_off_db_{key}_{name}"] = (
+                        10 * np.log10(srs.loss_profile[:n, -1]) + alpha * length
+                    )
+            return out
+
+        ref = oracle(f"raman_yankov2023_fig5_{total_dbm:.0f}dbm", compute, tool=TOOL)
+        order = np.argsort(allf)
+        raman = {
+            "pumps": [
+                {"frequency_thz": f, "power_mw": pump_mw, "direction": "counter"} for f in pumps_thz
+            ],
+            "step_km": 0.05,
+            "aeff_spectrum": {
+                "frequency_thz": list(allf[order] / 1e12),
+                "aeff_um2": list(np.asarray(ref["aeff_um2"])[order]),
+            },
+        }
+        ours = comnum.raman_profile(
+            fiber, list(freqs - FC), total_dbm - 10 * np.log10(len(freqs)), raman
+        )
+        on_off = np.asarray(ours["net_gain_db"]) + alpha * length
+
+        def extrapolated(key, ref=ref):
+            return 2 * np.asarray(ref[f"{key}_fine"]) - np.asarray(ref[f"{key}_coarse"])
+
+        err = np.abs(on_off - extrapolated("on_off_db_photon")).max()
+        native = np.abs(extrapolated("on_off_db_native") - extrapolated("on_off_db_photon")).max()
+        print(
+            f"{total_dbm} dBm: comnum against GNPy {err:.1e} dB; GNPy's own depletion moves the gain by {native:.3f} dB"
+        )
+        # measured: 1.9e-6 dB at 0 dBm and 1.7e-6 dB at 20 dBm; the depletion of GNPy
+        # (the pump loses the power the signal gains) moves the on-off gain by 0.047 and
+        # 0.120 dB, the load depleting the pumps more
+        assert err < 3e-6, (total_dbm, err)
+        assert 0.03 < native < 0.15, (total_dbm, native)
+
+
 @pytest.mark.parametrize("with_pumps", [False, True])
 def test_generalized_gn_model_with_counter_pumps(with_pumps):
     """The NLI of the centre of three channels, GNPy with a fine frequency grid."""

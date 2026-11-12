@@ -1,11 +1,29 @@
-//! Quadrature: the composite Simpson rule ([`simpson`], [`try_simpson`],
-//! [`simpson_weight`]) and the Gauss rules ([`gauss_hermite`], [`gauss_legendre`], and
+//! Quadrature: the composite trapezoidal rule on samples ([`trapezoid_uniform`]), the
+//! composite Simpson rule ([`simpson`], [`try_simpson`], [`simpson_weight`]) and the
+//! Gauss rules ([`gauss_hermite`], [`gauss_legendre`], and
 //! [`gaussian_nodes`], the nodes of a Gaussian expectation), re-exported at the root.
 
 use crate::C64;
 
 /// The weight below which a node of [`gaussian_nodes`] is left out.
 const NEGLIGIBLE_WEIGHT: f64 = 1e-300;
+
+/// The composite trapezoidal rule on samples `values` of a function at a uniform
+/// spacing `h`: $h \big(\sum_{i} v_{i} - (v_{0} + v_{m})/2\big)$, exact for affine
+/// functions (zero for fewer than two samples).
+///
+/// # Examples
+/// ```
+/// use comnum_math::trapezoid_uniform;
+/// assert_eq!(trapezoid_uniform(&[1.0, 2.0, 3.0], 0.5), 2.0);
+/// assert_eq!(trapezoid_uniform(&[4.0], 1.0), 0.0);
+/// ```
+pub fn trapezoid_uniform(values: &[f64], h: f64) -> f64 {
+    match values {
+        [first, .., last] => h * (values.iter().sum::<f64>() - (first + last) / 2.0),
+        _ => 0.0,
+    }
+}
 
 /// Composite Simpson's rule $\int_{a}^{b} f(t)\, dt$ on `n` intervals (`n` even, at
 /// least 2), exact for cubics.

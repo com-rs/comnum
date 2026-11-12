@@ -1,5 +1,6 @@
 //! The Raman gain spectrum of a fibre: the measured spectrum of standard single-mode
-//! fibre (GNPy) or a table, scaled with the pump frequency.
+//! fibre (GNPy) or a table, scaled with the pump frequency unless
+//! [`RamanGain::with_pump_scaling`]`(false)`.
 
 use comnum_core::{Result, ensure, ensure_shape};
 
@@ -10,6 +11,9 @@ pub struct RamanGain {
     offsets_hz: Vec<f64>,
     gain_m_w: Vec<f64>,
     reference_hz: f64,
+    /// Whether the efficiency of a pump scales with its frequency, $f_{p}/f_{\mathrm{ref}}$
+    /// (see [`RamanGain::efficiency`]).
+    pump_scaling: bool,
 }
 
 /// Frequency offsets of the gain spectrum of standard single-mode fibre (THz).
@@ -125,6 +129,7 @@ impl RamanGain {
             offsets_hz: SSMF_OFFSETS_THZ.iter().map(|f| f * 1e12).collect(),
             gain_m_w: SSMF_GAIN_M_W.to_vec(),
             reference_hz: 206.184_634_112_792e12,
+            pump_scaling: true,
         }
     }
 
@@ -149,7 +154,56 @@ impl RamanGain {
         })?;
         ensure(gain_m_w.iter().all(|g| *g >= 0.0), || "the Raman gain must be non-negative".into())?;
         ensure(reference_hz > 0.0, || "the reference frequency must be positive".into())?;
-        Ok(RamanGain { offsets_hz, gain_m_w, reference_hz })
+        Ok(RamanGain { offsets_hz, gain_m_w, reference_hz, pump_scaling: true })
+    }
+
+    /// The same gain with (`true`, the default) or without the scaling of the efficiency
+    /// with the frequency of the pump, $f_{p}/f_{\mathrm{ref}}$. Without it the efficiency
+    /// depends on the offset alone: the coupling of GNPy up to its version 2.4 (an
+    /// interpolated table of the offset), which the papers computed with those versions
+    /// assume. On the eight pumps from 203 to 219 THz of Soltani et al. (*J. Lightw.
+    /// Technol.* 40(12), 2022, Table III) the two conventions differ by about 0.6 dB on
+    /// the power of the signals after 80 km.
+    ///
+    /// # Examples
+    /// ```
+    /// use comnum_channel::optical::raman::RamanGain;
+    /// let g = RamanGain::ssmf();
+    /// let flat = g.clone().with_pump_scaling(false);
+    /// // at the reference pump the two agree; above it the scaled efficiency is larger
+    /// let (fs, f_ref) = (193.1e12, 206.184_634_112_792e12);
+    /// assert!((g.efficiency(fs, f_ref, 80e-12) / flat.efficiency(fs, f_ref, 80e-12) - 1.0).abs() < 1e-12);
+    /// assert!(g.efficiency(fs + 6e12, f_ref + 6e12, 80e-12) > flat.efficiency(fs + 6e12, f_ref + 6e12, 80e-12));
+    /// ```
+    #[must_use]
+    pub fn with_pump_scaling(mut self, on: bool) -> RamanGain {
+        self.pump_scaling = on;
+        self
+    }
+
+    /// The same spectrum times `factor`: a measured shape with another peak (Soltani et
+    /// al. 2022 give the shape of standard silica and a peak efficiency of 0.4125
+    /// 1/(W·km) at 80 µm², where that of [`RamanGain::ssmf`] is 0.416).
+    ///
+    /// # Errors
+    /// [`comnum_core::Error::Config`] for a factor negative or not finite.
+    ///
+    /// # Examples
+    /// ```
+    /// use comnum_channel::optical::raman::RamanGain;
+    /// let g = RamanGain::ssmf();
+    /// assert_eq!(g.clone().scaled(0.5)?.peak().1, 0.5 * g.peak().1);
+    /// assert!(g.scaled(-1.0).is_err());
+    /// # Ok::<(), comnum_core::Error>(())
+    /// ```
+    pub fn scaled(mut self, factor: f64) -> Result<RamanGain> {
+        ensure(factor.is_finite() && factor >= 0.0, || {
+            format!("the factor of the Raman gain must be finite and non-negative, got {factor}")
+        })?;
+        for g in &mut self.gain_m_w {
+            *g *= factor;
+        }
+        Ok(self)
     }
 
     /// A constant gain efficiency `c_r_w_km` (1/(W·km)) at every offset from 0 to 40 THz
@@ -181,22 +235,27 @@ impl RamanGain {
         RamanGain::new(offsets, vec![g; 41], reference_hz)
     }
 
-    /// $g_{R} A_{\mathrm{eff}}$ (m/W) at the offset `df` (Hz) for a pump at the
-    /// reference frequency.
-    pub fn at(&self, df: f64) -> f64 {
+    /// $g_{R} A_{\mathrm{eff}}$ (m/W) at the offset `df_hz` for a pump at the reference
+    /// frequency (zero outside the table).
+    pub fn at(&self, df_hz: f64) -> f64 {
         let (x, y) = (&self.offsets_hz, &self.gain_m_w);
-        if df < x[0] || df > x[x.len() - 1] {
+        if df_hz < x[0] || df_hz > x[x.len() - 1] {
             return 0.0;
         }
-        let i = x.partition_point(|v| *v <= df).clamp(1, x.len() - 1);
-        let t = (df - x[i - 1]) / (x[i] - x[i - 1]);
-        y[i - 1] + t * (y[i] - y[i - 1])
+        let (i, t) = super::segment(x, df_hz, |v| *v);
+        y[i] + t * (y[i + 1] - y[i])
     }
 
     /// The gain efficiency $C$ (1/(W·km)) of a wave at `f_s` from a pump at `f_p >
-    /// f_s`, for the effective area `aeff_m2`.
+    /// f_s`, for the effective area `aeff_m2`: $g_{R}(f_{p} - f_{s}) f_{p} / (f_{\mathrm{ref}}
+    /// A_{\mathrm{eff}})$, or without the factor $f_{p}/f_{\mathrm{ref}}$
+    /// ([`RamanGain::with_pump_scaling`]).
     pub fn efficiency(&self, f_s: f64, f_p: f64, aeff_m2: f64) -> f64 {
-        self.at(f_p - f_s) * f_p / self.reference_hz / aeff_m2 * 1e3
+        if self.pump_scaling {
+            self.at(f_p - f_s) * f_p / self.reference_hz / aeff_m2 * 1e3
+        } else {
+            self.at(f_p - f_s) / aeff_m2 * 1e3
+        }
     }
 
     /// The offset of the peak of the gain (Hz) and its $g_{R} A_{\mathrm{eff}}$ (m/W).

@@ -24,7 +24,8 @@
 //! $$
 //!
 //! the measured gain spectrum $g_{R}$ of a pump at $f_{\mathrm{ref}}$ ([`RamanGain`])
-//! scaled with the pump frequency, and the wave of higher frequency loses the photons
+//! scaled with the pump frequency (without the factor $f_{j}/f_{\mathrm{ref}}$ after
+//! [`RamanGain::with_pump_scaling`]`(false)`, the convention of GNPy up to 2.4), and the wave of higher frequency loses the photons
 //! that the other gains: $C_{jk} = -(f_{j}/f_{k}) C_{kj}$ (photon-number
 //! conservation; without loss, $\sum_{k} \pm P_{k}/f_{k}$ is constant along $z$).
 //!
@@ -152,7 +153,7 @@ use super::edfa::ase_density;
 use super::fiber::{Amplification, FiberParams};
 use comnum_core::Result;
 use comnum_core::rng::Rng;
-use comnum_math::{C64, PLANCK, db2lin, fft, lin2db, nm2hz, np2db};
+use comnum_math::{C64, PLANCK, db2lin, fft, lin2db, nm2hz, np2db, trapezoid_uniform};
 
 /// The direction of propagation of a pump.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -292,7 +293,7 @@ impl RamanProfile {
 
     /// The power of wave `k` along the span (dBm).
     pub fn power_dbm(&self, k: usize) -> Vec<f64> {
-        self.log_power[k].iter().map(|l| 10.0 * std::f64::consts::LOG10_E * l + 30.0).collect()
+        self.log_power[k].iter().map(|l| np2db(*l) + 30.0).collect()
     }
 
     /// The net gain of signal `k` over the span, $P(L)/P(0)$ (dB).
@@ -338,7 +339,7 @@ impl RamanProfile {
     pub fn integral_w_km(&self, k: usize) -> f64 {
         let w = self.power_w(k);
         let h = self.z_km[self.z_km.len() - 1] / (w.len() - 1) as f64;
-        h * (w.iter().sum::<f64>() - (w[0] + w[w.len() - 1]) / 2.0)
+        trapezoid_uniform(&w, h)
     }
 
     /// The effective Rayleigh reflection coefficient $R_{k}^{2}$ of signal `k` for a
@@ -356,7 +357,7 @@ impl RamanProfile {
             inner[i] = inner[i + 1] + h * (g2[i] + g2[i + 1]) / 2.0;
         }
         let f: Vec<f64> = (0..m).map(|i| inner[i] / g2[i]).collect();
-        let outer = h * (f.iter().sum::<f64>() - (f[0] + f[m - 1]) / 2.0);
+        let outer = trapezoid_uniform(&f, h);
         let kappa = db2lin(rayleigh_db_km);
         kappa * kappa * outer
     }
@@ -373,18 +374,19 @@ impl RamanProfile {
             .collect()
     }
 
-    /// $\ln (P_{k}(z)/P_{k}(0))$ of signal `k` at `z` (km), linear between the nodes.
-    pub fn log_gain(&self, k: usize, z: f64) -> f64 {
-        let (i, t) = self.node(z);
+    /// $\ln (P_{k}(z)/P_{k}(0))$ of signal `k` at `z_km`, linear between the nodes.
+    pub fn log_gain(&self, k: usize, z_km: f64) -> f64 {
+        let (i, t) = self.node(z_km);
         let l = &self.log_power[k];
         let a = l[i] + t * (l[(i + 1).min(l.len() - 1)] - l[i]);
         a - l[0]
     }
 
-    fn node(&self, z: f64) -> (usize, f64) {
+    /// The node of the uniform grid below `z_km` and the fraction of the step beyond it.
+    fn node(&self, z_km: f64) -> (usize, f64) {
         let m = self.z_km.len() - 1;
         let h = self.z_km[m] / m as f64;
-        let x = (z / h).clamp(0.0, m as f64);
+        let x = (z_km / h).clamp(0.0, m as f64);
         let i = (x.floor() as usize).min(m.saturating_sub(1));
         (i, x - i as f64)
     }
@@ -405,8 +407,8 @@ impl RamanProfile {
                     let k = order[fs.len() - 1];
                     return (k, k, 0.0);
                 }
-                let i = fs.partition_point(|v| v <= f).clamp(1, fs.len() - 1);
-                (order[i - 1], order[i], (f - fs[i - 1]) / (fs[i] - fs[i - 1]))
+                let (i, t) = segment(&fs, *f, |v| *v);
+                (order[i], order[i + 1], t)
             })
             .collect();
         SpectralInterp { weights }
@@ -513,6 +515,16 @@ impl Raman {
     }
 }
 
+/// The segment of the increasing abscissae `key(points[i])` that holds `x` (the first or
+/// the last segment beyond the table: the callers keep their own rule there): its
+/// first point `i` and the fraction $t = (x - x_{i})/(x_{i+1} - x_{i})$, the weights of
+/// every linear interpolation of the Raman tables.
+pub(crate) fn segment<T>(points: &[T], x: f64, key: impl Fn(&T) -> f64) -> (usize, f64) {
+    let i = points.partition_point(|p| key(p) <= x).clamp(1, points.len() - 1);
+    let (x0, x1) = (key(&points[i - 1]), key(&points[i]));
+    (i - 1, (x - x0) / (x1 - x0))
+}
+
 /// The value at `x` of the table `points` (increasing abscissae), linear between its
 /// points and constant beyond; `None` for an empty table.
 fn piecewise_linear(points: &[(f64, f64)], x: f64) -> Option<f64> {
@@ -523,9 +535,9 @@ fn piecewise_linear(points: &[(f64, f64)], x: f64) -> Option<f64> {
     if x >= last.0 {
         return Some(last.1);
     }
-    let i = points.partition_point(|p| p.0 <= x).clamp(1, points.len() - 1);
-    let ((x0, y0), (x1, y1)) = (points[i - 1], points[i]);
-    Some(y0 + (x - x0) / (x1 - x0) * (y1 - y0))
+    let (i, t) = segment(points, x, |p| p.0);
+    let (y0, y1) = (points[i].1, points[i + 1].1);
+    Some(y0 + t * (y1 - y0))
 }
 
 impl FieldSpan {
@@ -589,8 +601,9 @@ impl FieldSpan {
                     Amplification::Edfa if g[b] > 1.0 => ase_density(g[b], nf, self.freqs[b]),
                     _ => 0.0,
                 };
-                // two polarisations: the expression of the results recorded so far
-                let raman = if pols == 2 { (ase[b] + mpi[b]) * share } else { 0.5 * ase[b] + mpi[b] * share };
+                // the spontaneous noise of one polarisation, the share of the double
+                // Rayleigh backscattering of every polarisation
+                let raman = 0.5 * ase[b] + mpi[b] * share;
                 *v += wb * ((raman * g[b] + edfa) * fs).sqrt();
             }
         }

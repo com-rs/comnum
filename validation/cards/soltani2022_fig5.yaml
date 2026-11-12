@@ -1,0 +1,334 @@
+id: soltani2022_fig5
+title: Power maps of four bidirectional Raman designs over 80 km (Soltani et al. 2022, Table III and Fig. 5)
+literature: soltani2022
+evidence: [curve]
+source:
+  kind: paper
+  reference: "M. Soltani, F. Da Ros, A. Carena, D. Zibar, Spectral and spatial power evolution design with machine learning-enabled Raman amplification, J. Lightw. Technol. 40(12), 3546-3556, 2022"
+  locator: "Table III (the pump powers, verbatim) and Fig. 5(a)-(d) (the power of every channel along the span, read from the vector paths to 0.01 dB): five channels every 10 km and the forty channels at 80 km"
+  file: fiber/2022_soltani_spectral-spatial-power-evolution-ml-raman_jlt_arxiv.pdf
+description: >
+  80 km of single-mode fibre, 40 channels at 192.05 + 0.1 k THz launched at 0 dBm, four
+  co-pumps and four counter-pumps at 1366, 1425, 1455 and 1475 nm whose powers are the
+  four designs of Table III (a: CNN only, b, c, d: CNN+DE with the weights m(1), m(2),
+  m(3)); 0.2 dB/km for the signals, 0.25 and 0.32 dB/km for the first- and second-order
+  pumps, a constant effective area of 80 um^2, the gain spectrum of standard silica
+  (RamanGain::ssmf) scaled to the peak of the paper, 0.4125 1/(W km), and not scaled
+  with the frequency of the pump: the coupling of GNPy up to its version 2.4, with which
+  the maps were computed (a boundary-value solver with residual control, 500 m, 1e-6).
+  Raman::solve at 50 m; the power of every channel along the span (dBm).
+run:
+  test: validation/tests/fiber/soltani2022.rs::soltani_2022_fig_5_power_maps_of_table_iii
+tier: ci
+duration: "about 2 s"
+tolerance: {atol: 1.0}
+why: >
+  the agreement obtained, with what the paper does not give: the table of its gain
+  spectrum (only the shape, standard silica, and the peak), the version of GNPy (the
+  coupling of the versions up to 2.4 is assumed), the losses of the pump couplers
+  (assumed zero); the readings themselves are within 0.01 dB
+findings:
+  - "along the span the five channels are within 0.39, 0.38, 0.38 and 0.35 dB of the figure for the designs a, b, c, d (+0.04 to +0.18 dB on average); at 80 km the forty channels are 0.17, 0.19, 0.33 and 0.28 dB above it on average, 0.71, 0.67, 0.91 and 0.84 dB at most"
+  - "with the efficiency scaled with the pump frequency (the default of comnum and of GNPy 3.0.1) the powers at 80 km are 0.70 to 0.88 dB above the figure on average: the convention moves the map by about 0.6 dB"
+  - "the power excursions of Table IV are not all reproduced: J0 3.68, 3.18, 3.32, 3.39 dB against 3.58, 2.81, 2.97, 3.06 and J1 2.05, 1.27, 1.67, 1.47 against 1.48, 1.80, 0.88, 0.90 (J1 is the spread of the forty channels at one distance, here mostly at 80 km where the gap to the figure is largest); not explained, the gain table and the coupler losses not being given"
+cases:
+  - {inputs: {design: a, f_thz: 192.05, z_km: 10}, expected: 1.08}
+  - {inputs: {design: a, f_thz: 192.05, z_km: 20}, expected: 1.24}
+  - {inputs: {design: a, f_thz: 192.05, z_km: 30}, expected: 0.59}
+  - {inputs: {design: a, f_thz: 192.05, z_km: 40}, expected: -0.29}
+  - {inputs: {design: a, f_thz: 192.05, z_km: 50}, expected: -0.90}
+  - {inputs: {design: a, f_thz: 192.05, z_km: 60}, expected: -0.77}
+  - {inputs: {design: a, f_thz: 192.05, z_km: 70}, expected: 0.08}
+  - {inputs: {design: a, f_thz: 193.05, z_km: 10}, expected: 1.16}
+  - {inputs: {design: a, f_thz: 193.05, z_km: 20}, expected: 1.33}
+  - {inputs: {design: a, f_thz: 193.05, z_km: 30}, expected: 0.67}
+  - {inputs: {design: a, f_thz: 193.05, z_km: 40}, expected: -0.23}
+  - {inputs: {design: a, f_thz: 193.05, z_km: 50}, expected: -0.84}
+  - {inputs: {design: a, f_thz: 193.05, z_km: 60}, expected: -0.70}
+  - {inputs: {design: a, f_thz: 193.05, z_km: 70}, expected: 0.20}
+  - {inputs: {design: a, f_thz: 194.05, z_km: 10}, expected: 1.17}
+  - {inputs: {design: a, f_thz: 194.05, z_km: 20}, expected: 1.28}
+  - {inputs: {design: a, f_thz: 194.05, z_km: 30}, expected: 0.55}
+  - {inputs: {design: a, f_thz: 194.05, z_km: 40}, expected: -0.42}
+  - {inputs: {design: a, f_thz: 194.05, z_km: 50}, expected: -1.09}
+  - {inputs: {design: a, f_thz: 194.05, z_km: 60}, expected: -0.99}
+  - {inputs: {design: a, f_thz: 194.05, z_km: 70}, expected: -0.08}
+  - {inputs: {design: a, f_thz: 195.05, z_km: 10}, expected: 1.20}
+  - {inputs: {design: a, f_thz: 195.05, z_km: 20}, expected: 1.19}
+  - {inputs: {design: a, f_thz: 195.05, z_km: 30}, expected: 0.35}
+  - {inputs: {design: a, f_thz: 195.05, z_km: 40}, expected: -0.70}
+  - {inputs: {design: a, f_thz: 195.05, z_km: 50}, expected: -1.46}
+  - {inputs: {design: a, f_thz: 195.05, z_km: 60}, expected: -1.45}
+  - {inputs: {design: a, f_thz: 195.05, z_km: 70}, expected: -0.48}
+  - {inputs: {design: a, f_thz: 195.95, z_km: 10}, expected: 1.08}
+  - {inputs: {design: a, f_thz: 195.95, z_km: 20}, expected: 0.94}
+  - {inputs: {design: a, f_thz: 195.95, z_km: 30}, expected: -0.01}
+  - {inputs: {design: a, f_thz: 195.95, z_km: 40}, expected: -1.15}
+  - {inputs: {design: a, f_thz: 195.95, z_km: 50}, expected: -2.00}
+  - {inputs: {design: a, f_thz: 195.95, z_km: 60}, expected: -2.10}
+  - {inputs: {design: a, f_thz: 195.95, z_km: 70}, expected: -1.24}
+  - {inputs: {design: a, f_thz: 192.05, z_km: 80}, expected: 0.58}
+  - {inputs: {design: a, f_thz: 192.15, z_km: 80}, expected: 0.37}
+  - {inputs: {design: a, f_thz: 192.25, z_km: 80}, expected: 0.20}
+  - {inputs: {design: a, f_thz: 192.35, z_km: 80}, expected: 0.31}
+  - {inputs: {design: a, f_thz: 192.45, z_km: 80}, expected: 0.42}
+  - {inputs: {design: a, f_thz: 192.55, z_km: 80}, expected: 0.52}
+  - {inputs: {design: a, f_thz: 192.65, z_km: 80}, expected: 0.62}
+  - {inputs: {design: a, f_thz: 192.75, z_km: 80}, expected: 0.73}
+  - {inputs: {design: a, f_thz: 192.85, z_km: 80}, expected: 0.77}
+  - {inputs: {design: a, f_thz: 192.95, z_km: 80}, expected: 0.81}
+  - {inputs: {design: a, f_thz: 193.05, z_km: 80}, expected: 0.82}
+  - {inputs: {design: a, f_thz: 193.15, z_km: 80}, expected: 0.84}
+  - {inputs: {design: a, f_thz: 193.25, z_km: 80}, expected: 0.85}
+  - {inputs: {design: a, f_thz: 193.35, z_km: 80}, expected: 0.85}
+  - {inputs: {design: a, f_thz: 193.45, z_km: 80}, expected: 0.84}
+  - {inputs: {design: a, f_thz: 193.55, z_km: 80}, expected: 0.80}
+  - {inputs: {design: a, f_thz: 193.65, z_km: 80}, expected: 0.75}
+  - {inputs: {design: a, f_thz: 193.75, z_km: 80}, expected: 0.78}
+  - {inputs: {design: a, f_thz: 193.85, z_km: 80}, expected: 0.79}
+  - {inputs: {design: a, f_thz: 193.95, z_km: 80}, expected: 0.81}
+  - {inputs: {design: a, f_thz: 194.05, z_km: 80}, expected: 0.82}
+  - {inputs: {design: a, f_thz: 194.15, z_km: 80}, expected: 0.85}
+  - {inputs: {design: a, f_thz: 194.25, z_km: 80}, expected: 0.89}
+  - {inputs: {design: a, f_thz: 194.35, z_km: 80}, expected: 0.89}
+  - {inputs: {design: a, f_thz: 194.45, z_km: 80}, expected: 0.90}
+  - {inputs: {design: a, f_thz: 194.55, z_km: 80}, expected: 0.90}
+  - {inputs: {design: a, f_thz: 194.65, z_km: 80}, expected: 0.96}
+  - {inputs: {design: a, f_thz: 194.75, z_km: 80}, expected: 0.98}
+  - {inputs: {design: a, f_thz: 194.85, z_km: 80}, expected: 0.97}
+  - {inputs: {design: a, f_thz: 194.95, z_km: 80}, expected: 0.95}
+  - {inputs: {design: a, f_thz: 195.05, z_km: 80}, expected: 0.95}
+  - {inputs: {design: a, f_thz: 195.15, z_km: 80}, expected: 0.94}
+  - {inputs: {design: a, f_thz: 195.25, z_km: 80}, expected: 0.89}
+  - {inputs: {design: a, f_thz: 195.35, z_km: 80}, expected: 0.82}
+  - {inputs: {design: a, f_thz: 195.45, z_km: 80}, expected: 0.75}
+  - {inputs: {design: a, f_thz: 195.55, z_km: 80}, expected: 0.69}
+  - {inputs: {design: a, f_thz: 195.65, z_km: 80}, expected: 0.64}
+  - {inputs: {design: a, f_thz: 195.75, z_km: 80}, expected: 0.50}
+  - {inputs: {design: a, f_thz: 195.85, z_km: 80}, expected: 0.32}
+  - {inputs: {design: a, f_thz: 195.95, z_km: 80}, expected: 0.12}
+  - {inputs: {design: b, f_thz: 192.05, z_km: 10}, expected: 0.59}
+  - {inputs: {design: b, f_thz: 192.05, z_km: 20}, expected: 0.67}
+  - {inputs: {design: b, f_thz: 192.05, z_km: 30}, expected: 0.07}
+  - {inputs: {design: b, f_thz: 192.05, z_km: 40}, expected: -0.75}
+  - {inputs: {design: b, f_thz: 192.05, z_km: 50}, expected: -1.30}
+  - {inputs: {design: b, f_thz: 192.05, z_km: 60}, expected: -1.17}
+  - {inputs: {design: b, f_thz: 192.05, z_km: 70}, expected: -0.57}
+  - {inputs: {design: b, f_thz: 193.05, z_km: 10}, expected: 0.65}
+  - {inputs: {design: b, f_thz: 193.05, z_km: 20}, expected: 0.74}
+  - {inputs: {design: b, f_thz: 193.05, z_km: 30}, expected: 0.13}
+  - {inputs: {design: b, f_thz: 193.05, z_km: 40}, expected: -0.70}
+  - {inputs: {design: b, f_thz: 193.05, z_km: 50}, expected: -1.24}
+  - {inputs: {design: b, f_thz: 193.05, z_km: 60}, expected: -1.08}
+  - {inputs: {design: b, f_thz: 193.05, z_km: 70}, expected: -0.41}
+  - {inputs: {design: b, f_thz: 194.05, z_km: 10}, expected: 0.73}
+  - {inputs: {design: b, f_thz: 194.05, z_km: 20}, expected: 0.78}
+  - {inputs: {design: b, f_thz: 194.05, z_km: 30}, expected: 0.11}
+  - {inputs: {design: b, f_thz: 194.05, z_km: 40}, expected: -0.77}
+  - {inputs: {design: b, f_thz: 194.05, z_km: 50}, expected: -1.36}
+  - {inputs: {design: b, f_thz: 194.05, z_km: 60}, expected: -1.22}
+  - {inputs: {design: b, f_thz: 194.05, z_km: 70}, expected: -0.48}
+  - {inputs: {design: b, f_thz: 195.05, z_km: 10}, expected: 0.95}
+  - {inputs: {design: b, f_thz: 195.05, z_km: 20}, expected: 1.00}
+  - {inputs: {design: b, f_thz: 195.05, z_km: 30}, expected: 0.27}
+  - {inputs: {design: b, f_thz: 195.05, z_km: 40}, expected: -0.68}
+  - {inputs: {design: b, f_thz: 195.05, z_km: 50}, expected: -1.34}
+  - {inputs: {design: b, f_thz: 195.05, z_km: 60}, expected: -1.25}
+  - {inputs: {design: b, f_thz: 195.05, z_km: 70}, expected: -0.37}
+  - {inputs: {design: b, f_thz: 195.95, z_km: 10}, expected: 1.01}
+  - {inputs: {design: b, f_thz: 195.95, z_km: 20}, expected: 1.02}
+  - {inputs: {design: b, f_thz: 195.95, z_km: 30}, expected: 0.24}
+  - {inputs: {design: b, f_thz: 195.95, z_km: 40}, expected: -0.77}
+  - {inputs: {design: b, f_thz: 195.95, z_km: 50}, expected: -1.51}
+  - {inputs: {design: b, f_thz: 195.95, z_km: 60}, expected: -1.51}
+  - {inputs: {design: b, f_thz: 195.95, z_km: 70}, expected: -0.70}
+  - {inputs: {design: b, f_thz: 192.05, z_km: 80}, expected: -0.33}
+  - {inputs: {design: b, f_thz: 192.15, z_km: 80}, expected: -0.52}
+  - {inputs: {design: b, f_thz: 192.25, z_km: 80}, expected: -0.67}
+  - {inputs: {design: b, f_thz: 192.35, z_km: 80}, expected: -0.55}
+  - {inputs: {design: b, f_thz: 192.45, z_km: 80}, expected: -0.44}
+  - {inputs: {design: b, f_thz: 192.55, z_km: 80}, expected: -0.33}
+  - {inputs: {design: b, f_thz: 192.65, z_km: 80}, expected: -0.23}
+  - {inputs: {design: b, f_thz: 192.75, z_km: 80}, expected: -0.12}
+  - {inputs: {design: b, f_thz: 192.85, z_km: 80}, expected: -0.06}
+  - {inputs: {design: b, f_thz: 192.95, z_km: 80}, expected: -0.01}
+  - {inputs: {design: b, f_thz: 193.05, z_km: 80}, expected: 0.02}
+  - {inputs: {design: b, f_thz: 193.15, z_km: 80}, expected: 0.06}
+  - {inputs: {design: b, f_thz: 193.25, z_km: 80}, expected: 0.08}
+  - {inputs: {design: b, f_thz: 193.35, z_km: 80}, expected: 0.09}
+  - {inputs: {design: b, f_thz: 193.45, z_km: 80}, expected: 0.10}
+  - {inputs: {design: b, f_thz: 193.55, z_km: 80}, expected: 0.08}
+  - {inputs: {design: b, f_thz: 193.65, z_km: 80}, expected: 0.05}
+  - {inputs: {design: b, f_thz: 193.75, z_km: 80}, expected: 0.13}
+  - {inputs: {design: b, f_thz: 193.85, z_km: 80}, expected: 0.19}
+  - {inputs: {design: b, f_thz: 193.95, z_km: 80}, expected: 0.25}
+  - {inputs: {design: b, f_thz: 194.05, z_km: 80}, expected: 0.30}
+  - {inputs: {design: b, f_thz: 194.15, z_km: 80}, expected: 0.38}
+  - {inputs: {design: b, f_thz: 194.25, z_km: 80}, expected: 0.48}
+  - {inputs: {design: b, f_thz: 194.35, z_km: 80}, expected: 0.54}
+  - {inputs: {design: b, f_thz: 194.45, z_km: 80}, expected: 0.61}
+  - {inputs: {design: b, f_thz: 194.55, z_km: 80}, expected: 0.67}
+  - {inputs: {design: b, f_thz: 194.65, z_km: 80}, expected: 0.81}
+  - {inputs: {design: b, f_thz: 194.75, z_km: 80}, expected: 0.90}
+  - {inputs: {design: b, f_thz: 194.85, z_km: 80}, expected: 0.95}
+  - {inputs: {design: b, f_thz: 194.95, z_km: 80}, expected: 1.01}
+  - {inputs: {design: b, f_thz: 195.05, z_km: 80}, expected: 1.07}
+  - {inputs: {design: b, f_thz: 195.15, z_km: 80}, expected: 1.13}
+  - {inputs: {design: b, f_thz: 195.25, z_km: 80}, expected: 1.14}
+  - {inputs: {design: b, f_thz: 195.35, z_km: 80}, expected: 1.13}
+  - {inputs: {design: b, f_thz: 195.45, z_km: 80}, expected: 1.11}
+  - {inputs: {design: b, f_thz: 195.55, z_km: 80}, expected: 1.11}
+  - {inputs: {design: b, f_thz: 195.65, z_km: 80}, expected: 1.11}
+  - {inputs: {design: b, f_thz: 195.75, z_km: 80}, expected: 1.01}
+  - {inputs: {design: b, f_thz: 195.85, z_km: 80}, expected: 0.87}
+  - {inputs: {design: b, f_thz: 195.95, z_km: 80}, expected: 0.69}
+  - {inputs: {design: c, f_thz: 192.05, z_km: 10}, expected: 0.52}
+  - {inputs: {design: c, f_thz: 192.05, z_km: 20}, expected: 0.57}
+  - {inputs: {design: c, f_thz: 192.05, z_km: 30}, expected: -0.03}
+  - {inputs: {design: c, f_thz: 192.05, z_km: 40}, expected: -0.85}
+  - {inputs: {design: c, f_thz: 192.05, z_km: 50}, expected: -1.38}
+  - {inputs: {design: c, f_thz: 192.05, z_km: 60}, expected: -1.14}
+  - {inputs: {design: c, f_thz: 192.05, z_km: 70}, expected: -0.12}
+  - {inputs: {design: c, f_thz: 193.05, z_km: 10}, expected: 0.57}
+  - {inputs: {design: c, f_thz: 193.05, z_km: 20}, expected: 0.63}
+  - {inputs: {design: c, f_thz: 193.05, z_km: 30}, expected: 0.00}
+  - {inputs: {design: c, f_thz: 193.05, z_km: 40}, expected: -0.83}
+  - {inputs: {design: c, f_thz: 193.05, z_km: 50}, expected: -1.37}
+  - {inputs: {design: c, f_thz: 193.05, z_km: 60}, expected: -1.13}
+  - {inputs: {design: c, f_thz: 193.05, z_km: 70}, expected: -0.08}
+  - {inputs: {design: c, f_thz: 194.05, z_km: 10}, expected: 0.66}
+  - {inputs: {design: c, f_thz: 194.05, z_km: 20}, expected: 0.68}
+  - {inputs: {design: c, f_thz: 194.05, z_km: 30}, expected: -0.01}
+  - {inputs: {design: c, f_thz: 194.05, z_km: 40}, expected: -0.90}
+  - {inputs: {design: c, f_thz: 194.05, z_km: 50}, expected: -1.50}
+  - {inputs: {design: c, f_thz: 194.05, z_km: 60}, expected: -1.33}
+  - {inputs: {design: c, f_thz: 194.05, z_km: 70}, expected: -0.30}
+  - {inputs: {design: c, f_thz: 195.05, z_km: 10}, expected: 0.92}
+  - {inputs: {design: c, f_thz: 195.05, z_km: 20}, expected: 0.96}
+  - {inputs: {design: c, f_thz: 195.05, z_km: 30}, expected: 0.22}
+  - {inputs: {design: c, f_thz: 195.05, z_km: 40}, expected: -0.76}
+  - {inputs: {design: c, f_thz: 195.05, z_km: 50}, expected: -1.46}
+  - {inputs: {design: c, f_thz: 195.05, z_km: 60}, expected: -1.41}
+  - {inputs: {design: c, f_thz: 195.05, z_km: 70}, expected: -0.41}
+  - {inputs: {design: c, f_thz: 195.95, z_km: 10}, expected: 1.02}
+  - {inputs: {design: c, f_thz: 195.95, z_km: 20}, expected: 1.06}
+  - {inputs: {design: c, f_thz: 195.95, z_km: 30}, expected: 0.28}
+  - {inputs: {design: c, f_thz: 195.95, z_km: 40}, expected: -0.77}
+  - {inputs: {design: c, f_thz: 195.95, z_km: 50}, expected: -1.59}
+  - {inputs: {design: c, f_thz: 195.95, z_km: 60}, expected: -1.71}
+  - {inputs: {design: c, f_thz: 195.95, z_km: 70}, expected: -0.91}
+  - {inputs: {design: c, f_thz: 192.05, z_km: 80}, expected: 0.68}
+  - {inputs: {design: c, f_thz: 192.15, z_km: 80}, expected: 0.48}
+  - {inputs: {design: c, f_thz: 192.25, z_km: 80}, expected: 0.32}
+  - {inputs: {design: c, f_thz: 192.35, z_km: 80}, expected: 0.41}
+  - {inputs: {design: c, f_thz: 192.45, z_km: 80}, expected: 0.50}
+  - {inputs: {design: c, f_thz: 192.55, z_km: 80}, expected: 0.59}
+  - {inputs: {design: c, f_thz: 192.65, z_km: 80}, expected: 0.67}
+  - {inputs: {design: c, f_thz: 192.75, z_km: 80}, expected: 0.76}
+  - {inputs: {design: c, f_thz: 192.85, z_km: 80}, expected: 0.79}
+  - {inputs: {design: c, f_thz: 192.95, z_km: 80}, expected: 0.82}
+  - {inputs: {design: c, f_thz: 193.05, z_km: 80}, expected: 0.83}
+  - {inputs: {design: c, f_thz: 193.15, z_km: 80}, expected: 0.84}
+  - {inputs: {design: c, f_thz: 193.25, z_km: 80}, expected: 0.85}
+  - {inputs: {design: c, f_thz: 193.35, z_km: 80}, expected: 0.83}
+  - {inputs: {design: c, f_thz: 193.45, z_km: 80}, expected: 0.82}
+  - {inputs: {design: c, f_thz: 193.55, z_km: 80}, expected: 0.77}
+  - {inputs: {design: c, f_thz: 193.65, z_km: 80}, expected: 0.72}
+  - {inputs: {design: c, f_thz: 193.75, z_km: 80}, expected: 0.76}
+  - {inputs: {design: c, f_thz: 193.85, z_km: 80}, expected: 0.79}
+  - {inputs: {design: c, f_thz: 193.95, z_km: 80}, expected: 0.82}
+  - {inputs: {design: c, f_thz: 194.05, z_km: 80}, expected: 0.84}
+  - {inputs: {design: c, f_thz: 194.15, z_km: 80}, expected: 0.88}
+  - {inputs: {design: c, f_thz: 194.25, z_km: 80}, expected: 0.93}
+  - {inputs: {design: c, f_thz: 194.35, z_km: 80}, expected: 0.96}
+  - {inputs: {design: c, f_thz: 194.45, z_km: 80}, expected: 0.98}
+  - {inputs: {design: c, f_thz: 194.55, z_km: 80}, expected: 1.01}
+  - {inputs: {design: c, f_thz: 194.65, z_km: 80}, expected: 1.09}
+  - {inputs: {design: c, f_thz: 194.75, z_km: 80}, expected: 1.14}
+  - {inputs: {design: c, f_thz: 194.85, z_km: 80}, expected: 1.14}
+  - {inputs: {design: c, f_thz: 194.95, z_km: 80}, expected: 1.15}
+  - {inputs: {design: c, f_thz: 195.05, z_km: 80}, expected: 1.17}
+  - {inputs: {design: c, f_thz: 195.15, z_km: 80}, expected: 1.20}
+  - {inputs: {design: c, f_thz: 195.25, z_km: 80}, expected: 1.17}
+  - {inputs: {design: c, f_thz: 195.35, z_km: 80}, expected: 1.12}
+  - {inputs: {design: c, f_thz: 195.45, z_km: 80}, expected: 1.07}
+  - {inputs: {design: c, f_thz: 195.55, z_km: 80}, expected: 1.03}
+  - {inputs: {design: c, f_thz: 195.65, z_km: 80}, expected: 1.00}
+  - {inputs: {design: c, f_thz: 195.75, z_km: 80}, expected: 0.87}
+  - {inputs: {design: c, f_thz: 195.85, z_km: 80}, expected: 0.71}
+  - {inputs: {design: c, f_thz: 195.95, z_km: 80}, expected: 0.51}
+  - {inputs: {design: d, f_thz: 192.05, z_km: 10}, expected: 0.29}
+  - {inputs: {design: d, f_thz: 192.05, z_km: 20}, expected: 0.21}
+  - {inputs: {design: d, f_thz: 192.05, z_km: 30}, expected: -0.46}
+  - {inputs: {design: d, f_thz: 192.05, z_km: 40}, expected: -1.30}
+  - {inputs: {design: d, f_thz: 192.05, z_km: 50}, expected: -1.86}
+  - {inputs: {design: d, f_thz: 192.05, z_km: 60}, expected: -1.67}
+  - {inputs: {design: d, f_thz: 192.05, z_km: 70}, expected: -0.68}
+  - {inputs: {design: d, f_thz: 193.05, z_km: 10}, expected: 0.34}
+  - {inputs: {design: d, f_thz: 193.05, z_km: 20}, expected: 0.25}
+  - {inputs: {design: d, f_thz: 193.05, z_km: 30}, expected: -0.43}
+  - {inputs: {design: d, f_thz: 193.05, z_km: 40}, expected: -1.29}
+  - {inputs: {design: d, f_thz: 193.05, z_km: 50}, expected: -1.85}
+  - {inputs: {design: d, f_thz: 193.05, z_km: 60}, expected: -1.65}
+  - {inputs: {design: d, f_thz: 193.05, z_km: 70}, expected: -0.63}
+  - {inputs: {design: d, f_thz: 194.05, z_km: 10}, expected: 0.44}
+  - {inputs: {design: d, f_thz: 194.05, z_km: 20}, expected: 0.32}
+  - {inputs: {design: d, f_thz: 194.05, z_km: 30}, expected: -0.41}
+  - {inputs: {design: d, f_thz: 194.05, z_km: 40}, expected: -1.33}
+  - {inputs: {design: d, f_thz: 194.05, z_km: 50}, expected: -1.95}
+  - {inputs: {design: d, f_thz: 194.05, z_km: 60}, expected: -1.81}
+  - {inputs: {design: d, f_thz: 194.05, z_km: 70}, expected: -0.82}
+  - {inputs: {design: d, f_thz: 195.05, z_km: 10}, expected: 0.72}
+  - {inputs: {design: d, f_thz: 195.05, z_km: 20}, expected: 0.65}
+  - {inputs: {design: d, f_thz: 195.05, z_km: 30}, expected: -0.13}
+  - {inputs: {design: d, f_thz: 195.05, z_km: 40}, expected: -1.11}
+  - {inputs: {design: d, f_thz: 195.05, z_km: 50}, expected: -1.84}
+  - {inputs: {design: d, f_thz: 195.05, z_km: 60}, expected: -1.82}
+  - {inputs: {design: d, f_thz: 195.05, z_km: 70}, expected: -0.87}
+  - {inputs: {design: d, f_thz: 195.95, z_km: 10}, expected: 0.83}
+  - {inputs: {design: d, f_thz: 195.95, z_km: 20}, expected: 0.78}
+  - {inputs: {design: d, f_thz: 195.95, z_km: 30}, expected: -0.03}
+  - {inputs: {design: d, f_thz: 195.95, z_km: 40}, expected: -1.08}
+  - {inputs: {design: d, f_thz: 195.95, z_km: 50}, expected: -1.91}
+  - {inputs: {design: d, f_thz: 195.95, z_km: 60}, expected: -2.07}
+  - {inputs: {design: d, f_thz: 195.95, z_km: 70}, expected: -1.33}
+  - {inputs: {design: d, f_thz: 192.05, z_km: 80}, expected: 0.10}
+  - {inputs: {design: d, f_thz: 192.15, z_km: 80}, expected: -0.10}
+  - {inputs: {design: d, f_thz: 192.25, z_km: 80}, expected: -0.25}
+  - {inputs: {design: d, f_thz: 192.35, z_km: 80}, expected: -0.16}
+  - {inputs: {design: d, f_thz: 192.45, z_km: 80}, expected: -0.07}
+  - {inputs: {design: d, f_thz: 192.55, z_km: 80}, expected: 0.01}
+  - {inputs: {design: d, f_thz: 192.65, z_km: 80}, expected: 0.09}
+  - {inputs: {design: d, f_thz: 192.75, z_km: 80}, expected: 0.18}
+  - {inputs: {design: d, f_thz: 192.85, z_km: 80}, expected: 0.21}
+  - {inputs: {design: d, f_thz: 192.95, z_km: 80}, expected: 0.24}
+  - {inputs: {design: d, f_thz: 193.05, z_km: 80}, expected: 0.25}
+  - {inputs: {design: d, f_thz: 193.15, z_km: 80}, expected: 0.26}
+  - {inputs: {design: d, f_thz: 193.25, z_km: 80}, expected: 0.27}
+  - {inputs: {design: d, f_thz: 193.35, z_km: 80}, expected: 0.26}
+  - {inputs: {design: d, f_thz: 193.45, z_km: 80}, expected: 0.24}
+  - {inputs: {design: d, f_thz: 193.55, z_km: 80}, expected: 0.20}
+  - {inputs: {design: d, f_thz: 193.65, z_km: 80}, expected: 0.15}
+  - {inputs: {design: d, f_thz: 193.75, z_km: 80}, expected: 0.19}
+  - {inputs: {design: d, f_thz: 193.85, z_km: 80}, expected: 0.22}
+  - {inputs: {design: d, f_thz: 193.95, z_km: 80}, expected: 0.25}
+  - {inputs: {design: d, f_thz: 194.05, z_km: 80}, expected: 0.27}
+  - {inputs: {design: d, f_thz: 194.15, z_km: 80}, expected: 0.32}
+  - {inputs: {design: d, f_thz: 194.25, z_km: 80}, expected: 0.37}
+  - {inputs: {design: d, f_thz: 194.35, z_km: 80}, expected: 0.40}
+  - {inputs: {design: d, f_thz: 194.45, z_km: 80}, expected: 0.43}
+  - {inputs: {design: d, f_thz: 194.55, z_km: 80}, expected: 0.46}
+  - {inputs: {design: d, f_thz: 194.65, z_km: 80}, expected: 0.54}
+  - {inputs: {design: d, f_thz: 194.75, z_km: 80}, expected: 0.58}
+  - {inputs: {design: d, f_thz: 194.85, z_km: 80}, expected: 0.59}
+  - {inputs: {design: d, f_thz: 194.95, z_km: 80}, expected: 0.61}
+  - {inputs: {design: d, f_thz: 195.05, z_km: 80}, expected: 0.63}
+  - {inputs: {design: d, f_thz: 195.15, z_km: 80}, expected: 0.66}
+  - {inputs: {design: d, f_thz: 195.25, z_km: 80}, expected: 0.63}
+  - {inputs: {design: d, f_thz: 195.35, z_km: 80}, expected: 0.59}
+  - {inputs: {design: d, f_thz: 195.45, z_km: 80}, expected: 0.54}
+  - {inputs: {design: d, f_thz: 195.55, z_km: 80}, expected: 0.51}
+  - {inputs: {design: d, f_thz: 195.65, z_km: 80}, expected: 0.48}
+  - {inputs: {design: d, f_thz: 195.75, z_km: 80}, expected: 0.36}
+  - {inputs: {design: d, f_thz: 195.85, z_km: 80}, expected: 0.20}
+  - {inputs: {design: d, f_thz: 195.95, z_km: 80}, expected: 0.01}

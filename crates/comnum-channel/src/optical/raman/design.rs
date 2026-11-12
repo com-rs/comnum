@@ -45,8 +45,8 @@
 use super::{Raman, RamanProfile, RamanPump};
 use crate::optical::fiber::FiberParams;
 use comnum_core::{Error, Result, ensure};
+use comnum_math::db2np;
 use comnum_math::linalg::{lstsq, nnls, nnls_minimax};
-use comnum_math::{db2np, np2db};
 use ndarray::Array2;
 
 /// What the fit of the integrated pump powers minimises over the signals.
@@ -169,7 +169,8 @@ impl Raman {
                 powers[j] = (targets[j] / l_eff).max(OFF_W);
             }
         }
-        let mut jacobian: Option<Vec<Vec<f64>>> = None;
+        // the Jacobian and the active pumps it was computed for
+        let mut jacobian: Option<(Vec<usize>, Vec<Vec<f64>>)> = None;
         let mut last = f64::INFINITY;
         let mut profile = solve(&powers)?;
         for iteration in 1..=DESIGN_MAX_ITERATIONS {
@@ -185,7 +186,7 @@ impl Raman {
             if residual < DESIGN_TOLERANCE {
                 return Ok(self.design(&powers, targets, profile, target_on_off_db, iteration));
             }
-            if jacobian.as_ref().is_none_or(|j| j.len() != active.len()) || residual > 0.5 * last {
+            if jacobian.as_ref().is_none_or(|(pumps, _)| *pumps != active) || residual > 0.5 * last {
                 let mut jac = vec![vec![0.0; active.len()]; active.len()];
                 for (q, &l) in active.iter().enumerate() {
                     let mut perturbed = powers.clone();
@@ -195,9 +196,9 @@ impl Raman {
                         jac[r][q] = (p.integral_w_km(m + j) / profile.integral_w_km(m + j)).ln() / JACOBIAN_STEP;
                     }
                 }
-                jacobian = Some(jac);
+                jacobian = Some((active.clone(), jac));
             }
-            let jac = jacobian.as_ref().ok_or_else(|| Error::Numerical("raman design: no Jacobian".into()))?;
+            let (_, jac) = jacobian.as_ref().ok_or_else(|| Error::Numerical("raman design: no Jacobian".into()))?;
             let mut flat = Array2::<f64>::zeros((active.len(), active.len()));
             for (r, row) in jac.iter().enumerate() {
                 for (q, v) in row.iter().enumerate() {
@@ -232,7 +233,7 @@ impl Raman {
             .zip(powers)
             .map(|(p, w)| RamanPump { power_w: if *w <= OFF_W { 0.0 } else { *w }, ..p.clone() })
             .collect();
-        PumpDesign { pumps, integrals_w_km, profile, ripple_db: np2db(0.0) + ripple_db, iterations }
+        PumpDesign { pumps, integrals_w_km, profile, ripple_db, iterations }
     }
 }
 

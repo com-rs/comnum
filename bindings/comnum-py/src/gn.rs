@@ -175,8 +175,9 @@ fn format_moments(
 ///         ``isrs`` (True:
 ///         the channels also exchange power), ``step_km`` (0.1), ``slice_hz`` (25e9, for
 ///         the split-step solvers), ``gain`` (``{offsets_thz, gain_m_w,
-///         reference_thz}``, the gain spectrum ``g_R A_eff``; standard single-mode fibre
-///         by default) and ``rayleigh_db_km`` (the Rayleigh backscatter coupling of the
+///         reference_thz, pump_scaling}``, the gain spectrum ``g_R A_eff``, scaled with
+///         the frequency of the pump unless ``pump_scaling`` is False; standard
+///         single-mode fibre by default) and ``rayleigh_db_km`` (the Rayleigh backscatter coupling of the
 ///         signals, 10 log10 of its value in 1/km, about -40 for transmission fibre;
 ///         absent: no double Rayleigh backscattering).
 ///

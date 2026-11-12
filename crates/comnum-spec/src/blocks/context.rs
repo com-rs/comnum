@@ -179,8 +179,9 @@ block_params! {
     /// A measured Raman gain curve of the `raman` mapping.
     pub(crate) struct GainSpec {
         offsets_thz: Vec<f64> [required] "THz", "frequency offsets of the curve";
-        gain_m_w: Vec<f64> [required] "1/(W m)", "gain coefficients at the offsets";
+        gain_m_w: Vec<f64> [required] "m/W", "the gain coefficient times the effective area, g_R A_eff, at the offsets";
         reference_thz: f64 [required] "THz", "pump frequency of the measurement";
+        pump_scaling: bool [true], "scale the efficiency of a pump with its frequency, f_p/f_ref (false: the offset alone, the coupling of GNPy up to version 2.4)";
     }
 }
 
@@ -194,6 +195,7 @@ impl RamanSpec {
             Some(g) => {
                 let g = g.parse("raman gain")?;
                 RamanGain::new(g.offsets_thz.iter().map(|f| f * 1e12).collect(), g.gain_m_w, g.reference_thz * 1e12)?
+                    .with_pump_scaling(g.pump_scaling)
             }
         };
         let aeff_spectrum_um2 = match &self.aeff_spectrum {
