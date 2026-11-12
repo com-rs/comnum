@@ -10,7 +10,7 @@ use comnum_core::Result;
 use comnum_core::ensure;
 use comnum_core::rng::Rng;
 use comnum_dsp::compensation::cd;
-use comnum_dsp::compensation::dbp::NonlinearLength;
+use comnum_dsp::compensation::dbp::{NonlinearLength, power_filter};
 use comnum_math::nlse::{NonlinearStep, StepDistribution, StepRule};
 use serde_json::Value as Json;
 
@@ -210,16 +210,14 @@ block_params! {
         amplification: String ["edfa"] one_of ["edfa", "ideal", "none"], "the amplification of the forward link";
         nonlinear: bool [true], "false: linear back-propagation (dispersion compensation and loss)";
         nonlinear_scale: f64 [1.0] >= 0, "ξ: multiplies the nonlinear phase (optimised DBP with few steps, Ip & Kahn 2008)";
+        steps_per_link: Option<usize> [absent] >= 1, "this number of equal steps for the whole link instead of steps_per_span, a step covering several spans (or part of one; Rafique et al. 2011): lossless steps, the amplifiers restoring the loss of their span";
+        power_filter_taps: usize [1] >= 1, "the taps of a Gaussian filter on the power of every nonlinear step (odd; 1: the instantaneous power): the weighted DBP of Rafique et al. 2011, eq. (2), the enhanced split step of Häger & Pfister 2021, eq. (9)";
+        power_filter_sigma: Option<f64> [absent] > 0, "the standard deviation of the Gaussian filter on the power (samples), with power_filter_taps above 1";
     }
 }
 
-struct Dbp {
-    ssfm: Ssfm,
-    steps: usize,
-    xi: f64,
-    distribution: StepDistribution,
-    nonlinear_length: NonlinearLength,
-}
+/// The `dbp` block: the back-propagation, built once with the specification.
+struct Dbp(comnum_dsp::compensation::dbp::Dbp);
 
 impl Dbp {
     fn new(q: &DbpBlock, ctx: &BuildContext) -> Result<Dbp> {
@@ -236,27 +234,20 @@ impl Dbp {
             nonlinear: NonlinearStep::Midpoint,
             check_sampling: true,
         };
-        Ok(Dbp {
-            ssfm,
-            steps: q.steps_per_span,
-            xi: q.nonlinear_scale,
-            distribution: match q.step_distribution.parse().map_err(|e: Error| e.context("dbp"))? {
-                StepDistribution::ModifiedLogarithmic(_) => StepDistribution::ModifiedLogarithmic(q.step_factor),
-                d => d,
-            },
-            nonlinear_length: q.nonlinear_length.parse().map_err(|e: Error| e.context("dbp"))?,
-        })
+        let parse = |e: Error| e.context("dbp");
+        Ok(Dbp(comnum_dsp::compensation::dbp::Dbp {
+            distribution: q.step_distribution.parse::<StepDistribution>().map_err(parse)?.with_factor(q.step_factor),
+            nonlinear_length: q.nonlinear_length.parse::<NonlinearLength>().map_err(parse)?,
+            steps_per_link: q.steps_per_link,
+            power_filter: power_filter(q.power_filter_taps, q.power_filter_sigma).map_err(parse)?,
+            ..ssfm.dbp(q.steps_per_span, q.nonlinear_scale)
+        }))
     }
 }
 
 impl Block for Dbp {
     fn apply(&self, s: &mut Frame, _: &mut Rng) -> Result<()> {
-        let dbp = comnum_dsp::compensation::dbp::Dbp {
-            distribution: self.distribution,
-            nonlinear_length: self.nonlinear_length,
-            ..self.ssfm.dbp(self.steps, self.xi)
-        };
-        s.samples = dbp.run(&s.samples, s.fs())?;
+        s.samples = self.0.run(&s.samples, s.fs())?;
         Ok(())
     }
 }

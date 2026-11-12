@@ -211,6 +211,9 @@ pub struct SplitStep {
     plan: Option<Fft>,
     gamma_w_km: f64,
     steps: Steps,
+    /// The real taps of the filter on the power of the nonlinear step, centred (empty:
+    /// the instantaneous power), see [`SplitStep::with_power_filter`].
+    power_filter: Vec<f64>,
 }
 
 impl SplitStep {
@@ -224,6 +227,7 @@ impl SplitStep {
             plan: (n > 0).then(|| fft::plan(n)),
             gamma_w_km: medium.gamma_w_km,
             steps,
+            power_filter: Vec::new(),
         }
     }
 
@@ -253,6 +257,90 @@ impl SplitStep {
             plan: (n > 0).then(|| fft::plan(n)),
             gamma_w_km: medium.gamma_w_km,
             steps: Steps { n_steps: steps.len(), step_km: total / k, nl_length_km: total_nl / k },
+            power_filter: Vec::new(),
+        }
+    }
+
+    /// The same steps with the nonlinear phase of every step taken on the power filtered
+    /// by the real taps $c_{k}$, $k = -K, \dots, K$ (`taps`, $2K + 1$ of them, centred):
+    ///
+    /// $$
+    /// A\[n\] \leftarrow A\[n\] \exp\Big(j \gamma h_{\mathrm{NL}} \sum_{k=-K}^{K} c_{k} |A\[n - k\]|^{2}\Big)
+    /// $$
+    ///
+    /// (circularly over the block, in [`SplitStep::run`]; [`SplitStep::run_with_gain`]
+    /// keeps the instantaneous power; for two polarisations, [`SplitStep::run_dual`], on
+    /// $|A_{x}|^{2} + |A_{y}|^{2}$ with $\frac{8}{9}\gamma$). It is the enhanced split step
+    /// of the back-propagation with long steps: Rafique et al. (*Opt. Express* 19(10),
+    /// 2011, eq. (2), the weighted DBP) and Häger & Pfister (*IEEE J. Sel. Areas Commun.*
+    /// 39(1), 2021, eq. (9)). The taps are used as given: taps that sum to 1 give a
+    /// constant power the phase of the plain step, and a single tap of 1 is the plain step.
+    ///
+    /// # Errors
+    /// [`Error::Config`] for an even number of taps, none, a tap that is not finite, or
+    /// more taps than samples in the block.
+    ///
+    /// # Examples
+    /// ```
+    /// use comnum_math::nlse::{Medium, SplitStep, Steps};
+    /// use comnum_math::C64;
+    /// let m = Medium { alpha_np_km: 0.0, beta2_s2_km: 0.0, gamma_w_km: 1.0, beta3_s3_km: 0.0 };
+    /// // a constant field: taps that sum to 1 give the phase of the plain step
+    /// let s = SplitStep::new(&m, Steps::new(1, 1.0), 8, 1e9).with_power_filter(&[0.25, 0.5, 0.25])?;
+    /// let mut e = vec![C64::new(1.0, 0.0); 8];
+    /// s.run(&mut e);
+    /// assert!((e[3].arg() - 1.0).abs() < 1e-12);
+    /// # Ok::<(), comnum_core::Error>(())
+    /// ```
+    pub fn with_power_filter(mut self, taps: &[f64]) -> Result<SplitStep> {
+        if taps.len() % 2 == 0 || taps.iter().any(|c| !c.is_finite()) {
+            return Err(Error::Config(format!(
+                "the filter on the power needs an odd number of finite taps, got {}",
+                taps.len()
+            )));
+        }
+        let n = self.lins.first().map_or(0, Vec::len);
+        if n > 0 && taps.len() > n {
+            return Err(Error::Config(format!(
+                "the filter on the power has {} taps for a block of {n} samples",
+                taps.len()
+            )));
+        }
+        self.power_filter = if taps == [1.0] { Vec::new() } else { taps.to_vec() };
+        Ok(self)
+    }
+
+    /// The buffers of the filter on the power for a block of `n` samples: the power,
+    /// padded circularly by $K$ samples on each side, and the filtered power (empty
+    /// without a filter).
+    fn filter_buffers(&self, n: usize) -> (Vec<f64>, Vec<f64>) {
+        if self.power_filter.is_empty() {
+            return (Vec::new(), Vec::new());
+        }
+        (vec![0.0; n + self.power_filter.len() - 1], vec![0.0; n])
+    }
+
+    /// The `power` of every sample filtered circularly by
+    /// [`SplitStep::with_power_filter`] into `out`, through the buffer `padded` of
+    /// [`SplitStep::filter_buffers`] (the power at `padded[K..K + n]`, the $K$ samples of
+    /// each end copied to the other side).
+    fn filter_power(&self, power: impl Iterator<Item = f64>, padded: &mut [f64], out: &mut [f64]) {
+        let n = out.len();
+        let half = self.power_filter.len() / 2;
+        for (q, p) in padded[half..half + n].iter_mut().zip(power) {
+            *q = p;
+        }
+        for t in 0..half {
+            padded[t] = padded[n + t];
+            padded[n + half + t] = padded[half + t];
+        }
+        for (i, o) in out.iter_mut().enumerate() {
+            // tap c_k with k = j - K multiplies the power at i - k, padded[i + 2K - j]
+            let mut acc = 0.0;
+            for (j, c) in self.power_filter.iter().enumerate() {
+                acc += c * padded[i + 2 * half - j];
+            }
+            *o = acc;
         }
     }
 
@@ -271,12 +359,22 @@ impl SplitStep {
             return;
         };
         let g = self.gamma_w_km;
+        // the buffers of the filter on the power, once for every step
+        let filtered = !self.power_filter.is_empty();
+        let (mut padded, mut smooth) = self.filter_buffers(e.len());
         p.forward(e);
         for &(i, _, h) in &self.schedule {
             mul(e, &self.lins[i]);
             p.inverse(e);
-            for v in e.iter_mut() {
-                *v *= cis(g * v.norm_sqr() * h);
+            if filtered {
+                self.filter_power(e.iter().map(C64::norm_sqr), &mut padded, &mut smooth);
+                for (v, q) in e.iter_mut().zip(&smooth) {
+                    *v *= cis(g * q * h);
+                }
+            } else {
+                for v in e.iter_mut() {
+                    *v *= cis(g * v.norm_sqr() * h);
+                }
             }
             p.forward(e);
             mul(e, &self.lins[i]);
@@ -298,6 +396,8 @@ impl SplitStep {
             assert!(x.is_empty(), "a field for an empty block");
             return;
         };
+        let filtered = !self.power_filter.is_empty();
+        let (mut padded, mut smooth) = self.filter_buffers(x.len());
         p.forward(x);
         p.forward(y);
         for &(i, _, h) in &self.schedule {
@@ -305,7 +405,18 @@ impl SplitStep {
             mul(y, &self.lins[i]);
             p.inverse(x);
             p.inverse(y);
-            manakov_rotation(x, y, 8.0 / 9.0 * self.gamma_w_km * h);
+            if filtered {
+                let total = x.iter().zip(y.iter()).map(|(u, v)| u.norm_sqr() + v.norm_sqr());
+                self.filter_power(total, &mut padded, &mut smooth);
+                let k = 8.0 / 9.0 * self.gamma_w_km * h;
+                for ((u, v), q) in x.iter_mut().zip(y.iter_mut()).zip(&smooth) {
+                    let r = cis(k * q);
+                    *u *= r;
+                    *v *= r;
+                }
+            } else {
+                manakov_rotation(x, y, 8.0 / 9.0 * self.gamma_w_km * h);
+            }
             p.forward(x);
             p.forward(y);
             mul(x, &self.lins[i]);
@@ -516,6 +627,16 @@ pub enum StepDistribution {
 }
 
 impl StepDistribution {
+    /// The same distribution with the adjusting factor `factor` when it is
+    /// [`StepDistribution::ModifiedLogarithmic`] (the others have none): the factor of a
+    /// specification or a keyword given apart from the name of the distribution.
+    pub fn with_factor(self, factor: f64) -> StepDistribution {
+        match self {
+            StepDistribution::ModifiedLogarithmic(_) => StepDistribution::ModifiedLogarithmic(factor),
+            d => d,
+        }
+    }
+
     /// The `n` steps of a span of `length_km` with the power attenuation `alpha_np_km`
     /// (Np/km), in the order of the propagation.
     ///
@@ -1088,6 +1209,42 @@ mod tests {
         let (mut a, mut b2, mut c) = (x0.clone(), x0.clone(), x0);
         assert!(engine.run_fields(&mut [&mut a, &mut b2, &mut c], 1.0, fs, &PropagationOptions::default()).is_err());
         assert!(engine.run_fields(&mut [], 1.0, fs, &PropagationOptions::default()).is_err());
+    }
+
+    #[test]
+    fn the_filter_on_the_power_is_centred_and_circular() {
+        // one pulse of 1 W at sample 2: with the taps (c_-1, c_0, c_1) the phase at
+        // sample n is gamma h sum_k c_k P[n - k], so c_1 lands on sample 3 and c_-1 on 1;
+        // a pulse at 0 wraps to the last sample
+        let m = Medium { alpha_np_km: 0.0, beta2_s2_km: 0.0, gamma_w_km: 1.0, beta3_s3_km: 0.0 };
+        let taps = [0.1, 0.7, 0.2];
+        let s = SplitStep::new(&m, Steps::new(1, 1.0), 8, 1e9).with_power_filter(&taps).unwrap();
+        for (pulse, below, above) in [(2usize, 1usize, 3usize), (0, 7, 1)] {
+            // a background of 1e-4 W: its own phase is 1e-4 rad at most
+            let mut e = vec![C64::new(1e-2, 0.0); 8];
+            e[pulse] = C64::new(1.0, 0.0);
+            s.run(&mut e);
+            assert!((e[pulse].arg() - 0.7).abs() < 2e-4);
+            assert!((e[below].arg() - 0.1).abs() < 2e-4 && (e[above].arg() - 0.2).abs() < 2e-4, "{e:?}");
+            // the samples that no tap of the pulse reaches keep the background phase
+            assert!(e[(pulse + 4) % 8].arg().abs() < 2e-4);
+        }
+        assert!(SplitStep::new(&m, Steps::new(1, 1.0), 8, 1e9).with_power_filter(&[0.5, 0.5]).is_err());
+        // seven taps on eight samples: the padding wraps both ends, to the last bit of
+        // the circular sum gamma h sum_j c_j P[(n + K - j) mod 8]
+        let taps = [0.05, 0.1, 0.15, 0.4, 0.12, 0.11, 0.07];
+        let s = SplitStep::new(&m, Steps::new(1, 1.0), 8, 1e9).with_power_filter(&taps).unwrap();
+        let e0: Vec<C64> = (0..8).map(|n| C64::new(0.1 * (1 + n) as f64, 0.0)).collect();
+        let mut e = e0.clone();
+        s.run(&mut e);
+        for (n, v) in e.iter().enumerate() {
+            let mut q = 0.0;
+            for (j, c) in taps.iter().enumerate() {
+                q += c * e0[(n + 3 + 8 - j) % 8].norm_sqr();
+            }
+            assert!((v.arg() - q).abs() < 1e-12, "{n}: {} {q}", v.arg());
+        }
+        assert!(SplitStep::new(&m, Steps::new(1, 1.0), 8, 1e9).with_power_filter(&[0.1; 9]).is_err());
     }
 
     #[test]

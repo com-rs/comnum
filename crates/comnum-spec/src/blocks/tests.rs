@@ -73,6 +73,7 @@ fn example(b: &str, p: &str) -> Option<Json> {
         ("ssfm", "nonlinear_step") => json!("effective_length"),
         ("manakov", "step_rule") => json!("nonlinear_phase"),
         ("ssfm", "precision") => json!("f64"), // f32 refuses the logarithmic steps of steps_per_span
+        ("dbp" | "manakov_dbp", "power_filter_taps") => json!(3), // an odd number of taps
         ("dbp", "step_distribution") => json!("modified_logarithmic"),
         ("dbp", "step_factor") => json!(0.4),
         ("dbp", "nonlinear_length") => json!("step"),
@@ -139,9 +140,9 @@ fn example(b: &str, p: &str) -> Option<Json> {
         (
             _,
             "n_symbols" | "sps" | "n_taps" | "sps_out" | "offset" | "passes" | "n" | "b" | "m" | "steps_per_span"
-            | "start" | "length" | "max_delay" | "symmetry" | "window" | "n_subcarriers" | "oversampling" | "n_cp"
-            | "n_tx" | "n_rx" | "coherence_samples" | "k" | "seed" | "blocks" | "skip_start" | "skip_end"
-            | "n_channels" | "max_iterations" | "iterations" | "pols" | "kikuchi" | "sections" | "bits",
+            | "steps_per_link" | "start" | "length" | "max_delay" | "symmetry" | "window" | "n_subcarriers"
+            | "oversampling" | "n_cp" | "n_tx" | "n_rx" | "coherence_samples" | "k" | "seed" | "blocks" | "skip_start"
+            | "skip_end" | "n_channels" | "max_iterations" | "iterations" | "pols" | "kikuchi" | "sections" | "bits",
         ) => json!(2),
         _ => json!(1.0),
     })

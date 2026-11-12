@@ -339,8 +339,11 @@ block_params! {
     struct DbpSpec {
         fiber: Option<Mapping<FiberSpec>> [absent "spec fiber"], FIBER_DOC;
         steps_per_span: usize [1] >= 1, "symmetric steps per span";
-        nonlinear_scale: f64 [1.0], "ξ: multiplies the nonlinear phase (0: dispersion compensation only)";
+        nonlinear_scale: f64 [1.0] >= 0, "ξ: multiplies the nonlinear phase (0: dispersion compensation only)";
         amplification: String ["edfa"] one_of ["edfa", "ideal", "none"], "the amplification of the forward link";
+        steps_per_link: Option<usize> [absent] >= 1, "this number of equal steps for the whole link instead of steps_per_span, a step covering several spans (or part of one; Rafique et al. 2011): lossless steps, the amplifiers restoring the loss of their span";
+        power_filter_taps: usize [1] >= 1, "the taps of a Gaussian filter on the total power of every nonlinear step (odd; 1: the instantaneous power): the weighted DBP of Rafique et al. 2011, eq. (2), the enhanced split step of Häger & Pfister 2021, eq. (9)";
+        power_filter_sigma: Option<f64> [absent] > 0, "the standard deviation of the Gaussian filter on the power (samples), with power_filter_taps above 1";
     }
 }
 
@@ -352,7 +355,12 @@ impl ManakovDbpBlock {
             amplification: p.amplification.parse()?,
             ..ManakovSsfm::new(ctx.fiber(fiber_json(p.fiber.as_ref()))?)
         };
-        Ok(ManakovDbpBlock(link.dbp(p.steps_per_span, p.nonlinear_scale)))
+        Ok(ManakovDbpBlock(comnum_dsp::compensation::dbp::Dbp {
+            steps_per_link: p.steps_per_link,
+            power_filter: comnum_dsp::compensation::dbp::power_filter(p.power_filter_taps, p.power_filter_sigma)
+                .map_err(|e| e.context("manakov_dbp"))?,
+            ..link.dbp(p.steps_per_span, p.nonlinear_scale)
+        }))
     }
 }
 

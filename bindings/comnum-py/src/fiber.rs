@@ -10,7 +10,7 @@ use comnum::channel::optical::manakov::ManakovSsfm;
 use comnum::channel::optical::pmd::{ManakovPmd, PmdLink};
 use comnum::channel::optical::raman::Raman;
 use comnum::core::signal::DualPol;
-use comnum::dsp::compensation::dbp::{Dbp, NonlinearLength};
+use comnum::dsp::compensation::dbp::{Dbp, NonlinearLength, power_filter};
 use comnum::math::nlse::{NonlinearStep, StepDistribution, StepRule, StepUpdate};
 use comnum::spec::blocks::BuildContext;
 use pyo3::exceptions::PyValueError;
@@ -478,13 +478,22 @@ impl PySsfm {
     ///     nonlinear_length (str): ``"effective"``, the effective length of a coarse step
     ///         (the power integrated over it), or ``"step"``, the step itself (the
     ///         midpoint rule of Häger & Pfister 2021).
+    ///     steps_per_link (int, optional): this number of equal steps for the whole link
+    ///         instead of ``steps_per_span``, a step covering several spans (Rafique et
+    ///         al. 2011); the amplifiers must restore the loss of their span.
+    ///     power_filter_taps (int): the taps of a Gaussian filter on the power of every
+    ///         nonlinear step (odd; 1, the default, for the instantaneous power): the
+    ///         weighted DBP of Rafique et al. 2011, the enhanced split step of Häger &
+    ///         Pfister 2021, eq. (9).
+    ///     power_filter_sigma (float, optional): its standard deviation (samples),
+    ///         needed with more than one tap.
     ///
     /// Returns:
     ///     numpy.ndarray: the back-propagated field (complex128).
     ///
     /// Raises:
     ///     ValueError: for an invalid parameter or input (the message names it).
-    #[pyo3(signature = (x, fs, *, steps_per_span = 1, nonlinear_scale = 1.0, step_distribution = "uniform", step_factor = 0.4, nonlinear_length = "effective"))]
+    #[pyo3(signature = (x, fs, *, steps_per_span = 1, nonlinear_scale = 1.0, step_distribution = "uniform", step_factor = 0.4, nonlinear_length = "effective", steps_per_link = None, power_filter_taps = 1, power_filter_sigma = None))]
     #[allow(clippy::too_many_arguments, reason = "the settings of the back-propagation, by keyword")]
     fn backpropagate<'py>(
         &self,
@@ -496,15 +505,17 @@ impl PySsfm {
         step_distribution: &str,
         step_factor: f64,
         nonlinear_length: &str,
+        steps_per_link: Option<usize>,
+        power_filter_taps: usize,
+        power_filter_sigma: Option<f64>,
     ) -> PyResult<CArr<'py>> {
         let x = cvec(x)?;
-        let distribution = match step_distribution.parse::<StepDistribution>().py()? {
-            StepDistribution::ModifiedLogarithmic(_) => StepDistribution::ModifiedLogarithmic(step_factor),
-            d => d,
-        };
+        let distribution = step_distribution.parse::<StepDistribution>().py()?.with_factor(step_factor);
         let dbp = Dbp {
             distribution,
             nonlinear_length: nonlinear_length.parse::<NonlinearLength>().py()?,
+            steps_per_link,
+            power_filter: power_filter(power_filter_taps, power_filter_sigma).py()?,
             ..self.inner.dbp(steps_per_span, nonlinear_scale)
         };
         Ok(carr(py, py.detach(|| dbp.run(&x, fs)).py()?))
@@ -790,13 +801,23 @@ impl PyManakovSsfm {
     ///     steps_per_span (int): steps per span.
     ///     nonlinear_scale (float): ξ, multiplies the nonlinear phase (0: dispersion
     ///         compensation only).
+    ///     steps_per_link (int, optional): this number of equal steps for the whole link
+    ///         instead of ``steps_per_span``, a step covering several spans (Rafique et
+    ///         al. 2011); the amplifiers must restore the loss of their span.
+    ///     power_filter_taps (int): the taps of a Gaussian filter on the total power of
+    ///         every nonlinear step (odd; 1, the default, for the instantaneous power):
+    ///         the weighted DBP of Rafique et al. 2011, the enhanced split step of Häger &
+    ///         Pfister 2021, eq. (9).
+    ///     power_filter_sigma (float, optional): its standard deviation (samples),
+    ///         needed with more than one tap.
     ///
     /// Returns:
     ///     numpy.ndarray: the back-propagated field, `(2, n)` (complex128).
     ///
     /// Raises:
     ///     ValueError: for an invalid parameter or input (the message names it).
-    #[pyo3(signature = (u, fs, *, steps_per_span = 1, nonlinear_scale = 1.0))]
+    #[pyo3(signature = (u, fs, *, steps_per_span = 1, nonlinear_scale = 1.0, steps_per_link = None, power_filter_taps = 1, power_filter_sigma = None))]
+    #[allow(clippy::too_many_arguments, reason = "the settings of the back-propagation, by keyword")]
     fn backpropagate<'py>(
         &self,
         py: Python<'py>,
@@ -804,9 +825,16 @@ impl PyManakovSsfm {
         fs: f64,
         steps_per_span: usize,
         nonlinear_scale: f64,
+        steps_per_link: Option<usize>,
+        power_filter_taps: usize,
+        power_filter_sigma: Option<f64>,
     ) -> PyResult<CMat<'py>> {
         let DualPol { mut x, mut y } = dual_pol(u)?;
-        let d = self.inner.dbp(steps_per_span, nonlinear_scale);
+        let d = Dbp {
+            steps_per_link,
+            power_filter: power_filter(power_filter_taps, power_filter_sigma).py()?,
+            ..self.inner.dbp(steps_per_span, nonlinear_scale)
+        };
         py.detach(|| d.run_dual(&mut x, &mut y, fs)).py()?;
         mat(py, vec![x, y])
     }
