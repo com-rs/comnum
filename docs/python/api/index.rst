@@ -79,6 +79,9 @@ On scalars or arrays.
    theory_ser_esn0
    theory_ber_gray
    theory_ber_rayleigh_mrc
+   theory_ser_fading
+   theory_ber_binary_fading
+   theory_ber_noncoherent_binary_fading
    theory_ber_dpsk
    theory_differential_phase_tail
    theory_phase_pdf

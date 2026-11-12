@@ -2,4 +2,5 @@
 //! cards of `validation/cards/` (`just card <id>` runs one).
 
 mod basar2019;
+mod simon1998;
 mod zheng2003;

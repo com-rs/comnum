@@ -1,0 +1,23 @@
+id: alouini1999_ser_fading
+title: SER of square M-QAM over Rayleigh fading, the closed form (49) of Alouini & Goldsmith 1999
+literature: alouini1999
+evidence: [closed_form]
+source:
+  kind: paper
+  reference: "M.-S. Alouini, A. J. Goldsmith, A unified approach for calculating error rates of linearly modulated signals over generalized fading channels, IEEE Trans. Commun. 47(9), 1324-1334, 1999"
+  locator: "eq. (49) (one Rayleigh branch), the closed form of the integral (48) evaluated by theory_ser_fading"
+  file: wireless-channels/1999_alouini_unified-approach-error-rates-linearly-modulated-fading_tcom.pdf
+run:
+  function: comnum.theory_ser_fading
+tolerance: {rtol: 1.0e-9}
+why: "a closed form evaluated with 15 digits against the 96-node Gauss-Legendre quadrature of the MGF integral"
+cases:
+  - {inputs: {m: 4, esn0_db: 0.0}, expected: 3.650998205402e-1}
+  - {inputs: {m: 16, esn0_db: 0.0}, expected: 7.611963108663e-1}
+  - {inputs: {m: 64, esn0_db: 0.0}, expected: 9.285189383454e-1}
+  - {inputs: {m: 4, esn0_db: 10.0}, expected: 7.857305673855e-2}
+  - {inputs: {m: 16, esn0_db: 10.0}, expected: 3.606388435665e-1}
+  - {inputs: {m: 64, esn0_db: 10.0}, expected: 7.117769311705e-1}
+  - {inputs: {m: 4, esn0_db: 20.0}, expected: 8.949634358238e-3}
+  - {inputs: {m: 16, esn0_db: 20.0}, expected: 5.989371823949e-2}
+  - {inputs: {m: 64, esn0_db: 20.0}, expected: 2.296553105231e-1}

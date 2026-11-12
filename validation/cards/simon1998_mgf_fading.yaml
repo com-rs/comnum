@@ -1,0 +1,41 @@
+id: simon1998_mgf_fading
+title: Simulated error rates of BPSK and 16-QAM over Rice and Nakagami-m fading against their MGF averages
+literature: simon1998
+evidence: [closed_form]
+source:
+  kind: paper
+  reference: "M. K. Simon, M.-S. Alouini, A unified approach to the performance analysis of digital communication over generalized fading channels, Proc. IEEE 86(9), 1860-1877, 1998"
+  locator: "eq. (22) (the average of the conditional error rate over the pdf of the SNR) with the Rice and Nakagami-m densities of Table 2, integrated numerically (scipy.integrate.quad over the conditional BER Q(sqrt(2 gamma)) of BPSK and the conditional SER (45) of 16-QAM); eqs. (23) and (46) with the MGFs of Table 3 give the same values, which comnum evaluates"
+  file: wireless-channels/1998_simon_unified-approach-performance-generalized-fading_procieee.pdf
+description: >
+  One symbol at a time through a flat fading channel known at the receiver: BPSK at a
+  mean Eb/N0 of 10 dB and 16-QAM at a mean Es/N0 of 20 dB, the amplitude of each
+  symbol drawn from a Rice distribution of factor K = 3 and 10 (a line of sight plus a
+  circular Gaussian term) or from a Nakagami-m distribution of m = 0.5, 2 and 4 (the
+  power a gamma variable of shape m, Rng::gamma), complex white Gaussian noise, the
+  division by the amplitude, the minimum-distance decision; 400 000 symbols per case
+  (seed 1998). Measured: the bit error rate of BPSK and the symbol error rate of
+  16-QAM; expected: the numerical average of the conditional error rate over the pdf
+  of the SNR, which the MGF integrals of comnum (ber_binary_fading, ser_fading)
+  reproduce to 1e-9. The test prints both.
+run:
+  test: validation/tests/wireless_channels/simon1998.rs::the_simulated_error_rates_over_rice_and_nakagami_fading_are_their_mgf_averages
+tier: ci
+duration: "2 s on an Apple M6"
+why: >
+  400 000 symbols give 280 bit errors at the rarest case (BPSK over Rice, K = 10, BER
+  7e-4), a relative standard deviation of 6 %: the factor 1.2 is three of them; the
+  other cases count 1200 errors and more.
+findings:
+  - "the ten simulated error rates are within 2.5 % of their MGF averages (a sampling error of 2 to 6 % at one standard deviation), and the MGF averages within 1e-9 of the numerical integrals of the densities"
+cases:
+  - {inputs: {signal: bpsk, fading: rice, parameter: 3.0}, expected: 7.610770e-3, tolerance: {factor: 1.2}}
+  - {inputs: {signal: bpsk, fading: rice, parameter: 10.0}, expected: 7.014440e-4, tolerance: {factor: 1.2}}
+  - {inputs: {signal: bpsk, fading: nakagami, parameter: 0.5}, expected: 7.002435e-2, tolerance: {factor: 1.2}}
+  - {inputs: {signal: bpsk, fading: nakagami, parameter: 2.0}, expected: 5.528247e-3, tolerance: {factor: 1.2}}
+  - {inputs: {signal: bpsk, fading: nakagami, parameter: 4.0}, expected: 1.038669e-3, tolerance: {factor: 1.2}}
+  - {inputs: {signal: qam16, fading: rice, parameter: 3.0}, expected: 2.031219e-2, tolerance: {factor: 1.2}}
+  - {inputs: {signal: qam16, fading: rice, parameter: 10.0}, expected: 2.048155e-3, tolerance: {factor: 1.2}}
+  - {inputs: {signal: qam16, fading: nakagami, parameter: 0.5}, expected: 1.634732e-1, tolerance: {factor: 1.2}}
+  - {inputs: {signal: qam16, fading: nakagami, parameter: 2.0}, expected: 1.547577e-2, tolerance: {factor: 1.2}}
+  - {inputs: {signal: qam16, fading: nakagami, parameter: 4.0}, expected: 3.051726e-3, tolerance: {factor: 1.2}}

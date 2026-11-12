@@ -95,6 +95,137 @@ fn theory_ber_rayleigh_mrc(ebn0_db: &Bound<'_, PyAny>, branches: usize) -> PyRes
     map_real(ebn0_db, |e| theory::ber_rayleigh_mrc(comnum::math::db2lin(e), branches).py())
 }
 
+/// The fading channel of a name and its parameter ([`theory::SnrFading`]).
+fn snr_fading(fading: &str, parameter: Option<f64>) -> PyResult<theory::SnrFading> {
+    theory::SnrFading::from_name(fading, parameter).py()
+}
+
+/// Average symbol error rate of M-PSK, square M-QAM or M-PAM over a flat fading
+/// channel, by the moment generating function (MGF) of the SNR with Craig's form of the
+/// Q function (M.-S. Alouini and A. J. Goldsmith, "A unified approach for calculating
+/// error rates of linearly modulated signals over generalized fading channels," IEEE
+/// Trans. Commun. 47(9), 1999, eqs. (41), (45), (48)): `P_s = (1/π) ∫ M_γ(-g/sin²φ) dφ`
+/// over the intervals of the family, with the MGF of Rayleigh, Rice (Rician factor
+/// `K`), Nakagami-m (`m`) or Hoyt (`q`) fading (eqs. (23), (28), (30), (26)).
+///
+/// Args:
+///     m (int): the order of the constellation.
+///     esn0_db (float | array_like): the mean `E_s/N_0` (dB).
+///     kind (str): ``"psk"``, ``"qam"`` or ``"pam"``.
+///     fading (str): ``"rayleigh"`` (the default), ``"rice"``, ``"nakagami"``, ``"hoyt"``
+///         or ``"awgn"``.
+///     parameter (float, optional): `K` (linear) for Rice, `m` for Nakagami, `q` for
+///         Hoyt; none for Rayleigh and AWGN.
+///
+/// Returns:
+///     float | numpy.ndarray: the symbol error probability at every `E_s/N_0`.
+///
+/// Raises:
+///     ValueError: for an invalid parameter or input (the message names it).
+///
+/// Examples:
+///     >>> import comnum, math
+///     >>> # 16-QAM over Rayleigh fading at 20 dB: the closed form (49) of the paper
+///     >>> g, q = 0.1 * 100, 0.75
+///     >>> mu = math.sqrt(g / (1 + g))
+///     >>> closed = 2 * q * (1 - mu) + q * q * (4 / math.pi * mu * math.atan(1 / mu) - 1)
+///     >>> round(comnum.theory_ser_fading(16, 20.0) / closed, 10)
+///     1.0
+///     >>> bool(comnum.theory_ser_fading(16, 20.0, fading="rice", parameter=10.0) < closed)
+///     True
+#[pyfunction]
+#[pyo3(signature = (m, esn0_db, kind = "qam", *, fading = "rayleigh", parameter = None))]
+fn theory_ser_fading(
+    m: usize,
+    esn0_db: &Bound<'_, PyAny>,
+    kind: &str,
+    fading: &str,
+    parameter: Option<f64>,
+) -> PyResult<Py<PyAny>> {
+    let k = self::kind(kind)?;
+    let f = snr_fading(fading, parameter)?;
+    map_real(esn0_db, |e| theory::ser_fading(k, m, f, e).py())
+}
+
+/// Average bit error rate of a coherent binary signal of conditional BER `Q(√(2 g γ))`
+/// over a flat fading channel, with maximal-ratio combining of independent branches
+/// of the same mean (M. K. Simon and M.-S. Alouini, "A unified approach to the
+/// performance analysis of digital communication over generalized fading channels,"
+/// Proc. IEEE 86(9), 1998, eqs. (17), (23) and Table 3): `P_b = (1/π) ∫_0^{π/2}
+/// [M_γ(-g/sin²φ)]^L dφ`, `g` = 1 for BPSK and Gray QPSK per bit, 1/2 for orthogonal
+/// BFSK. Over Rayleigh fading it is :func:`theory_ber_rayleigh_mrc`.
+///
+/// Args:
+///     ebn0_db (float | array_like): the mean `E_b/N_0` of one branch (dB).
+///     g (float): the constant of the binary signal (1 for BPSK).
+///     fading (str): ``"rayleigh"`` (the default), ``"rice"``, ``"nakagami"``, ``"hoyt"``
+///         or ``"awgn"``.
+///     parameter (float, optional): `K` (linear) for Rice, `m` for Nakagami, `q` for
+///         Hoyt.
+///     branches (int): the number of branches `L` (at least 1).
+///
+/// Returns:
+///     float | numpy.ndarray: the bit error probability at every `E_b/N_0`.
+///
+/// Raises:
+///     ValueError: for an invalid parameter or input (the message names it).
+///
+/// Examples:
+///     >>> import comnum
+///     >>> # BPSK over Nakagami-m with an integer m is the MRC of m Rayleigh branches
+///     >>> a = comnum.theory_ber_binary_fading(10.0, fading="nakagami", parameter=3.0)
+///     >>> b = comnum.theory_ber_rayleigh_mrc(10.0 - 10 * __import__("math").log10(3), branches=3)
+///     >>> round(a / b, 10)
+///     1.0
+#[pyfunction]
+#[pyo3(signature = (ebn0_db, *, g = 1.0, fading = "rayleigh", parameter = None, branches = 1))]
+fn theory_ber_binary_fading(
+    ebn0_db: &Bound<'_, PyAny>,
+    g: f64,
+    fading: &str,
+    parameter: Option<f64>,
+    branches: usize,
+) -> PyResult<Py<PyAny>> {
+    let f = snr_fading(fading, parameter)?;
+    map_real(ebn0_db, |e| theory::ber_binary_fading(g, f, e, branches).py())
+}
+
+/// Average bit error rate of a binary signal detected noncoherently or differentially,
+/// of conditional BER `0.5 exp(-g γ)`, over a flat fading channel: `P_b = 0.5 M_γ(-g)`
+/// (Simon & Alouini 1998, eq. (53) averaged; eq. (64) over Rayleigh fading), `g` = 1
+/// for DPSK, 1/2 for noncoherent orthogonal BFSK.
+///
+/// Args:
+///     ebn0_db (float | array_like): the mean `E_b/N_0` (dB).
+///     g (float): the constant of the binary signal (1 for DPSK).
+///     fading (str): ``"rayleigh"`` (the default), ``"rice"``, ``"nakagami"``, ``"hoyt"``
+///         or ``"awgn"``.
+///     parameter (float, optional): `K` (linear) for Rice, `m` for Nakagami, `q` for
+///         Hoyt.
+///
+/// Returns:
+///     float | numpy.ndarray: the bit error probability at every `E_b/N_0`.
+///
+/// Raises:
+///     ValueError: for an invalid parameter or input (the message names it).
+///
+/// Examples:
+///     >>> import comnum
+///     >>> # DPSK over Rayleigh fading at 10 dB: 1 / (2 (1 + 10))
+///     >>> round(comnum.theory_ber_noncoherent_binary_fading(10.0) * 22, 12)
+///     1.0
+#[pyfunction]
+#[pyo3(signature = (ebn0_db, *, g = 1.0, fading = "rayleigh", parameter = None))]
+fn theory_ber_noncoherent_binary_fading(
+    ebn0_db: &Bound<'_, PyAny>,
+    g: f64,
+    fading: &str,
+    parameter: Option<f64>,
+) -> PyResult<Py<PyAny>> {
+    let f = snr_fading(fading, parameter)?;
+    map_real(ebn0_db, |e| theory::ber_noncoherent_binary_fading(g, f, e).py())
+}
+
 /// Density of the phase error of a carrier in circular Gaussian noise (S. O. Rice 1948;
 /// eq. (8) of Ahmed, Thompson and Zeidler, MILCOM 2007).
 ///
@@ -362,6 +493,9 @@ pub(crate) fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(theory_ser_esn0, m)?)?;
     m.add_function(wrap_pyfunction!(theory_ber_gray, m)?)?;
     m.add_function(wrap_pyfunction!(theory_ber_rayleigh_mrc, m)?)?;
+    m.add_function(wrap_pyfunction!(theory_ser_fading, m)?)?;
+    m.add_function(wrap_pyfunction!(theory_ber_binary_fading, m)?)?;
+    m.add_function(wrap_pyfunction!(theory_ber_noncoherent_binary_fading, m)?)?;
     m.add_function(wrap_pyfunction!(theory_phase_pdf, m)?)?;
     m.add_function(wrap_pyfunction!(theory_mi, m)?)?;
     m.add_function(wrap_pyfunction!(theory_gmi, m)?)?;

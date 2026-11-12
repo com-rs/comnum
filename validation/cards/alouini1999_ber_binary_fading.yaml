@@ -1,0 +1,23 @@
+id: alouini1999_ber_binary_fading
+title: BER of BPSK over Rayleigh and Nakagami-m fading, the closed forms (24) and (64) of Alouini & Goldsmith 1999
+literature: alouini1999
+evidence: [closed_form]
+source:
+  kind: paper
+  reference: "M.-S. Alouini, A. J. Goldsmith, A unified approach for calculating error rates of linearly modulated signals over generalized fading channels, IEEE Trans. Commun. 47(9), 1324-1334, 1999"
+  locator: "eq. (24) (Rayleigh) and Appendix B, eqs. (64)-(65) (the integral I_m(c) for an integer m, c = gamma / m: BPSK over Nakagami-m), evaluated by theory_ber_binary_fading"
+  file: wireless-channels/1999_alouini_unified-approach-error-rates-linearly-modulated-fading_tcom.pdf
+run:
+  function: comnum.theory_ber_binary_fading
+tolerance: {rtol: 1.0e-9}
+why: "closed forms evaluated with 15 digits against the 96-node Gauss-Legendre quadrature of the MGF integral; at 20 dB and m = 4 the BER is 3e-7, the quadrature still within 1e-9 relative"
+cases:
+  - {inputs: {ebn0_db: 0.0, fading: rayleigh}, expected: 1.464466094067e-1}
+  - {inputs: {ebn0_db: 10.0, fading: rayleigh}, expected: 2.326870537720e-2}
+  - {inputs: {ebn0_db: 20.0, fading: rayleigh}, expected: 2.481404895005e-3}
+  - {inputs: {ebn0_db: 0.0, fading: nakagami, parameter: 2.0}, expected: 1.150998205402e-1}
+  - {inputs: {ebn0_db: 10.0, fading: nakagami, parameter: 2.0}, expected: 5.528246696725e-3}
+  - {inputs: {ebn0_db: 20.0, fading: nakagami, parameter: 2.0}, expected: 7.256408530660e-5}
+  - {inputs: {ebn0_db: 0.0, fading: nakagami, parameter: 4.0}, expected: 9.750776405004e-2}
+  - {inputs: {ebn0_db: 10.0, fading: nakagami, parameter: 4.0}, expected: 1.038668855613e-3}
+  - {inputs: {ebn0_db: 20.0, fading: nakagami, parameter: 4.0}, expected: 3.038980347171e-7}

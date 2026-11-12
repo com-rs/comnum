@@ -1,0 +1,20 @@
+id: simon1998_noncoherent_rayleigh
+title: BER of DPSK and noncoherent BFSK over Rayleigh fading, eq. (64) of Simon & Alouini 1998
+literature: simon1998
+evidence: [closed_form]
+source:
+  kind: paper
+  reference: "M. K. Simon, M.-S. Alouini, A unified approach to the performance analysis of digital communication over generalized fading channels, Proc. IEEE 86(9), 1860-1877, 1998"
+  locator: "eq. (64) at zeta = 0 (one Rayleigh branch): 1 / (2 (1 + gamma)) for DPSK (b^2 = 2) and 1 / (2 + gamma) for orthogonal BFSK (b^2 = 1), evaluated by theory_ber_noncoherent_binary_fading"
+  file: wireless-channels/1998_simon_unified-approach-performance-generalized-fading_procieee.pdf
+run:
+  function: comnum.theory_ber_noncoherent_binary_fading
+tolerance: {rtol: 1.0e-12}
+why: "closed forms evaluated with 15 digits: 0.5 M(-g) with the Rayleigh MGF is the same arithmetic"
+cases:
+  - {inputs: {ebn0_db: 0.0, g: 1.0}, expected: 2.5e-1}
+  - {inputs: {ebn0_db: 10.0, g: 1.0}, expected: 4.545454545455e-2}
+  - {inputs: {ebn0_db: 20.0, g: 1.0}, expected: 4.950495049505e-3}
+  - {inputs: {ebn0_db: 0.0, g: 0.5}, expected: 3.333333333333e-1}
+  - {inputs: {ebn0_db: 10.0, g: 0.5}, expected: 8.333333333333e-2}
+  - {inputs: {ebn0_db: 20.0, g: 0.5}, expected: 9.803921568627e-3}
