@@ -665,7 +665,7 @@
   badge: green
   not_covered: "the SMa scenario (its formulas are truncated in the converted copy), the optional NLOS formulas, the InF path loss and LOS probability are not compared with an oracle; the system-level fast fading of Sec. 7.5 and its calibration (Sec. 7.8, whose results are in RAN1 contributions, not in the TR), the angle scaling of Sec. 7.7.5 and the additional features of Sec. 7.6; the TDL taps are rounded to the sampling grid"
   remarks:
-    - "20 cluster angles of the CDL tables of comnum were mistyped until 2 November 2026 (CDL-A 5-7 and 22, CDL-B 23, CDL-D 8-13, CDL-E 13-14), found by the reading card and corrected against the PDF and Sionna"
+    - "20 cluster angles of the CDL tables of comnum were mistyped until 2 November 2026 (CDL-A 5-7 and 22, CDL-B 23, CDL-D 8-13, CDL-E 13-14), found by a check of the tables against TR 38.901 and corrected against the standard and Sionna"
     - "tap 14 of TDL-E is at 20.6519 in Table 7.7.2-5 and 20.6419 in Table 7.7.1-5 (CDL-E cluster 14); the TDL value is kept (and is that of Sionna)"
 - id: ts38101_4
   area: Systems and standards
@@ -710,6 +710,31 @@
     - crates/comnum-channel/src/multipath/mod.rs::itu_r_m1225_tables_4_and_5
     - crates/comnum-channel/src/multipath/mod.rs::itu_r_m1225_table_2_delay_spreads
   badge: green
+- id: simon1998
+  area: Wireless channels
+  ref: "M. K. Simon, M.-S. Alouini, A unified approach to the performance analysis of digital communication over generalized fading channels, Proc. IEEE 86(9), 1860-1877, 1998"
+  module: comnum_mapping::theory::{SnrFading, ber_binary_mgf, ber_noncoherent_binary_mgf, ser_mgf}
+  tested: "Tables 2 and 3: the MGFs of Rice, Nakagami-m and Hoyt fading against the numerical Laplace transforms of their densities within 1e-6, their limits to Rayleigh and to no fading; eq. (22) against eqs. (23) and (46): the simulated BER of BPSK and SER of 16-QAM over Rice (K = 3, 10) and Nakagami-m (m = 0.5, 2, 4) fading within 2.5 % (the sampling error) of the MGF averages, which are within 1e-9 of the numerical averages over the densities; eq. (64) at zeta = 0: DPSK and noncoherent BFSK over Rayleigh fading, exact"
+  tests:
+    - validation/tests/wireless_channels/simon1998.rs::the_simulated_error_rates_over_rice_and_nakagami_fading_are_their_mgf_averages
+    - validation/cards/simon1998_noncoherent_rayleigh.yaml
+    - crates/comnum-mapping/src/theory.rs::the_mgfs_are_the_laplace_transforms_of_their_densities
+    - crates/comnum-mapping/src/theory.rs::the_limits_of_the_fading_families_are_rayleigh_and_awgn
+  badge: green
+  not_covered: "equal-gain combining (eqs. (27)-(34)), correlated branches (eqs. (35)-(42)), the log-normal and composite channels, the Marcum-Q integrals of DQPSK (eq. (63) with zeta > 0) and of M-DPSK (eq. (67)); the paper publishes no numerical value"
+  remarks:
+    - "the constant g of coherent BFSK with minimum correlation is 1/2 + 1/(3 pi) = 0.606 here (text after eq. (17)) and 0.715 in Alouini & Goldsmith 1999, eq. (15)"
+- id: alouini1999
+  area: Wireless channels
+  ref: "M.-S. Alouini, A. J. Goldsmith, A unified approach for calculating error rates of linearly modulated signals over generalized fading channels, IEEE Trans. Commun. 47(9), 1324-1334, 1999"
+  module: comnum_mapping::theory::{SnrFading, ser_fading, ber_binary_fading}
+  tested: "eqs. (23), (26), (28), (30): the MGFs; eq. (24): BPSK over Rayleigh, eq. (49): 4-, 16- and 64-QAM over Rayleigh, Appendix B eq. (64): BPSK over Nakagami-m for m = 1, 2, 4 (the maximal-ratio combining of m Rayleigh branches), all closed forms within 1e-9 of the 96-node quadrature of eqs. (41), (45), (48) from 0 to 20 dB; eq. (45): 2-PAM is BPSK; the SER over AWGN by the MGF is the closed form"
+  tests:
+    - validation/cards/alouini1999_ser_fading.yaml
+    - validation/cards/alouini1999_ber_binary_fading.yaml
+    - crates/comnum-mapping/src/theory.rs::the_closed_forms_of_alouini_and_goldsmith_1999_hold
+  badge: green
+  not_covered: "the log-normal and composite MGFs by Gauss-Hermite (eqs. (31)-(34)), the closed forms of several Rayleigh branches (eqs. (50)-(53)), the non-integer m of eq. (63); the paper publishes no numerical value"
 - id: basar2019
   area: Wireless channels
   ref: "E. Basar, M. Di Renzo, J. de Rosny, M. Debbah, M.-S. Alouini, R. Zhang, Wireless communications through reconfigurable intelligent surfaces, IEEE Access, 2019 (arXiv 1906.09490)"
@@ -865,6 +890,31 @@
     - validation/tests/fiber/hu2004.rs::hu_2004_table_i_case_i_ripple_of_equally_spaced_pumps
   badge: orange
   not_covered: "cases II and III of Table I (the central wavelength and the wavelengths optimised: the library fits the powers at given wavelengths); the curves of Fig. 2 against the spacing (not read)"
+- id: soltani2022
+  area: Optical
+  ref: "M. Soltani, F. Da Ros, A. Carena, D. Zibar, Spectral and spatial power evolution design with machine learning-enabled Raman amplification, JLT 40(12), 3546-3556, 2022"
+  module: comnum_channel::optical::raman
+  tested: "Fig. 5 with the pumps of Table III (80 km, four co- and four counter-pumps at 1366 to 1475 nm, two of second order, 40 channels at 0 dBm; the gain of standard silica at the peak of the paper, 0.4125 1/(W km), not scaled with the pump frequency as in GNPy up to 2.4): the four designs within 0.39 dB of the figure along the span, 0.17 to 0.33 dB above it on average at 80 km (0.91 dB at most); scaled with the pump frequency (the default) 0.70 to 0.88 dB above it"
+  tests:
+    - validation/tests/fiber/soltani2022.rs::soltani_2022_fig_5_power_maps_of_table_iii
+  badge: orange
+  not_covered: "the symmetric designs of Table V and Fig. 8; the neural networks and the differential evolution (out of scope)"
+  remarks:
+    - "the gain table, the version of GNPy and the coupler losses are not given; the excursions of Table IV are not all reproduced (J0 3.18 against 2.81 dB for m(1), J1 1.67 against 0.88 for m(2)), not explained"
+    - "some powers of Table V lie outside the ranges of Table I (p5 = 1480 mW above the 1.2 W of the data set and the 1.4 W of the text)"
+- id: yankov2023
+  area: Optical
+  ref: "M. P. Yankov, F. Da Ros, U. C. de Moura, A. Carena, D. Zibar, Flexible Raman amplifier optimization based on machine learning-aided physical stimulated Raman scattering model, JLT 41(2), 508-514, 2023"
+  module: comnum_channel::optical::raman
+  tested: "the backward amplifier of Fig. 5 (100 km at 0.2 dB/km, four counter-pumps of 21 dBm at 206.1 to 210.6 THz, 40 channels, flat loads of 0 and 20 dBm) against GNPy 3.0.1 with its own gain spectrum and effective areas: within 2e-6 dB (recorded); GNPy's depletion (the pump losing the power the signal gains) moves the on-off gain by 0.05 and 0.12 dB"
+  tests:
+    - tests/oracle/test_gnpy_oracle.py::test_on_off_gain_of_four_counter_pumps_against_the_load
+  badge: orange
+  not_covered: "every figure: with the parameters given, GNPy and comnum agree with each other and not with the paper"
+  remarks:
+    - "Fig. 5: with four pumps of 21 dBm both tools give 10 to 18 dB of on-off gain where the figure shows 5.2 to 10.5 dB; one common pump power (18.75 dBm) leaves 0.5 dB of shape and a weaker dependence on the load (-1.11 against -1.73 dB at 20 dBm); whether the figure is simulated or measured is not stated"
+    - "Fig. 10: with the launch profile of Fig. 2 and the pumps of Fig. 9, one span of 250 km, GNPy 3.0.1 and comnum give -4.0 and -4.2 dBm in all at the receiver where the GNPy curve of the paper gives -10.3 dBm, with another shape; the attenuation, effective area, gain peak, pump losses and version of GNPy are not given"
+    - "eq. (2) writes the loss of a step as alpha Delta z where eq. (1) and the effective length use 2 alpha"
 - id: kidorf1999
   area: Optical
   ref: "H. Kidorf, K. Rottwitt, M. Nissov, M. Ma, E. Rabarijaona, Pump interactions in a 100-nm bandwidth Raman amplifier, IEEE PTL 11(5), 530-532, 1999"
@@ -1587,14 +1637,19 @@
   area: Reference implementations
   ref: "Optilux, Apr 2021 (P. Serena, University of Parma, GPL-3.0; recorded outputs, run under Octave)"
   module: comnum_channel::optical::fiber
-  tested: "the split-step propagation of 16-QAM over 80 km spans at 1 km steps on the same field: identical without the Kerr effect (NMSE 3e-28), 1.2e-10 after one span and 1.5e-8 after ten with it (the nonlinear step: Optilux uses the effective length of the step), both solvers within 4e-8 of the solution at 0.05 km; the amplified link of its example 21 (PDM QPSK, 50 spans of 150 km, amplifiers of 30 dB gain and 6 dB noise figure): the SNR after 10 to 50 spans within 0.3 dB of Optilux's estimates and 0.15 dB of the example's formula"
+  tested: "the split-step propagation of 16-QAM over 80 km spans at 1 km steps on the same field: identical without the Kerr effect (NMSE 3e-28), 1.2e-10 after one span and 1.5e-8 after ten with it (the nonlinear step: Optilux uses the effective length of the step), both solvers within 4e-8 of the solution at 0.05 km; the amplified link of its example 21 (PDM QPSK, 50 spans of 150 km, amplifiers of 30 dB gain and 6 dB noise figure): the SNR after 10 to 50 spans within 0.3 dB of Optilux's estimates and 0.15 dB of the example's formula; the dispersion-managed link of its example 19 (OOK, five spans of 100 km of transmission fibre with slope and 1 km of compensating fibre, Manakov): the same field to the arithmetic with its symmetric step (NMSE 1.5e-26 after five spans, the same 101 steps of its four-wave-mixing rule), its default asymmetric step 2.1e-6 from comnum's converged solution; the DPSK link of its example 15 (integrator, delay interferometer, balanced detection): the BER within 3.5 % of 0.5 exp(-SNR) from 3 to 8 dB and within 6 % of Optilux's estimates; the WDM back to back of its example 16 (5 x PDM 16-QAM at 37.5 GHz): no crosstalk nor intersymbol interference above Optilux's numerical floor of 75.9 dB (comnum 147 dB and more)"
   tests:
     - tests/oracle/test_optilux_oracle.py
     - validation/tests/fiber/optilux.rs::the_split_step_of_optilux_on_the_same_field
     - validation/tests/fiber/optilux.rs::the_amplified_link_of_example_21
+    - validation/tests/fiber/optilux.rs::the_dispersion_managed_link_of_example_19
+    - validation/tests/fiber/optilux.rs::the_dpsk_link_of_example_15
+    - validation/tests/fiber/optilux.rs::the_wdm_back_to_back_of_example_16
   badge: green
+  not_covered: "the asymmetric step of Optilux's fiber, its default (comnum has the symmetric step only); PMD, which its examples leave at zero"
   remarks:
-    - "Optilux writes the nonlinear Schrödinger equation with the opposite sign of the imaginary unit (its nonlinear step is exp(-i phi)): its fields are the conjugates of comnum's and OptiCommPy's, as Sionna's"
+    - "Optilux solves the equation of the carrier exp(+j w t) (the higher frequencies at the positive bins, the phases exp(-j beta z) and exp(-j gamma |A|^2 z)); comnum, as OptiCommPy, solves the same system for b(t) = conj(a(-t)), which keeps every frequency at its bin. The conjugate alone, the mapping of the scalar and Manakov comparisons, is exact without third-order dispersion only: with the slope of its example 19 it leaves NMSE 1.8e-5 after one span, the sign of beta3 reversed"
+    - "its example 15 (DPSK) returns a BER of 0.475 at every SNR under Octave, which compares complex numbers by their moduli where MATLAB compares their real parts (diffencoder and samp2pat on real arrays with a zero imaginary part); and its differential encoder starts its recursion at the second symbol without the first, so that the second bit is decided against the wrong reference: noise-free, 1 error in 1023 bits, a floor of 9.8e-4 on the example's BER (1.86e-3 at 8 dB against 9.1e-4 of the theory)"
 - id: aff3ct
   area: Reference implementations
   ref: "AFF3CT v4.7.1 (Cassagne et al., SoftwareX 10, 2019), recorded outputs"

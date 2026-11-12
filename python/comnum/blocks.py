@@ -515,6 +515,9 @@ class Dbp(Native):
         amplification (str): the amplification of the forward link; one of edfa, ideal, none; default edfa
         nonlinear (bool): false: linear back-propagation (dispersion compensation and loss); default true
         nonlinear_scale (float): ξ: multiplies the nonlinear phase (optimised DBP with few steps, Ip & Kahn 2008); default 1.0
+        steps_per_link (int): this number of equal steps for the whole link instead of steps_per_span, a step covering several spans (or part of one; Rafique et al. 2011): lossless steps, the amplifiers restoring the loss of their span; default none
+        power_filter_taps (int): the taps of a Gaussian filter on the power of every nonlinear step (odd; 1: the instantaneous power): the weighted DBP of Rafique et al. 2011, eq. (2), the enhanced split step of Häger & Pfister 2021, eq. (9); default 1
+        power_filter_sigma (float): the standard deviation of the Gaussian filter on the power (samples), with power_filter_taps above 1; default none
     """
 
     needs = ("samples",)
@@ -528,6 +531,9 @@ class Dbp(Native):
         "amplification",
         "nonlinear",
         "nonlinear_scale",
+        "steps_per_link",
+        "power_filter_taps",
+        "power_filter_sigma",
     )
 
     def __init__(
@@ -541,6 +547,9 @@ class Dbp(Native):
         amplification: str | Var = "edfa",
         nonlinear: bool | Var = True,
         nonlinear_scale: float | Var = 1.0,
+        steps_per_link: int | Var | None = None,
+        power_filter_taps: int | Var = 1,
+        power_filter_sigma: float | Var | None = None,
     ) -> None:
         _init(
             self,
@@ -553,6 +562,9 @@ class Dbp(Native):
             amplification=amplification,
             nonlinear=nonlinear,
             nonlinear_scale=nonlinear_scale,
+            steps_per_link=steps_per_link,
+            power_filter_taps=power_filter_taps,
+            power_filter_sigma=power_filter_sigma,
         )
 
 
@@ -1275,11 +1287,22 @@ class ManakovDbp(Native):
         steps_per_span (int): symmetric steps per span; default 1
         nonlinear_scale (float): ξ: multiplies the nonlinear phase (0: dispersion compensation only); default 1.0
         amplification (str): the amplification of the forward link; one of edfa, ideal, none; default edfa
+        steps_per_link (int): this number of equal steps for the whole link instead of steps_per_span, a step covering several spans (or part of one; Rafique et al. 2011): lossless steps, the amplifiers restoring the loss of their span; default none
+        power_filter_taps (int): the taps of a Gaussian filter on the total power of every nonlinear step (odd; 1: the instantaneous power): the weighted DBP of Rafique et al. 2011, eq. (2), the enhanced split step of Häger & Pfister 2021, eq. (9); default 1
+        power_filter_sigma (float): the standard deviation of the Gaussian filter on the power (samples), with power_filter_taps above 1; default none
     """
 
     needs = ("samples",)
     gives = ()
-    param_names = ("fiber", "steps_per_span", "nonlinear_scale", "amplification")
+    param_names = (
+        "fiber",
+        "steps_per_span",
+        "nonlinear_scale",
+        "amplification",
+        "steps_per_link",
+        "power_filter_taps",
+        "power_filter_sigma",
+    )
 
     def __init__(
         self,
@@ -1288,6 +1311,9 @@ class ManakovDbp(Native):
         steps_per_span: int | Var = 1,
         nonlinear_scale: float | Var = 1.0,
         amplification: str | Var = "edfa",
+        steps_per_link: int | Var | None = None,
+        power_filter_taps: int | Var = 1,
+        power_filter_sigma: float | Var | None = None,
     ) -> None:
         _init(
             self,
@@ -1296,6 +1322,9 @@ class ManakovDbp(Native):
             steps_per_span=steps_per_span,
             nonlinear_scale=nonlinear_scale,
             amplification=amplification,
+            steps_per_link=steps_per_link,
+            power_filter_taps=power_filter_taps,
+            power_filter_sigma=power_filter_sigma,
         )
 
 

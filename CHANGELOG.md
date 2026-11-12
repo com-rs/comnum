@@ -8,6 +8,51 @@ and follow [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- The error rates over flat fading channels by the moment generating function (MGF)
+  of the SNR, in `comnum_mapping::theory`: `SnrFading` (Rayleigh, Rice of factor $K$,
+  Nakagami-m, Hoyt of parameter $q$, AWGN) and its `mgf` (Alouini & Goldsmith, *IEEE
+  Trans. Commun.* 47(9), 1999, eqs. (23)–(30)); `ser_mgf` extended to M-PAM (eq. (45));
+  `ber_binary_mgf` for the coherent binary signals $Q(\sqrt{2g\gamma})$ (BPSK, BFSK;
+  Simon & Alouini, *Proc. IEEE* 86(9), 1998, eq. (23)) and `ber_noncoherent_binary_mgf`
+  for DPSK and noncoherent BFSK ($\frac{1}{2}M_{\gamma}(-g)$, eq. (53) averaged); and
+  `ser_fading`, `ber_binary_fading` (with maximal-ratio combining of identical
+  branches), `ber_noncoherent_binary_fading` taking the channel and the mean SNR in dB.
+  In Python `theory_ser_fading(m, esn0_db, kind, fading=, parameter=)`,
+  `theory_ber_binary_fading(ebn0_db, g=, fading=, parameter=, branches=)` and
+  `theory_ber_noncoherent_binary_fading(ebn0_db, g=, fading=, parameter=)`. Validated
+  against the closed forms of both papers (BPSK and square QAM over Rayleigh, BPSK
+  over Nakagami-m with an integer $m$, DPSK and BFSK over Rayleigh, within $10^{-9}$),
+  the numerical Laplace transforms of the densities ($10^{-6}$) and a simulation over
+  Rice and Nakagami-m fading (within the sampling error of 6 %); neither paper publishes
+  a numerical value. `ser_mgf` gives the same results on PSK and QAM.
+- `comnum_hardware::optical::delay_interferometer`, the Mach–Zehnder delay
+  interferometer of differential detection: the constructive and destructive ports
+  $(E[n] \pm E[n - D])/2$, the delay circular over the block; with
+  `balanced_photodiode` its output is $R\,\Re\{E[n] E^{*}[n - D]\}$, the DPSK
+  receiver.
+- Three more examples of Optilux (April 2021, under Octave) as validation cards, their
+  outputs recorded by `tools/record_optilux.py --mode examples` in
+  `validation/optilux/` (the outputs, not the GPL code):
+  - `optilux_dm_link`, its example 19: OOK through five spans of 100 km of
+    transmission fibre with slope and 1 km of compensating fibre in the Manakov
+    equation. With Optilux's symmetric step, comnum's `ManakovSsfm` takes the same 101
+    steps of the four-wave-mixing rule and gives the same field to the arithmetic
+    (NMSE 1.5e-26 after five spans); the example's default asymmetric step, which
+    comnum does not have, is 2.1e-6 from comnum's converged solution.
+  - `optilux_dpsk`, its example 15: binary DPSK through the integrator over one
+    symbol, the delay interferometer and balanced detection, the BER within 3.5 % of
+    $0.5 e^{-\mathrm{SNR}}$ from 3 to 8 dB and within 6 % of Optilux's estimates. Under
+    Octave the example returns 0.475 at every SNR (Octave compares complex numbers by
+    their moduli), and its differential encoder leaves the second bit against the
+    wrong reference, a floor of 9.8e-4 on its BER; both are recorded on the card.
+  - `optilux_wdm_b2b`, its example 16: five channels of PDM 16-QAM at 37.5 GHz back
+    to back, comnum's chain above 147 dB where Optilux's numerical floor is 75.9 dB.
+
+  The comparison of example 19 shows that Optilux's fields map to comnum's by
+  $b(t) = a^{*}(-t)$, which keeps every frequency at its bin: the conjugate alone, the
+  mapping of the previous Optilux comparisons, is exact without third-order dispersion
+  only (with the slope it reverses the sign of $\beta_{3}$, NMSE 1.8e-5 after one span).
+  No result of comnum changes.
 - The Raman solver takes the attenuation and the effective area of the fibre against
   frequency, `Raman::alpha_spectrum_db_km` and `Raman::aeff_spectrum_um2` (tables of
   `(Hz, value)` points, linear between them and constant beyond; in a specification and
@@ -253,6 +298,33 @@ and follow [Semantic Versioning](https://semver.org/).
   figure), the SNR of comnum's chain within 0.15 dB of Optilux's estimates and 0.03 dB
   of the example's formula, the BER within 3 % of the formula; the example re-draws the
   noise of the last span only, so its own BER estimates are biased (noted on the card).
+
+- The digital back-propagation with long steps: `Dbp::steps_per_link` back-propagates the
+  link in equal steps that may cover several spans (the amplifiers restoring the loss of
+  their span, a step of $s$ spans carrying the phase of $s$ spans at its middle), and
+  `Dbp::power_filter` takes the nonlinear phase of every step on the power filtered by
+  real taps, the weighted DBP of Rafique et al. (*Opt. Express* 19(10), 2011, eq. (2))
+  and the enhanced split step of Häger & Pfister (*IEEE J. Sel. Areas Commun.* 39(1),
+  2021, eq. (9)); `gaussian_power_filter` gives Gaussian taps of unit sum, and the
+  solver takes any taps (`SplitStep::with_power_filter`, scalar and Manakov). The `dbp`
+  block takes `steps_per_link`, `power_filter_taps` and `power_filter_sigma` (samples),
+  and so does `Ssfm.backpropagate` in Python. On 25 x 80 km at 10.7 GBd and 2 dBm, four
+  steps for the link leave a residual of 0.206 of the field power with the instantaneous
+  power and 0.071 with Gaussian weights of 5 samples (0.426 for linear equalisation).
+  The defaults change no result.
+
+- `RamanGain::with_pump_scaling(false)` takes the efficiency of a pump from its offset
+  alone, without the factor $f_{p}/f_{\mathrm{ref}}$: the coupling of GNPy up to its
+  version 2.4 (the `raman` key `gain: {..., pump_scaling: false}` in a specification and
+  in Python); `RamanGain::scaled` multiplies a spectrum by a factor. The default changes
+  no result. Validated against Soltani et al. (*J. Lightw. Technol.* 40(12), 2022, Table
+  III and Fig. 5, card `soltani2022_fig5`, CI): the power maps of four designs with four
+  co- and four counter-pumps over 80 km within 0.39 dB of the figure along the span and
+  0.17 to 0.33 dB above it on average at 80 km (0.91 dB at most) without the pump
+  scaling, 0.70 to 0.88 dB with it. GNPy 3.0.1 recorded on the backward amplifier of
+  Yankov et al. (*J. Lightw. Technol.* 41(2), 2023, Fig. 5): within 2e-6 dB; neither tool
+  reproduces that figure nor its Fig. 10 with the parameters the paper gives
+  (`validation/literature.yaml`, `yankov2023`).
 
 ### Changed
 
@@ -909,8 +981,8 @@ PyPI and the command line `comnum`.
   `PmdLink::random` growing as the square root of the length (eq. (18)); cards
   `foschini1991_fig3` and `foschini1991_eq18`. Found: the output PMD vector of the model
   is not isotropic (no rotation follows the last section); the DGD is unaffected. The
-  module "EDFA and PMD" reaches level A. Reading cards of Ip & Kahn 2008 (`ip2008`) and
-  Saul 2004 (`saul2004`) for the next validations.
+  module "EDFA and PMD" reaches level A. Ip & Kahn 2008 (`ip2008`) and Saul 2004
+  (`saul2004`) are the references of the next validations.
 - `upfirdn` convolved the upsampled signal by FFT whatever its length: a 120 s capture
   at 2 MS/s through `select_channel` to 153.6 kHz (up 48, down 625) asked for 11.5 G
   samples and was killed. Beyond 64 Mi upsampled samples the direct polyphase sum runs
@@ -1175,9 +1247,6 @@ PyPI and the command line `comnum`.
   link of `pfau2009_table1` starts its carrier at a random phase: on the grid of the
   test phases the quantisation of the phase cost nothing (256-QAM floor 0.34 dB,
   0.51 now, the paper 0.55).
-- The first reading card, of Pfau et al. (2009): the extraction of a
-  reference (model, equations, parameters, figures read) that the tests and cards
-  are written from.
 - `comnum_fec::bounds::gaussian_limit_ebn0_db`: the Shannon limit on $E_{b}/N_{0}$ with
   Gaussian inputs, $(2^{\eta} - 1)/\eta$, $-1.59$ dB as $\eta \to 0$.
 - The GN integral of a lossless span (distributed amplification) takes the limit $L^{2}$

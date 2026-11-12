@@ -82,6 +82,7 @@ row                     2  # comnum_sim::ConditionResult (the flattened record o
 run                     10 # the run of different objects (a runner, a specification, a solver, an equalizer, a loop, a density evolution): one verb
 run_with_gain           2  # SplitStep::run_with_gain (one polarisation) / ManakovSplitStep::run_with_gain (two), the same distributed gain on the two solvers of nlse
 sampling_check          3  # Ssfm::sampling_check and ManakovSsfm::sampling_check are the thin wrappers of nlse::sampling_check on their fields
+scaled                  2  # Constellation::scaled and RamanGain::scaled: the same verb (multiply by a factor) on two types
 sequence                2  # Scrambler::sequence (the sequence of a configured scrambler) / ccsds::Randomizer::sequence (the two sequences of CCSDS)
 ser                     2  # the closed forms of two modulations, mapping::theory and css::theory
 ser_esn0                2  # comnum_mapping::theory (a constellation) / ce_ofdm::theory (the waveform at the SNR of its linear regime, on the former)
@@ -123,7 +124,7 @@ draw                    6
 field                   3
 frequency_response      3
 from_json               4
-from_name              15
+from_name              16
 from_rows               2
 generator               2
 ideal                   2
