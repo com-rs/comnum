@@ -26,7 +26,7 @@ from _common import ROOT
 
 FOLDERS = ("references/", "validation/readings/", "captures/", ".claude/")
 EXTENSIONS = re.compile(r"\.(pdf|ps|eps|epub|djvu|doc|docx)$", re.IGNORECASE)
-# the section titles of a reading card (the template of the paper-reader procedure)
+# the section titles of a reading card (its template)
 CARD = re.compile(
     rb"^## (What the document is about|Reproducible items|Missing or unclear in the document)",
     re.MULTILINE,
