@@ -1,0 +1,72 @@
+{
+ "channel": "complex white Gaussian noise of variance 10^(-SNR/10) fs/R per sample: the SNR over the symbol rate, Es/N0 = Eb/N0",
+ "count": "ber: bits 2 to 1024, the example's; errors_from_bit_3: bits 3 to 1024 (the encoder of Optilux starts its recursion at the second symbol without the first, so the second bit is decided against the wrong reference)",
+ "license": "GPL-3.0 (the outputs, not the code)",
+ "name": "dpsk",
+ "numpy": "2.5.4",
+ "octave": "GNU Octave (aarch64-apple-darwin27.0.0) version 11.3.0",
+ "points": [
+  {
+   "ber": 0.06952590420332347,
+   "ber_std": 0.001062667568215074,
+   "ber_theory": 0.06798899021423577,
+   "bits": 57288,
+   "bits_from_bit_3": 57232,
+   "errors_from_bit_3": 3932,
+   "snr_db": 3.0
+  },
+  {
+   "ber": 0.04158982576009509,
+   "ber_std": 0.0006337934731569476,
+   "ber_theory": 0.04055753839216114,
+   "bits": 99231,
+   "bits_from_bit_3": 99134,
+   "errors_from_bit_3": 4034,
+   "snr_db": 4.0
+  },
+  {
+   "ber": 0.02234935286230896,
+   "ber_std": 0.0003416348138230382,
+   "ber_theory": 0.02116460981160249,
+   "bits": 187209,
+   "bits_from_bit_3": 187026,
+   "errors_from_bit_3": 4004,
+   "snr_db": 5.0
+  },
+  {
+   "ber": 0.01019169929069818,
+   "ber_std": 0.0001558470318919828,
+   "ber_theory": 0.00933281228075946,
+   "bits": 415338,
+   "bits_from_bit_3": 414932,
+   "errors_from_bit_3": 3829,
+   "snr_db": 6.0
+  },
+  {
+   "ber": 0.004347701607790693,
+   "ber_std": 6.652994651118143e-05,
+   "ber_theory": 0.003329212408816008,
+   "bits": 977988,
+   "bits_from_bit_3": 977032,
+   "errors_from_bit_3": 3298,
+   "snr_db": 7.0
+  },
+  {
+   "ber": 0.00185946446027091,
+   "ber_std": 2.8459551808119e-05,
+   "ber_theory": 0.0009094044480786029,
+   "bits": 2291520,
+   "bits_from_bit_3": 2289280,
+   "errors_from_bit_3": 2022,
+   "snr_db": 8.0
+  }
+ ],
+ "python": "3.12.15",
+ "receiver": "the movavg optical filter of bandwidth 2 R, H(f) = sinc(f/R) (the integrator over one symbol), the one-symbol delay interferometer and the balanced photodiode, data-aided timing, the sign decision",
+ "repository": "https://optilux.sourceforge.io/",
+ "script": "tools/record_optilux_dpsk.m: the chain of Examples/ex15_dtc_dpsk_ber.m with the stopping rule 3 % at 95 % confidence or 1e7 bits, and the real part of the two complex arrays that Octave compares by their moduli",
+ "signal": "binary DPSK, 10 GBd, the costails pulse of roll-off 0.01 at 32 samples per symbol (a rectangle of one symbol), 1 mW, 1024 symbols, seed 1 (Optilux's pattern)",
+ "theory": "the example's: BER = 0.5 exp(-SNR)",
+ "tool": "Optilux",
+ "version": "Apr 2021"
+}

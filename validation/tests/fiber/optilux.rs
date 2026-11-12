@@ -204,3 +204,238 @@ fn the_amplified_link_of_example_21() {
     }
     card.finish().unwrap();
 }
+
+// ------------------------------------------------------- the dispersion-managed link
+
+use comnum::channel::optical::manakov::ManakovSsfm;
+use comnum::core::signal::DualPol;
+use comnum::math::nlse::{NonlinearStep, StepRule, StepUpdate};
+
+/// The four-wave-mixing phase of Optilux's `fiber` without a `bandwidth` field: its
+/// default of 20 rad (Musetti et al. 2018, for the signal bandwidth) times 1.5², the
+/// correction it applies for taking the sampling bandwidth instead.
+const OPTILUX_FWM_PHASE_RAD: f64 = 20.0 * 1.5 * 1.5;
+
+/// One fibre of the recorded dispersion-managed link (`validation/optilux/dm_link.json`)
+/// as a single span of comnum's Manakov link without amplifier, its nonlinear
+/// coefficient $\gamma = 2\pi n_{2} / (\lambda A_{\mathrm{eff}})$ and Optilux's
+/// nonlinear step on the effective length of the step.
+fn dm_fibre(doc: &Value, name: &str, rule: StepRule) -> ManakovSsfm {
+    let link = &doc["link"];
+    let f = &link[name];
+    let lambda_m = link["wavelength_nm"].as_f64().unwrap() * 1e-9;
+    let gamma_w_m = 2.0 * std::f64::consts::PI * link["n2_m2_w"].as_f64().unwrap()
+        / (lambda_m * f["aeff_um2"].as_f64().unwrap() * 1e-12);
+    let fiber = FiberParams {
+        alpha_db_km: f["alpha_db_km"].as_f64().unwrap(),
+        d_ps_nm_km: f["d_ps_nm_km"].as_f64().unwrap(),
+        slope_ps_nm2_km: f["slope_ps_nm2_km"].as_f64().unwrap(),
+        gamma_w_km: gamma_w_m * 1e3,
+        span_km: f["length_km"].as_f64().unwrap(),
+        n_spans: 1,
+        fc_hz: 299_792_458.0 / lambda_m,
+        ..FiberParams::default()
+    };
+    ManakovSsfm {
+        rule,
+        nonlinear: NonlinearStep::EffectiveLength,
+        amplification: Amplification::None,
+        check_sampling: false,
+        ..ManakovSsfm::new(fiber)
+    }
+}
+
+/// comnum's field after `spans` spans of the recorded dispersion-managed link, the
+/// transmission fibre with the step rule `rule`, and its number of steps per span.
+fn dm_link(doc: &Value, rule: StepRule, spans: usize) -> (Vec<C64>, usize) {
+    let fs = doc["link"]["fs_hz"].as_f64().unwrap();
+    let transmission = dm_fibre(doc, "transmission", rule);
+    let compensation = dm_fibre(doc, "compensation", StepRule::Fixed(1.0));
+    let gain = 10f64.powf(doc["link"]["amplifier_gain_db"].as_f64().unwrap() / 20.0);
+    let x = field(doc, "input");
+    let mut u = DualPol { y: vec![C64::new(0.0, 0.0); x.len()], x };
+    let mut steps = 0;
+    for _ in 0..spans {
+        steps = transmission.propagate(&mut u, fs, None).unwrap();
+        compensation.propagate(&mut u, fs, None).unwrap();
+        for v in u.x.iter_mut().chain(u.y.iter_mut()) {
+            *v *= gain;
+        }
+    }
+    assert!(u.y.iter().all(|v| v.norm_sqr() == 0.0), "no PMD: the y polarisation stays empty");
+    (u.x, steps)
+}
+
+/// Optilux's example 19 on the recorded input field: five spans of 100 km of
+/// transmission fibre and 1 km of compensating fibre followed by a noiseless gain of
+/// both losses. With Optilux's `fiber` in its symmetric step, comnum's Manakov split
+/// step takes the same steps (the four-wave-mixing rule of Musetti et al. 2018 with
+/// the phase `20 × 1.5²` rad over the sampling bandwidth and the constant local error
+/// in the transmission fibre, one step of 1 km in the compensating fibre): the test
+/// measures the normalised mean square error of the fields after one span and after
+/// five, and the number of steps. The example's own step is asymmetric, which comnum
+/// does not have: its field after five spans is compared with comnum's at steps of
+/// 10 m (the converged solution), as is the symmetric one. The card
+/// `validation/cards/optilux_dm_link.yaml` holds the tolerances.
+#[test]
+fn the_dispersion_managed_link_of_example_19() {
+    let path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("optilux").join("dm_link.json");
+    let doc: Value =
+        serde_json::from_str(&std::fs::read_to_string(&path).expect("validation/optilux/dm_link.json is missing"))
+            .unwrap();
+    let mut card = Card::load("optilux_dm_link").unwrap();
+    let fwm = StepRule::Fwm {
+        phase_rad: OPTILUX_FWM_PHASE_RAD,
+        bandwidth_hz: Some(doc["link"]["fs_hz"].as_f64().unwrap()),
+        update: StepUpdate::ConstantLocalError,
+        max_nl_phase_rad: None,
+    };
+    for spans in [1, 5] {
+        let (u, steps) = dm_link(&doc, fwm, spans);
+        let e = nmse(&u, &field(&doc, &format!("span_{spans}_symm")));
+        println!(
+            "symmetric steps, {spans} span(s): {steps} steps (Optilux {}), NMSE {e:.3e}",
+            doc["steps"]["symm"]["transmission"]
+        );
+        card.check(&json!({"spans": spans, "step": "symm", "quantity": "nmse"}), e);
+        card.check(&json!({"spans": spans, "step": "symm", "quantity": "steps_transmission"}), steps as f64);
+    }
+    let (converged, _) = dm_link(&doc, StepRule::Fixed(0.01), 5);
+    for step in ["asymm", "symm"] {
+        let e = nmse(&field(&doc, &format!("span_5_{step}")), &converged);
+        println!("Optilux {step} after 5 spans against comnum at 10 m steps: NMSE {e:.3e}");
+        card.check(&json!({"spans": 5, "step": step, "quantity": "nmse_converged"}), e);
+    }
+    card.finish().unwrap();
+}
+
+// ------------------------------------------------------------ the WDM back to back
+
+use comnum::dsp::signal::freq_shift;
+
+/// Optilux's example 16 in comnum: five channels of polarisation-multiplexed 16-QAM at
+/// 32 GBd spaced by 37.5 GHz (root-raised cosine of roll-off 0.1 on the periodic block,
+/// 32 samples per symbol, 1 mW per polarisation, 1024 symbols), multiplexed back to
+/// back; per channel the frequency shift to the baseband, the matched root-raised
+/// cosine, the sample at the symbol instant and the data-aided SNR of both
+/// polarisations (`comnum::metrics::effective_snr_db`, the inverse SNRs averaged). The
+/// SNR that Optilux records (`validation/optilux/wdm_b2b.json`) is its numerical floor,
+/// which the example notes; the card `validation/cards/optilux_wdm_b2b.yaml` bounds
+/// comnum's by it.
+#[test]
+fn the_wdm_back_to_back_of_example_16() {
+    const SYMBOLS: usize = 1024;
+    const SPS: usize = 32;
+    let path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("optilux").join("wdm_b2b.json");
+    let doc: Value =
+        serde_json::from_str(&std::fs::read_to_string(&path).expect("validation/optilux/wdm_b2b.json is missing"))
+            .unwrap();
+    let mut card = Card::load("optilux_wdm_b2b").unwrap();
+    let (symbol_rate, spacing, power_w) = (32e9, 37.5e9, 1e-3);
+    let fs = symbol_rate * SPS as f64;
+    let spectrum = rrc_spectrum(SYMBOLS, SPS, 0.1);
+    let shape = |x: &[C64]| -> Vec<C64> {
+        let mut xf = fft(x);
+        for (v, h) in xf.iter_mut().zip(&spectrum) {
+            *v *= *h;
+        }
+        ifft(&xf)
+    };
+    let c = Constellation::qam(16).unwrap().normalized();
+    let mut rng = Rng::new(1);
+    let offsets: Vec<f64> = (0..5).map(|k| (k as f64 - 2.0) * spacing).collect();
+    let mut sent = Vec::new();
+    let mut wdm = [vec![C64::new(0.0, 0.0); SYMBOLS * SPS], vec![C64::new(0.0, 0.0); SYMBOLS * SPS]];
+    for &f in &offsets {
+        let mut pols = Vec::new();
+        for field in &mut wdm {
+            let (_, points) = symbols(&c, SYMBOLS, None, &mut rng).unwrap();
+            let x = shape(&upsample(&points, SPS));
+            let scale = (power_w / (x.iter().map(C64::norm_sqr).sum::<f64>() / x.len() as f64)).sqrt();
+            for (w, v) in field.iter_mut().zip(freq_shift(&x, f, fs)) {
+                *w += v * scale;
+            }
+            pols.push(points);
+        }
+        sent.push(pols);
+    }
+    for (k, &f) in offsets.iter().enumerate() {
+        let inv_snr: f64 = wdm
+            .iter()
+            .zip(&sent[k])
+            .map(|(field, points)| {
+                let r = downsample(&shape(&freq_shift(field, -f, fs)), SPS, 0);
+                10f64.powf(-effective_snr_db(&r, points).unwrap() / 10.0)
+            })
+            .sum::<f64>()
+            / 2.0;
+        let snr_db = -10.0 * inv_snr.log10();
+        println!("channel {}: SNR {snr_db:.1} dB (Optilux {:.2})", k + 1, doc["snr_db"][k].as_f64().unwrap());
+        card.check(&json!({"channel": k + 1}), snr_db);
+    }
+    card.finish().unwrap();
+}
+
+// ------------------------------------------------------------------- the DPSK link
+
+use comnum::dsp::filter::moving_average;
+use comnum::hardware::optical::{Photodiode, balanced_photodiode, delay_interferometer};
+use comnum::mapping::differential::Dpsk;
+
+/// Optilux's example 15 in comnum: binary DPSK at 10 GBd with the rectangular pulse of
+/// one symbol (Optilux's `costails` of roll-off 0.01 at 32 samples per symbol is that
+/// rectangle), 1 mW, complex white Gaussian noise of variance `10^(-SNR/10) f_s/R` per
+/// sample (the SNR over the symbol rate, `E_s/N_0 = E_b/N_0`); the integrator over one
+/// symbol (`moving_average` of 32 samples, the `movavg` optical filter of bandwidth `2R`),
+/// the one-symbol delay interferometer (`delay_interferometer`) and the ideal balanced
+/// photodiode, the sample at the middle of every symbol and the sign decision. The test
+/// measures the bit error rate over `BLOCKS` blocks of 1024 bits at every SNR of the
+/// recording `validation/optilux/dpsk.json`; the card
+/// `validation/cards/optilux_dpsk.yaml` compares it with the example's theory
+/// `0.5 exp(-SNR)` and with Optilux's estimate from bit 3 on.
+#[test]
+fn the_dpsk_link_of_example_15() {
+    const BITS: usize = 1024;
+    const SPS: usize = 32;
+    const BLOCKS: usize = 400;
+    let path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("optilux").join("dpsk.json");
+    let doc: Value =
+        serde_json::from_str(&std::fs::read_to_string(&path).expect("validation/optilux/dpsk.json is missing"))
+            .unwrap();
+    let mut card = Card::load("optilux_dpsk").unwrap();
+    let dpsk = Dpsk::new(2).unwrap();
+    let power_w: f64 = 1e-3;
+    let pd = Photodiode::ideal();
+    let mut rng = Rng::new(15);
+    for point in doc["points"].as_array().unwrap() {
+        let snr_db = point["snr_db"].as_f64().unwrap();
+        let sigma = (power_w * 10f64.powf(-snr_db / 10.0) * SPS as f64).sqrt();
+        let (mut errors, mut bits) = (0usize, 0usize);
+        for _ in 0..BLOCKS {
+            let tx: Vec<u8> = (0..BITS).map(|_| u8::from(rng.uniform() < 0.5)).collect();
+            let s = dpsk.map_bits(&tx).unwrap();
+            let e: Vec<C64> = s
+                .iter()
+                .flat_map(|v| std::iter::repeat_n(*v * power_w.sqrt(), SPS))
+                .map(|v| v + rng.complex_gaussian() * sigma)
+                .collect();
+            let r = moving_average(&e, SPS);
+            let [plus, minus] = delay_interferometer(&r, SPS).unwrap();
+            let i = balanced_photodiode(&plus, &minus, &pd, 1.0, &mut rng).unwrap();
+            // the symbol k >= 1 against the symbol k - 1: the bit k - 1
+            let indices: Vec<usize> = (1..s.len()).map(|k| usize::from(i[k * SPS + SPS / 2] < 0.0)).collect();
+            errors += bit_errors(&dpsk.bits(&indices).unwrap(), &tx).unwrap();
+            bits += BITS;
+        }
+        let ber = errors as f64 / bits as f64;
+        let optilux = point["errors_from_bit_3"].as_f64().unwrap() / point["bits_from_bit_3"].as_f64().unwrap();
+        println!(
+            "SNR {snr_db} dB: BER {ber:.3e} ({errors} errors); theory {:.3e}; Optilux from bit 3 {optilux:.3e}, the example's count {:.3e}",
+            point["ber_theory"].as_f64().unwrap(),
+            point["ber"].as_f64().unwrap()
+        );
+        card.check(&json!({"snr_db": snr_db, "quantity": "ber_theory"}), ber);
+        card.check(&json!({"snr_db": snr_db, "quantity": "ber_optilux"}), ber);
+    }
+    card.finish().unwrap();
+}

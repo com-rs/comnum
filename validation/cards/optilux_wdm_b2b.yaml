@@ -1,0 +1,35 @@
+id: optilux_wdm_b2b
+title: Five channels of PDM 16-QAM at 37.5 GHz back to back, the example 16 of Optilux
+literature: optilux
+evidence: [recording]
+source:
+  kind: tool
+  reference: "Optilux (GPL-3.0), P. Serena, University of Parma, the release of April 2021, Examples/ex16_opt_wdm_save_and_print.m run under Octave 11.3"
+  locator: "recorded SNR per channel validation/optilux/wdm_b2b.json (tools/record_optilux_wdm.m: the chain of the example without its saving and printing)"
+  version: "Apr 2021"
+description: >
+  Five channels of polarisation-multiplexed 16-QAM at 32 GBd spaced by 37.5 GHz (root-
+  raised cosine of roll-off 0.1, 32 samples per symbol, 3 dBm per channel, 1024
+  symbols per polarisation), multiplexed and detected back to back: per channel the
+  shift to the baseband, the matched root-raised cosine, the sample at the symbol
+  instant and the data-aided SNR of both polarisations. Optilux records 78.75, 76.19,
+  75.90, 76.23 and 78.77 dB, which the example notes are finite only because of the
+  numerical noise; the expected value of every channel is that floor, as a lower bound.
+run:
+  test: validation/tests/fiber/optilux.rs::the_wdm_back_to_back_of_example_16
+tier: ci
+duration: "0.1 s on an Apple M6"
+why: >
+  Back to back the SNR measures the numerics of the chain, not a physical noise: the
+  bound is the lowest floor of Optilux (75.9 dB, the central channel) rounded down. A
+  crosstalk between the channels at 37.5 GHz, which the occupied bandwidth of 35.2 GHz
+  leaves free, or an intersymbol interference of the pulse and the matched filter would
+  show below it.
+findings:
+  - "comnum's chain reaches 147 to 160 dB on the four first channels and the exact symbols on the fifth (the arithmetic of the frequency shifts), Optilux 75.9 to 78.8 dB (its numerical floor, lower on the central channels, which have two neighbours)"
+cases:
+  - {inputs: {channel: 1}, expected: {min: 75.0}}
+  - {inputs: {channel: 2}, expected: {min: 75.0}}
+  - {inputs: {channel: 3}, expected: {min: 75.0}}
+  - {inputs: {channel: 4}, expected: {min: 75.0}}
+  - {inputs: {channel: 5}, expected: {min: 75.0}}

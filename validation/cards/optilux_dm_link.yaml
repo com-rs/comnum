@@ -1,0 +1,45 @@
+id: optilux_dm_link
+title: Dispersion-managed OOK link of five spans in the Manakov equation, the example 19 of Optilux
+literature: optilux
+evidence: [recording]
+source:
+  kind: tool
+  reference: "Optilux (GPL-3.0), P. Serena, University of Parma, the release of April 2021, Examples/ex19_opt_dm_link.m run under Octave 11.3"
+  locator: "recorded fields validation/optilux/dm_link.json (tools/record_optilux_dm.m: the chain of the example on 64 symbols, with the example's asymmetric step and with the symmetric step)"
+  version: "Apr 2021"
+description: >
+  On-off keying at 10 GBd (the costails pulse of roll-off 0.2 at 32 samples per
+  symbol, 3 dBm, 64 symbols) through five spans of 100 km of transmission fibre
+  (0.2 dB/km, 17 ps/(nm km), slope 0.057 ps/(nm^2 km), 80 um^2) and 1 km of
+  compensating fibre (0.6 dB/km, -1700 ps/(nm km), the same slope, 20 um^2), n2
+  2.5e-20 m^2/W, a noiseless gain of 20.6 dB after every span, the Manakov equation
+  without PMD. comnum propagates Optilux's recorded input field with ManakovSsfm, one
+  link per fibre, Optilux's nonlinear step on the effective length of the step
+  (NonlinearStep::EffectiveLength) and its step rule: the four-wave-mixing rule of
+  Musetti et al. (2018) with the phase 20 x 1.5^2 rad over the sampling bandwidth and
+  the constant local error in the transmission fibre, one step in the compensating
+  fibre. Measured: the normalised mean square error of the field against Optilux's
+  with its symmetric step after one and five spans, the number of steps, and the error
+  of Optilux's fields after five spans (the example's asymmetric step and the
+  symmetric one) against comnum's at steps of 10 m.
+run:
+  test: validation/tests/fiber/optilux.rs::the_dispersion_managed_link_of_example_19
+tier: ci
+duration: "1.5 s on an Apple M6"
+why: >
+  With the symmetric step both solvers take the same 101 steps and the same operators:
+  the tolerance is the arithmetic of 15 significant digits (1e-24). The number of steps
+  is exact. Against the converged solution the tolerance is five times the error
+  measured, the discretisation error of each scheme at its own steps (2.1e-6 for the
+  asymmetric step of the example, 1.8e-8 for the symmetric one).
+findings:
+  - "with the symmetric step, NMSE 6.2e-28 after one span and 1.5e-26 after five, at the same 101 steps (a first step of 513.38 m): the same solution to the arithmetic, Kerr effect, slope and both fibres included"
+  - "the example's own step is the asymmetric one, which comnum does not have (78 steps, its constant-local-error growth exp(alpha h / 2)): its field after five spans is 2.1e-6 from comnum's converged solution, the symmetric one 1.8e-8"
+  - "Optilux solves the equation of the carrier exp(+j w t), the higher frequencies at the positive bins; comnum solves the same system for b(t) = conj(a(-t)), which keeps every frequency at its bin: the conjugate alone, the mapping of the cards optilux_ssfm and of the Manakov oracle, exact without third-order dispersion, reverses the frequency axis and gives here NMSE 1.8e-5 after one span, the effect of the opposite sign of beta3"
+cases:
+  - {inputs: {spans: 1, step: symm, quantity: nmse}, expected: 0, tolerance: {atol: 1.0e-24}}
+  - {inputs: {spans: 1, step: symm, quantity: steps_transmission}, expected: 101, tolerance: {atol: 0}}
+  - {inputs: {spans: 5, step: symm, quantity: nmse}, expected: 0, tolerance: {atol: 1.0e-24}}
+  - {inputs: {spans: 5, step: symm, quantity: steps_transmission}, expected: 101, tolerance: {atol: 0}}
+  - {inputs: {spans: 5, step: asymm, quantity: nmse_converged}, expected: 0, tolerance: {atol: 1.0e-5}}
+  - {inputs: {spans: 5, step: symm, quantity: nmse_converged}, expected: 0, tolerance: {atol: 1.0e-7}}

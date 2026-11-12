@@ -1,0 +1,21 @@
+{
+ "license": "GPL-3.0 (the outputs, not the code)",
+ "name": "wdm_b2b",
+ "note": "back to back: the example notes that the SNR is finite only because of the numerical noise",
+ "numpy": "2.5.4",
+ "octave": "GNU Octave (aarch64-apple-darwin27.0.0) version 11.3.0",
+ "python": "3.12.15",
+ "receiver": "no optical filter; the root-raised-cosine electrical filter of bandwidth 0.5 symbol rate; data-aided timing; the SNR of samp2snr",
+ "repository": "https://optilux.sourceforge.io/",
+ "script": "tools/record_optilux_wdm.m: the chain of Examples/ex16_opt_wdm_save_and_print.m without its saving and printing",
+ "signal": "5 channels of polarisation-multiplexed 16-QAM at 32 GBd spaced by 37.5 GHz around 1550 nm, root-raised cosine of roll-off 0.1 at 32 samples per symbol, 3 dBm per channel, 1024 symbols per polarisation, the seeds 1e5 + k - 3",
+ "snr_db": [
+  78.75498815437514,
+  76.19440511785784,
+  75.89712112385095,
+  76.22503193232603,
+  78.77447050237937
+ ],
+ "tool": "Optilux",
+ "version": "Apr 2021"
+}

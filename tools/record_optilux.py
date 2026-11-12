@@ -32,17 +32,28 @@ Two modes, two fixtures:
   ``optilux_ssfm``), and the amplified link of Optilux's example 21
   (``tools/record_optilux_ase.m``: polarisation-multiplexed QPSK through 50 spans of
   150 km of lossy fibre and noisy amplifiers, the bit error rate and the SNR after
-  every span), ``ase_link.json`` (the card ``optilux_ase_link``).
+  every span), ``ase_link.json`` (the card ``optilux_ase_link``);
+- ``--mode examples`` (``validation/optilux/``, read by the same Rust tests): three
+  more examples of Optilux, run by their own Octave scripts: the DPSK link of
+  example 15 (``tools/record_optilux_dpsk.m``, ``dpsk.json``, the card
+  ``optilux_dpsk``), the WDM back-to-back link of example 16
+  (``tools/record_optilux_wdm.m``, ``wdm_b2b.json``, the card ``optilux_wdm_b2b``)
+  and the dispersion-managed link of example 19 (``tools/record_optilux_dm.m``,
+  ``dm_link.json`` with its input and output fields, the card ``optilux_dm_link``).
 
 Optilux's fields are returned in comnum's convention: Optilux writes the equation with
 the opposite sign of the imaginary unit, so the driver propagates the conjugate of the
-input and conjugates the result. Optilux is not a dependency of comnum: download
+input and conjugates the result. The conjugate is exact here, without third-order
+dispersion; in general (example 19, with a dispersion slope) comnum's field is
+b(t) = conj(a(-t)), the conjugate of Optilux's reversed in time, which keeps every
+frequency at its bin where the conjugate alone reverses the frequency axis. Optilux is not a dependency of comnum: download
 ``optilux.zip`` from SourceForge (it is never committed: GPL-3.0 code, for instance
 into ``references/tools/optilux/``, which git ignores) and run::
 
     python tools/record_optilux.py --optilux /path/to/optilux --mode ssfm
     python tools/record_optilux.py --optilux /path/to/optilux --mode manakov
     python tools/record_optilux.py --optilux /path/to/optilux --mode cards
+    python tools/record_optilux.py --optilux /path/to/optilux --mode examples
 
 The files are written with the functions of the recorded oracles
 (``tests/oracle/__init__.py``): recording again with the same version produces no diff.
@@ -156,14 +167,27 @@ def run_optilux(optilux: Path, x: np.ndarray, fs: float, n_spans: int, gamma_sca
     return y, steps
 
 
-def run_ase_link(optilux: Path) -> list[dict]:
-    """The rows of ``tools/record_optilux_ase.m``: one per span."""
-    script = ROOT / "tools" / "record_optilux_ase.m"
+def run_octave_csv(optilux: Path, script: str, *extra: str) -> np.ndarray:
+    """The CSV written by the Octave script ``tools/<script>`` on Optilux (with the
+    arguments `extra` after the output file)."""
     with tempfile.TemporaryDirectory() as tmp:
         dst = Path(tmp) / "out.csv"
-        cmd = ["octave", "--no-gui", "--quiet", str(script), str(optilux), str(dst)]
+        cmd = [
+            "octave",
+            "--no-gui",
+            "--quiet",
+            str(ROOT / "tools" / script),
+            str(optilux),
+            str(dst),
+            *extra,
+        ]
         subprocess.run(cmd, capture_output=True, text=True, check=True)
-        rows = np.loadtxt(dst, delimiter=",")
+        return np.loadtxt(dst, delimiter=",", ndmin=2)
+
+
+def run_ase_link(optilux: Path) -> list[dict]:
+    """The rows of ``tools/record_optilux_ase.m``: one per span."""
+    rows = run_octave_csv(optilux, "record_optilux_ase.m")
     keys = ["span", "ber", "ber_std", "bits", "snr_db", "snr_theory_db", "ber_theory"]
     out = []
     for row in rows:
@@ -171,6 +195,17 @@ def run_ase_link(optilux: Path) -> list[dict]:
         d["span"], d["bits"] = int(d["span"]), int(d["bits"])
         out.append(d)
     return out
+
+
+def compact_fields(doc: dict, fields: dict[str, np.ndarray]) -> str:
+    """`doc` as JSON with the complex `fields` appended as compact rows of ``[re, im]``
+    pairs, 15 significant digits (relative 1e-15 per sample)."""
+    text = json.dumps(doc, sort_keys=True, indent=1)
+    rows = []
+    for key in sorted(fields):
+        pairs = ",".join(f"[{z.real:.15g},{z.imag:.15g}]" for z in fields[key])
+        rows.append(f'  "{key}": [{pairs}]')
+    return text[: text.rindex("}")].rstrip() + ',\n "fields": {\n' + ",\n".join(rows) + "\n }\n}\n"
 
 
 def record_cards(optilux: Path, provenance: dict) -> None:
@@ -201,13 +236,7 @@ def record_cards(optilux: Path, provenance: dict) -> None:
         "units": "sqrt(W)",
         "digits": 15,
     }
-    # the fields as compact rows, 15 significant digits (relative 1e-15 per sample)
-    text = json.dumps(doc, sort_keys=True, indent=1)
-    rows = []
-    for key in sorted(fields):
-        pairs = ",".join(f"[{z.real:.15g},{z.imag:.15g}]" for z in fields[key])
-        rows.append(f'  "{key}": [{pairs}]')
-    text = text[: text.rindex("}")].rstrip() + ',\n "fields": {\n' + ",\n".join(rows) + "\n }\n}\n"
+    text = compact_fields(doc, fields)
     CARDS_DIR.mkdir(exist_ok=True)
     (CARDS_DIR / "ssfm_256.json").write_text(text, encoding="utf-8")
     print(f"wrote {CARDS_DIR / 'ssfm_256.json'} ({len(text) // 1024} KB)")
@@ -243,29 +272,164 @@ def record_cards(optilux: Path, provenance: dict) -> None:
     print(f"wrote {CARDS_DIR / 'ase_link.json'}")
 
 
+def record_examples(optilux: Path, provenance: dict) -> None:
+    """The fixtures of the examples 15, 16 and 19 of Optilux."""
+    CARDS_DIR.mkdir(exist_ok=True)
+    rows = run_octave_csv(optilux, "record_optilux_dpsk.m")
+    keys = [
+        "snr_db",
+        "ber",
+        "ber_std",
+        "bits",
+        "errors_from_bit_3",
+        "bits_from_bit_3",
+        "ber_theory",
+    ]
+    points = []
+    for row in rows:
+        d = dict(zip(keys, row.tolist(), strict=True))
+        for k in ("bits", "errors_from_bit_3", "bits_from_bit_3"):
+            d[k] = int(d[k])
+        points.append(d)
+    doc = {
+        **provenance,
+        "name": "dpsk",
+        "script": "tools/record_optilux_dpsk.m: the chain of Examples/ex15_dtc_dpsk_ber.m with the "
+        "stopping rule 3 % at 95 % confidence or 1e7 bits, and the real part of the two complex "
+        "arrays that Octave compares by their moduli",
+        "signal": "binary DPSK, 10 GBd, the costails pulse of roll-off 0.01 at 32 samples per symbol "
+        "(a rectangle of one symbol), 1 mW, 1024 symbols, seed 1 (Optilux's pattern)",
+        "channel": "complex white Gaussian noise of variance 10^(-SNR/10) fs/R per sample: the SNR "
+        "over the symbol rate, Es/N0 = Eb/N0",
+        "receiver": "the movavg optical filter of bandwidth 2 R, H(f) = sinc(f/R) (the integrator over "
+        "one symbol), the one-symbol delay interferometer and the balanced photodiode, data-aided "
+        "timing, the sign decision",
+        "count": "ber: bits 2 to 1024, the example's; errors_from_bit_3: bits 3 to 1024 (the encoder "
+        "of Optilux starts its recursion at the second symbol without the first, so the second "
+        "bit is decided against the wrong reference)",
+        "theory": "the example's: BER = 0.5 exp(-SNR)",
+        "points": points,
+    }
+    (CARDS_DIR / "dpsk.json").write_text(dumps(doc), encoding="utf-8")
+    print(f"wrote {CARDS_DIR / 'dpsk.json'}")
+
+    rows = run_octave_csv(optilux, "record_optilux_wdm.m")
+    doc = {
+        **provenance,
+        "name": "wdm_b2b",
+        "script": "tools/record_optilux_wdm.m: the chain of Examples/ex16_opt_wdm_save_and_print.m "
+        "without its saving and printing",
+        "signal": "5 channels of polarisation-multiplexed 16-QAM at 32 GBd spaced by 37.5 GHz around "
+        "1550 nm, root-raised cosine of roll-off 0.1 at 32 samples per symbol, 3 dBm per channel, "
+        "1024 symbols per polarisation, the seeds 1e5 + k - 3",
+        "receiver": "no optical filter; the root-raised-cosine electrical filter of bandwidth 0.5 "
+        "symbol rate; data-aided timing; the SNR of samp2snr",
+        "note": "back to back: the example notes that the SNR is finite only because of the "
+        "numerical noise",
+        "snr_db": [float(v) for v in rows[:, 1]],
+    }
+    (CARDS_DIR / "wdm_b2b.json").write_text(dumps(doc), encoding="utf-8")
+    print(f"wrote {CARDS_DIR / 'wdm_b2b.json'}")
+
+    # Optilux's fields in comnum's representation, in sqrt(W): the conjugate of the
+    # field reversed in time, b[n] = conj(a[-n mod N]), which keeps every frequency bin
+    # (the spectrum of b is the conjugate of that of a, bin by bin). The conjugate alone,
+    # enough without third-order dispersion, reverses the frequency axis and with it
+    # the sign of beta3.
+    def to_comnum(re: np.ndarray, im: np.ndarray) -> np.ndarray:
+        a = re + 1j * im
+        return np.conj(np.roll(a[::-1], 1)) * math.sqrt(1e-3)
+
+    fields, steps = {}, {}
+    for steptype in ("asymm", "symm"):
+        rows = run_octave_csv(optilux, "record_optilux_dm.m", steptype)
+        last, samples = rows[-1], rows[:-1]
+        assert np.all(samples[:, [2, 3, 6, 7, 10, 11]] == 0.0), (
+            "the y polarisation of example 19 stays empty"
+        )
+        fields.setdefault("input", to_comnum(samples[:, 0], samples[:, 1]))
+        if steptype == "symm":
+            fields["span_1_symm"] = to_comnum(samples[:, 4], samples[:, 5])
+        fields[f"span_5_{steptype}"] = to_comnum(samples[:, 8], samples[:, 9])
+        steps[steptype] = {
+            "transmission": int(last[0]),
+            "compensation": int(last[1]),
+            "first_step_m": float(last[2]),
+        }
+    doc = {
+        **provenance,
+        "name": "dm_link",
+        "script": "tools/record_optilux_dm.m: the chain of Examples/ex19_opt_dm_link.m on 64 symbols "
+        "instead of 1024 (the step rule depends on the sampling rate, not on the block)",
+        "signal": "OOK through Optilux's iqmodulator, 10 GBd, the costails pulse of roll-off 0.2 at 32 "
+        "samples per symbol, 3 dBm, 64 symbols, seed 1 (Optilux's pattern); the y polarisation empty",
+        "link": {
+            "spans": 5,
+            "wavelength_nm": 1550.0,
+            "fs_hz": 320e9,
+            "transmission": {
+                "length_km": 100.0,
+                "alpha_db_km": 0.2,
+                "d_ps_nm_km": 17.0,
+                "slope_ps_nm2_km": 0.057,
+                "aeff_um2": 80.0,
+            },
+            "compensation": {
+                "length_km": 1.0,
+                "alpha_db_km": 0.6,
+                "d_ps_nm_km": -1700.0,
+                "slope_ps_nm2_km": 0.057,
+                "aeff_um2": 20.0,
+            },
+            "n2_m2_w": 2.5e-20,
+            "amplifier_gain_db": 20.6,
+            "equation": "the Manakov equation of the unique-field mode (8/9 gamma), no PMD",
+            "steps": "fiber's defaults: the first step bounded by the four-wave-mixing phase "
+            "20 x 1.5^2 rad over the sampling bandwidth (Musetti et al. 2018), the constant local "
+            "error after it, dzmax 20 km, the nonlinear step on the effective length of the step; "
+            "the compensating fibre in one step (its dzmax beyond its length)",
+        },
+        "steps": steps,
+        "fields_recorded": "input; span_5_asymm, the example's step type (the nonlinear step then the "
+        "linear step); span_1_symm and span_5_symm, the same link with steptype symm",
+        "convention": "the fields are b[n] = conj(a[-n mod N]) of Optilux's fields a, in sqrt(W): "
+        "Optilux solves the equation of the carrier exp(+j w t) (the higher frequencies at the "
+        "positive bins, the phases exp(-j beta z) and exp(-j gamma |A|^2 z)), comnum the same "
+        "system for the conjugate of the field reversed in time, which keeps every frequency at "
+        "its bin; the conjugate alone reverses the frequency axis and the sign of beta3",
+        "units": "sqrt(W)",
+        "digits": 15,
+    }
+    (CARDS_DIR / "dm_link.json").write_text(compact_fields(doc, fields), encoding="utf-8")
+    print(f"wrote {CARDS_DIR / 'dm_link.json'}")
+
+
 def main() -> int:
     p = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     p.add_argument("--optilux", required=True, type=Path, help="the directory of Optilux")
-    p.add_argument("--mode", choices=[*sorted(MODES), "cards"], default="ssfm", help="the fixture")
+    p.add_argument(
+        "--mode", choices=[*sorted(MODES), "cards", "examples"], default="ssfm", help="the fixture"
+    )
     args = p.parse_args()
     readme = (args.optilux / "README").read_text(encoding="utf-8", errors="replace")
     m = re.search(r"Optilux,\s*([A-Za-z]+ \d{4})", readme)
     version = m.group(1) if m else "unknown"
     octave = subprocess.run(["octave", "--version"], capture_output=True, text=True, check=True)
     octave_version = octave.stdout.splitlines()[0]
+    provenance = {
+        "tool": "Optilux",
+        "version": version,
+        "repository": "https://optilux.sourceforge.io/",
+        "license": "GPL-3.0 (the outputs, not the code)",
+        "octave": octave_version,
+        "python": platform.python_version(),
+        "numpy": np.__version__,
+    }
     if args.mode == "cards":
-        record_cards(
-            args.optilux,
-            {
-                "tool": "Optilux",
-                "version": version,
-                "repository": "https://optilux.sourceforge.io/",
-                "license": "GPL-3.0 (the outputs, not the code)",
-                "octave": octave_version,
-                "python": platform.python_version(),
-                "numpy": np.__version__,
-            },
-        )
+        record_cards(args.optilux, provenance)
+        return 0
+    if args.mode == "examples":
+        record_examples(args.optilux, provenance)
         return 0
     mode = MODES[args.mode]
     name = mode["name"]

@@ -18,6 +18,9 @@
 //!   shot noise `σ² = 2q(i + I_d)B`, thermal noise `σ² = 4kTB/R_L`, both white over the
 //!   simulation bandwidth and scaled by `f_s/(2B)`, then a low-pass FIR of bandwidth `B`;
 //!   [`Photodiode::ideal`] keeps `R|E|²` only;
+//! - [`delay_interferometer`]: the Mach–Zehnder delay interferometer of differential
+//!   detection, `E_± = (E(t) ± E(t - τ))/2`; with [`balanced_photodiode`] its output is
+//!   `R Re{E(t) E*(t - τ)}`, the DPSK receiver;
 //! - [`hybrid_2x4`]: the 90° optical hybrid of OptiCommPy (`opticalHybrid2x4`);
 //! - [`coherent_receiver`]: hybrid and two balanced photodiode pairs; with ideal
 //!   photodiodes its output is exactly `R E_s E_LO*`;
@@ -506,6 +509,42 @@ pub fn balanced_photodiode(e1: &[C64], e2: &[C64], pd: &Photodiode, fs: f64, rng
     Ok(a.iter().zip(&b).map(|(x, y)| x - y).collect())
 }
 
+/// The two outputs of a Mach–Zehnder delay interferometer whose arms differ by
+/// `delay` samples, the constructive and the destructive port:
+///
+/// $$
+/// E_{\pm}\[n\] = \tfrac{1}{2} \big(E\[n\] \pm E\[n - D\]\big),
+/// $$
+///
+/// the delay circular over the block (the periodic field of the other blocks). Detected
+/// by [`balanced_photodiode`] with ideal photodiodes, $|E_{+}|^{2} - |E_{-}|^{2} =
+/// \Re\{E\[n\] E^{*}\[n - D\]\}$: the receiver of differential phase-shift keying with a
+/// delay of one symbol (Optilux's `rxfrontend` for DPSK, a one-symbol interferometer and
+/// balanced detection).
+///
+/// # Errors
+/// [`comnum_core::Error::Config`] for a delay beyond the block (an empty block takes
+/// none).
+///
+/// # Examples
+/// ```
+/// use comnum_hardware::optical::{balanced_photodiode, delay_interferometer, Photodiode};
+/// use comnum_core::rng::Rng;
+/// use comnum_math::C64;
+/// // two symbols of two samples, a phase flip between them
+/// let e = [C64::new(1.0, 0.0), C64::new(1.0, 0.0), C64::new(-1.0, 0.0), C64::new(-1.0, 0.0)];
+/// let [plus, minus] = delay_interferometer(&e, 2)?;
+/// let i = balanced_photodiode(&plus, &minus, &Photodiode::ideal(), 1e9, &mut Rng::new(0))?;
+/// assert_eq!(i, vec![-1.0, -1.0, -1.0, -1.0]);
+/// # Ok::<(), comnum_core::Error>(())
+/// ```
+pub fn delay_interferometer(e: &[C64], delay: usize) -> Result<[Vec<C64>; 2]> {
+    let n = e.len();
+    ensure(n == 0 || delay < n, || format!("a delay of {delay} samples for a block of {n}"))?;
+    let delayed = |i: usize| e[(i + n - delay) % n];
+    Ok([(0..n).map(|i| (e[i] + delayed(i)) * 0.5).collect(), (0..n).map(|i| (e[i] - delayed(i)) * 0.5).collect()])
+}
+
 /// The four outputs of the 90° optical hybrid for the signal `es` and the local
 /// oscillator `elo` (OptiCommPy `opticalHybrid2x4`):
 ///
@@ -576,6 +615,25 @@ pub fn coherent_receiver_signal(es: &Signal, elo: &Signal, pd: &Photodiode, rng:
 mod tests {
     use super::*;
     use comnum_core::units::Hertz;
+
+    #[test]
+    fn the_delay_interferometer_with_balanced_detection_is_the_differential_product() {
+        let mut r = Rng::new(7);
+        let e: Vec<C64> = (0..64).map(|_| r.complex_gaussian()).collect();
+        for delay in [0usize, 1, 5, 63] {
+            let [plus, minus] = delay_interferometer(&e, delay).unwrap();
+            let i = balanced_photodiode(&plus, &minus, &Photodiode::ideal(), 1e9, &mut r).unwrap();
+            for n in 0..e.len() {
+                let d = e[(n + e.len() - delay) % e.len()];
+                assert!((i[n] - (e[n] * d.conj()).re).abs() < 1e-14, "delay {delay}, sample {n}");
+                // a lossless coupler: the ports carry half the power of both arms
+                let p = plus[n].norm_sqr() + minus[n].norm_sqr();
+                assert!((p - (e[n].norm_sqr() + d.norm_sqr()) / 2.0).abs() < 1e-14);
+            }
+        }
+        assert!(delay_interferometer(&e, 64).is_err());
+        assert_eq!(delay_interferometer(&[], 3).unwrap(), [Vec::new(), Vec::new()]);
+    }
 
     #[test]
     fn invalid_modulators_are_refused_instead_of_giving_nan() {

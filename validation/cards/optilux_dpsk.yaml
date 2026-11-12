@@ -1,0 +1,47 @@
+id: optilux_dpsk
+title: Bit error rate of binary DPSK with a delay interferometer, the example 15 of Optilux
+literature: optilux
+evidence: [recording, closed_form]
+source:
+  kind: tool
+  reference: "Optilux (GPL-3.0), P. Serena, University of Parma, the release of April 2021, Examples/ex15_dtc_dpsk_ber.m run under Octave 11.3"
+  locator: "recorded results validation/optilux/dpsk.json (tools/record_optilux_dpsk.m: the chain of the example with a stopping rule of 3 % at 95 % confidence or 1e7 bits); the example's theory BER = 0.5 exp(-SNR)"
+  version: "Apr 2021"
+description: >
+  Binary DPSK at 10 GBd with the rectangular pulse of one symbol (Optilux's costails
+  of roll-off 0.01 at 32 samples per symbol is that rectangle), 1 mW, complex white
+  Gaussian noise of variance 10^(-SNR/10) fs/R per sample (the SNR over the symbol
+  rate, Es/N0 = Eb/N0, from 3 to 8 dB); the integrator over one symbol (the movavg
+  optical filter of bandwidth 2R, H(f) = sinc(f/R); comnum's moving_average of 32
+  samples), the one-symbol delay interferometer and the balanced photodiode
+  (comnum_hardware::optical::delay_interferometer and balanced_photodiode), the sample
+  at the middle of the symbol and the sign decision. comnum's chain runs 400 blocks of
+  1024 bits per SNR. The expected values are the example's theory 0.5 exp(-SNR), exact
+  for this matched receiver (closed form), and Optilux's estimate from bit 3 on
+  (recording).
+run:
+  test: validation/tests/fiber/optilux.rs::the_dpsk_link_of_example_15
+tier: ci
+duration: "1.2 s on an Apple M6"
+why: >
+  400 blocks of 1024 bits give 380 errors at 8 dB, a relative standard deviation of
+  5 %: the factor 1.15 on the theory is three of them. Optilux's estimates carry their
+  own 1.5 to 2.5 % (from bit 3 on, its stopping rule at 3 % for the example's count):
+  1.2 against them.
+findings:
+  - "comnum's BER follows the theory within 3.5 % from 3 to 8 dB (6.73e-2, 4.02e-2, 2.14e-2, 9.01e-3, 3.28e-3, 9.33e-4 against 6.80e-2, 4.06e-2, 2.12e-2, 9.33e-3, 3.33e-3, 9.09e-4), and Optilux's estimates from bit 3 on within 6 %"
+  - "the differential encoder of Optilux (diffencoder: exp(filter(1, [1 1], log(stars(2:end))))) starts its recursion at the second symbol without the first: the second bit is decided against the wrong reference and is wrong whenever the first bit is 0, as with this pattern (seed 1). Noise-free, the example counts 1 error in 1023 bits; its BER carries that floor of 9.8e-4, 1.86e-3 at 8 dB against 8.8e-4 from bit 3 on and 9.1e-4 of the theory"
+  - "under Octave the example returns a BER of 0.475 at every SNR: Octave compares complex numbers by their moduli where MATLAB compares their real parts, so the encoder and samp2pat decide 1 for every symbol (both arrays are real with a zero imaginary part); the recorder takes their real parts"
+cases:
+  - {inputs: {snr_db: 3.0, quantity: ber_theory}, expected: 6.799e-02, tolerance: {factor: 1.15}}
+  - {inputs: {snr_db: 3.0, quantity: ber_optilux}, expected: 6.870e-02, tolerance: {factor: 1.2}}
+  - {inputs: {snr_db: 4.0, quantity: ber_theory}, expected: 4.056e-02, tolerance: {factor: 1.15}}
+  - {inputs: {snr_db: 4.0, quantity: ber_optilux}, expected: 4.069e-02, tolerance: {factor: 1.2}}
+  - {inputs: {snr_db: 5.0, quantity: ber_theory}, expected: 2.116e-02, tolerance: {factor: 1.15}}
+  - {inputs: {snr_db: 5.0, quantity: ber_optilux}, expected: 2.141e-02, tolerance: {factor: 1.2}}
+  - {inputs: {snr_db: 6.0, quantity: ber_theory}, expected: 9.333e-03, tolerance: {factor: 1.15}}
+  - {inputs: {snr_db: 6.0, quantity: ber_optilux}, expected: 9.228e-03, tolerance: {factor: 1.2}}
+  - {inputs: {snr_db: 7.0, quantity: ber_theory}, expected: 3.329e-03, tolerance: {factor: 1.15}}
+  - {inputs: {snr_db: 7.0, quantity: ber_optilux}, expected: 3.376e-03, tolerance: {factor: 1.2}}
+  - {inputs: {snr_db: 8.0, quantity: ber_theory}, expected: 9.094e-04, tolerance: {factor: 1.15}}
+  - {inputs: {snr_db: 8.0, quantity: ber_optilux}, expected: 8.832e-04, tolerance: {factor: 1.2}}
