@@ -30,7 +30,19 @@ are allowed a few percent of model error.
    * - BPSK over flat Rayleigh fading,
        :math:`\frac{1}{2}\bigl(1 - \sqrt{\bar\gamma/(1 + \bar\gamma)}\bigr)`
      - Proakis & Salehi, Sec. 13.3
-     - :doc:`auto_examples/foundations/plot_04_rayleigh`
+     - :doc:`auto_examples/foundations/plot_04_fading_channels`
+   * - The split-step Fourier method: a Gaussian pulse broadens by
+       :math:`\sqrt{1 + (z/L_D)^2}` and self-phase modulation is the phase
+       :math:`\gamma|A|^2 L` to the arithmetic; the solitons keep their shape over a
+       period; the field error of the symmetric step is of order :math:`h^2`
+     - Agrawal, *Nonlinear Fiber Optics*, Secs. 2.4, 3.2, 4.1, 5.2
+     - :doc:`auto_examples/optical/plot_09_split_step_fourier`
+   * - BPSK, 16-QAM and DPSK over Rice, Nakagami-m and Hoyt fading, and with
+       maximal-ratio combining: the simulated error rates within the sampling error of
+       the MGF averages
+     - Simon & Alouini, *Proc. IEEE* 86(9), 1998; Alouini & Goldsmith, *IEEE Trans.
+       Commun.* 47(9), 1999
+     - :doc:`auto_examples/foundations/plot_04_fading_channels`
    * - MI and GMI of 16-QAM: Monte Carlo against quadrature,
        GMI ≤ MI ≤ :math:`\min(\log_2 M, \log_2(1 + \mathrm{SNR}))`
      - Shannon; Gauss–Hermite quadrature

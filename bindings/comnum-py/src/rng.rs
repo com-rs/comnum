@@ -122,6 +122,33 @@ impl PyRng {
         Ok(farr(py, (0..n).map(|_| self.inner.gaussian()).collect()))
     }
 
+    /// Gamma draws of shape `shape` and unit scale (mean `shape`), by the method of
+    /// Marsaglia and Tsang: the power of a Nakagami-m fading of unit mean is
+    /// `gamma(m) / m`.
+    ///
+    /// Args:
+    ///     shape (float): the shape, positive.
+    ///     n (int): number of draws.
+    ///
+    /// Returns:
+    ///     numpy.ndarray: `n` values (float64).
+    ///
+    /// Raises:
+    ///     ValueError: for a negative count or a shape that is not positive.
+    ///
+    /// Examples:
+    ///     >>> import comnum
+    ///     >>> g = comnum.Rng(3).gamma(2.0, 100_000)
+    ///     >>> bool(abs(g.mean() - 2.0) < 0.03)
+    ///     True
+    fn gamma<'py>(&mut self, py: Python<'py>, shape: f64, n: i64) -> PyResult<FArr<'py>> {
+        if !(shape > 0.0 && shape.is_finite()) {
+            return Err(pyo3::exceptions::PyValueError::new_err(format!("the shape must be positive, got {shape}")));
+        }
+        let n = count(n, "n")?;
+        Ok(farr(py, (0..n).map(|_| self.inner.gamma(shape)).collect()))
+    }
+
     /// Circular complex Gaussian draws of variance `noise_var` (`E|w|² = noise_var`).
     ///
     /// Args:

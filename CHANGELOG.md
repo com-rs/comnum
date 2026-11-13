@@ -8,6 +8,18 @@ and follow [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- `Rng.gamma(shape, n)` in Python, the gamma draws of `Rng::gamma` (the power of a
+  Nakagami-m fading of unit mean is `gamma(m) / m`).
+- The gallery example `optical/plot_09_split_step_fourier.py`: the split-step Fourier
+  method checked against the exact solutions of the NLSE (the broadening of a Gaussian
+  pulse, self-phase modulation, the fundamental and second-order solitons, Agrawal
+  Secs. 3.2, 4.1 and 5.2), the order of the symmetric step, and the two nonlinear
+  steps on a lossy link.
+- The gallery example `foundations/plot_04_fading_channels.py` replaces
+  `plot_04_rayleigh.py`: the error rates of BPSK, 16-QAM and DPSK over AWGN, then over
+  Rayleigh, Rice, Nakagami-m and Hoyt fading, with maximal-ratio combining, every
+  simulated curve against its closed form or its MGF average, and the $E_b/N_0$ of a
+  BER of $10^{-3}$ over every channel.
 - The error rates over flat fading channels by the moment generating function (MGF)
   of the SNR, in `comnum_mapping::theory`: `SnrFading` (Rayleigh, Rice of factor $K$,
   Nakagami-m, Hoyt of parameter $q$, AWGN) and its `mgf` (Alouini & Goldsmith, *IEEE

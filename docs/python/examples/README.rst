@@ -69,8 +69,18 @@ equations they use. The table below gathers every comparison of this gallery.
        maximal-ratio combining
      - :ref:`sphx_glr_auto_examples_foundations_plot_02_ber_qam_awgn.py`,
        :ref:`sphx_glr_auto_examples_foundations_plot_03_ber_psk.py`,
-       :ref:`sphx_glr_auto_examples_foundations_plot_04_rayleigh.py`,
+       :ref:`sphx_glr_auto_examples_foundations_plot_04_fading_channels.py`,
        :ref:`sphx_glr_auto_examples_mimo_plot_02_space_time_diversity.py`
+   * - G. P. Agrawal, *Nonlinear Fiber Optics*, Secs. 2.4, 3.2, 4.1 and 5.2
+     - The split-step Fourier method against the exact solutions of the NLSE: the
+       broadening of a Gaussian pulse, self-phase modulation, the solitons; the error
+       of the method against the step
+     - :ref:`sphx_glr_auto_examples_optical_plot_09_split_step_fourier.py`
+   * - M. K. Simon, M.-S. Alouini, *Proc. IEEE* 86(9), 1998, Tables 2–3; M.-S. Alouini,
+       A. J. Goldsmith, *IEEE Trans. Commun.* 47(9), 1999, eqs. (23)–(30), (48)
+     - BPSK, 16-QAM and DPSK over Rayleigh, Rice, Nakagami-m and Hoyt fading, and with
+       maximal-ratio combining, against the MGF averages
+     - :ref:`sphx_glr_auto_examples_foundations_plot_04_fading_channels.py`
    * - H. Ochiai, H. Imai, *IEEE Trans. Commun.* 49(2), 2001, eqs. (11) and (27)
      - The distribution of the PAPR of OFDM at the Nyquist rate and oversampled
      - :ref:`sphx_glr_auto_examples_waveforms_plot_01_papr_ccdf.py`
