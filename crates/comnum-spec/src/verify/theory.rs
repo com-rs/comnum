@@ -35,6 +35,8 @@ pub(super) enum Theory {
     GnSnrDb(Gn),
     /// The BER of BPSK or QPSK with maximal-ratio combining of Rayleigh branches.
     BerRayleigh(Rayleigh),
+    /// The BER of a coherent binary signal over flat fading, by the MGF of the SNR.
+    BerFading(FadingTheory),
     /// The ideal $E_{s}/N_{0}$ (dB) of a DVB-S2 MODCOD (Table 13 of EN 302 307-1).
     Dvbs2Esn0Db(Dvbs2),
 }
@@ -147,6 +149,24 @@ pub(super) struct Rayleigh {
     branches: usize,
 }
 
+/// The parameters of `ber_fading`.
+#[derive(Deserialize, Debug)]
+#[serde(deny_unknown_fields)]
+pub(super) struct FadingTheory {
+    fading: String,
+    #[serde(default)]
+    parameter: Option<f64>,
+    ebn0_db: f64,
+    #[serde(default = "d_g")]
+    g: f64,
+    #[serde(default = "d_one")]
+    branches: usize,
+}
+
+fn d_g() -> f64 {
+    1.0
+}
+
 /// The parameters of `dvbs2_esn0_db`.
 #[derive(Deserialize, Debug)]
 #[serde(deny_unknown_fields)]
@@ -214,6 +234,15 @@ impl Theory {
                     format!("expectation {name:?}: at most {MAX_POINTS} branches, got {}", t.branches)
                 })?;
                 theory::ber_rayleigh_mrc(db2lin(ebn0_of(t.ebn0_db, t.snr_db, t.m, name)? + t.offset_db), t.branches)?
+            }
+            Theory::BerFading(t) => {
+                ensure(t.branches <= MAX_POINTS, || {
+                    format!("expectation {name:?}: at most {MAX_POINTS} branches, got {}", t.branches)
+                })?;
+                // rayleigh and awgn take no parameter: one written for the others is ignored
+                let parameter = if matches!(t.fading.as_str(), "rayleigh" | "awgn") { None } else { t.parameter };
+                let fading = theory::SnrFading::from_name(&t.fading, parameter)?;
+                theory::ber_binary_fading(t.g, fading, t.ebn0_db, t.branches)?
             }
             Theory::Dvbs2Esn0Db(t) => {
                 comnum_systems::dvbs2::Modcod::from_name(&t.modulation, &t.rate)?.threshold_db() + t.offset_db

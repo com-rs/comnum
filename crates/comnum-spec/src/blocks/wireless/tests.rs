@@ -194,6 +194,34 @@ fn a_seeded_channel_is_the_same_in_every_trial() {
 }
 
 #[test]
+fn flat_fading_of_every_distribution_is_undone_by_the_genie_receiver() {
+    for (fading, parameter) in [("rayleigh", None), ("rice", Some(3.0)), ("nakagami", Some(0.5)), ("hoyt", Some(0.5))] {
+        for coherence in [0, 1, 8] {
+            let mut block = json!({"type": "flat_fading", "fading": fading, "coherence_samples": coherence});
+            if let Some(p) = parameter {
+                block["parameter"] = json!(p);
+            }
+            let s = run(
+                &[
+                    json!({"type": "source", "constellation": "16-QAM", "n_symbols": 256}),
+                    block,
+                    json!({"type": "mimo_rx"}),
+                ],
+                7,
+            );
+            assert!(max_error(&s) < 1e-9, "{fading}, coherence {coherence}: {}", max_error(&s));
+        }
+    }
+    // a parameter the distribution needs, or refuses
+    for bad in [
+        json!({"type": "flat_fading", "fading": "nakagami"}),
+        json!({"type": "flat_fading", "fading": "hoyt", "parameter": 2.0}),
+    ] {
+        assert!(crate::blocks::build(&bad, &crate::blocks::BuildContext::default()).is_err(), "{bad}");
+    }
+}
+
+#[test]
 fn a_seeded_rayleigh_matrix_is_the_same_in_every_trial() {
     let csi = |trial_seed: u64| {
         let s = run(

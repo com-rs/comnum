@@ -1,9 +1,9 @@
-//! The fading channels: `rayleigh`, `tdl` and `cdl`.
+//! The fading channels: `rayleigh`, `flat_fading`, `tdl` and `cdl`.
 
 use super::Csi;
 use crate::blocks::{Block, Frame, NameOr, Named};
 use comnum_channel::cdl::{Array, Cdl, CdlParams, Profile as CdlProfile};
-use comnum_channel::fading::Mimo;
+use comnum_channel::fading::{FlatFading, Mimo, flat_gains};
 use comnum_channel::multipath::{Profile, Tdl, TdlParams};
 use comnum_channel::spatial::{Kronecker, exponential_correlation};
 use comnum_core::Result;
@@ -64,6 +64,63 @@ impl Block for Rayleigh {
                 None => model.apply(x, rng)?,
             };
             Ok((y, Csi::Flat { h: hs, coherence: coh }))
+        })
+    }
+}
+
+// -------------------------------------------------------------------- flat_fading
+
+block_params! {
+    pub(super) struct FlatFadingSpec {
+        fading: String ["rayleigh"] one_of ["rayleigh", "rice", "nakagami", "hoyt"],
+            "the distribution of the gain, of unit mean power (Simon & Alouini 1998, Table 2)";
+        parameter: Option<f64> [absent "none for rayleigh"] >= 0,
+            "the Rician factor K (linear) of rice, m >= 1/2 of nakagami, q in [0, 1] of hoyt";
+        coherence_samples: usize [0] "samples", "samples per gain (0: one gain per trial, 1: fast fading)";
+        seed: Option<u64> [absent "the stream of the trial"],
+            "draw the gains from their own stream: the same realisation in every condition and trial";
+    }
+}
+
+pub(super) struct FlatFadingBlock {
+    fading: FlatFading,
+    coherence: usize,
+    seed: Option<u64>,
+}
+
+impl FlatFadingBlock {
+    pub(super) fn new(p: &FlatFadingSpec) -> Result<FlatFadingBlock> {
+        let parameter = if p.fading == "rayleigh" { None } else { p.parameter };
+        Ok(FlatFadingBlock {
+            fading: FlatFading::from_name(&p.fading, parameter).map_err(|e| e.context("flat_fading"))?,
+            coherence: p.coherence_samples,
+            seed: p.seed,
+        })
+    }
+}
+
+impl Block for FlatFadingBlock {
+    fn apply(&self, s: &mut Frame, rng: &mut Rng) -> Result<()> {
+        fade(s, rng, |x, _, rng| {
+            let n = x[0].len();
+            let coh = if self.coherence == 0 { n.max(1) } else { self.coherence };
+            // every stream by its own gain: a diagonal matrix per coherence block
+            let mut own = self.seed.map(Rng::new);
+            let rng = own.as_mut().unwrap_or(rng);
+            let gains = x.iter().map(|_| flat_gains(self.fading, n, coh, rng)).collect::<Result<Vec<_>>>()?;
+            let y = x.iter().zip(&gains).map(|(xs, g)| xs.iter().zip(g).map(|(v, h)| v * h).collect()).collect();
+            let h = (0..n.div_ceil(coh).max(1))
+                .map(|b| {
+                    comnum_math::linalg::CMat::from_shape_fn((x.len(), x.len()), |(r, t)| {
+                        if r == t {
+                            gains[r].get(b * coh).copied().unwrap_or(C64::new(1.0, 0.0))
+                        } else {
+                            C64::new(0.0, 0.0)
+                        }
+                    })
+                })
+                .collect();
+            Ok((y, Csi::Flat { h, coherence: coh }))
         })
     }
 }

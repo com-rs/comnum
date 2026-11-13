@@ -1,0 +1,35 @@
+# BPSK over flat fading, a new gain for every symbol, known at the receiver: the
+# simulated bit error rate against the average of the conditional error rate over the
+# distribution of the SNR, written as a finite integral of its moment generating
+# function (M. K. Simon, M.-S. Alouini, Proc. IEEE 86(9), 1998, eq. (23) and Table 3;
+# M.-S. Alouini, A. J. Goldsmith, IEEE Trans. Commun. 47(9), 1999, eqs. (20)-(30)).
+#
+# The plot shows the simulated bit error rate of every channel against the mean Eb/N0,
+# with the MGF averages drawn over them.
+name: flat_fading
+description: BER of BPSK over Rayleigh, Rice, Nakagami-m and Hoyt fading against the MGF averages
+seed: 1998
+batch: 32
+cases:
+  - {fading: rayleigh, parameter: 0}
+  - {fading: rice, parameter: 3}
+  - {fading: rice, parameter: 10}
+  - {fading: nakagami, parameter: 0.5}
+  - {fading: nakagami, parameter: 2}
+  - {fading: hoyt, parameter: 0.5}
+grid:
+  ebn0_db: [0, 5, 10, 15]
+link:
+  - {type: source, constellation: {kind: psk, m: 2}, n_symbols: 8192}
+  - {type: flat_fading, fading: $fading, parameter: $parameter, coherence_samples: 1}
+  - {type: awgn_ebn0, ebn0_db: $ebn0_db}
+  - {type: mimo_rx}
+metrics: {report: [ber], scale: none}
+stop: {min_errors: {ber: 2000}, min_trials: 32, max_trials: 4000}
+expect:
+  - name: BER of BPSK over flat fading (the MGF average)
+    source: Simon & Alouini, Proc. IEEE 86(9), 1998, eq. (23) and Table 3; Alouini & Goldsmith, IEEE Trans. Commun. 47(9), 1999, eqs. (23)-(30)
+    metric: ber
+    theory: {function: ber_fading, fading: $fading, parameter: $parameter, ebn0_db: $ebn0_db}
+    interval: 0.999
+    min_count: 100

@@ -43,7 +43,11 @@
 //!   `mb_lambda` for shaped symbols, gives the EGN model), and `ber_rayleigh`, the BER of BPSK
 //!   or QPSK with maximal-ratio combining of `branches` Rayleigh branches whose mean
 //!   $E_{b}/N_{0}$ is `ebn0_db` plus `offset_db` (with `m`, `kind`; see
-//!   `comnum_mapping::theory::ber_rayleigh_mrc`), and `dvbs2_esn0_db`,
+//!   `comnum_mapping::theory::ber_rayleigh_mrc`), `ber_fading`, the BER of a coherent
+//!   binary signal over flat fading by the MGF of the SNR (with `fading`, one of
+//!   `rayleigh`, `rice`, `nakagami`, `hoyt`, `awgn`, its `parameter`, `ebn0_db`, and
+//!   optionally `g`, 1 for BPSK, and `branches` combined by maximal ratio; see
+//!   `comnum_mapping::theory::ber_binary_fading`), and `dvbs2_esn0_db`,
 //!   the ideal $E_{s}/N_{0}$ of a DVB-S2 MODCOD at a PER of $10^{-7}$ (Table 13 of EN
 //!   302 307-1, with `modulation`, `rate`) plus `offset_db`.
 //!

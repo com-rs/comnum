@@ -69,6 +69,8 @@ fn example(b: &str, p: &str) -> Option<Json> {
         ("capture", _) => return None,
         ("dump", "dir") => json!("results/signals"),
         ("dump", "datatype") => json!("cf64"),
+        ("flat_fading", "fading") => json!("nakagami"),
+        ("flat_fading", "parameter") => json!(2.0),
         ("manakov", "nonlinear_step") => json!("trapezoidal"),
         ("ssfm", "nonlinear_step") => json!("effective_length"),
         ("manakov", "step_rule") => json!("nonlinear_phase"),

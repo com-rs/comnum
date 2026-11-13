@@ -8,6 +8,7 @@ mod shaping;
 
 use crate::rng::PyRng;
 use crate::{BArr, CArr, FArr, IArr, IntoPy, bvec, carr, count, cvec, farr, fvec, iarr, kind, map_real, uvec};
+use comnum::channel::fading::flat_gains;
 use comnum::fec::ccdm::Ccdm;
 use comnum::mapping::constellation::Constellation;
 use comnum::mapping::theory::RateChannel;

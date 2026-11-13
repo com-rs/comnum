@@ -95,9 +95,196 @@ fn theory_ber_rayleigh_mrc(ebn0_db: &Bound<'_, PyAny>, branches: usize) -> PyRes
     map_real(ebn0_db, |e| theory::ber_rayleigh_mrc(comnum::math::db2lin(e), branches).py())
 }
 
-/// The fading channel of a name and its parameter ([`theory::SnrFading`]).
-fn snr_fading(fading: &str, parameter: Option<f64>) -> PyResult<theory::SnrFading> {
-    theory::SnrFading::from_name(fading, parameter).py()
+/// A flat fading channel: the distribution of its complex gain, of unit mean power.
+/// One object for the simulation (:meth:`gains`) and for the theory (:meth:`ber`,
+/// :meth:`ser`, :meth:`ber_noncoherent`, :meth:`mgf`), so that a simulated curve and
+/// its closed form are those of the same channel.
+///
+/// - ``"rayleigh"``: scattered paths only, ``h ~ CN(0, 1)``;
+/// - ``"rice"`` with the Rician factor `K` (linear): a line of sight of power
+///   `K/(1 + K)` plus a scattered term;
+/// - ``"nakagami"`` with `m >= 1/2`: `|h|²` a gamma variable of shape `m` and unit
+///   mean, a uniform phase;
+/// - ``"hoyt"`` with `0 <= q <= 1`: a Gaussian of variance `1/(1 + q²)` on the real
+///   axis and `q²/(1 + q²)` on the imaginary one;
+/// - ``"awgn"``: no fading, `h = 1`.
+///
+/// The densities are those of Table 2 of M. K. Simon and M.-S. Alouini, "A unified
+/// approach to the performance analysis of digital communication over generalized
+/// fading channels," Proc. IEEE 86(9), 1998; the error rates are the averages by the
+/// moment generating function of the SNR (its Table 3; M.-S. Alouini and A. J.
+/// Goldsmith, IEEE Trans. Commun. 47(9), 1999).
+///
+/// Args:
+///     kind (str): ``"rayleigh"`` (the default), ``"rice"``, ``"nakagami"``, ``"hoyt"``
+///         or ``"awgn"``.
+///     parameter (float, optional): `K` (linear) for Rice, `m` for Nakagami, `q` for
+///         Hoyt; none for Rayleigh and AWGN.
+///
+/// Raises:
+///     ValueError: for an unknown channel, a missing or an invalid parameter.
+///
+/// Examples:
+///     >>> import comnum, numpy as np
+///     >>> ch = comnum.Fading("nakagami", 2.0)
+///     >>> h = ch.gains(200_000, comnum.Rng(1))
+///     >>> bool(abs(np.mean(np.abs(h) ** 2) - 1.0) < 0.01)
+///     True
+///     >>> round(float(ch.ber(10.0)), 6)
+///     0.005528
+#[pyclass(name = "Fading", module = "comnum", frozen)]
+#[derive(Clone)]
+pub struct PyFading {
+    kind: String,
+    parameter: Option<f64>,
+    snr: theory::SnrFading,
+}
+
+impl PyFading {
+    fn build(kind: &str, parameter: Option<f64>) -> PyResult<PyFading> {
+        let kind = kind.to_ascii_lowercase();
+        // the channels without a parameter ignore one
+        let parameter = if matches!(kind.as_str(), "rayleigh" | "awgn") { None } else { parameter };
+        let snr = theory::SnrFading::from_name(&kind, parameter).py()?;
+        Ok(PyFading { kind, parameter, snr })
+    }
+}
+
+#[pymethods]
+impl PyFading {
+    #[new]
+    #[pyo3(signature = (kind = "rayleigh", parameter = None))]
+    fn new(kind: &str, parameter: Option<f64>) -> PyResult<Self> {
+        PyFading::build(kind, parameter)
+    }
+
+    /// str: the name of the channel.
+    #[getter]
+    fn kind(&self) -> &str {
+        &self.kind
+    }
+
+    /// float | None: its parameter (`K`, `m` or `q`).
+    #[getter]
+    fn parameter(&self) -> Option<f64> {
+        self.parameter
+    }
+
+    fn __repr__(&self) -> String {
+        match self.parameter {
+            Some(p) => format!("Fading({:?}, {p:?})", self.kind),
+            None => format!("Fading({:?})", self.kind),
+        }
+    }
+
+    /// Gains of unit mean power, one per block of `coherence` samples.
+    ///
+    /// Args:
+    ///     n (int): number of gains.
+    ///     rng (Rng): the generator.
+    ///     coherence (int): samples sharing one gain (1, the default: a new gain for
+    ///         every sample).
+    ///
+    /// Returns:
+    ///     numpy.ndarray: `n` gains (complex128); ones without fading.
+    ///
+    /// Raises:
+    ///     ValueError: for a negative count or a zero coherence.
+    #[pyo3(signature = (n, rng, *, coherence = 1))]
+    fn gains<'py>(&self, py: Python<'py>, n: i64, rng: &mut PyRng, coherence: usize) -> PyResult<CArr<'py>> {
+        let n = count(n, "n")?;
+        Ok(carr(
+            py,
+            match self.snr.gain_distribution() {
+                Some(f) => flat_gains(f, n, coherence, &mut rng.inner).py()?,
+                None => vec![num_complex::Complex64::new(1.0, 0.0); n],
+            },
+        ))
+    }
+
+    /// Moment generating function `M(s) = E exp(s γ)` of the SNR `γ`, at `s <= 0`.
+    ///
+    /// Args:
+    ///     s (float | array_like): the argument, not positive.
+    ///     snr_db (float): the mean SNR (dB).
+    ///
+    /// Returns:
+    ///     float | numpy.ndarray: the MGF at every `s`.
+    ///
+    /// Raises:
+    ///     ValueError: for a positive `s`.
+    fn mgf(&self, s: &Bound<'_, PyAny>, snr_db: f64) -> PyResult<Py<PyAny>> {
+        let mean = comnum::math::db2lin(snr_db);
+        map_real(s, |v| self.snr.mgf(v, mean).py())
+    }
+
+    /// Average BER of a coherent binary signal of conditional BER `Q(√(2 g γ))`
+    /// (:func:`theory_ber_binary_fading`).
+    ///
+    /// Args:
+    ///     ebn0_db (float | array_like): the mean `E_b/N_0` of one branch (dB).
+    ///     g (float): the constant of the signal: 1 for BPSK and Gray QPSK per bit, 1/2
+    ///         for orthogonal BFSK.
+    ///     branches (int): branches combined by maximal ratio.
+    ///
+    /// Returns:
+    ///     float | numpy.ndarray: the bit error probability at every `E_b/N_0`.
+    ///
+    /// Raises:
+    ///     ValueError: for an invalid parameter or input (the message names it).
+    #[pyo3(signature = (ebn0_db, *, g = 1.0, branches = 1))]
+    fn ber(&self, ebn0_db: &Bound<'_, PyAny>, g: f64, branches: usize) -> PyResult<Py<PyAny>> {
+        map_real(ebn0_db, |e| theory::ber_binary_fading(g, self.snr, e, branches).py())
+    }
+
+    /// Average BER of a binary signal detected noncoherently or differentially, of
+    /// conditional BER `0.5 exp(-g γ)` (:func:`theory_ber_noncoherent_binary_fading`).
+    ///
+    /// Args:
+    ///     ebn0_db (float | array_like): the mean `E_b/N_0` (dB).
+    ///     g (float): 1 for DPSK, 1/2 for noncoherent orthogonal BFSK.
+    ///
+    /// Returns:
+    ///     float | numpy.ndarray: the bit error probability at every `E_b/N_0`.
+    ///
+    /// Raises:
+    ///     ValueError: for an invalid parameter or input (the message names it).
+    #[pyo3(signature = (ebn0_db, *, g = 1.0))]
+    fn ber_noncoherent(&self, ebn0_db: &Bound<'_, PyAny>, g: f64) -> PyResult<Py<PyAny>> {
+        map_real(ebn0_db, |e| theory::ber_noncoherent_binary_fading(g, self.snr, e).py())
+    }
+
+    /// Average SER of M-PSK, square M-QAM or M-PAM (:func:`theory_ser_fading`).
+    ///
+    /// Args:
+    ///     m (int): the order of the constellation.
+    ///     esn0_db (float | array_like): the mean `E_s/N_0` (dB).
+    ///     kind (str): ``"psk"``, ``"qam"`` or ``"pam"``.
+    ///
+    /// Returns:
+    ///     float | numpy.ndarray: the symbol error probability at every `E_s/N_0`.
+    ///
+    /// Raises:
+    ///     ValueError: for an invalid parameter or input (the message names it).
+    #[pyo3(signature = (m, esn0_db, kind = "qam"))]
+    fn ser(&self, m: usize, esn0_db: &Bound<'_, PyAny>, kind: &str) -> PyResult<Py<PyAny>> {
+        let k = self::kind(kind)?;
+        map_real(esn0_db, |e| theory::ser_fading(k, m, self.snr, e).py())
+    }
+}
+
+/// The channel of the `fading` argument of the closed forms: a :class:`Fading`, a name
+/// with its `parameter`, or Rayleigh fading when it is left out.
+fn snr_fading(fading: Option<&Bound<'_, PyAny>>, parameter: Option<f64>) -> PyResult<theory::SnrFading> {
+    let Some(fading) = fading else {
+        return Ok(theory::SnrFading::Rayleigh);
+    };
+    if let Ok(f) = fading.cast::<PyFading>() {
+        return Ok(f.get().snr);
+    }
+    let name: String =
+        fading.extract().map_err(|_| pyo3::exceptions::PyValueError::new_err("fading must be a name or a Fading"))?;
+    Ok(PyFading::build(&name, parameter)?.snr)
 }
 
 /// Average symbol error rate of M-PSK, square M-QAM or M-PAM over a flat fading
@@ -112,8 +299,8 @@ fn snr_fading(fading: &str, parameter: Option<f64>) -> PyResult<theory::SnrFadin
 ///     m (int): the order of the constellation.
 ///     esn0_db (float | array_like): the mean `E_s/N_0` (dB).
 ///     kind (str): ``"psk"``, ``"qam"`` or ``"pam"``.
-///     fading (str): ``"rayleigh"`` (the default), ``"rice"``, ``"nakagami"``, ``"hoyt"``
-///         or ``"awgn"``.
+///     fading (str | Fading, optional): a :class:`Fading`, or ``"rayleigh"`` (the
+///         default), ``"rice"``, ``"nakagami"``, ``"hoyt"`` or ``"awgn"``.
 ///     parameter (float, optional): `K` (linear) for Rice, `m` for Nakagami, `q` for
 ///         Hoyt; none for Rayleigh and AWGN.
 ///
@@ -134,12 +321,12 @@ fn snr_fading(fading: &str, parameter: Option<f64>) -> PyResult<theory::SnrFadin
 ///     >>> bool(comnum.theory_ser_fading(16, 20.0, fading="rice", parameter=10.0) < closed)
 ///     True
 #[pyfunction]
-#[pyo3(signature = (m, esn0_db, kind = "qam", *, fading = "rayleigh", parameter = None))]
+#[pyo3(signature = (m, esn0_db, kind = "qam", *, fading = None, parameter = None))]
 fn theory_ser_fading(
     m: usize,
     esn0_db: &Bound<'_, PyAny>,
     kind: &str,
-    fading: &str,
+    fading: Option<&Bound<'_, PyAny>>,
     parameter: Option<f64>,
 ) -> PyResult<Py<PyAny>> {
     let k = self::kind(kind)?;
@@ -158,8 +345,8 @@ fn theory_ser_fading(
 /// Args:
 ///     ebn0_db (float | array_like): the mean `E_b/N_0` of one branch (dB).
 ///     g (float): the constant of the binary signal (1 for BPSK).
-///     fading (str): ``"rayleigh"`` (the default), ``"rice"``, ``"nakagami"``, ``"hoyt"``
-///         or ``"awgn"``.
+///     fading (str | Fading, optional): a :class:`Fading`, or ``"rayleigh"`` (the
+///         default), ``"rice"``, ``"nakagami"``, ``"hoyt"`` or ``"awgn"``.
 ///     parameter (float, optional): `K` (linear) for Rice, `m` for Nakagami, `q` for
 ///         Hoyt.
 ///     branches (int): the number of branches `L` (at least 1).
@@ -178,11 +365,11 @@ fn theory_ser_fading(
 ///     >>> round(a / b, 10)
 ///     1.0
 #[pyfunction]
-#[pyo3(signature = (ebn0_db, *, g = 1.0, fading = "rayleigh", parameter = None, branches = 1))]
+#[pyo3(signature = (ebn0_db, *, g = 1.0, fading = None, parameter = None, branches = 1))]
 fn theory_ber_binary_fading(
     ebn0_db: &Bound<'_, PyAny>,
     g: f64,
-    fading: &str,
+    fading: Option<&Bound<'_, PyAny>>,
     parameter: Option<f64>,
     branches: usize,
 ) -> PyResult<Py<PyAny>> {
@@ -198,8 +385,8 @@ fn theory_ber_binary_fading(
 /// Args:
 ///     ebn0_db (float | array_like): the mean `E_b/N_0` (dB).
 ///     g (float): the constant of the binary signal (1 for DPSK).
-///     fading (str): ``"rayleigh"`` (the default), ``"rice"``, ``"nakagami"``, ``"hoyt"``
-///         or ``"awgn"``.
+///     fading (str | Fading, optional): a :class:`Fading`, or ``"rayleigh"`` (the
+///         default), ``"rice"``, ``"nakagami"``, ``"hoyt"`` or ``"awgn"``.
 ///     parameter (float, optional): `K` (linear) for Rice, `m` for Nakagami, `q` for
 ///         Hoyt.
 ///
@@ -215,11 +402,11 @@ fn theory_ber_binary_fading(
 ///     >>> round(comnum.theory_ber_noncoherent_binary_fading(10.0) * 22, 12)
 ///     1.0
 #[pyfunction]
-#[pyo3(signature = (ebn0_db, *, g = 1.0, fading = "rayleigh", parameter = None))]
+#[pyo3(signature = (ebn0_db, *, g = 1.0, fading = None, parameter = None))]
 fn theory_ber_noncoherent_binary_fading(
     ebn0_db: &Bound<'_, PyAny>,
     g: f64,
-    fading: &str,
+    fading: Option<&Bound<'_, PyAny>>,
     parameter: Option<f64>,
 ) -> PyResult<Py<PyAny>> {
     let f = snr_fading(fading, parameter)?;
@@ -493,6 +680,7 @@ pub(crate) fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(theory_ser_esn0, m)?)?;
     m.add_function(wrap_pyfunction!(theory_ber_gray, m)?)?;
     m.add_function(wrap_pyfunction!(theory_ber_rayleigh_mrc, m)?)?;
+    m.add_class::<PyFading>()?;
     m.add_function(wrap_pyfunction!(theory_ser_fading, m)?)?;
     m.add_function(wrap_pyfunction!(theory_ber_binary_fading, m)?)?;
     m.add_function(wrap_pyfunction!(theory_ber_noncoherent_binary_fading, m)?)?;

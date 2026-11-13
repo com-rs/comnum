@@ -26,7 +26,7 @@
   evidence:
     - recording: "OptiCommPy 0.11, recorded: `tests/oracle/test_oracle.py::test_gray_mapping_points_and_labels`, `::test_gray_code`, `::test_modulate_and_demodulate`, `::test_theory_ber`, `::test_theory_ber_of_bpsk_is_exact_where_opticommpy_doubles_it`"
     - closed_form: "Proakis & Salehi, *Digital Communications*, 5th ed., 2008, Sec. 4.3: `specs/validation/proakis_awgn.yaml` (47 checks; CI, `comnum verify`), `specs/validation/required_snr.yaml` (the inverted closed forms, `validation/tests/simulation/specs.rs::operating_points_follow_the_inverted_closed_forms`)"
-    - table: "Cho & Yoon, *IEEE Trans. Commun.* 50(7), 2002: Table I verbatim (`crates/comnum-mapping/src/theory.rs`, `literature::cho_2002_table_1`), the exact Gray BER of PAM, square and rectangular QAM (eqs. (9)–(22)) against an enumeration of the decision regions of the library's Gray labels (10⁻¹³), the 4–5 dB per extra bit of Fig. 2"
+    - table: "Cho & Yoon, *IEEE Trans. Commun.* 50(7), 2002: Table I verbatim (`crates/comnum-mapping/src/theory/mod.rs`, `literature::cho_2002_table_1`), the exact Gray BER of PAM, square and rectangular QAM (eqs. (9)–(22)) against an enumeration of the decision regions of the library's Gray labels (10⁻¹³), the 4–5 dB per extra bit of Fig. 2"
     - closed_form: "the density of the phase of a carrier in noise (Rice 1948; eq. (8) of Ahmed et al. 2007) integrates to the BER of BPSK and the SER of QPSK"
     - self: "self-consistency: `crates/comnum-mapping/src/demapper.rs::llr_signs_and_max_log`, `::multi_stream_map_demap_round_trip`, `crates/comnum/tests/links.rs::llr_signs_are_the_hard_decisions`"
   gaps: "• the closed forms of Proakis & Salehi are checked, not its figures<br>• `theory_ber` of Gray QAM is the nearest-neighbour approximation, optimistic for 64-QAM below 4 dB (example `ber_awgn`)<br>• custom constellations: self-consistency only"
@@ -59,13 +59,14 @@
   gaps: "• `prbs` (any register state, never inverted) is the O.150 polynomials at another phase; the sequences of the Recommendation are `O150Sequence`<br>• the shaped symbols: self-consistency only"
 - theme: Foundations
   name: "Error rates over fading channels by the MGF"
-  modules: "`comnum_mapping::theory::{SnrFading, ser_mgf, ser_fading, ber_binary_fading, ber_noncoherent_binary_fading}`"
+  modules: "`comnum_mapping::theory::{SnrFading, ser_mgf, ser_fading, ber_binary_fading, ber_noncoherent_binary_fading}`, `comnum_channel::fading::{flat_gains, Flat}`, `comnum_core::channel::FlatFading`"
   summary: "Simon & Alouini 1998 Tables 2-3, eq. (64); Alouini & Goldsmith 1999 eqs. (24), (49), (64); simulated Rice and Nakagami-m within the sampling error"
   evidence:
     - closed_form: "cards [`alouini1999_ser_fading`](../validation/cards/alouini1999_ser_fading.yaml) and [`alouini1999_ber_binary_fading`](../validation/cards/alouini1999_ber_binary_fading.yaml) (Alouini & Goldsmith, *IEEE Trans. Commun.* 47(9), 1999: the closed forms (24), (49) and Appendix B (64) of BPSK and square QAM over Rayleigh and Nakagami-m fading within 1e-9 of the MGF quadrature), [`simon1998_noncoherent_rayleigh`](../validation/cards/simon1998_noncoherent_rayleigh.yaml) (Simon & Alouini, *Proc. IEEE* 86(9), 1998, eq. (64): DPSK and noncoherent BFSK over Rayleigh fading, exact)"
-    - closed_form: "card [`simon1998_mgf_fading`](../validation/cards/simon1998_mgf_fading.yaml) (`validation/tests/wireless_channels/simon1998.rs`: the simulated BER of BPSK and SER of 16-QAM over Rice (K = 3, 10) and Nakagami-m (m = 0.5, 2, 4) fading within 2.5 % of the averages of eq. (22), which the MGF integrals reproduce to 1e-9)"
-    - self: "`crates/comnum-mapping/src/theory.rs::the_mgfs_are_the_laplace_transforms_of_their_densities` (the MGFs against the numerical transforms of the densities within 1e-6), `::the_limits_of_the_fading_families_are_rayleigh_and_awgn`"
-  gaps: "• no published curve is compared: both papers give the method without numerical values<br>• one branch, or maximal-ratio combining of identical branches: no equal-gain combining, no correlated branches, no log-normal or composite shadowing<br>• DQPSK and M-DPSK over fading (the Marcum-Q integrals) are not implemented; no Nakagami-m or Hoyt fading block of the channel crate"
+    - closed_form: "card [`simon1998_mgf_fading`](../validation/cards/simon1998_mgf_fading.yaml) (`validation/tests/wireless_channels/simon1998.rs`: the simulated BER of BPSK and SER of 16-QAM over Rice (K = 3, 10) and Nakagami-m (m = 0.5, 2, 4) fading within 4.5 % of the averages of eq. (22), which the MGF integrals reproduce to 1e-9)"
+    - closed_form: "`specs/validation/flat_fading.yaml` (CI): the declarative block `flat_fading` (`comnum_channel::fading::flat_gains`), BPSK over Rayleigh, Rice (K = 3, 10), Nakagami-m (m = 0.5, 2) and Hoyt (q = 0.5) fading from 0 to 15 dB, every simulated BER inside the 99.9 % interval of its MGF average"
+    - self: "`crates/comnum-channel/src/fading.rs::the_flat_fading_gains_have_the_moments_of_their_distributions` (the second and fourth moments of the gains of every distribution), `crates/comnum-mapping/src/theory/fading.rs::the_mgfs_are_the_laplace_transforms_of_their_densities` (the MGFs against the numerical transforms of the densities within 1e-6), `::the_limits_of_the_fading_families_are_rayleigh_and_awgn`"
+  gaps: "• no published curve is compared: both papers give the method without numerical values<br>• one branch, or maximal-ratio combining of identical branches: no equal-gain combining, no correlated branches, no log-normal or composite shadowing<br>• DQPSK and M-DPSK over fading (the Marcum-Q integrals) are not implemented"
 - theme: Foundations
   name: "Differential PSK"
   modules: "`comnum_mapping::differential`, `comnum_mapping::theory::ber_dpsk`"
@@ -412,7 +413,7 @@
   evidence:
     - curve: "`validation/tests/wireless_channels/basar2019.rs::the_simulated_ser_follows_eq_17_as_in_fig_7_of_basar_2019` (Basar et al., *IEEE Access*, 2019, Fig. 7: the simulated SER of BPSK within 0.1 dB of eq. (17) for N = 32 to 256, 6.1 to 6.5 dB per doubling of N; ignored), `::eq_17_lies_below_its_bound_and_awgn_as_in_fig_6_of_basar_2019` (Fig. 6, eqs. (17)–(18))"
     - closed_form: "`crates/comnum-channel/src/ris.rs::the_mean_snr_of_co_phased_elements_is_eq_15`, `::the_mgf_is_that_of_eq_14_of_basar`"
-    - closed_form: "`crates/comnum-mapping/src/theory.rs::the_ser_of_a_constant_snr_is_that_of_awgn` (the MGF approach against the closed forms over AWGN)"
+    - closed_form: "`crates/comnum-mapping/src/theory/mod.rs::the_ser_of_a_constant_snr_is_that_of_awgn` (the MGF approach against the closed forms over AWGN)"
   gaps: "• i.i.d. Rayleigh hops without line of sight only; no path loss, no phase quantisation of the elements<br>• the QAM SER of eq. (21) is not compared with a figure<br>• below 32 elements eq. (17) is pessimistic (11.3 dB at N = 4): the Gaussian approximation, not the code"
 - theme: Optical
   name: "Fibre: linear, split-step Fourier, Manakov, back-propagation"
@@ -443,7 +444,7 @@
   evidence:
     - curve: "`validation/tests/fiber/carena2014.rs::sci_of_pm_qpsk_follows_fig_1a_of_carena_2014` (Carena et al., *Opt. Express* 22(13), 2014, Fig. 1(a) at 1, 10, 20 and 50 spans, within 0.2 dB (GN) and 0.25 dB (EGN); ignored), `::egn_correction_is_the_first_order_perturbation_of_qpsk` (ignored)"
     - claim: "`validation/tests/fiber/dar2014.rs::fon_of_qpsk_and_16qam_follows_sec_3_of_dar_2014` (Dar et al., *Opt. Express*, 2014, Sec. 3: the GN error of QPSK and QPSK against 16-QAM after 500 km, four amplification schemes, within 0.72 dB; ignored), `::the_split_step_simulation_confirms_sec_3_of_dar_2014` (the split-step simulation of the distributed case: 9.95 and 5.78 dB against 10 and 6 dB, Gaussian symbols within 0.16 dB of the GN model; ignored)"
-    - closed_form: "`crates/comnum-channel/src/optical/gn.rs::one_span_of_pm_qpsk_has_the_sci_of_carena`, `::the_moments_of_the_formats_are_those_of_carena`"
+    - closed_form: "`crates/comnum-channel/src/optical/gn/mod.rs::one_span_of_pm_qpsk_has_the_sci_of_carena`, `::the_moments_of_the_formats_are_those_of_carena`"
     - recording: "GNPy 3.0, recorded: `tests/oracle/test_gnpy_oracle.py::test_generalized_gn_model_with_counter_pumps` (0.02 dB)"
     - closed_form: "the Manakov simulation against the GN model (Poggiolini, *J. Lightw. Technol.* 30(24), 2012) and the EGN model: `specs/wdm_gn.yaml` (14 checks within 0.3 dB; `tests/test_performance.py::test_specification_reproduces_its_closed_forms[wdm_gn]`)"
     - curve: "`validation/tests/fiber/semrau2019.rs` (Semrau, Killey & Bayvel, *J. Lightw. Technol.* 37(9), 2019: the closed form of the ISRS GN model, eqs. (5), (10), (11), against the dashed curves of Figs. 4a, 4b and 5 on the 251-channel, 10 THz link of Table I: within 0.12 dB without ISRS and 0.25 dB with it away from the band edges after one span, the change by ISRS against the power transfer within 0.14 dB, the coherent and incoherent accumulation over six spans within 0.17 and 0.3 dB; ε = 0.151 by Poggiolini 2012 eq. (22) against the paper's 0.15)"

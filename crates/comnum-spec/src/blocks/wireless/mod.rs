@@ -52,7 +52,7 @@ mod fading;
 mod mimo;
 mod ofdm;
 
-use fading::{CdlBlock, CdlSpec, Rayleigh, RayleighSpec, TdlBlock, TdlSpec};
+use fading::{CdlBlock, CdlSpec, FlatFadingBlock, FlatFadingSpec, Rayleigh, RayleighSpec, TdlBlock, TdlSpec};
 use mimo::{Detection, DetectorSpec, MimoRx, MimoTx, MimoTxSpec};
 use ofdm::{OfdmRx, OfdmRxSpec, OfdmTx, OfdmTxSpec};
 
@@ -100,6 +100,14 @@ pub(super) fn blocks() -> Vec<Extension> {
             needs[Samples],
             gives[Csi],
             |q, _, _| Ok(Box::new(Rayleigh { p: q })),
+        ),
+        builtin!(
+            "flat_fading",
+            "Flat fading of every stream by its own gain, Rayleigh, Rice, Nakagami-m or Hoyt; records the gains for a genie-aided receiver.",
+            FlatFadingSpec,
+            needs[Samples],
+            gives[Csi],
+            |q, _, _| Ok(Box::new(FlatFadingBlock::new(&q)?)),
         ),
         builtin!(
             "tdl",

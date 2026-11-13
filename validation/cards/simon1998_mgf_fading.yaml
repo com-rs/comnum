@@ -27,7 +27,7 @@ why: >
   7e-4), a relative standard deviation of 6 %: the factor 1.2 is three of them; the
   other cases count 1200 errors and more.
 findings:
-  - "the ten simulated error rates are within 2.5 % of their MGF averages (a sampling error of 2 to 6 % at one standard deviation), and the MGF averages within 1e-9 of the numerical integrals of the densities"
+  - "the ten simulated error rates are within 4.5 % of their MGF averages (a sampling error of 2 to 6 % at one standard deviation), and the MGF averages within 1e-9 of the numerical integrals of the densities"
 cases:
   - {inputs: {signal: bpsk, fading: rice, parameter: 3.0}, expected: 7.610770e-3, tolerance: {factor: 1.2}}
   - {inputs: {signal: bpsk, fading: rice, parameter: 10.0}, expected: 7.014440e-4, tolerance: {factor: 1.2}}

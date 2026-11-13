@@ -34,8 +34,8 @@
   module: comnum_mapping::theory
   tested: "Table I verbatim; the exact BER of Gray PAM, square and rectangular QAM, eqs. (9)-(22); Fig. 2"
   tests:
-    - crates/comnum-mapping/src/theory.rs::cho_2002_table_1
-    - crates/comnum-mapping/src/theory.rs::cho_2002_fig_2_cost_of_an_extra_bit
+    - crates/comnum-mapping/src/theory/mod.rs::cho_2002_table_1
+    - crates/comnum-mapping/src/theory/mod.rs::cho_2002_fig_2_cost_of_an_extra_bit
   badge: green
   remarks:
     - "\"4-5 dB per extra bit\" at 1e-3 holds from 4- to 32-PAM; the step is 3.73 dB from 2 to 4 and above 5 dB beyond 32"
@@ -714,12 +714,14 @@
   area: Wireless channels
   ref: "M. K. Simon, M.-S. Alouini, A unified approach to the performance analysis of digital communication over generalized fading channels, Proc. IEEE 86(9), 1860-1877, 1998"
   module: comnum_mapping::theory::{SnrFading, ber_binary_mgf, ber_noncoherent_binary_mgf, ser_mgf}
-  tested: "Tables 2 and 3: the MGFs of Rice, Nakagami-m and Hoyt fading against the numerical Laplace transforms of their densities within 1e-6, their limits to Rayleigh and to no fading; eq. (22) against eqs. (23) and (46): the simulated BER of BPSK and SER of 16-QAM over Rice (K = 3, 10) and Nakagami-m (m = 0.5, 2, 4) fading within 2.5 % (the sampling error) of the MGF averages, which are within 1e-9 of the numerical averages over the densities; eq. (64) at zeta = 0: DPSK and noncoherent BFSK over Rayleigh fading, exact"
+  tested: "Tables 2 and 3: the MGFs of Rice, Nakagami-m and Hoyt fading against the numerical Laplace transforms of their densities within 1e-6, their limits to Rayleigh and to no fading; eq. (22) against eqs. (23) and (46): the simulated BER of BPSK and SER of 16-QAM over Rice (K = 3, 10) and Nakagami-m (m = 0.5, 2, 4) fading within 4.5 % (the sampling error) of the MGF averages, which are within 1e-9 of the numerical averages over the densities; eq. (64) at zeta = 0: DPSK and noncoherent BFSK over Rayleigh fading, exact"
   tests:
     - validation/tests/wireless_channels/simon1998.rs::the_simulated_error_rates_over_rice_and_nakagami_fading_are_their_mgf_averages
+    - specs/validation/flat_fading.yaml
+    - crates/comnum-channel/src/fading.rs::the_flat_fading_gains_have_the_moments_of_their_distributions
     - validation/cards/simon1998_noncoherent_rayleigh.yaml
-    - crates/comnum-mapping/src/theory.rs::the_mgfs_are_the_laplace_transforms_of_their_densities
-    - crates/comnum-mapping/src/theory.rs::the_limits_of_the_fading_families_are_rayleigh_and_awgn
+    - crates/comnum-mapping/src/theory/fading.rs::the_mgfs_are_the_laplace_transforms_of_their_densities
+    - crates/comnum-mapping/src/theory/fading.rs::the_limits_of_the_fading_families_are_rayleigh_and_awgn
   badge: green
   not_covered: "equal-gain combining (eqs. (27)-(34)), correlated branches (eqs. (35)-(42)), the log-normal and composite channels, the Marcum-Q integrals of DQPSK (eq. (63) with zeta > 0) and of M-DPSK (eq. (67)); the paper publishes no numerical value"
   remarks:
@@ -732,7 +734,7 @@
   tests:
     - validation/cards/alouini1999_ser_fading.yaml
     - validation/cards/alouini1999_ber_binary_fading.yaml
-    - crates/comnum-mapping/src/theory.rs::the_closed_forms_of_alouini_and_goldsmith_1999_hold
+    - crates/comnum-mapping/src/theory/fading.rs::the_closed_forms_of_alouini_and_goldsmith_1999_hold
   badge: green
   not_covered: "the log-normal and composite MGFs by Gauss-Hermite (eqs. (31)-(34)), the closed forms of several Rayleigh branches (eqs. (50)-(53)), the non-integer m of eq. (63); the paper publishes no numerical value"
 - id: basar2019
@@ -811,7 +813,7 @@
   tested: "the SCI of PM-QPSK of Fig. 1(a) at 1, 10, 20 and 50 spans (GN within 0.2 dB, EGN within 0.25 dB); the moments of the formats"
   tests:
     - validation/tests/fiber/carena2014.rs::sci_of_pm_qpsk_follows_fig_1a_of_carena_2014
-    - crates/comnum-channel/src/optical/gn.rs::the_moments_of_the_formats_are_those_of_carena
+    - crates/comnum-channel/src/optical/gn/mod.rs::the_moments_of_the_formats_are_those_of_carena
   badge: green
   remarks:
     - "between 2 and 5 spans the EGN curve of Fig. 1(a) lies up to 0.9 dB below the formulas of the same paper"
@@ -945,7 +947,7 @@
     - validation/tests/fiber/semrau2019.rs::the_closed_form_of_eta_1_follows_the_dashed_curves_of_fig_4a
     - validation/tests/fiber/semrau2019.rs::the_change_of_eta_1_by_isrs_follows_the_dashed_curves_of_fig_4b
     - validation/tests/fiber/semrau2019.rs::the_accumulation_over_six_spans_follows_the_dashed_curves_of_fig_5
-    - crates/comnum-channel/src/optical/gn.rs::the_coherence_factor_of_table_i_is_the_papers_0_15
+    - crates/comnum-channel/src/optical/gn/mod.rs::the_coherence_factor_of_table_i_is_the_papers_0_15
   badge: orange
   not_covered: "the integration curves and the SSFM markers of Figs. 4a, 4b and 5 against GnModel with ISRS (its grid of 10 MHz over 10 THz, 10^6 nodes and 5 10^11 cells per channel, more than 15 minutes for one channel without the Raman profiles, stopped unfinished: not run); Fig. 3 (the XPM of one interferer against its separation; the values were not read); the mesh network of Figs. 6-7 (the random loading of the spans is not given); the sloped launch of Fig. 8"
   remarks:
@@ -1043,7 +1045,7 @@
     - specs/validation/hager2021_fig5.yaml
     - specs/validation/hager2021_fig8.yaml
     - validation/tests/fiber/hager2021.rs::the_split_step_converges_to_its_fine_step_solution_on_the_link_of_fig_8
-    - crates/comnum-math/src/nlse/mod.rs::hager_2021_example_1_modified_logarithmic_steps
+    - crates/comnum-math/src/nlse/steps.rs::hager_2021_example_1_modified_logarithmic_steps
   badge: orange
   not_covered: "the learned DBP (LDBP, Figs. 5-9), the contribution of the paper: comnum has no trained blocks; Fig. 9 (WDM), Figs. 6-7"
   remarks:
@@ -1056,7 +1058,7 @@
   tested: "eq. (6), the logarithmic steps, to 1e-10 (L = 50 km, 0.25 dB/km, K = 50 of Fig. 3); every gamma_n of eq. (5) equal; Sec. III and Fig. 3: past the true efficiency the fictitious four-wave mixing of eq. (5) stays near the floor 1/K (its mean 0.92/K, its largest 0.19 from 2 to 40 rad/km) where equal steps reach peaks of 1 (mean 1.6/K)"
   tests:
     - crates/comnum-math/src/nlse/mod.rs::logarithmic_steps_are_eq_6_of_bosco_and_check_their_inputs
-    - crates/comnum-math/src/nlse/mod.rs::bosco_2000_fig_3_logarithmic_steps_keep_the_fictitious_fwm_near_1_over_k
+    - crates/comnum-math/src/nlse/steps.rs::bosco_2000_fig_3_logarithmic_steps_keep_the_fictitious_fwm_near_1_over_k
   badge: green
   not_covered: "Figs. 1-2 (the spectra of unequally spaced carriers, not specified) and eq. (9) (the number of steps for a given suppression)"
 - id: banelli2000

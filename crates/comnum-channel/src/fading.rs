@@ -11,8 +11,10 @@
 //! against the rate the delays and Doppler shifts were put on). It is implemented by
 //! [`Mimo`] (one tap at delay 0), [`crate::multipath::Tdl`],
 //! [`crate::multipath::DelayDopplerModel`] and [`crate::cdl::Cdl`]; the [`Propagate`]
-//! impls of the last three are [`Fading::fade_into`]. [`Rayleigh`] fades every stream by
-//! its own gain (any number of streams, no antenna dimension) and stays apart.
+//! impls of the last three are [`Fading::fade_into`]. [`Flat`] and [`Rayleigh`] fade
+//! every stream by its own gain (any number of streams, no antenna dimension) and stay
+//! apart; [`flat_gains`] draws that gain from a [`FlatFading`]: Rayleigh, Rice,
+//! Nakagami-m or Hoyt.
 //!
 //! [`Mimo`] draws the $n_{r} \times n_{t}$ matrix of a flat MIMO channel — Rayleigh or
 //! Rician, with or without antenna correlation (see [`crate::spatial`]) — constant over
@@ -135,38 +137,90 @@ pub trait Fading {
     }
 }
 
-/// Flat Rayleigh fading with a block coherence of `coherence` samples.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub struct Rayleigh {
+pub use comnum_core::channel::FlatFading;
+
+/// One gain of unit mean power, the parameters of `fading` checked.
+fn flat_gain(fading: FlatFading, rng: &mut SimRng) -> C64 {
+    match fading {
+        FlatFading::Rayleigh => rng.complex_gaussian(),
+        FlatFading::Rice { k_factor } => {
+            rng.complex_gaussian() * (1.0 / (1.0 + k_factor)).sqrt() + (k_factor / (1.0 + k_factor)).sqrt()
+        }
+        FlatFading::Nakagami { m } => {
+            let amplitude = (rng.gamma(m) / m).sqrt();
+            comnum_math::cis(2.0 * std::f64::consts::PI * rng.uniform()) * amplitude
+        }
+        FlatFading::Hoyt { q } => {
+            let scale = (1.0 / (1.0 + q * q)).sqrt();
+            C64::new(rng.gaussian() * scale, rng.gaussian() * q * scale)
+        }
+    }
+}
+
+/// `n` gains of the flat fading `fading`, of unit mean power, one per block of
+/// `coherence` samples (`coherence = 1`: a new gain for every sample):
+///
+/// - Rayleigh: $h \sim \mathcal{CN}(0, 1)$;
+/// - Rice of factor $K$: a line of sight $\sqrt{K/(1 + K)}$ plus
+///   $\mathcal{CN}(0, 1/(1 + K))$;
+/// - Nakagami-m: $|h|^{2} \sim \Gamma(m)/m$ (a gamma variable of shape $m$ and mean 1)
+///   with a uniform phase;
+/// - Hoyt (Nakagami-q): a Gaussian of variance $1/(1 + q^{2})$ on the real axis and
+///   $q^{2}/(1 + q^{2})$ on the imaginary one.
+///
+/// # Errors
+/// [`Error::Config`] for an invalid parameter or a zero coherence.
+///
+/// # Examples
+/// ```
+/// use comnum_channel::fading::{FlatFading, flat_gains};
+/// use comnum_core::rng::Rng;
+/// let h = flat_gains(FlatFading::Nakagami { m: 2.0 }, 100_000, 1, &mut Rng::new(1))?;
+/// let power = h.iter().map(|g| g.norm_sqr()).sum::<f64>() / h.len() as f64;
+/// assert!((power - 1.0).abs() < 0.01);
+/// # Ok::<(), comnum_core::Error>(())
+/// ```
+pub fn flat_gains(fading: FlatFading, n: usize, coherence: usize, rng: &mut SimRng) -> Result<Vec<C64>> {
+    fading.check()?;
+    ensure(coherence >= 1, || "the coherence must be at least one sample".into())?;
+    let mut h = Vec::with_capacity(n);
+    let mut g = C64::new(0.0, 0.0);
+    for k in 0..n {
+        if k % coherence == 0 {
+            g = flat_gain(fading, rng);
+        }
+        h.push(g);
+    }
+    Ok(h)
+}
+
+/// Flat fading of every stream by its own gain, drawn from `fading` and constant over
+/// blocks of `coherence` samples.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct Flat {
+    /// The distribution of the gains.
+    pub fading: FlatFading,
     /// Number of consecutive samples sharing one gain (at least 1).
     pub coherence: usize,
 }
 
-impl Rayleigh {
+impl Flat {
     /// Fade `x` and return the faded signal with the gain of every stream and sample.
     ///
     /// # Errors
-    /// [`Error::Config`] for a zero coherence.
+    /// As [`flat_gains`].
     pub fn fade(&self, x: &Signal, rng: &mut SimRng) -> Result<(Signal, Vec<Vec<C64>>)> {
         let mut out = Signal::zeros(x.n_streams(), x.len(), x.sample_rate());
         let gains = self.fade_into(x, rng, &mut out)?;
         Ok((out, gains))
     }
 
-    /// [`Rayleigh::fade`] into `out`, reshaped to `x` (its storage reused): the gains.
+    /// [`Flat::fade`] into `out`, reshaped to `x` (its storage reused): the gains.
     fn fade_into(self, x: &Signal, rng: &mut SimRng, out: &mut Signal) -> Result<Vec<Vec<C64>>> {
-        ensure(self.coherence >= 1, || "the coherence must be at least one sample".into())?;
         out.resize(x.n_streams(), x.len(), x.sample_rate());
         let mut gains = Vec::with_capacity(x.n_streams());
         for s in 0..x.n_streams() {
-            let mut h = Vec::with_capacity(x.len());
-            let mut g = C64::new(0.0, 0.0);
-            for k in 0..x.len() {
-                if k % self.coherence == 0 {
-                    g = rng.complex_gaussian();
-                }
-                h.push(g);
-            }
+            let h = flat_gains(self.fading, x.len(), self.coherence, rng)?;
             for ((o, v), g) in out.as_array_mut().row_mut(s).iter_mut().zip(x.stream(s)).zip(&h) {
                 *o = v * g;
             }
@@ -176,9 +230,37 @@ impl Rayleigh {
     }
 }
 
-impl Propagate for Rayleigh {
+impl Propagate for Flat {
     fn propagate_into(&mut self, x: &Signal, rng: &mut SimRng, out: &mut Signal) -> Result<()> {
         self.fade_into(x, rng, out).map(drop)
+    }
+}
+
+/// Flat Rayleigh fading with a block coherence of `coherence` samples: [`Flat`] with
+/// [`FlatFading::Rayleigh`].
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct Rayleigh {
+    /// Number of consecutive samples sharing one gain (at least 1).
+    pub coherence: usize,
+}
+
+impl Rayleigh {
+    fn flat(self) -> Flat {
+        Flat { fading: FlatFading::Rayleigh, coherence: self.coherence }
+    }
+
+    /// Fade `x` and return the faded signal with the gain of every stream and sample.
+    ///
+    /// # Errors
+    /// [`Error::Config`] for a zero coherence.
+    pub fn fade(&self, x: &Signal, rng: &mut SimRng) -> Result<(Signal, Vec<Vec<C64>>)> {
+        self.flat().fade(x, rng)
+    }
+}
+
+impl Propagate for Rayleigh {
+    fn propagate_into(&mut self, x: &Signal, rng: &mut SimRng, out: &mut Signal) -> Result<()> {
+        self.flat().propagate_into(x, rng, out)
     }
 }
 
@@ -350,6 +432,66 @@ impl Propagate for Mimo {
 mod tests {
     use super::*;
     use crate::spatial::exponential_correlation;
+
+    #[test]
+    fn the_flat_fading_gains_have_the_moments_of_their_distributions() {
+        let n = 400_000;
+        let mut r = Rng::new(11);
+        let moment = |h: &[C64], f: &dyn Fn(&C64) -> f64| h.iter().map(f).sum::<f64>() / h.len() as f64;
+        for fading in [
+            FlatFading::Rayleigh,
+            FlatFading::Rice { k_factor: 4.0 },
+            FlatFading::Nakagami { m: 0.5 },
+            FlatFading::Nakagami { m: 3.0 },
+            FlatFading::Hoyt { q: 0.5 },
+        ] {
+            let h = flat_gains(fading, n, 1, &mut r).unwrap();
+            let p2 = moment(&h, &|g| g.norm_sqr());
+            assert!((p2 - 1.0).abs() < 0.01, "{fading:?}: mean power {p2}");
+            // E|h|^4: 2 (Rayleigh), 1 + (1 + 2K)/(1 + K)^2 (Rice), (m + 1)/m (Nakagami),
+            // 2 + ((1 - q^2)/(1 + q^2))^2 (Hoyt)
+            let expected = match fading {
+                FlatFading::Rayleigh => 2.0,
+                FlatFading::Rice { k_factor: k } => 1.0 + (1.0 + 2.0 * k) / (1.0 + k).powi(2),
+                FlatFading::Nakagami { m } => (m + 1.0) / m,
+                FlatFading::Hoyt { q } => 2.0 + ((1.0 - q * q) / (1.0 + q * q)).powi(2),
+            };
+            let p4 = moment(&h, &|g| g.norm_sqr().powi(2));
+            assert!((p4 / expected - 1.0).abs() < 0.03, "{fading:?}: E|h|^4 {p4} against {expected}");
+        }
+        // the line of sight of Rice, the axes of Hoyt, the uniform phase of Nakagami
+        let h = flat_gains(FlatFading::Rice { k_factor: 4.0 }, n, 1, &mut r).unwrap();
+        assert!((moment(&h, &|g| g.re) - 0.8f64.sqrt()).abs() < 0.005);
+        let h = flat_gains(FlatFading::Hoyt { q: 0.5 }, n, 1, &mut r).unwrap();
+        assert!((moment(&h, &|g| g.re * g.re) - 0.8).abs() < 0.01 && (moment(&h, &|g| g.im * g.im) - 0.2).abs() < 0.01);
+        let h = flat_gains(FlatFading::Nakagami { m: 3.0 }, n, 1, &mut r).unwrap();
+        assert!(moment(&h, &|g| g.re).abs() < 0.005 && moment(&h, &|g| g.im).abs() < 0.005);
+        // the coherence, and the limits that are Rayleigh fading in distribution
+        let h = flat_gains(FlatFading::Nakagami { m: 2.0 }, 10, 4, &mut r).unwrap();
+        assert!(h[0] == h[3] && h[4] == h[7] && h[3] != h[4] && h[8] == h[9]);
+        // invalid inputs
+        assert!(flat_gains(FlatFading::Rayleigh, 4, 0, &mut r).is_err());
+        assert!(flat_gains(FlatFading::Rice { k_factor: -1.0 }, 4, 1, &mut r).is_err());
+        assert!(flat_gains(FlatFading::Nakagami { m: 0.2 }, 4, 1, &mut r).is_err());
+        assert!(flat_gains(FlatFading::Hoyt { q: 2.0 }, 4, 1, &mut r).is_err());
+    }
+
+    #[test]
+    fn rayleigh_is_the_flat_channel_of_rayleigh_gains_bit_for_bit() {
+        let x = Signal::from_streams(
+            &[vec![C64::new(1.0, 0.5); 64], vec![C64::new(-0.3, 2.0); 64]],
+            comnum_core::units::Hertz(1.0),
+        )
+        .unwrap();
+        let (a, ga) = Rayleigh { coherence: 4 }.fade(&x, &mut Rng::new(5)).unwrap();
+        let (b, gb) = Flat { fading: FlatFading::Rayleigh, coherence: 4 }.fade(&x, &mut Rng::new(5)).unwrap();
+        assert_eq!(a, b);
+        assert_eq!(ga, gb);
+        // the stream of draws of the former loop: one complex Gaussian per block
+        let mut r = Rng::new(5);
+        assert_eq!(ga[0][0], r.complex_gaussian());
+        assert_eq!(ga[0][4], r.complex_gaussian());
+    }
 
     #[test]
     fn gains_have_unit_power_and_the_requested_coherence() {
