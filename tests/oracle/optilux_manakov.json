@@ -23,7 +23,7 @@
   "beta3": 0.0,
   "d_ps_nm_km": 17.0,
   "fc_hz": 193100000000000.0,
-  "fs_hz": 512000000000.0,
+  "fs_hz": 256000000000.0,
   "gamma_w_km": 1.3,
   "span_km": 80.0,
   "step_km": 1.0
@@ -35,7 +35,7 @@
  "python": "3.12.15",
  "repository": "https://optilux.sourceforge.io/",
  "script": "tools/record_optilux.m (fiber with steptype symm, dzmax 1000 m, dphi1fwm false, stepupd nlp, dphimax 1e9; ampliflat with the gain alpha L)",
- "signal": "5 channels of 16-QAM at 32 GBd spaced by 50 GHz (comnum.wdm_grid), RRC roll-off 0.1, 16 samples per symbol, 2.0 dBm per channel split between two polarisations, 2048 symbols, seed 1 (comnum: the symbols of every channel and polarisation drawn in order from one generator)",
+ "signal": "3 channels of 16-QAM at 32 GBd spaced by 50 GHz (comnum.wdm_grid), RRC roll-off 0.1, 8 samples per symbol, 2.0 dBm per channel split between two polarisations, 512 symbols, seed 1 (comnum: the symbols of every channel and polarisation drawn in order from one generator)",
  "steps_per_span": {
   "kerr_10spans": [
    80,

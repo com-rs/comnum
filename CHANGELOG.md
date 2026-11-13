@@ -360,6 +360,12 @@ and follow [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- The recorded Manakov comparison with Optilux (`tests/oracle/optilux_manakov.npz`) is
+  0.5 MB instead of 4.0 MB: three channels at 8 samples per symbol and 2⁹ symbols
+  instead of five at 16 and 2¹¹, the sampling conditions kept (256 GS/s for a band of
+  135 GHz, a window of 16 ns for a walk-off of 11 ns). The agreement is the same:
+  7e-28 and 7e-26 with Optilux's nonlinear step after one and ten spans, 2e-10 and 2e-8
+  with the midpoint step, both solvers 4.1e-4 from the converged solution at 1 km.
 - `README.md` is shorter (195 lines for 351): a first result in ten lines, the three
   examples condensed, and the summary of the maturity table in place of the table,
   which stays in `docs/MATURITY.md` and in the documentation.
