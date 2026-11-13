@@ -1,10 +1,8 @@
 //! The split-step solver of the Manakov equation, [`ManakovSplitStep`]: two polarisations,
 //! the nonlinear rotation and the birefringence of the fibre.
 
-use super::{
-    FieldGain, Medium, NonlinearStep, StepRule, StepUpdate, logarithmic_boundary, manakov_rotation, mul, scale,
-    signal_bandwidth,
-};
+use super::steps::logarithmic_boundary;
+use super::{FieldGain, Medium, NonlinearStep, StepRule, StepUpdate, manakov_rotation, mul, scale, signal_bandwidth};
 use crate::fft;
 use crate::{C64, cis, effective_length};
 use comnum_core::{Error, Result, ensure, same_len};
