@@ -29,9 +29,9 @@ finite integral of the moment generating function (MGF) of the SNR,
    M_\\gamma\\!\\left(-\\frac{g}{\\sin^2\\theta}\\right) d\\theta,
    \\qquad g = 1 \\text{ for BPSK},
 
-and the MGF is known in closed form for every usual channel. The library evaluates it
-with :func:`comnum.theory_ber_binary_fading`, :func:`comnum.theory_ser_fading` and
-:func:`comnum.theory_ber_noncoherent_binary_fading`, for the channels
+and the MGF is known in closed form for every usual channel. In the library a channel
+is one object, :class:`comnum.Fading`, which draws the gains of a simulation
+(``gains``) and evaluates the averages (``ber``, ``ser``, ``ber_noncoherent``), for
 
 .. list-table::
    :header-rows: 1
@@ -80,39 +80,18 @@ def error_rate(trial, stream: str, tag: int) -> float:
     return errors / decisions
 
 
-def gains(fading: str, parameter: float, n: int, rng: comnum.Rng) -> np.ndarray:
-    """`n` gains of unit mean power drawn from the channel."""
-    if fading == "awgn":
-        return np.ones(n)
-    if fading == "rayleigh":
-        return rng.complex_noise(n, 1.0)
-    if fading == "rice":
-        k = parameter
-        return np.sqrt(k / (1 + k)) + rng.complex_noise(n, 1 / (1 + k))
-    if fading == "nakagami":
-        return np.sqrt(rng.gamma(parameter, n) / parameter)
-    if fading == "hoyt":
-        # a Gaussian of variances 1/(1 + q^2) on the real axis and q^2/(1 + q^2) on
-        # the imaginary one (Simon & Alouini 1998, Table 2)
-        q = parameter
-        return (rng.gaussian(n) + 1j * q * rng.gaussian(n)) / np.sqrt(1 + q * q)
-    raise ValueError(fading)
-
-
-def simulate(
-    c: comnum.Constellation, ebn0_db: float, fading: str, parameter: float, tag: int
-) -> float:
+def simulate(c: comnum.Constellation, ebn0_db: float, channel: comnum.Fading, tag: int) -> float:
     """The BER of the constellation `c` at the mean Eb/N0 over the channel, with
     coherent detection: the receiver divides by the gain and decides."""
     n0 = 1.0 / (comnum.db2lin(ebn0_db) * c.bits_per_symbol)
 
     def trial(rng: comnum.Rng) -> tuple[int, int]:
         tx = comnum.bits(BLOCK * c.bits_per_symbol, rng)
-        h = gains(fading, parameter, BLOCK, rng)
+        h = channel.gains(BLOCK, rng)
         y = h * c.map_bits(tx) + rng.complex_noise(BLOCK, n0)
         return int(np.count_nonzero(c.demap_bits(y / h) != tx)), tx.size
 
-    return error_rate(trial, f"ber-{fading}", tag)
+    return error_rate(trial, f"ber-{channel.kind}", tag)
 
 
 # %%
@@ -126,7 +105,7 @@ eb = np.linspace(0, 40, 401)
 
 fig, ax = plt.subplots()
 for c, name, kind, marker in [(bpsk, "BPSK", "psk", "o"), (qam16, "16-QAM", "qam", "s")]:
-    sim = [simulate(c, e, "awgn", 0.0, i) for i, e in enumerate(eb_awgn)]
+    sim = [simulate(c, e, comnum.Fading("awgn"), i) for i, e in enumerate(eb_awgn)]
     (line,) = ax.semilogy(
         eb, comnum.theory_ber(len(c), eb, kind), linewidth=1.4, label=f"{name}, theory"
     )
@@ -157,32 +136,28 @@ fig.tight_layout()
 # sight (Rice) or a less severe distribution (Nakagami with :math:`m > 1`) brings the
 # curve back towards AWGN; the one-sided Gaussian (Nakagami :math:`m = 1/2`, Hoyt
 # :math:`q = 0`) is worse than Rayleigh. Every simulated point sits on the MGF average
-# of :func:`comnum.theory_ber_binary_fading`.
+# of :meth:`comnum.Fading.ber`.
+rayleigh = comnum.Fading("rayleigh")
+rice10 = comnum.Fading("rice", 10.0)
+nakagami2 = comnum.Fading("nakagami", 2.0)
 channels = [
-    ("rayleigh", 1.0, "Rayleigh", "o"),
-    ("rice", 3.0, "Rice, $K$ = 3", "s"),
-    ("rice", 10.0, "Rice, $K$ = 10", "D"),
-    ("nakagami", 0.5, "Nakagami, $m$ = 0.5", "v"),
-    ("nakagami", 2.0, "Nakagami, $m$ = 2", "^"),
-    ("nakagami", 4.0, "Nakagami, $m$ = 4", ">"),
-    ("hoyt", 0.5, "Hoyt, $q$ = 0.5", "p"),
+    (rayleigh, "Rayleigh", "o"),
+    (comnum.Fading("rice", 3.0), "Rice, $K$ = 3", "s"),
+    (rice10, "Rice, $K$ = 10", "D"),
+    (comnum.Fading("nakagami", 0.5), "Nakagami, $m$ = 0.5", "v"),
+    (nakagami2, "Nakagami, $m$ = 2", "^"),
+    (comnum.Fading("nakagami", 4.0), "Nakagami, $m$ = 4", ">"),
+    (comnum.Fading("hoyt", 0.5), "Hoyt, $q$ = 0.5", "p"),
 ]
 eb_fading = np.arange(0.0, 41.0, 4.0)
 fading_sims = {}
 
 fig, ax = plt.subplots(figsize=(7, 5))
 ax.semilogy(eb, comnum.theory_ber(2, eb, "psk"), color=GREY, linewidth=1.2, label="AWGN")
-for i, (fading, parameter, name, marker) in enumerate(channels):
-    param = None if fading == "rayleigh" else parameter
-    theory = comnum.theory_ber_binary_fading(eb, fading=fading, parameter=param)
-    sim = np.array(
-        [simulate(bpsk, e, fading, parameter, 100 * i + j) for j, e in enumerate(eb_fading)]
-    )
-    fading_sims[name] = (
-        comnum.theory_ber_binary_fading(eb_fading, fading=fading, parameter=param),
-        sim,
-    )
-    (line,) = ax.semilogy(eb, theory, linewidth=1.4)
+for i, (channel, name, marker) in enumerate(channels):
+    sim = np.array([simulate(bpsk, e, channel, 100 * i + j) for j, e in enumerate(eb_fading)])
+    fading_sims[name] = (channel.ber(eb_fading), sim)
+    (line,) = ax.semilogy(eb, channel.ber(eb), linewidth=1.4)
     keep = sim > 0
     ax.plot(
         eb_fading[keep],
@@ -222,36 +197,31 @@ es_points = np.arange(0.0, 41.0, 4.0)
 
 
 def simulate_ser(
-    c: comnum.Constellation, esn0_db: float, fading: str, parameter: float, tag: int
+    c: comnum.Constellation, esn0_db: float, channel: comnum.Fading, tag: int
 ) -> float:
     """The SER of the constellation `c` at the mean Es/N0 over the channel."""
     n0 = 1.0 / comnum.db2lin(esn0_db)
 
     def trial(rng: comnum.Rng) -> tuple[int, int]:
         labels, x = comnum.symbols(c, BLOCK, rng)
-        h = gains(fading, parameter, BLOCK, rng)
+        h = channel.gains(BLOCK, rng)
         y = h * x + rng.complex_noise(BLOCK, n0)
         return int(np.count_nonzero(c.decide(y / h) != labels)), BLOCK
 
-    return error_rate(trial, f"ser-{fading}", tag)
+    return error_rate(trial, f"ser-{channel.kind}", tag)
 
 
 fig, ax = plt.subplots()
 ax.semilogy(es, comnum.theory_ser_esn0(16, es, "qam"), color=GREY, linewidth=1.2, label="AWGN")
-for i, (fading, parameter, name, marker) in enumerate(
+for i, (channel, name, marker) in enumerate(
     [
-        ("rayleigh", 1.0, "Rayleigh", "o"),
-        ("rice", 10.0, "Rice, $K$ = 10", "D"),
-        ("nakagami", 2.0, "Nakagami, $m$ = 2", "^"),
+        (rayleigh, "Rayleigh", "o"),
+        (rice10, "Rice, $K$ = 10", "D"),
+        (nakagami2, "Nakagami, $m$ = 2", "^"),
     ]
 ):
-    param = None if fading == "rayleigh" else parameter
-    (line,) = ax.semilogy(
-        es, comnum.theory_ser_fading(16, es, "qam", fading=fading, parameter=param), linewidth=1.4
-    )
-    sim = np.array(
-        [simulate_ser(qam16, e, fading, parameter, 10 * i + j) for j, e in enumerate(es_points)]
-    )
+    (line,) = ax.semilogy(es, channel.ser(16, es, "qam"), linewidth=1.4)
+    sim = np.array([simulate_ser(qam16, e, channel, 10 * i + j) for j, e in enumerate(es_points)])
     keep = sim > 0
     ax.plot(
         es_points[keep],
@@ -284,7 +254,7 @@ fig.tight_layout()
 SLOW_BLOCK = 64
 
 
-def simulate_dpsk(ebn0_db: float, fading: str, parameter: float, tag: int) -> float:
+def simulate_dpsk(ebn0_db: float, channel: comnum.Fading, tag: int) -> float:
     """The BER of binary DPSK at the mean Eb/N0, the gain constant over `SLOW_BLOCK`
     symbols."""
     n0 = 1.0 / comnum.db2lin(ebn0_db)
@@ -294,28 +264,21 @@ def simulate_dpsk(ebn0_db: float, fading: str, parameter: float, tag: int) -> fl
         tx = comnum.bits(blocks * SLOW_BLOCK, rng).reshape(blocks, SLOW_BLOCK)
         # the differential encoding, a reference symbol first
         x = np.cumprod(np.hstack([np.ones((blocks, 1)), 1.0 - 2.0 * tx]), axis=1)
-        h = gains(fading, parameter, blocks, rng)[:, None]
+        h = channel.gains(blocks, rng)[:, None]
         y = h * x + rng.complex_noise(x.size, n0).reshape(x.shape)
         rx = (np.real(y[:, 1:] * np.conj(y[:, :-1])) < 0).astype(np.uint8)
         return int(np.count_nonzero(rx != tx)), tx.size
 
-    return error_rate(trial, f"dpsk-{fading}", tag)
+    return error_rate(trial, f"dpsk-{channel.kind}", tag)
 
 
 fig, ax = plt.subplots()
 ax.semilogy(eb, comnum.theory_ber_dpsk(2, eb), color=GREY, linewidth=1.2, label="AWGN")
-for i, (fading, parameter, name, marker) in enumerate(
-    [("rayleigh", 1.0, "Rayleigh", "o"), ("rice", 10.0, "Rice, $K$ = 10", "D")]
+for i, (channel, name, marker) in enumerate(
+    [(rayleigh, "Rayleigh", "o"), (rice10, "Rice, $K$ = 10", "D")]
 ):
-    param = None if fading == "rayleigh" else parameter
-    (line,) = ax.semilogy(
-        eb,
-        comnum.theory_ber_noncoherent_binary_fading(eb, fading=fading, parameter=param),
-        linewidth=1.4,
-    )
-    sim = np.array(
-        [simulate_dpsk(e, fading, parameter, 10 * i + j) for j, e in enumerate(eb_fading)]
-    )
+    (line,) = ax.semilogy(eb, channel.ber_noncoherent(eb), linewidth=1.4)
+    sim = np.array([simulate_dpsk(e, channel, 10 * i + j) for j, e in enumerate(eb_fading)])
     keep = sim > 0
     ax.plot(
         eb_fading[keep],
@@ -327,7 +290,7 @@ for i, (fading, parameter, name, marker) in enumerate(
     )
 ax.semilogy(
     eb,
-    comnum.theory_ber_binary_fading(eb, fading="rayleigh"),
+    rayleigh.ber(eb),
     color=MUTED,
     linestyle=":",
     linewidth=1.2,
@@ -374,9 +337,7 @@ def simulate_mrc(ebn0_db: float, branches: int, tag: int) -> float:
 fig, ax = plt.subplots()
 ax.semilogy(eb, comnum.theory_ber(2, eb, "psk"), color=GREY, linewidth=1.2, label="AWGN")
 for i, (branches, marker) in enumerate([(1, "o"), (2, "s"), (4, "D")]):
-    (line,) = ax.semilogy(
-        eb, comnum.theory_ber_binary_fading(eb, fading="rayleigh", branches=branches), linewidth=1.4
-    )
+    (line,) = ax.semilogy(eb, rayleigh.ber(eb, branches=branches), linewidth=1.4)
     sim = np.array([simulate_mrc(e, branches, 10 * i + j) for j, e in enumerate(eb_fading)])
     keep = sim > 0
     ax.plot(
@@ -387,7 +348,7 @@ for i, (branches, marker) in enumerate([(1, "o"), (2, "s"), (4, "D")]):
         markeredgecolor=BACKGROUND,
         label=f"$L$ = {branches}",
     )
-nakagami = comnum.theory_ber_binary_fading(eb + 10 * np.log10(4), fading="nakagami", parameter=4.0)
+nakagami = comnum.Fading("nakagami", 4.0).ber(eb + 10 * np.log10(4))
 ax.semilogy(
     eb,
     nakagami,
@@ -425,29 +386,12 @@ def ebn0_at(f, target: float = TARGET) -> float:
     return lo
 
 
-rows = [
-    ("AWGN, BPSK", lambda e: comnum.theory_ber(2, e, "psk")),
-    ("Rayleigh", lambda e: comnum.theory_ber_binary_fading(e, fading="rayleigh")),
-    ("Rice, K = 3", lambda e: comnum.theory_ber_binary_fading(e, fading="rice", parameter=3.0)),
-    ("Rice, K = 10", lambda e: comnum.theory_ber_binary_fading(e, fading="rice", parameter=10.0)),
-    (
-        "Nakagami, m = 0.5",
-        lambda e: comnum.theory_ber_binary_fading(e, fading="nakagami", parameter=0.5),
-    ),
-    (
-        "Nakagami, m = 2",
-        lambda e: comnum.theory_ber_binary_fading(e, fading="nakagami", parameter=2.0),
-    ),
-    ("Hoyt, q = 0.5", lambda e: comnum.theory_ber_binary_fading(e, fading="hoyt", parameter=0.5)),
-    ("Rayleigh, DPSK", lambda e: comnum.theory_ber_noncoherent_binary_fading(e, fading="rayleigh")),
-    (
-        "Rayleigh, MRC L = 2",
-        lambda e: comnum.theory_ber_binary_fading(e, fading="rayleigh", branches=2),
-    ),
-    (
-        "Rayleigh, MRC L = 4",
-        lambda e: comnum.theory_ber_binary_fading(e, fading="rayleigh", branches=4),
-    ),
+rows = [("AWGN, BPSK", lambda e: comnum.theory_ber(2, e, "psk"))]
+rows += [(name.replace("$", ""), channel.ber) for channel, name, _ in channels]
+rows += [
+    ("Rayleigh, DPSK", rayleigh.ber_noncoherent),
+    ("Rayleigh, MRC L = 2", lambda e: rayleigh.ber(e, branches=2)),
+    ("Rayleigh, MRC L = 4", lambda e: rayleigh.ber(e, branches=4)),
 ]
 reference = ebn0_at(rows[0][1])
 for name, f in rows:

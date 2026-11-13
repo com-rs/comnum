@@ -8,6 +8,26 @@ and follow [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Flat fading as one object, for the simulation and for the theory:
+  - Rust: `comnum_core::channel::FlatFading` (Rayleigh, Rice, Nakagami-m, Hoyt) names
+    the distribution, once, for the medium and for the theory;
+    `comnum_channel::fading::flat_gains` draws its gains of unit mean power, and
+    `Flat { fading, coherence }` fades every stream by its own gain (`Rayleigh` is `Flat`
+    with Rayleigh gains, bit for bit); `SnrFading` converts from it (`From`, `gain_distribution`).
+  - Specifications: the block `flat_fading` (`fading`, `parameter`,
+    `coherence_samples`, `seed`), which records the gains for a genie-aided receiver,
+    and the theory function `ber_fading` of the expectations.
+    `specs/validation/flat_fading.yaml` (CI) checks BPSK over six channels against the
+    MGF averages, every point inside the 99.9 % interval.
+  - Python: `comnum.Fading(kind, parameter)` with `gains`, `mgf`, `ber`, `ser` and
+    `ber_noncoherent`; the `theory_*_fading` functions take it as `fading=`.
+- Thematic namespaces in Python, generated from the sections of the API reference
+  (`tools/gen_namespaces.py`, checked by `just check`): `comnum.theory` (the closed
+  forms without their prefix, `comnum.theory.ber`), `comnum.coding`,
+  `comnum.waveforms`, `comnum.mimo`, `comnum.channels`, `comnum.optical`,
+  `comnum.hardware`, `comnum.dsp`, `comnum.metrics`, `comnum.systems`. Every name stays
+  at the top level: nothing changes for existing code.
+
 - `Rng.gamma(shape, n)` in Python, the gamma draws of `Rng::gamma` (the power of a
   Nakagami-m fading of unit mean is `gamma(m) / m`).
 - The gallery example `optical/plot_09_split_step_fourier.py`: the split-step Fourier
@@ -340,6 +360,9 @@ and follow [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- `README.md` is shorter (195 lines for 351): a first result in ten lines, the three
+  examples condensed, and the summary of the maturity table in place of the table,
+  which stays in `docs/MATURITY.md` and in the documentation.
 - `GardnerLoop::run` returns a `Result`: a loop that diverges (a signal far from unit
   power, gains too large) is `Error::Numerical` instead of samples that are not numbers
   or a call that never returns (Python: `gardner_clock_recovery` raises `ArithmeticError`).

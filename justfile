@@ -7,7 +7,7 @@ set windows-shell := ["bash", "-cu"]
 
 # The specifications of specs/validation that `just check` and CI verify (the only list:
 # CI runs `just verify-ci`)
-ci_specs := "specs/validation/proakis_awgn.yaml specs/validation/information_rates.yaml specs/validation/hager2021_fig5.yaml specs/validation/msk_bpsk.yaml specs/validation/thompson2008_eq15.yaml"
+ci_specs := "specs/validation/proakis_awgn.yaml specs/validation/information_rates.yaml specs/validation/hager2021_fig5.yaml specs/validation/msk_bpsk.yaml specs/validation/thompson2008_eq15.yaml specs/validation/flat_fading.yaml"
 
 # The Python environment .venv at the versions of uv.lock: the package, built by maturin,
 # with the dependency groups test and lint (`uv sync --group docs` adds the documentation;
@@ -68,6 +68,7 @@ check-python:
     python tools/highlights.py --check
     python tools/gen_stubs.py --check
     python tools/gen_blocks.py --check
+    python tools/gen_namespaces.py --check
 
 # Rewrite every generated file, in the order they depend on each other: the stub and
 # the classes of comnum.blocks (from the extension, rebuilt), docs/API.md (which reads
@@ -76,6 +77,7 @@ check-python:
 regen: develop
     python tools/gen_stubs.py
     python tools/gen_blocks.py
+    python tools/gen_namespaces.py
     python tools/api_index.py
     python tools/literature_table.py
     python tools/maturity_table.py
@@ -124,6 +126,7 @@ maturity:
 gen-python: develop
     python tools/gen_stubs.py
     python tools/gen_blocks.py
+    python tools/gen_namespaces.py
 
 # The names defined in several modules: candidates for a shared helper
 api-duplicates:

@@ -56,6 +56,20 @@ Closed forms
    an array-like (and return an array of the same shape):
    ``comnum.theory_ber(16, np.arange(0, 12))``.
 
+Namespaces
+   Every name is at the top level, ``comnum.<name>``. The same objects are also grouped
+   by theme, to explore them by completion: ``comnum.theory`` (the closed forms without
+   their prefix: ``comnum.theory.ber`` is ``comnum.theory_ber``), ``comnum.coding``,
+   ``comnum.waveforms``, ``comnum.mimo``, ``comnum.channels``, ``comnum.optical``,
+   ``comnum.hardware``, ``comnum.dsp``, ``comnum.metrics`` and ``comnum.systems``, the
+   themes of the :doc:`API reference <api/index>`.
+
+Channels
+   A flat fading channel is one object for the simulation and for the theory:
+   ``ch = comnum.Fading("rice", 10.0)`` draws gains (``ch.gains(n, rng)``) and gives the
+   closed-form error rates over the same channel (``ch.ber(ebn0_db)``,
+   ``ch.ser(16, esn0_db)``). In a specification the block is ``flat_fading``.
+
 Errors
    Invalid parameters raise :class:`ValueError`, numerical failures
    :class:`ArithmeticError`.

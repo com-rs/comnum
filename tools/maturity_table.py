@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""The maturity of the modules of comnum, in `docs/MATURITY.md`, the table of `README.md`
+"""The maturity of the modules of comnum, in `docs/MATURITY.md`, the summary of `README.md`
 and `docs/python/maturity.rst`.
 
 The source is `validation/maturity.yaml`: one entry per module, with its theme, its
@@ -175,12 +175,9 @@ def render_maturity(entries: list[dict]) -> str:
 
 
 def render_readme(entries: list[dict]) -> str:
-    """The table of README.md, between its marker lines."""
-    out = ["", summary(entries)]
-    for theme, rows in by_theme(entries):
-        out += ["", f"**{theme}**", "", "| Module | Level | Strongest evidence |", "|---|---|---|"]
-        out += [f"| {e.get('short', e['name'])} | {e['level']} | {e['summary']} |" for e in rows]
-    return "\n".join([*out, ""]) + "\n"
+    """The summary of README.md, between its marker lines (the tables are in
+    docs/MATURITY.md and docs/python/maturity.rst)."""
+    return "\n".join(["", summary(entries), ""]) + "\n"
 
 
 def render_python(entries: list[dict]) -> str:

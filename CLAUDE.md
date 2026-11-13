@@ -66,7 +66,7 @@ is rewritten by `just regen`.
 - `python tools/literature_table.py --check` (docs/LITERATURE.md is up to date and every
   test named in `validation/literature.yaml` exists)
 - `python tools/maturity_table.py --check` (docs/MATURITY.md and the maturity tables of
-  README.md and docs/python/maturity.rst are generated from `validation/maturity.yaml`,
+  docs/python/maturity.rst and the summary of README.md are generated from `validation/maturity.yaml`,
   and every test it cites exists)
 - `python tools/cards.py --check` (every validation card of `validation/cards/` points at
   an existing runner, literature entry and theme folder; `just card <id>` reruns one)
@@ -81,6 +81,8 @@ is rewritten by `just regen`.
 - `python tools/gen_stubs.py --check` (the type stubs `python/comnum/_comnum.pyi` match the
   extension) and `python tools/gen_blocks.py --check` (`python/comnum/blocks.py`, the classes of the
   declarative blocks, matches the registry)
+- `python tools/gen_namespaces.py --check` (the thematic namespaces `python/comnum/<theme>.py`,
+  `comnum.theory`, `comnum.optical`…, match the sections of `docs/python/api/index.rst`)
 
 CI also runs the Python tests (`just test`: `maturin develop`, then `python -m pytest`;
 `just setup-py` makes `.venv` with `uv sync --locked`), `just deny` and the MSRV build.

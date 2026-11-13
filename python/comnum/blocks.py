@@ -1410,6 +1410,40 @@ class Rayleigh(Native):
         )
 
 
+class FlatFading(Native):
+    """Flat fading of every stream by its own gain, Rayleigh, Rice, Nakagami-m or Hoyt; records the gains for a genie-aided receiver.
+
+    Needs: samples. Gives: csi.
+
+    Args:
+        fading (str): the distribution of the gain, of unit mean power (Simon & Alouini 1998, Table 2); one of rayleigh, rice, nakagami, hoyt; default rayleigh
+        parameter (float): the Rician factor K (linear) of rice, m >= 1/2 of nakagami, q in [0, 1] of hoyt; default none for rayleigh
+        coherence_samples (int): samples per gain (0: one gain per trial, 1: fast fading) [samples]; default 0
+        seed (int): draw the gains from their own stream: the same realisation in every condition and trial; default the stream of the trial
+    """
+
+    needs = ("samples",)
+    gives = ("csi",)
+    param_names = ("fading", "parameter", "coherence_samples", "seed")
+
+    def __init__(
+        self,
+        *,
+        fading: str | Var = "rayleigh",
+        parameter: float | Var | None = None,
+        coherence_samples: int | Var = 0,
+        seed: int | Var | None = None,
+    ) -> None:
+        _init(
+            self,
+            "flat_fading",
+            fading=fading,
+            parameter=parameter,
+            coherence_samples=coherence_samples,
+            seed=seed,
+        )
+
+
 class Tdl(Native):
     """Tapped-delay-line multipath fading with Clarke/Jakes Doppler; records the taps for a genie-aided receiver.
 
@@ -1993,6 +2027,7 @@ __all__ = [
     "FecEncode",
     "Fiber",
     "Fir",
+    "FlatFading",
     "Foe",
     "FrameSync",
     "Gardner",

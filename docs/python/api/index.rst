@@ -312,6 +312,7 @@ Noise and flat fading
 
    awgn
    awgn_ebn0
+   Fading
    mimo_channel
    mimo_channels
    exponential_correlation
