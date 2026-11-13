@@ -175,23 +175,31 @@ macro_rules! container {
 
 container!(
     /// Hard bits, one row per stream; the values are 0 or 1.
-    Bits, u8, 0
+    Bits,
+    u8,
+    0
 );
 container!(
     /// Log-likelihood ratios, one row per stream (positive favours 0, see the module
     /// documentation).
-    Llr, f64, 0.0
+    Llr,
+    f64,
+    0.0
 );
 container!(
     /// Complex symbols at one sample per symbol, one row per stream.
-    Symbols, C64, C64::new(0.0, 0.0)
+    Symbols,
+    C64,
+    C64::new(0.0, 0.0)
 );
 container!(
     /// The labels of symbols, one row per stream: the index $a \in \\{0, \dots, M - 1\\}$
     /// of every symbol of an alphabet of $M$ (a chirp of chirp spread spectrum, a level of
     /// continuous-phase modulation, a point of a constellation), the input and the
     /// decisions of the waveforms that carry an index (`Modulate<Labels>`).
-    Labels, usize, 0
+    Labels,
+    usize,
+    0
 );
 
 /// A complex baseband waveform, `[n_streams, n_samples]`, with its sample rate.
