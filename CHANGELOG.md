@@ -360,6 +360,10 @@ and follow [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- README.md and the home page of the Python documentation open on the playground, with
+  a screenshot of a validation campaign run in the browser
+  (`docs/python/_static/readme/playground.png`); the README is shorter (the domains in
+  fewer words, positioning, stability and authorship in one section).
 - The recorded Manakov comparison with Optilux (`tests/oracle/optilux_manakov.npz`) is
   0.5 MB instead of 4.0 MB: three channels at 8 samples per symbol and 2⁹ symbols
   instead of five at 16 and 2¹¹, the sampling conditions kept (256 GS/s for a band of

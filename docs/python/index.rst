@@ -32,6 +32,21 @@ The details, and how these numbers are produced: :doc:`why`.
    y = comnum.awgn_ebn0(c.map_bits(bits), 10.0, 4, rng)
    comnum.ber(c.demap_bits(y), bits), comnum.theory_ber(16, 10.0, "qam")
 
+Try it in the browser
+---------------------
+
+.. image:: _static/readme/playground.png
+   :target: https://com-rs.github.io/comnum/playground/
+   :alt: The playground: a validation campaign edited and run in the browser, the published closed forms drawn over the simulated curves
+   :width: 100%
+
+The `playground <https://com-rs.github.io/comnum/playground/>`_ is the Rust engine
+compiled to WebAssembly: pick a campaign (the tutorials, the examples, the validation
+specifications with their published points), edit it, run it, read the curves and the
+signals along the chain. A point computed in the page is the point of ``comnum run``,
+to the last bit, and nothing leaves the browser. Every specification of the
+:doc:`user guide <user_guide/specifications>` and of the gallery opens there.
+
 Learning
 --------
 

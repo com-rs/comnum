@@ -26,16 +26,23 @@ the literature.
 The numbers are recomputed by `tools/highlights.py` from the recorded benchmark and the validation files; the details are on the page [Why comnum](https://com-rs.github.io/comnum/why.html).
 <!-- highlights:end -->
 
+## Try it in the browser
+
+[![The playground: a validation campaign edited and run in the browser, the published closed forms drawn over the simulated curves](https://raw.githubusercontent.com/com-rs/comnum/main/docs/python/_static/readme/playground.png)](https://com-rs.github.io/comnum/playground/)
+
+The [playground](https://com-rs.github.io/comnum/playground/) is the Rust engine compiled to WebAssembly: pick a
+campaign (the tutorials, the examples, the validation specifications with their
+published points), edit it, run it, read the curves and the signals along the chain.
+A point computed in the page is the point of `comnum run`, to the last bit, and nothing
+leaves the browser.
+
 ## Install
 
 ```bash
-pip install comnum            # Python 3.11 or later; wheels for Linux, macOS and Windows
-pip install "comnum[plot]"    # with matplotlib, for the plots
+pip install "comnum[plot]"    # Python 3.11 or later, NumPy only (plus matplotlib for the plots)
 cargo add comnum              # the Rust library (Rust 1.85 or later)
 cargo install comnum-spec     # the `comnum` command, which runs campaigns written as YAML files
 ```
-
-The Python package needs NumPy only.
 
 ## A first result
 
@@ -52,18 +59,17 @@ print(comnum.ber(c.demap_bits(y), bits), comnum.theory_ber(16, 10.0, "qam"))
 ```
 
 Next: [getting started](https://com-rs.github.io/comnum/getting_started.html), the
-[tutorials](https://com-rs.github.io/comnum/auto_tutorials/index.html), and a
-[gallery](https://com-rs.github.io/comnum/auto_examples/index.html) of classical
-results, each compared with its theory. A
-[playground](https://com-rs.github.io/comnum/playground/) runs campaigns in the browser.
+[tutorials](https://com-rs.github.io/comnum/auto_tutorials/index.html), the
+[user guide](https://com-rs.github.io/comnum/user_guide/index.html) and a
+[gallery](https://com-rs.github.io/comnum/auto_examples/index.html) of classical results, each compared with its
+theory or with a named figure of the literature.
 
 ## Three examples
 
-**A coded link, on every core.** The error rates of an LDPC code with 16-QAM over
-AWGN, run by the parallel runner until 100 block errors at each $E_b/N_0$, with their
-confidence intervals. The campaign is a YAML file (the link as a list of blocks, the
-grid, the stopping rule), run from Python, from the command line
-(`comnum run specs/bicm_ldpc.yaml`) or in Rust.
+**A coded link, on every core.** An LDPC code with 16-QAM over AWGN, run by the
+parallel runner until 100 block errors at each $E_b/N_0$, with confidence intervals.
+The campaign is a YAML file, run from Python, from the command line
+(`comnum run specs/bicm_ldpc.yaml`), in Rust or in the playground.
 
 ```python
 res = comnum.run_spec("specs/bicm_ldpc.yaml")
@@ -83,10 +89,9 @@ res.plot("power_dbm", "snr_db", by="receiver")
 
 ![Effective SNR against the launch power, CDC and DBP](https://raw.githubusercontent.com/com-rs/comnum/main/docs/python/_static/readme/optical_link.png)
 
-**A measured signal.** A capture of a software radio goes through the same blocks as
-a simulation: one second of an LTE carrier recorded by a HackRF One is brought to
-baseband, searched for a cell, and the master information block of its 100 frames is
-decoded.
+**A measured signal.** One second of an LTE carrier recorded by a HackRF One goes
+through the same blocks as a simulation: brought to baseband, searched for a cell, the
+master information block of its 100 frames decoded.
 
 ```python
 x, fs, meta = comnum.read_sigmf("capture", channel=0)
@@ -101,34 +106,29 @@ frames = comnum.lte_decode_mib(y, cell)                             # {"sfn", "p
 
 | Domain | Blocks |
 |---|---|
-| Mapping and coding | QAM, PSK, PAM and custom constellations with Gray labels, exact and max-log LLRs; CRC, scramblers, interleavers, convolutional (Viterbi, BCJR, tail biting), turbo, Reed–Solomon, BCH, LDPC and polar codes, the LDPC and polar codes of 5G NR with their rate matching; probabilistic amplitude shaping; closed-form error rates, capacities and finite-length bounds |
-| Waveforms | OFDM (resource grids, pilots, LS and LMMSE estimation, synchronisation), constant-envelope OFDM, CPM (MSK, GMSK), chirp spread spectrum (LoRa), FBMC/OQAM, UFMC, OTFS; PAPR and its reduction |
-| MIMO | detectors (ZF, MMSE, SIC, ML, sphere, K-best, message passing), space-time block codes, precoding and capacity, massive MIMO, channel estimation |
-| Wireless channels | AWGN, flat and correlated fading, the tapped and clustered delay lines of ITU-R M.1225 and 3GPP TR 38.901, delay–Doppler channels, path loss, reconfigurable surfaces |
-| Optical | fibre (linear, split-step Fourier, Manakov with PMD) and back-propagation, EDFA and Raman amplification, the GN and EGN models, lasers, modulators, photodiodes and coherent front ends, indoor optical wireless and free-space optics |
-| Hardware | power amplifiers and digital predistortion, phase noise, frequency and clock offsets, IQ imbalance, DAC and ADC |
-| Receiver DSP | pulse shaping and filters, rational resampling and the front end of a capture, carrier and clock recovery, adaptive equalisers, dispersion compensation, blind estimation (modulation, SNR, symbol rate) |
-| Metrics | error rates, SNR, EVM, mutual and generalised mutual information, the rates of a receiver's posterior, PSD, ACLR, PAPR |
+| Mapping and coding | QAM, PSK, PAM, Gray labels, exact and max-log LLRs; CRC, convolutional, turbo, Reed–Solomon, BCH, LDPC and polar codes (with those of 5G NR); probabilistic shaping; closed-form error rates, capacities and finite-length bounds |
+| Waveforms | OFDM, constant-envelope OFDM, CPM (MSK, GMSK), LoRa, FBMC/OQAM, UFMC, OTFS; PAPR and its reduction |
+| MIMO | ZF, MMSE, SIC, ML, sphere, K-best and message-passing detectors, space-time codes, precoding, capacity, massive MIMO |
+| Wireless channels | AWGN, flat and correlated fading, the delay lines of ITU-R M.1225 and 3GPP TR 38.901, delay–Doppler channels, path loss, reconfigurable surfaces |
+| Optical | fibre (linear, split-step Fourier, Manakov with PMD) and back-propagation, EDFA and Raman amplification, the GN and EGN models, lasers, modulators, photodiodes, coherent front ends, optical wireless |
+| Hardware and DSP | power amplifiers and predistortion, phase noise, frequency and clock offsets, IQ imbalance, DAC and ADC; pulse shaping, resampling, carrier and clock recovery, equalisers, blind estimation |
 | Standards | DVB-S, DVB-S2, DVB-T, CCSDS 131.0-B, the 5G NR PDSCH with HARQ, the LTE cell search and MIB, FM broadcasting and RDS |
 | Simulation | the parallel Monte Carlo runner (Wilson intervals, stopping rules, operating-point search), declarative campaigns, verification against expected results, SigMF recordings |
 
-The blocks live in fourteen crates, in five layers whose dependencies point downward
-only ([`docs/ARCHITECTURE.md`](https://github.com/com-rs/comnum/blob/main/docs/ARCHITECTURE.md));
-`comnum blocks` lists the declarative ones, and a project can add its own
-([ADR 0006](https://github.com/com-rs/comnum/blob/main/docs/adr/0006-external-blocks.md)).
+Fourteen crates in five layers whose dependencies point downward only
+([`docs/ARCHITECTURE.md`](https://github.com/com-rs/comnum/blob/main/docs/ARCHITECTURE.md)); a project can add its own
+blocks ([ADR 0006](https://github.com/com-rs/comnum/blob/main/docs/adr/0006-external-blocks.md)).
 
 ## Validated, not only tested
 
 Every block enters the library with the reference it is checked against: a closed
 form, a table of a standard, a published figure, or the recorded output of a reference
-implementation (OptiCommPy, GNPy, Optilux, AFF3CT, Sionna, py3gpp) used as a test
-oracle. The comparisons are written as data, the
-[validation cards](https://com-rs.github.io/comnum/validation.html), and rerun without
-the paper; the inconsistencies found in the documents themselves are recorded with them
-([`docs/LITERATURE.md`](https://github.com/com-rs/comnum/blob/main/docs/LITERATURE.md)).
-Every module has a grade: **A**, an external reference; **B**, a closed form only;
-**C**, self-consistency only. The table of every module, with its tests and the regimes
-not covered, is [`docs/MATURITY.md`](https://github.com/com-rs/comnum/blob/main/docs/MATURITY.md).
+implementation (OptiCommPy, GNPy, Optilux, AFF3CT, Sionna, py3gpp). The comparisons
+are written as data, the [validation cards](https://com-rs.github.io/comnum/validation.html), rerun without the
+paper, with the inconsistencies found in the documents themselves
+([`docs/LITERATURE.md`](https://github.com/com-rs/comnum/blob/main/docs/LITERATURE.md)). Every module has a grade, **A** an
+external reference, **B** a closed form only, **C** self-consistency only
+([`docs/MATURITY.md`](https://github.com/com-rs/comnum/blob/main/docs/MATURITY.md)).
 
 <!-- generated by tools/maturity_table.py from validation/maturity.yaml: do not edit -->
 
@@ -136,29 +136,17 @@ Summary: 76 modules: 70 at A, 4 at B, 2 at C.
 
 <!-- end of the generated table -->
 
-## Positioning
+## About
 
-comnum aims to be a reference link-level simulator: fast, reproducible bit for bit, and
-validated block by block. It complements the existing tools: Sionna targets
-differentiable, GPU-accelerated learning; the MATLAB toolboxes and AFF3CT cover wider
-or more specialised ground; GNU Radio streams in real time
-([comparisons](https://com-rs.github.io/comnum/comparisons.html),
-[benchmarks](https://com-rs.github.io/comnum/benchmarks.html)). In scope: the physical
-layer of a point-to-point link, simulated sample by sample. Out of scope: system and
-network level, training neural receivers, real-time and hardware targets.
-
-The blocks follow the layout and conventions of
-[OptiCommPy](https://github.com/edsonportosilva/OptiCommPy); the algorithms are written
-from their publications. OptiCommPy (GPL-3.0) is a test oracle only, never imported.
-
-## Stability
-
-The crates follow semantic versioning with one version for all; the Python API changes
-only with a migration note in the
-[changelog](https://github.com/com-rs/comnum/blob/main/CHANGELOG.md); CI checks every
-pull request with `cargo-semver-checks`.
-
-## How this library was written
+comnum aims to be a reference link-level simulator: fast, reproducible bit for bit,
+validated block by block. It complements Sionna (differentiable, GPU learning), the
+MATLAB toolboxes and AFF3CT (wider or more specialised) and GNU Radio (real time):
+[comparisons](https://com-rs.github.io/comnum/comparisons.html), [benchmarks](https://com-rs.github.io/comnum/benchmarks.html). In scope: the
+physical layer of a point-to-point link, sample by sample. Out of scope: system and
+network level, training neural receivers, real-time and hardware targets. The blocks
+follow the layout of [OptiCommPy](https://github.com/edsonportosilva/OptiCommPy)
+(GPL-3.0, a test oracle only, never imported); the algorithms are written from their
+publications.
 
 comnum is developed with an AI coding assistant, and says so plainly: Claude
 (Anthropic), through Claude Code, wrote most of the code, tests and documentation,
@@ -166,30 +154,16 @@ under the direction of the author, who decided the scope and the architecture, t
 models, the references each block is checked against and the tolerances, and reviewed
 every change. Correctness rests on the evidence above, not on who wrote a line; the
 rules apply to every contribution, human or generated
-([`docs/ARCHITECTURE.md`](https://github.com/com-rs/comnum/blob/main/docs/ARCHITECTURE.md),
-[`CLAUDE.md`](https://github.com/com-rs/comnum/blob/main/CLAUDE.md)).
+([`CLAUDE.md`](https://github.com/com-rs/comnum/blob/main/CLAUDE.md), [`CONTRIBUTING.md`](https://github.com/com-rs/comnum/blob/main/CONTRIBUTING.md)). A
+disagreement with a reference is a bug: please
+[report it](https://github.com/com-rs/comnum/issues/new/choose).
 
-## Documentation
-
-- The Python package: [tutorials](https://com-rs.github.io/comnum/auto_tutorials/index.html),
-  the [user guide](https://com-rs.github.io/comnum/user_guide/index.html), a
-  [gallery](https://com-rs.github.io/comnum/auto_examples/index.html) of classical
-  results and of reproduced figures of the literature, the
-  [API reference](https://com-rs.github.io/comnum/api/index.html).
-- The Rust crates: <https://docs.rs/comnum>; the runnable examples in
-  [`examples/`](https://github.com/com-rs/comnum/tree/main/examples); the
-  specifications in [`specs/`](https://github.com/com-rs/comnum/tree/main/specs).
-- Contributing: [`CONTRIBUTING.md`](https://github.com/com-rs/comnum/blob/main/CONTRIBUTING.md)
-  (how a block is validated, the test suites, good first contributions). A
-  disagreement with a reference is a bug: please
-  [report it](https://github.com/com-rs/comnum/issues/new/choose).
+The crates follow semantic versioning with one version for all; the Python API changes
+only with a migration note in the [changelog](https://github.com/com-rs/comnum/blob/main/CHANGELOG.md).
 
 ## Licence
 
-MIT or Apache-2.0, at your option
-([`LICENSE-MIT`](https://github.com/com-rs/comnum/blob/main/LICENSE-MIT),
-[`LICENSE-APACHE`](https://github.com/com-rs/comnum/blob/main/LICENSE-APACHE)). The
-data of third parties shipped in the crates and the status of the recorded oracle
-fixtures are listed in
-[`THIRD_PARTY.md`](https://github.com/com-rs/comnum/blob/main/THIRD_PARTY.md). To cite
-comnum, use [`CITATION.cff`](https://github.com/com-rs/comnum/blob/main/CITATION.cff).
+MIT or Apache-2.0, at your option ([`LICENSE-MIT`](https://github.com/com-rs/comnum/blob/main/LICENSE-MIT),
+[`LICENSE-APACHE`](https://github.com/com-rs/comnum/blob/main/LICENSE-APACHE)); third-party data and the recorded oracle
+fixtures are listed in [`THIRD_PARTY.md`](https://github.com/com-rs/comnum/blob/main/THIRD_PARTY.md). To cite comnum, use
+[`CITATION.cff`](https://github.com/com-rs/comnum/blob/main/CITATION.cff).
