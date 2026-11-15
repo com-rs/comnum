@@ -94,7 +94,8 @@ pub fn worst_case_partial_band(m: usize, ebnj_db: f64, ebn0_db: Option<f64>) -> 
     let log_rho = golden_max(|x| ber_at(m, n0, nj, x.exp()).unwrap_or(0.0), -28.0, 0.0, 120);
     let rho = log_rho.exp();
     let ber = ber_at(m, n0, nj, rho)?;
-    Ok(if ber > whole { (rho, ber) } else { (1.0, whole) })
+    // the whole band unless a part of it is worse by more than the rounding of the search
+    Ok(if ber > whole * (1.0 + 1e-12) { (rho, ber) } else { (1.0, whole) })
 }
 
 #[cfg(test)]
