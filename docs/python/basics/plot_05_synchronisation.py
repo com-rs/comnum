@@ -37,7 +37,7 @@ PREAMBLE = 32  # known symbols at the start of the frame
 rng = comnum.Rng(5)
 qpsk = comnum.Constellation("qam", 4).normalized()
 rrc = comnum.pulse_shape("rrc", SPS, n_taps=SPAN * SPS + 1, rolloff=ROLLOFF)
-rrc = rrc / np.sqrt(np.sum(rrc**2))
+rrc = rrc / np.linalg.norm(rrc)  # unit energy
 
 # %%
 # The frame
@@ -66,7 +66,7 @@ DELAY = 3.4  # samples
 transmitted = comnum.fir_filter(rrc, comnum.upsample(symbols, SPS))
 delayed = comnum.delay_fft(transmitted, DELAY, 1.0)
 rotated = comnum.freq_shift(delayed, FREQUENCY_OFFSET, SPS) * np.exp(1j * 2.3)
-received = rotated + rng.complex_noise(rotated.size, 1.0 / (2 * comnum.db2lin(EBN0_DB)))
+received = comnum.awgn_ebn0(rotated, EBN0_DB, 2, rng, sps=SPS)
 filtered = comnum.fir_filter(rrc, received)
 
 # %%
@@ -118,8 +118,8 @@ print(f"largest power at phase {int(np.argmax(power))}, true delay {DELAY} sampl
 steady, offset = comnum.fourth_power_foe(timed, 1.0, m=4)
 print(f"frequency offset: estimated {offset:.5f}, true {FREQUENCY_OFFSET} cycles per symbol")
 
-spectrum = np.abs(np.fft.fftshift(np.fft.fft(timed**4))) / timed.size
-frequencies = np.fft.fftshift(np.fft.fftfreq(timed.size)) / 4
+frequencies, spectrum = comnum.psd(timed**4, nfft=512)
+frequencies = frequencies / 4  # the line of the fourth power is at four times the offset
 fig, ax = plt.subplots(figsize=(6, 3.2))
 ax.plot(frequencies, spectrum, color=SERIES[0])
 ax.axvline(FREQUENCY_OFFSET, color=GREY, linestyle=":", label="true offset")
@@ -192,7 +192,7 @@ def one_frame(ebn0_db: float, n_symbols: int) -> tuple[int, int]:
     signal = comnum.freq_shift(signal, FREQUENCY_OFFSET, SPS) * np.exp(
         2j * np.pi * rng.uniform(1)[0]
     )
-    signal = signal + rng.complex_noise(signal.size, 1.0 / (2 * comnum.db2lin(ebn0_db)))
+    signal = comnum.awgn_ebn0(signal, ebn0_db, 2, rng, sps=SPS)
     samples = comnum.decimate(comnum.fir_filter(rrc, signal), SPS, 1)
     samples, _ = comnum.fourth_power_foe(samples, 1.0, m=4)
     samples = comnum.derotate(samples, comnum.viterbi_viterbi(samples, n=20, m=4))
@@ -200,7 +200,7 @@ def one_frame(ebn0_db: float, n_symbols: int) -> tuple[int, int]:
     data = samples[start + PREAMBLE : start + PREAMBLE + n_symbols] * rotation
     if data.size < n_symbols:  # the frame was not found where it could be
         return n_symbols, 2 * n_symbols
-    return int(np.count_nonzero(qpsk.demap_bits(data) != tx)), tx.size
+    return round(comnum.ber(qpsk.demap_bits(data), tx) * tx.size), tx.size
 
 
 FRAMES = 300

@@ -39,13 +39,13 @@ qpsk = comnum.Constellation("qam", 4).normalized()
 # energy, so that the received energy per symbol is the transmitted one and
 # :math:`E_b/N_0` keeps its meaning.
 channel = np.array([1.0, 0.5 * np.exp(0.8j), 0.3 * np.exp(-1.9j)])
-channel = channel / np.sqrt(np.sum(np.abs(channel) ** 2))
+channel = channel / np.linalg.norm(channel)
 
 
 def through_channel(symbols: np.ndarray, ebn0_db: float) -> np.ndarray:
     """The symbols after the echoes and the noise, one sample per symbol."""
     echoed = comnum.convolve(channel, symbols)[: symbols.size]
-    return echoed + rng.complex_noise(symbols.size, 1.0 / (2 * comnum.db2lin(ebn0_db)))
+    return comnum.awgn_ebn0(echoed, ebn0_db, 2, rng)
 
 
 # %%
@@ -216,8 +216,8 @@ def error_rates(ebn0_db: float) -> tuple[float, float]:
             reference=a.reshape(1, -1),
         )
         data = slice(2 * TRAINING, None)
-        plain += int(np.count_nonzero(qpsk.demap_bits(y)[data] != tx[data]))
-        equal += int(np.count_nonzero(qpsk.demap_bits(z[0])[data] != tx[data]))
+        plain += round(comnum.ber(qpsk.demap_bits(y)[data], tx[data]) * tx[data].size)
+        equal += round(comnum.ber(qpsk.demap_bits(z[0])[data], tx[data]) * tx[data].size)
         sent += tx[data].size
     return plain / sent, equal / sent
 

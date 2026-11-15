@@ -170,7 +170,7 @@ def jammed_ber(link: comnum.Dsss, ebn0: float, tag: int) -> float:
     # the same jammer-to-signal ratio per chip whatever the code: a chip has the power 1/N
     amplitude = np.sqrt(comnum.db2lin(JAMMER_DB) / link.spreading_factor)
     tone = amplitude * np.exp(2j * np.pi * TONE * np.arange(chips.size))
-    received = chips + tone + rng.complex_noise(chips.size, 1.0 / comnum.db2lin(ebn0))
+    received = comnum.awgn_ebn0(chips, ebn0, 1, rng, sps=link.spreading_factor) + tone
     return float(np.mean(bpsk.decide(link.demodulate(received)[0]) != labels))
 
 
@@ -258,6 +258,8 @@ for color, (receiver, name, marker) in zip(SERIES, receivers, strict=False):
         rng = comnum.Rng.stream(9, "near-far", i, 0)
         labels, symbols = bpsk_symbols((8, 400_000), rng)
         chips = cdma.modulate(symbols)
+        # the noise is set against the energy of the first user, not against the power
+        # of the sum of the eight: its variance is given, not derived from the signal
         chips += rng.complex_noise(chips.size, noise_var)
         decided = cdma.detect(chips, bpsk, noise_var, receiver)
         sim.append(np.mean(decided[0] != labels[0]))
@@ -394,6 +396,8 @@ def rake_ber(ebn0: float, tag: int) -> np.ndarray:
         labels, symbols = bpsk_symbols((BURST_SYMBOLS,), rng)
         x = link.modulate(symbols)
         gains = rng.complex_noise(3, 1.0 / 3.0)
+        # the noise is set against the mean energy of the faded signal, not that of
+        # this burst: its variance is given, not derived from the signal
         received = rng.complex_noise(x.size + DELAYS[-1], 1.0 / comnum.db2lin(ebn0))
         for delay, gain in zip(DELAYS, gains, strict=True):
             received[delay : delay + x.size] += gain * x

@@ -101,12 +101,12 @@ assert np.array_equal(qpsk.demap_bits(symbols), bits)
 #    E_s = \frac{1}{M}\sum_{m=1}^{M} |x_m|^2 .
 #
 # Comparing two modulations is only fair at the same energy, so the convention is
-# :math:`E_s = 1`: ``normalized()`` scales the points to it. Since a symbol carries
+# :math:`E_s = 1`: ``energy`` gives :math:`E_s` and ``normalized()`` scales the points
+# to 1. Since a symbol carries
 # :math:`k` bits, the **energy per bit** is :math:`E_b = E_s / k`. It is the quantity
 # a link pays for, and the one error rates are plotted against.
 for name, c in families:
-    raw = float(np.mean(np.abs(c.points) ** 2))
-    unit = float(np.mean(np.abs(c.normalized().points) ** 2))
+    raw, unit = c.energy, c.normalized().energy
     k = c.bits_per_symbol
     print(
         f"{name:>7}: Es = {raw:5.2f} as built, {unit:.2f} normalised, Eb = Es/{k} = {unit / k:.3f}"
@@ -118,22 +118,16 @@ for name, c in families:
 # With the energy fixed, adding points to a constellation pushes them together. What
 # protects a symbol from the noise is the distance to its nearest neighbour,
 # :math:`d_{\min}`: the noise has to move the received point by :math:`d_{\min}/2` to
-# cause an error. More bits per symbol means a higher rate in the same bandwidth, and
-# a smaller :math:`d_{\min}` at the same energy. That trade is the first design choice
-# of any link.
-
-
-def min_distance(c: comnum.Constellation) -> float:
-    """The smallest distance between two points of a constellation."""
-    gaps = np.abs(c.points[:, None] - c.points[None, :])
-    return float(gaps[gaps > 0].min())
+# cause an error (``Constellation.min_distance``). More bits per symbol means a higher
+# rate in the same bandwidth, and a smaller :math:`d_{\min}` at the same energy. That
+# trade is the first design choice of any link.
 
 
 orders = [("psk", 2), ("qam", 4), ("psk", 8), ("qam", 16), ("psk", 16), ("qam", 64), ("qam", 256)]
 print(" modulation   bits/symbol   d_min at Es = 1   d_min^2 / Eb")
 for kind, m in orders:
     c = comnum.Constellation(kind, m).normalized()
-    d = min_distance(c)
+    d = c.min_distance
     k = c.bits_per_symbol
     print(f"{m:>4}-{kind.upper():<5}        {k}            {d:.3f}           {d * d * k:5.2f}")
 
@@ -156,7 +150,7 @@ def neighbour_bit_differences(c: comnum.Constellation) -> list[int]:
     """The number of differing bits between every pair of nearest neighbours."""
     labels = c.demap_bits(c.points).reshape(-1, c.bits_per_symbol)
     gaps = np.abs(c.points[:, None] - c.points[None, :])
-    near = np.argwhere(np.isclose(gaps, min_distance(c)))
+    near = np.argwhere(np.isclose(gaps, c.min_distance))
     return [int(np.count_nonzero(labels[i] != labels[j])) for i, j in near if i < j]
 
 

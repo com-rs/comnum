@@ -35,11 +35,6 @@ rng = comnum.Rng(4)
 qpsk = comnum.Constellation("qam", 4).normalized()
 
 
-def unit_energy(h: np.ndarray) -> np.ndarray:
-    """The pulse scaled to a unit energy, so that a symbol keeps its energy."""
-    return h / np.sqrt(np.sum(h**2))
-
-
 def shape(symbols: np.ndarray, pulse: np.ndarray) -> np.ndarray:
     """The signal that carries the symbols on the pulse, SPS samples per symbol."""
     return comnum.fir_filter(pulse, comnum.upsample(symbols, SPS))
@@ -54,8 +49,12 @@ def shape(symbols: np.ndarray, pulse: np.ndarray) -> np.ndarray:
 # not thank us. The raised-cosine family trades a longer pulse for a compact spectrum:
 # the root-raised cosine below is confined to :math:`\pm(1 + \alpha)/(2T)`, with the
 # **roll-off** :math:`\alpha` between 0 and 1.
-rect = unit_energy(np.ones(SPS))
-rrc = unit_energy(comnum.pulse_shape("rrc", SPS, n_taps=SPAN * SPS + 1, rolloff=ROLLOFF))
+# :func:`comnum.pulse_shape` gives the samples of a pulse; scaled to a unit energy, a
+# symbol keeps its energy through the transmit filter and the matched filter
+rect = comnum.pulse_shape("rect", SPS)
+rect = rect / np.linalg.norm(rect)
+rrc = comnum.pulse_shape("rrc", SPS, n_taps=SPAN * SPS + 1, rolloff=ROLLOFF)
+rrc = rrc / np.linalg.norm(rrc)
 _, symbols = comnum.symbols(qpsk, 20_000, rng)
 
 fig, ax = plt.subplots()
@@ -139,7 +138,7 @@ transmitted = shape(symbols[:2000], rrc)
 filtered = comnum.fir_filter(rrc, transmitted)
 
 fig, axes = plt.subplots(1, 2, figsize=(9.5, 3.6), sharey=True)
-comnum.plot.eye(transmitted * np.sqrt(SPS), ax=axes[0], sps=SPS, traces=200, skip=SPAN * SPS)
+comnum.plot.eye(comnum.pnorm(transmitted), ax=axes[0], sps=SPS, traces=200, skip=SPAN * SPS)
 axes[0].set_title("after the transmit filter")
 comnum.plot.eye(filtered, ax=axes[1], sps=SPS, traces=200, skip=SPAN * SPS)
 axes[1].set_title("after the matched filter")
@@ -156,8 +155,9 @@ print(f"samples after the matched filter: the symbols, to within {residual:.3f}"
 #
 # The link with pulses
 # --------------------
-# White noise of variance :math:`N_0` per sample is added to the shaped signal, the
-# receiver filters and takes one sample per symbol. With unit-energy pulses the noise
+# :func:`comnum.awgn_ebn0` adds the noise to the shaped signal (its argument ``sps``
+# tells it that a symbol now lasts ``SPS`` samples), the receiver filters and takes one
+# sample per symbol. With unit-energy pulses the noise
 # after the matched filter still has the variance :math:`N_0` and the symbols their
 # energy: the error rate is that of chapter 3, as if the pulses were not there.
 #
@@ -169,19 +169,18 @@ MIN_ERRORS = 1000  # 3 % of standard error per point
 
 def ber_with_pulses(pulse: np.ndarray, ebn0_db: float, *, matched: bool) -> float:
     """The bit error rate of QPSK on a pulse, with or without the matched filter."""
-    n0 = 1.0 / (2 * comnum.db2lin(ebn0_db))
     errors = sent = 0
     while errors < MIN_ERRORS and sent < 8_000_000:
         tx = comnum.bits(2 * 20_000, rng)
         signal = shape(qpsk.map_bits(tx), pulse)
-        noisy = signal + rng.complex_noise(signal.size, n0)
+        noisy = comnum.awgn_ebn0(signal, ebn0_db, 2, rng, sps=SPS)
         if matched:
             samples = comnum.downsample(comnum.fir_filter(pulse[::-1], noisy), SPS)
         else:
             samples = comnum.downsample(noisy, SPS, offset=SPS // 2) * np.sqrt(SPS)
         keep = slice(2 * SPAN, -2 * SPAN)  # the ends, where the filters are still filling
         rx = qpsk.demap_bits(samples).reshape(-1, 2)[SPAN:-SPAN].ravel()
-        errors += int(np.count_nonzero(rx != tx[keep]))
+        errors += round(comnum.ber(rx, tx[keep]) * rx.size)
         sent += rx.size
     return errors / sent
 
@@ -233,14 +232,6 @@ print(
 # larger peak power and a tighter timing. The **spectral efficiency** of the link is
 # :math:`k/(1 + \alpha)` bits per second per hertz: 1.48 for this QPSK, 2.96 for
 # 16-QAM on the same pulse.
-f, p = comnum.psd(shape(symbols, rrc), fs=SPS, nfft=1024)
-order = np.argsort(f)
-cumulative = np.cumsum(p[order]) / p.sum()
-low, high = (
-    f[order][np.searchsorted(cumulative, 0.005)],
-    f[order][np.searchsorted(cumulative, 0.995)],
-)
-print(f"99 % of the power within {high - low:.2f} symbol rates, all of it within {1 + ROLLOFF}")
 
 # %%
 # Summary

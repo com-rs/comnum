@@ -352,6 +352,25 @@ impl Constellation {
         comnum_math::power(&self.points)
     }
 
+    /// The minimum distance $d_{\min} = \min_{i \ne j} \lvert x_{i} - x_{j} \rvert$ between
+    /// two points: what the noise must cover by half to cause an error, so that the
+    /// error rate at high SNR falls as $Q(d_{\min} / \sqrt{2 N_{0}})$. With the
+    /// energy per bit $E_{b} = E_{s} / \log_{2} M$, $d_{\min}^{2} / E_{b}$ compares the
+    /// constellations: 4 for BPSK and QPSK, 1.6 for 16-QAM.
+    ///
+    /// # Examples
+    /// ```
+    /// use comnum_mapping::constellation::Constellation;
+    /// let c = Constellation::qam(16)?.normalized();
+    /// assert!((c.min_distance().powi(2) * 4.0 - 1.6).abs() < 1e-12);
+    /// # Ok::<(), comnum_core::Error>(())
+    /// ```
+    pub fn min_distance(&self) -> f64 {
+        let pairs =
+            self.points.iter().enumerate().flat_map(|(i, a)| self.points[i + 1..].iter().map(move |b| (a - b).norm()));
+        pairs.fold(f64::INFINITY, f64::min)
+    }
+
     /// Average energy `Σ p_i |x_i|²` under the probabilities `px`.
     ///
     /// # Errors
@@ -519,6 +538,22 @@ mod tests {
                 let z = rng.complex_gaussian() * scale;
                 assert_eq!(c.nearest(z), brute.nearest(z), "{:?} {} at {z}", c.kind(), c.order());
             }
+        }
+    }
+
+    #[test]
+    fn the_minimum_distance_is_that_of_the_closed_forms() {
+        // PAM and square QAM as built: 2; M-PSK on the unit circle: 2 sin(π/M)
+        assert!((Constellation::pam(8).unwrap().min_distance() - 2.0).abs() < 1e-12);
+        assert!((Constellation::qam(64).unwrap().min_distance() - 2.0).abs() < 1e-12);
+        for m in [2usize, 4, 8, 16] {
+            let d = Constellation::psk(m).unwrap().min_distance();
+            assert!((d - 2.0 * (std::f64::consts::PI / m as f64).sin()).abs() < 1e-12);
+        }
+        // normalised square M-QAM: d² = 6 / (M - 1)
+        for m in [4usize, 16, 64, 256] {
+            let d = Constellation::qam(m).unwrap().normalized().min_distance();
+            assert!((d * d - 6.0 / (m as f64 - 1.0)).abs() < 1e-12);
         }
     }
 

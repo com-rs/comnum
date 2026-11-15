@@ -136,6 +136,14 @@ impl PyConstellation {
         self.inner.energy()
     }
 
+    /// float: The minimum distance between two points, `min |s_i - s_j|`: at high SNR
+    /// the error rate falls as `Q(d_min / √(2 N0))`. `d_min² / Eb` compares the
+    /// constellations (4 for BPSK and QPSK, 1.6 for 16-QAM).
+    #[getter]
+    fn min_distance(&self) -> f64 {
+        self.inner.min_distance()
+    }
+
     /// Mean energy of the points under the probabilities `px`.
     ///
     /// Args:

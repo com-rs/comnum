@@ -48,7 +48,9 @@ decided = qpsk.demap_bits(received)  # the detector
 
 print(f"sent:     {message!r}")
 print(f"received: {comnum.bits_to_text(decided)!r}")
-print(f"{bits.size} bits, {symbols.size} symbols, {np.count_nonzero(decided != bits)} bit errors")
+print(
+    f"{bits.size} bits, {symbols.size} symbols, {round(comnum.ber(decided, bits) * bits.size)} bit errors"
+)
 
 # %%
 # At this noise level a few bits are wrong, and each wrong bit damages one character

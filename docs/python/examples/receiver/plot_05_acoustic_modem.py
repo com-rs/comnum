@@ -102,13 +102,13 @@ fig.tight_layout()
 # What the second computer records: silence first, the signal with an echo 4 ms later
 # (1.4 m of extra path) at half the amplitude, noise, and a card whose clock runs 60
 # parts per million fast.
-rng = np.random.default_rng(7)
+rng = comnum.Rng(7)
 skew = 1 + 60e-6
 t = np.arange(int(audio.size * skew)) / skew
 played = np.interp(t, np.arange(audio.size), audio)
 recording = np.concatenate([np.zeros(31_234), played, np.zeros(10_000)])
 recording[192:] += 0.5 * recording[:-192]
-recording += 0.05 * rng.standard_normal(recording.size)
+recording += 0.05 * rng.gaussian(recording.size)
 comnum.write_wav(folder / "recording.wav", recording, AUDIO_RATE)
 
 # %%
@@ -159,8 +159,7 @@ generator = comnum.Rng(11)
 simulated = []
 for e in ebn0_db:
     sent = generator.integers(4, 100_000)
-    noise = generator.complex_noise(sent.size * SPS, SPS / (2 * comnum.db2lin(e)))
-    got = fsk.demodulate(fsk.modulate(sent) + noise)
+    got = fsk.demodulate(comnum.awgn_ebn0(fsk.modulate(sent), e, 2, generator, sps=SPS))
     wrong = sent ^ got
     simulated.append(np.mean((wrong >> 1) + (wrong & 1)) / 2)
 

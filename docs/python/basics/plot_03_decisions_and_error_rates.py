@@ -154,7 +154,7 @@ def simulate(c: comnum.Constellation, ebn0_db: float) -> tuple[float, int]:
     while errors < MIN_ERRORS and sent < MAX_BITS:
         tx = comnum.bits(k * BLOCK, rng)
         rx = c.demap_bits(comnum.awgn_ebn0(c.map_bits(tx), ebn0_db, k, rng))
-        errors += int(np.count_nonzero(rx != tx))
+        errors += round(comnum.ber(rx, tx) * tx.size)
         sent += tx.size
     return errors / sent, errors
 

@@ -111,8 +111,9 @@ for kind, m in [("psk", 2), ("psk", 4), ("qam", 16), ("qam", 64)]:
 #
 #    N_0 = \frac{E_s}{k \cdot E_b/N_0} = \frac{1}{k \cdot 10^{(E_b/N_0)_{\mathrm{dB}}/10}} .
 #
-# :func:`comnum.awgn_ebn0` does exactly that and adds the noise. The two ways below
-# give the same channel; the measured :math:`E_s/N_0` confirms it.
+# :func:`comnum.awgn_ebn0` does exactly that and adds the noise: it is the function to
+# use, here and in every chapter that follows. The line written by hand below is only
+# there to show what the call does; the measured :math:`E_s/N_0` of both confirms it.
 qam16 = comnum.Constellation("qam", 16).normalized()
 k = qam16.bits_per_symbol
 ebn0_db = 8.0
@@ -123,7 +124,7 @@ by_hand = x + rng.complex_noise(x.size, n0)
 by_call = comnum.awgn_ebn0(x, ebn0_db, k, rng)
 
 for name, y in [("by hand", by_hand), ("awgn_ebn0", by_call)]:
-    measured = np.mean(np.abs(x) ** 2) / np.mean(np.abs(y - x) ** 2)
+    measured = 1.0 / comnum.evm(y, qam16, tx=x)  # the EVM is noise power over signal power
     print(f"{name:>10}: Es/N0 = {10 * np.log10(measured):.2f} dB")
 print(f"  expected: Es/N0 = {ebn0_db + 10 * np.log10(k):.2f} dB")
 

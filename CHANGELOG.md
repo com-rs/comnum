@@ -14,7 +14,9 @@ and follow [Semantic Versioning](https://semver.org/).
   filter, synchronisation, multipath and equalisation; each chapter ends on a
   comparison with the theory. `comnum.frame_sync` (the delay and the rotation of a
   received stream against known symbols, `comnum_dsp::sync::frame::frame_sync`) is
-  now in the Python package.
+  now in the Python package, and `Constellation::min_distance` (`Constellation.min_distance`
+  in Python) gives the minimum distance between two points. The chapters and the
+  tutorials add their noise with `comnum.awgn_ebn0` and count errors with `comnum.ber`.
 - A sound card as a channel, to send a signal through a loudspeaker and a microphone:
   - `comnum_dsp::audio`: `upconvert` (a complex baseband signal resampled to the audio
     rate on a carrier, a real signal) and `downconvert` (a recording back to baseband),
