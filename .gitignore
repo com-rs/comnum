@@ -11,6 +11,7 @@ results/
 # except the recorded results of the benchmark against other libraries
 !benchmarks/libraries/results/
 docs/python/_build/
+docs/python/auto_basics/
 docs/python/auto_examples/
 docs/python/auto_tutorials/
 docs/python/api/generated/

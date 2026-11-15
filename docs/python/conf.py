@@ -48,7 +48,7 @@ intersphinx_mapping = {
     "python": ("https://docs.python.org/3", None),
     "numpy": ("https://numpy.org/doc/stable", None),
 }
-exclude_patterns = ["_build", "examples", "tutorials"]
+exclude_patterns = ["_build", "examples", "tutorials", "basics"]
 copybutton_prompt_text = r">>> |\.\.\. "
 copybutton_prompt_is_regexp = True
 
@@ -65,10 +65,11 @@ def reset_style(gallery_conf, fname):
 
 
 sphinx_gallery_conf = {
-    # two galleries: the tutorials (step by step) and the classical results, one
+    # three galleries: the basics (a short course, one idea per chapter), the tutorials
+    # (the library step by step) and the classical results, one
     # sub-gallery per theme (the reproductions of named figures in their theme)
-    "examples_dirs": ["tutorials", "examples"],
-    "gallery_dirs": ["auto_tutorials", "auto_examples"],
+    "examples_dirs": ["basics", "tutorials", "examples"],
+    "gallery_dirs": ["auto_basics", "auto_tutorials", "auto_examples"],
     "filename_pattern": r"/plot_",
     "subsection_order": [f"examples/{t}" for t in GALLERY_THEMES],
     "within_subsection_order": "FileNameSortKey",

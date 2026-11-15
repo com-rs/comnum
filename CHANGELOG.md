@@ -8,6 +8,13 @@ and follow [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Documentation: a section **Learn the basics**, a short course in digital
+  communications written as programs (`docs/python/basics/`): a quickstart, bits and
+  symbols, the noisy channel, decisions and error rates, pulse shaping and the matched
+  filter, synchronisation, multipath and equalisation; each chapter ends on a
+  comparison with the theory. `comnum.frame_sync` (the delay and the rotation of a
+  received stream against known symbols, `comnum_dsp::sync::frame::frame_sync`) is
+  now in the Python package.
 - A sound card as a channel, to send a signal through a loudspeaker and a microphone:
   - `comnum_dsp::audio`: `upconvert` (a complex baseband signal resampled to the audio
     rate on a carrier, a real signal) and `downconvert` (a recording back to baseband),

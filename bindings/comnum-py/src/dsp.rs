@@ -757,6 +757,54 @@ fn viterbi_viterbi<'py>(py: Python<'py>, x: &Bound<'py, PyAny>, n: i64, m: u32) 
     Ok(farr(py, carrier::viterbi_viterbi(&cvec(x)?, count(n, "n")?, m).py()?))
 }
 
+/// Frame synchronisation on known symbols: the delay and the rotation of a received
+/// stream against a reference, by the correlation `c(d) = Σ_n z[n + d] x*[n]` over the
+/// known symbols `x = reference[start:stop]`. The delay is the largest `|c(d)|`; the
+/// rotation is the phase of `c` there, rounded to a multiple of `2π/symmetry` (the
+/// ambiguity a blind carrier recovery leaves) or exact.
+///
+/// Args:
+///     z (array_like): the received symbols, one sample per symbol.
+///     reference (array_like): the transmitted symbols.
+///     max_delay (int): the largest `|d|` searched.
+///     symmetry (int | None): the rotational symmetry of the constellation (4 for
+///         square QAM, 2 for BPSK); `None` removes the exact phase.
+///     start (int): the first known symbol of `reference`.
+///     stop (int | None): one past the last known symbol (the end by default).
+///
+/// Returns:
+///     tuple[int, complex, float]: the delay `d` (`z[n + d]` carries `reference[n]`),
+///     the rotation to multiply `z` with, and the normalised correlation in `[0, 1]`
+///     (close to 1 when the synchronisation is reliable).
+///
+/// Raises:
+///     ValueError: if the known symbols do not lie in `reference`, or no delay keeps
+///         them inside `z`.
+///
+/// Examples:
+///     >>> import comnum, numpy as np
+///     >>> c = comnum.Constellation("qam", 4).normalized()
+///     >>> _, x = comnum.symbols(c, 64, comnum.Rng(1))
+///     >>> z = np.concatenate([np.zeros(5), 1j * x])
+///     >>> delay, rotation, quality = comnum.frame_sync(z, x, max_delay=10)
+///     >>> delay, complex(np.round(rotation, 6)), round(quality, 6)
+///     (5, -1j, 1.0)
+#[pyfunction]
+#[pyo3(signature = (z, reference, *, max_delay, symmetry = Some(4), start = 0, stop = None))]
+fn frame_sync(
+    z: &Bound<'_, PyAny>,
+    reference: &Bound<'_, PyAny>,
+    max_delay: usize,
+    symmetry: Option<u32>,
+    start: usize,
+    stop: Option<usize>,
+) -> PyResult<(isize, C64, f64)> {
+    let reference = cvec(reference)?;
+    let positions = start..stop.unwrap_or(reference.len());
+    let sync = comnum::dsp::sync::frame::frame_sync(&cvec(z)?, &reference, positions, max_delay, symmetry).py()?;
+    Ok((sync.delay, sync.rotation, sync.quality))
+}
+
 /// Blind phase search (Pfau, Hoffmann and Noé 2009; OptiCommPy `bps`).
 ///
 /// Every test phase `b (π/2)/B` rotates the samples; the squared distances to the
@@ -987,6 +1035,7 @@ pub(crate) fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(unwrap, m)?)?;
     m.add_function(wrap_pyfunction!(fourth_power_foe, m)?)?;
     m.add_function(wrap_pyfunction!(viterbi_viterbi, m)?)?;
+    m.add_function(wrap_pyfunction!(frame_sync, m)?)?;
     m.add_function(wrap_pyfunction!(bps, m)?)?;
     m.add_function(wrap_pyfunction!(ddpll, m)?)?;
     m.add_function(wrap_pyfunction!(gardner_ted, m)?)?;

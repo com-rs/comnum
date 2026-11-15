@@ -798,3 +798,19 @@ def test_the_continuous_time_pulses():
     np.testing.assert_allclose(comnum.rc_taps(np.arange(1.0, 6.0), 0.25), 0.0, atol=1e-12)
     # the period scales the time axis
     np.testing.assert_allclose(comnum.rrc_taps(2 * t, 0.3, ts=2.0), h / 2.0)
+
+
+def test_frame_sync_finds_the_delay_and_the_rotation_on_a_preamble():
+    c = comnum.Constellation("qam", 4).normalized()
+    rng = comnum.Rng(8)
+    _, x = comnum.symbols(c, 200, rng)
+    _, junk = comnum.symbols(c, 37, rng)
+    z = np.concatenate([junk, x]) * np.exp(1j * (np.pi / 2 + 0.1)) + rng.complex_noise(237, 0.05)
+    delay, rotation, quality = comnum.frame_sync(z, x, max_delay=60, stop=32)
+    assert delay == 37 and quality > 0.9
+    # the rotation is the nearest multiple of 90 degrees, or the exact phase
+    assert rotation == pytest.approx(-1j, abs=1e-9)
+    _, exact, _ = comnum.frame_sync(z, x, max_delay=60, stop=32, symmetry=None)
+    assert np.angle(exact) == pytest.approx(-(np.pi / 2 + 0.1), abs=0.1)
+    with pytest.raises(ValueError, match="reference"):
+        comnum.frame_sync(z, x, max_delay=60, stop=500)

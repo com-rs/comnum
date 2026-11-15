@@ -16,7 +16,7 @@ reproducible random streams, and their results come with confidence intervals.
 
 - **Lightweight**: one run-time dependency in Python (numpy), 9 direct crates in Rust and no C, C++ or Fortran library to build; 27 MB installed with its dependencies (the benchmark's environment: komm 22 MB, OptiCommPy 321 MB, Sionna 1004 MB).
 - **Fast**: compiled Rust, Monte Carlo runs on every core; on one CPU thread, the links of the benchmark take 2.1 to 33 times as long with komm, 2.3 to 4.7 times as long with OptiCommPy and 1.1 to 7.4 times as long with Sionna as with comnum.
-- **Safe**: ``unsafe`` code forbidden in every crate, invalid inputs are errors (one error type), results independent of the thread count; 843 unit tests, 219 validation tests, 298 Python tests.
+- **Safe**: ``unsafe`` code forbidden in every crate, invalid inputs are errors (one error type), results independent of the thread count; 843 unit tests, 219 validation tests, 299 Python tests.
 - **Validated**: compared with 152 papers, standards and reference tools (92 fully reproduced, 56 partly), 484 inconsistencies found in them; 129 validation cards rerun a comparison without the paper.
 
 The details, and how these numbers are produced: :doc:`why`.
@@ -59,6 +59,14 @@ Learning
       :link-type: doc
 
       Installation, conventions (arrays, generators, units) and a first link.
+
+   .. grid-item-card:: Learn the basics
+      :link: auto_basics/index
+      :link-type: doc
+
+      A short course in digital communications written as programs: bits and
+      symbols, noise, decisions and error rates, pulse shaping, synchronisation,
+      equalisation; each chapter checked against the theory.
 
    .. grid-item-card:: Tutorials
       :link: auto_tutorials/index
@@ -164,6 +172,7 @@ Reference
    :maxdepth: 2
 
    getting_started
+   auto_basics/index
    auto_tutorials/index
    user_guide/index
    auto_examples/index

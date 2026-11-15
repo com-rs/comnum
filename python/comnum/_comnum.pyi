@@ -1747,6 +1747,15 @@ def fourth_power_foe(
 def frame_metrics(
     frame: Frame, metrics: dict[str, Any], *, confidence: float = ...
 ) -> dict[str, Any]: ...
+def frame_sync(
+    z: ArrayLike,
+    reference: ArrayLike,
+    *,
+    max_delay: int,
+    symmetry: int | None = ...,
+    start: int = ...,
+    stop: int | None = ...,
+) -> tuple[int, complex, float]: ...
 def free_distance(
     generators: list[int] = ...,
     constraint: int = ...,

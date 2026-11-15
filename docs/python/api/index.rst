@@ -519,6 +519,7 @@ Carrier recovery
 
    fourth_power_foe
    viterbi_viterbi
+   frame_sync
    bps
    ddpll
    derotate

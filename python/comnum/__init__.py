@@ -63,6 +63,7 @@ equalisation           :func:`cdc`, :func:`cd_taps_needed`, :func:`cd_fir_taps`,
                        :func:`cd_ls_taps`, :func:`cd_ls_error`,
                        :func:`adaptive_equalizer`
 carrier recovery       :func:`fourth_power_foe`, :func:`viterbi_viterbi`, :func:`bps`,
+                       :func:`frame_sync`,
                        :func:`ddpll`, :func:`derotate`, :func:`unwrap`
 clock recovery         :func:`gardner_ted`, :func:`gardner_ted_nyquist`,
                        :func:`lagrange_cubic`, :func:`gardner_clock_recovery`
@@ -378,6 +379,7 @@ from comnum._comnum import (
     format_moments,
     fourth_power_foe,
     frame_metrics,
+    frame_sync,
     free_distance,
     freq_shift,
     gain_limited_correction,
@@ -735,6 +737,7 @@ __all__ = [
     "format_moments",
     "fourth_power_foe",
     "frame_metrics",
+    "frame_sync",
     "free_distance",
     "freq_shift",
     "gain_limited_correction",
