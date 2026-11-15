@@ -13,7 +13,7 @@ const $ = (id) => document.getElementById(id);
 const ui = {
   list: $("spec-list"), run: $("run"), stop: $("stop"), status: $("status"), engine: $("engine"),
   error: $("error"), xAxis: $("x-axis"), metric: $("metric"), logY: $("log-y"),
-  plot: $("plot"), plotTabs: $("plot-tabs"), chain: $("chain"), plotControls: document.querySelector(".plot-controls:not(#trace-controls)"), version: $("version"), caption: $("caption"), traceControls: $("trace-controls"), traceCondition: $("trace-condition"), terminal: $("terminal"), clear: $("clear"),
+  plot: $("plot"), plotTabs: $("plot-tabs"), chain: $("chain"), plotControls: document.querySelector(".plot-controls:not(#trace-controls)"), version: $("version"), caption: $("caption"), traceControls: $("trace-controls"), traceCondition: $("trace-condition"), wavControls: $("wav-controls"), wavBaud: $("wav-baud"), wavCarrier: $("wav-carrier"), wavExport: $("wav-export"), terminal: $("terminal"), clear: $("clear"),
   tabName: $("tab-name"), share: $("share"), openName: $("open-name"), theme: $("theme"),
   sidebar: $("sidebar"), backdrop: $("sidebar-backdrop"), explorerOpen: $("explorer-toggle"), explorerClose: $("explorer-close"),
   splitH: $("split-h"), splitV: $("split-v"), workbench: document.querySelector(".workbench"), editorArea: document.querySelector(".editor-area"),
@@ -177,6 +177,8 @@ function onMessage(e) {
       log(`error: ${traceNote}`, "err");
     }
     draw();
+  } else if (m.type === "wav") {
+    onWav(m);
   } else if (m.type === "inspect") {
     if (m.id !== inspectId) return;
     if (m.ok) {
@@ -569,6 +571,7 @@ function draw() {
   ui.plot.hidden = chain;
   ui.plotControls.hidden = view.kind !== "curves";
   updateTraceControls(view.kind === "scope");
+  ui.wavControls.hidden = !(view.kind === "scope" && traces && traces.some((t) => t.label === view.label && t.streams.length));
   if (chain) drawChain();
   else if (view.kind === "scope") drawScope();
   else drawCurves(colorOf);
@@ -883,6 +886,41 @@ ui.traceCondition.addEventListener("change", () => {
   requestTrace();
   draw();
 });
+
+// ---------------------------------------------------------------- the WAV export
+
+// The rate of the exported file: that of most sound cards.
+const AUDIO_RATE = 48000;
+
+/// Ask the worker for the WAV file of the signal of the scope on screen: its first
+/// stream, taken as sampled at baud × samples per symbol, on the audio carrier. The
+/// page only exports; a recording is processed with the Python package.
+ui.wavExport.addEventListener("click", () => {
+  const t = traces && traces.find((x) => x.label === view.label);
+  if (!t || !t.streams.length) return;
+  const sps = t.sps > 0 ? t.sps : 1;
+  const fs = Number(ui.wavBaud.value) * sps;
+  const name = `${inspected ? inspected.name : "signal"}_${t.label}.wav`.replace(/[^A-Za-z0-9._-]+/g, "_");
+  worker.postMessage({ type: "wav", re: t.streams[0].re, im: t.streams[0].im, fs, carrier: Number(ui.wavCarrier.value), rate: AUDIO_RATE, name });
+});
+
+/// The answer of the worker: the file is downloaded, and the terminal says how to
+/// bring a recording of it back to baseband.
+function onWav(m) {
+  if (!m.ok) {
+    log(`error: WAV export: ${m.error}`, "err");
+    return;
+  }
+  const url = URL.createObjectURL(new Blob([m.bytes], { type: "audio/wav" }));
+  const a = Object.assign(document.createElement("a"), { href: url, download: m.name });
+  document.body.append(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  const seconds = (m.bytes.length - 44) / 2 / m.rate;
+  log(`exported ${m.name}: ${seconds.toFixed(2)} s at ${m.rate} Hz, baseband at ${fmt(m.fs)} Hz on a carrier of ${fmt(m.carrier)} Hz`, "ok");
+  log(`  a recording of it: y = comnum.audio_downconvert(comnum.read_wav("recording.wav")[0], ${fmt(m.carrier)}, ${fmt(m.fs)})`, "dim");
+}
 
 // ---------------------------------------------------------------- the terminal
 

@@ -7,6 +7,7 @@ mod continuous_phase;
 mod css;
 mod dsss;
 mod fhss;
+mod fsk;
 
 use crate::comm::PyConstellation;
 use crate::kind;
@@ -26,5 +27,6 @@ pub(crate) fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     css::register(m)?;
     dsss::register(m)?;
     fhss::register(m)?;
+    fsk::register(m)?;
     Ok(())
 }

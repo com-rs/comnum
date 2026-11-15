@@ -71,6 +71,19 @@ AWGN, root-raised-cosine at eight samples per symbol, seen before and after the 
 estimated by LMMSE from the pilots; `specs/tutorial/03_mimo.yaml`, 4 x 4 spatial
 multiplexing over one Rayleigh matrix (the `seed` of `rayleigh`) with five detectors.
 
+A scope tab has a **WAV** button: it downloads the first stream of the signal of that
+scope as a WAV file (mono, 16-bit, 48 kHz) that plays it on a sound card, the complex
+baseband taken as sampled at **baud** times its samples per symbol and put on the
+audio **carrier** (`comnum::dsp::audio::upconvert`, a peak of 0.8 of the full scale
+between two silences of a quarter of a second). The band `carrier ± baud × sps / 2`
+must fit under 24 kHz. The file holds what the scope holds, its first `max_samples`
+samples (4096 by default): `specs/tutorial/13_text_fsk.yaml`, a text in an HDLC frame on
+four FSK tones, has a scope `message` long enough for the whole message, and its
+header gives the lines of Python that read the text in a recording. The page only exports: a recording of the file played is
+processed with the Python package, and the terminal prints the line that brings it back
+to baseband (`comnum.audio_downconvert(comnum.read_wav("recording.wav")[0], carrier,
+fs)`).
+
 ## Sharing a specification
 
 **Share** puts the text of the specification in the fragment of the address,
@@ -102,7 +115,8 @@ The module exports (see `pkg/comnum.d.ts`):
 - `run(yaml, on_condition, on_batch)`: the campaign, every completed condition and
   the progress of the batches relayed to the callbacks as JSON, the results and the
   checks of the expectations returned at the end;
-- `trace(yaml, condition)`: the signals at the `scope` blocks of trial 0 of a condition.
+- `trace(yaml, condition)`: the signals at the `scope` blocks of trial 0 of a condition;
+- `wav(re, im, fs, carrier_hz, audio_rate)`: the bytes of the WAV file of a traced signal.
 
 A long run blocks the worker only; **Stop** terminates it and loads the module again.
 In the console, `comnumPlayground.setText(yaml)` and `comnumPlayground.run()` script

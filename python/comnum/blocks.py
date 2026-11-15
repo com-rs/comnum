@@ -1002,6 +1002,79 @@ class CpmRx(Native):
         )
 
 
+class TextSource(Native):
+    """A text as the bits and symbols of a block: its UTF-8 bytes in an HDLC frame (or bare), the same in every trial.
+
+    Needs: nothing. Gives: bits, symbols, constellation, samples.
+
+    Args:
+        text (str): the message (UTF-8); default Hello, world!
+        constellation (str | dict): the constellation the bits are mapped to, the bits of a point being the binary digits of its index (for fsk_tx only its order matters: `4-PAM` is four tones); keys kind, m; default 4-PAM
+        framing (str): hdlc: the bytes in an HDLC frame (flags, CRC-16, bit stuffing), found in a stream of bits by its flags; none: the bits of the bytes, most significant first; one of hdlc, none; default hdlc
+        flags (int): flags sent before the frame (hdlc), for the receiver to settle; default 4
+        symbol_rate (float): symbol rate; 1 keeps a normalised time axis [Bd]; default 1.0
+    """
+
+    needs = ()
+    gives = ("bits", "symbols", "constellation", "samples")
+    param_names = ("text", "constellation", "framing", "flags", "symbol_rate")
+
+    def __init__(
+        self,
+        *,
+        text: str | Var = "Hello, world!",
+        constellation: str | dict | Var = "4-PAM",
+        framing: str | Var = "hdlc",
+        flags: int | Var = 4,
+        symbol_rate: float | Var = 1.0,
+    ) -> None:
+        _init(
+            self,
+            "text_source",
+            text=text,
+            constellation=constellation,
+            framing=framing,
+            flags=flags,
+            symbol_rate=symbol_rate,
+        )
+
+
+class FskTx(Native):
+    """Orthogonal FSK modulator: the index of every symbol of the constellation chooses one of its M tones, a unit-envelope signal at sps samples per symbol.
+
+    Needs: samples, constellation. Gives: nothing.
+
+    Args:
+        sps (int): samples per symbol; default 16
+        spacing (int): cycles per symbol between two adjacent tones (M · spacing ≤ sps); default 1
+    """
+
+    needs = ("samples", "constellation")
+    gives = ()
+    param_names = ("sps", "spacing")
+
+    def __init__(self, *, sps: int | Var = 16, spacing: int | Var = 1) -> None:
+        _init(self, "fsk_tx", sps=sps, spacing=spacing)
+
+
+class FskRx(Native):
+    """Noncoherent FSK detector, aligned on the symbols: the tone of largest energy, back to the symbols of the constellation.
+
+    Needs: samples, constellation. Gives: nothing.
+
+    Args:
+        sps (int): samples per symbol; default 16
+        spacing (int): cycles per symbol between two adjacent tones (M · spacing ≤ sps); default 1
+    """
+
+    needs = ("samples", "constellation")
+    gives = ()
+    param_names = ("sps", "spacing")
+
+    def __init__(self, *, sps: int | Var = 16, spacing: int | Var = 1) -> None:
+        _init(self, "fsk_rx", sps=sps, spacing=spacing)
+
+
 class Probe(Native):
     """Measure metrics at this point of the link; reported as <label>.<metric> (label: probe by default).
 
@@ -2030,6 +2103,8 @@ __all__ = [
     "FlatFading",
     "Foe",
     "FrameSync",
+    "FskRx",
+    "FskTx",
     "Gardner",
     "Manakov",
     "ManakovDbp",
@@ -2055,6 +2130,7 @@ __all__ = [
     "Source",
     "Ssfm",
     "Tdl",
+    "TextSource",
     "TxIq",
     "Viterbi",
     "WdmRx",

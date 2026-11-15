@@ -6,6 +6,7 @@
 //!
 //! | Module | Content |
 //! |---|---|
+//! | [`audio`] | a sound card as a channel: a complex baseband signal on an audio carrier and back, the WAV container |
 //! | [`fm`] | analogue frequency modulation: the modulator, the polar discriminator, pre- and de-emphasis |
 //! | [`frontend`] | one channel of a capture to baseband at the rate of its receiver: DC removal, frequency shift, rational resampling |
 //! | [`filter`] | pulse shapes (rectangular, NRZ, raised cosine, root-raised cosine, return-to-zero), FIR filtering (`same` alignment), low-pass FIR design, Butterworth IIR low-pass, moving average |
@@ -34,6 +35,7 @@
 //! ```
 
 pub mod adaptive;
+pub mod audio;
 pub mod compensation;
 pub mod cyclo;
 pub mod equalizer;

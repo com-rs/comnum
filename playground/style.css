@@ -270,6 +270,9 @@ button.tab:hover { color: var(--fg); }
 .action.primary:hover:not(:disabled) { background: #2369bf; }
 .plot-controls label { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; color: var(--muted); }
 .plot-controls label.check { color: var(--fg); }
+.plot-controls input[type="number"] { width: 5.5em; font: inherit; font-size: 12px; color: var(--fg); background: var(--input-bg); border: 1px solid var(--border); border-radius: 3px; padding: 1px 4px; }
+.text-button { font-size: 12px; padding: 2px 8px; border: 1px solid var(--border); border-radius: 3px; }
+.text-button:hover { background: var(--hover); }
 .plot-controls input[type="checkbox"] { margin: 0; accent-color: var(--accent); }
 
 #editor { overflow: hidden; }

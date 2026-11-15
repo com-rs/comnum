@@ -1,0 +1,149 @@
+//! Orthogonal M-FSK with a noncoherent receiver.
+
+use super::*;
+use comnum::waveform::fsk::Fsk;
+
+/// Orthogonal `M`-FSK with a continuous phase and a noncoherent receiver: the symbol
+/// `a` is the tone of `a · spacing` cycles per symbol, held for `sps` samples. The
+/// receiver correlates every symbol with the `M` tones and needs neither the phase nor
+/// the exact frequency of the carrier; its error rate over white noise is
+/// `theory_ber_fsk_noncoherent`.
+///
+/// Args:
+///     m (int): the number of tones.
+///     sps (int): samples per symbol.
+///     spacing (int): cycles per symbol between two adjacent tones (`m · spacing ≤ sps`).
+///
+/// Raises:
+///     ValueError: for an invalid parameter (the message names it).
+///
+/// Examples:
+///     >>> import comnum
+///     >>> fsk = comnum.Fsk(4, 16, spacing=2)
+///     >>> x = fsk.modulate([0, 3, 1, 2])
+///     >>> x.size, fsk.demodulate(x).tolist()
+///     (64, [0, 3, 1, 2])
+#[pyclass(name = "Fsk", module = "comnum")]
+pub struct PyFsk {
+    inner: Fsk,
+}
+
+#[pymethods]
+impl PyFsk {
+    #[new]
+    #[pyo3(signature = (m, sps, *, spacing=1))]
+    fn new(m: usize, sps: usize, spacing: usize) -> PyResult<Self> {
+        Ok(PyFsk { inner: Fsk::new(m, sps, spacing).py()? })
+    }
+
+    /// int: The number of tones `M`.
+    #[getter]
+    fn m(&self) -> usize {
+        self.inner.m
+    }
+
+    /// int: Samples per symbol.
+    #[getter]
+    fn sps(&self) -> usize {
+        self.inner.sps
+    }
+
+    /// int: Cycles per symbol between two adjacent tones.
+    #[getter]
+    fn spacing(&self) -> usize {
+        self.inner.spacing
+    }
+
+    /// The unit-envelope samples of a sequence of symbols.
+    ///
+    /// Args:
+    ///     symbols (array_like): integers in `[0, M)`.
+    ///
+    /// Returns:
+    ///     numpy.ndarray: `sps` samples per symbol.
+    ///
+    /// Raises:
+    ///     ValueError: for a symbol outside the alphabet.
+    fn modulate<'py>(&self, py: Python<'py>, symbols: &Bound<'py, PyAny>) -> PyResult<CArr<'py>> {
+        Ok(carr(py, self.inner.modulate(&uvec(symbols)?).py()?))
+    }
+
+    /// The energy of the `M` tones in every whole symbol, the first symbol at the
+    /// first sample.
+    ///
+    /// Args:
+    ///     samples (array_like): the received samples.
+    ///
+    /// Returns:
+    ///     numpy.ndarray: `M` energies per symbol.
+    ///
+    /// Raises:
+    ///     ValueError: for an input that is not a 1-D complex array.
+    fn energies<'py>(&self, py: Python<'py>, samples: &Bound<'py, PyAny>) -> PyResult<FArr<'py>> {
+        Ok(farr(py, self.inner.energies(&cvec(samples)?).py()?))
+    }
+
+    /// The noncoherent decisions: the tone of largest energy in every whole symbol.
+    ///
+    /// Args:
+    ///     samples (array_like): the received samples, the first symbol at the first sample.
+    ///
+    /// Returns:
+    ///     numpy.ndarray: one symbol per `sps` samples.
+    ///
+    /// Raises:
+    ///     ValueError: for an input that is not a 1-D complex array.
+    fn demodulate<'py>(&self, py: Python<'py>, samples: &Bound<'py, PyAny>) -> PyResult<IArr<'py>> {
+        Ok(iarr(py, self.inner.demodulate(&cvec(samples)?).py()?))
+    }
+
+    /// The offset in `[0, sps)` at which the symbols start: the one that maximises the
+    /// energy of the decisions, to within one sample. Give it the part of a recording
+    /// that holds the signal.
+    ///
+    /// Args:
+    ///     samples (array_like): the received samples.
+    ///
+    /// Returns:
+    ///     int: the offset of the first whole symbol.
+    ///
+    /// Raises:
+    ///     ValueError: for fewer samples than two symbols.
+    fn timing(&self, samples: &Bound<'_, PyAny>) -> PyResult<usize> {
+        self.inner.timing(&cvec(samples)?).py()
+    }
+
+    fn __repr__(&self) -> String {
+        format!("Fsk(m={}, sps={}, spacing={})", self.inner.m, self.inner.sps, self.inner.spacing)
+    }
+}
+
+/// The bit error rate of `M` orthogonal signals detected noncoherently over white
+/// noise (noncoherent `M`-FSK; Proakis & Salehi, Sec. 4.5): `exp(-Eb/(2 N0)) / 2` for
+/// `M = 2`.
+///
+/// Args:
+///     m (int): the number of tones.
+///     ebn0_db (float | array_like): `Eb/N0` (dB).
+///
+/// Returns:
+///     float | numpy.ndarray: the bit error rate.
+///
+/// Raises:
+///     ValueError: for fewer than two tones.
+///
+/// Examples:
+///     >>> import comnum, math
+///     >>> round(comnum.theory_ber_fsk_noncoherent(2, 10.0), 9) == round(0.5 * math.exp(-5), 9)
+///     True
+#[pyfunction]
+fn theory_ber_fsk_noncoherent(m: usize, ebn0_db: &Bound<'_, PyAny>) -> PyResult<Py<PyAny>> {
+    let bits = comnum::math::lin2db((m.max(2) as f64).log2());
+    map_real(ebn0_db, |e| comnum::mapping::theory::ber_orthogonal_noncoherent(m, e + bits).py())
+}
+
+/// Register the bindings of this module.
+pub(super) fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
+    m.add_class::<PyFsk>()?;
+    m.add_function(wrap_pyfunction!(theory_ber_fsk_noncoherent, m)?)
+}

@@ -82,3 +82,34 @@ the clock time (NRSC-4 / EN 50067):
 
 Demodulation needs a carrier about 10 dB above the noise in its 200 kHz (the threshold
 of FM); the telescopic antenna of a HackRF indoors may give less.
+
+Sound cards
+-----------
+
+A loudspeaker and a microphone are a channel that needs no radio: a complex baseband
+signal is played on an audio carrier and recorded by another computer.
+:func:`comnum.audio_upconvert` resamples the signal to the rate of the card and puts it
+on the carrier, :func:`comnum.write_wav` writes the file to play;
+:func:`comnum.read_wav` and :func:`comnum.audio_downconvert` bring a recording back to
+baseband, with the delay, the echoes and the clock difference of two cards for the
+receiver to deal with.
+
+.. code-block:: python
+
+   fsk = comnum.Fsk(4, 24, spacing=2)                   # four tones, 24 samples per symbol
+   bits = comnum.hdlc_frame("a text message")           # flags, check sequence, stuffing
+   x = fsk.modulate(2 * bits[0::2] + bits[1::2])        # (an even number of bits)
+   comnum.write_wav("message.wav", 0.5 * comnum.audio_upconvert(x, 2400, 6000))
+
+   samples, rate = comnum.read_wav("recording.wav")     # recorded on another machine
+   y = comnum.audio_downconvert(samples, 6000, 2400, rate)
+   decided = fsk.demodulate(y[fsk.timing(y):])
+   bits = np.stack([decided >> 1, decided & 1], axis=1).ravel()
+   print(comnum.hdlc_frames(bits))                      # [(b'a text message', True)]
+
+:func:`comnum.text_to_bits` and :func:`comnum.bits_to_text` convert a text to the bits
+of its UTF-8 bytes and back; :class:`comnum.Fsk` is noncoherent orthogonal FSK, which
+needs neither the phase nor the exact frequency of the carrier. The gallery page
+:doc:`../auto_examples/receiver/plot_05_acoustic_modem` goes through the chain with a
+simulated room, and the playground exports the signal of any scope as a WAV file (the
+**WAV** button of a scope tab).

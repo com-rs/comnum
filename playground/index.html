@@ -113,6 +113,11 @@
               <div id="trace-controls" class="plot-controls" hidden>
                 <label>traced <select id="trace-condition" aria-label="condition traced"></select></label>
               </div>
+              <div id="wav-controls" class="plot-controls" hidden>
+                <label title="symbols per second when the signal is played">baud <input type="number" id="wav-baud" value="100" min="1" step="1" aria-label="symbol rate of the exported signal"></label>
+                <label title="the audio carrier of the exported signal">carrier (Hz) <input type="number" id="wav-carrier" value="6000" min="1" step="100" aria-label="audio carrier"></label>
+                <button id="wav-export" class="text-button" title="download the signal of this scope as a WAV file (48 kHz, mono)">WAV</button>
+              </div>
               <div class="plot-controls">
                 <label>x <select id="x-axis" aria-label="x axis"></select></label>
                 <label>y <select id="metric" aria-label="metric"></select></label>

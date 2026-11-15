@@ -8,7 +8,7 @@
 use super::per_pol::PerPol;
 use super::schema::{self, Fact, ParamDefault, ParamInfo};
 use super::{Block, BuildContext};
-use super::{analysis, ce_ofdm, channel, coding, cpm, dsp, fiber, optical, source, systems, wireless};
+use super::{analysis, ce_ofdm, channel, coding, cpm, dsp, fiber, fsk, optical, source, systems, wireless};
 use crate::params::split_block;
 use comnum_core::{Error, Result};
 use serde_json::{Map, Value as Json};
@@ -130,6 +130,7 @@ const FAMILIES: &[FamilyFn] = &[
     dsp::blocks,
     ce_ofdm::blocks,
     cpm::blocks,
+    fsk::blocks,
     analysis::blocks,
     optical::blocks,
     wireless::blocks,

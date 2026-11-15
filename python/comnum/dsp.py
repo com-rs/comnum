@@ -7,6 +7,8 @@ not edit.
 from comnum import (
     adaptive_equalizer,
     anorm,
+    audio_downconvert,
+    audio_upconvert,
     bps,
     butterworth_lowpass,
     cd_dispersion_factor,
@@ -38,6 +40,7 @@ from comnum import (
     pnorm,
     pulse_shape,
     rc_taps,
+    read_wav,
     resample_fft,
     resample_rational,
     rrc_spectrum,
@@ -48,11 +51,14 @@ from comnum import (
     unwrap,
     upsample,
     viterbi_viterbi,
+    write_wav,
 )
 
 __all__ = [
     "adaptive_equalizer",
     "anorm",
+    "audio_downconvert",
+    "audio_upconvert",
     "bps",
     "butterworth_lowpass",
     "cd_dispersion_factor",
@@ -84,6 +90,7 @@ __all__ = [
     "pnorm",
     "pulse_shape",
     "rc_taps",
+    "read_wav",
     "resample_fft",
     "resample_rational",
     "rrc_spectrum",
@@ -94,4 +101,5 @@ __all__ = [
     "unwrap",
     "upsample",
     "viterbi_viterbi",
+    "write_wav",
 ]

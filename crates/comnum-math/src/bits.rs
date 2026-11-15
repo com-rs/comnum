@@ -108,6 +108,28 @@ pub fn bits_to_indices(bits: &[u8], n_bits: usize) -> Result<Vec<usize>> {
     Ok(bits.chunks(n_bits).map(bits_to_index).collect())
 }
 
+/// The bits of the UTF-8 bytes of `text`, every byte the most significant bit first:
+/// eight bits per ASCII character, sixteen to thirty-two for the others.
+///
+/// # Examples
+/// ```
+/// use comnum_math::bits::{bits_to_text, text_to_bits};
+/// assert_eq!(text_to_bits("A"), [0, 1, 0, 0, 0, 0, 0, 1]);
+/// assert_eq!(bits_to_text(&text_to_bits("été 2026")), "été 2026");
+/// ```
+pub fn text_to_bits(text: &str) -> Vec<u8> {
+    text.bytes().flat_map(|byte| index_to_bits(usize::from(byte), 8)).collect()
+}
+
+/// The text of `bits` read eight at a time as UTF-8 bytes, the inverse of
+/// [`text_to_bits`]: the bits left over after the last whole byte are dropped, and a
+/// byte sequence that is not UTF-8 (a bit received in error) becomes the replacement
+/// character U+FFFD instead of an error.
+pub fn bits_to_text(bits: &[u8]) -> String {
+    let bytes: Vec<u8> = bits.chunks_exact(8).map(|b| bits_to_index(b) as u8).collect();
+    String::from_utf8_lossy(&bytes).into_owned()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -120,5 +142,23 @@ mod tests {
             let bits: Vec<u8> = index_to_bits(i, 8).collect();
             assert_eq!(bits_to_index(&bits), i);
         }
+    }
+
+    #[test]
+    fn a_text_is_its_utf8_bits_and_errors_do_not_stop_the_reading() {
+        let text = "Bonjour, ça va ? ✓";
+        let bits = text_to_bits(text);
+        assert_eq!(bits.len(), 8 * text.len());
+        assert_eq!(bits_to_text(&bits), text);
+        // nine bits more: one byte and a bit that is dropped
+        let mut longer = bits.clone();
+        longer.extend([0, 0, 1, 0, 0, 0, 0, 1, 1]);
+        assert_eq!(bits_to_text(&longer), format!("{text}!"));
+        // an error in the first bit of the first byte: an invalid byte, the rest intact
+        let mut wrong = bits;
+        wrong[0] ^= 1;
+        let read = bits_to_text(&wrong);
+        assert!(read.starts_with('\u{FFFD}') && read.ends_with("onjour, ça va ? ✓"));
+        assert_eq!(bits_to_text(&[]), "");
     }
 }

@@ -38,7 +38,7 @@ decode                 13  # the decoder of each code (BCH, RS, OSTBC, different
 deinterleave            2  # Interleaver::deinterleave (a permutation) / dvbt::InnerInterleaver::deinterleave (the LLRs of a DVB-T symbol): the same verb
 detect                  6  # differential::detect, ofdm::detection::detect (per RE), OfdmFrame::detect (calls the former), Gamp::detect, Photodiode::detect, Dsss::detect (calls a detector of comnum-mimo on the signature matrix)
 encode                 10  # the encoder of each code (BCH, RS, trellis, OSTBC, differential, the FEC of the standards): one verb, different codes
-energies                2  # Css::energies / Fhss::energies: the energies of the candidates of a noncoherent receiver, by two different transforms (dechirp and DFT; the DFT bins of a hop)
+energies                3  # Css::energies / Fhss::energies: the energies of the candidates of a noncoherent receiver, by two different transforms (dechirp and DFT; the DFT bins of a hop); Fsk::energies (the correlations with the tones at any number of samples per symbol)
 energy                  2  # Constellation::energy calls comnum_math::power on its points
 ensure                  2  # comnum_core::ensure (an error unless a condition holds) / SamplingCheck::ensure (the sampling conditions of a split-step run)
 estimate                8  # the estimators of different quantities (OFDM channel, MIMO channel, symbols, cumulants); OfdmFrame::estimate calls the OFDM kernel
@@ -113,7 +113,7 @@ bind                    2
 bit_map                 2
 bits_per_symbol         3
 block_len               4
-check                  23
+check                  24
 code                    5
 conditions              2
 config                  2
@@ -121,7 +121,7 @@ dbp                     2
 decoder_mut             2
 delays                  5  # DoublySelective::delays: the taps of the SIR model on its grid
 demap_bits              2
-demodulate              12  # ais::demodulate (the line levels of an AIS channel); Dsss::demodulate (the bank of matched filters of a direct-sequence link); Fhss::demodulate (the noncoherent decisions of a hopping link)
+demodulate              13  # ais::demodulate (the line levels of an AIS channel); Dsss::demodulate (the bank of matched filters of a direct-sequence link); Fhss::demodulate (the noncoherent decisions of a hopping link); Fsk::demodulate (the noncoherent decisions of orthogonal FSK)
 describe                2
 draw                    6
 field                   3
@@ -140,7 +140,7 @@ m                       3
 map_bits                2
 mean                    2
 merge                   2
-modulate               15
+modulate               16
 mul                     2
 n                       3
 n_clusters              2

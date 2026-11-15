@@ -1,0 +1,32 @@
+# A text message on four tones: the chain of a message played on a loudspeaker and
+# recorded by another computer. text_source puts the UTF-8 bytes of the text in an HDLC
+# frame (four flags 01111110, the bytes and a 16-bit check sequence with bit stuffing,
+# a closing flag) and maps two bits to one of four symbols; fsk_tx sends every symbol
+# as one of four orthogonal tones, 24 samples per symbol, two cycles per symbol apart;
+# fsk_rx, a noncoherent receiver aligned on the symbols, compares the energies of the
+# four tones. At an Eb/N0 of 10 dB the message comes back without an error.
+#
+# In the playground, the WAV button of the scope "message" (which holds the whole
+# signal: a scope keeps max_samples samples, 4096 by default) downloads it as a sound: at 100 baud and a carrier of 6000 Hz the tones are at 6.0, 6.2, 6.4 and
+# 6.6 kHz. Played, recorded on another machine and read with the Python package, it
+# gives the text back:
+#
+#   fsk = comnum.Fsk(4, 24, spacing=2)
+#   samples, rate = comnum.read_wav("recording.wav")
+#   y = comnum.audio_downconvert(samples, 6000, 2400, rate)
+#   decided = fsk.demodulate(y[fsk.timing(y):])
+#   bits = np.stack([decided >> 1, decided & 1], axis=1).ravel()
+#   print(comnum.hdlc_frames(bits))
+name: tutorial_text_fsk
+description: A text message in an HDLC frame on four FSK tones, to play on a sound card
+seed: 13
+link:
+  - {type: text_source, text: "Bonjour ! Ce message est passé par le haut-parleur.", constellation: 4-PAM}
+  - {type: fsk_tx, sps: 24, spacing: 2}
+  - {type: scope, label: signal, view: time, max_samples: 480}
+  - {type: scope, label: message, view: time, max_samples: 20000}
+  - {type: scope, label: spectrum, view: spectrum, nfft: 512}
+  - {type: awgn_ebn0, ebn0_db: 10}
+  - {type: fsk_rx, sps: 24, spacing: 2}
+metrics: {report: [ber, ser]}
+stop: {max_trials: 1}

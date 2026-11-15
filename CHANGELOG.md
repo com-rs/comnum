@@ -8,6 +8,25 @@ and follow [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- A sound card as a channel, to send a signal through a loudspeaker and a microphone:
+  - `comnum_dsp::audio`: `upconvert` (a complex baseband signal resampled to the audio
+    rate on a carrier, a real signal) and `downconvert` (a recording back to baseband),
+    `wav_encode` (mono 16-bit PCM) and `wav_decode` (PCM of 8 to 32 bits, IEEE floats,
+    every channel).
+  - `comnum_waveform::fsk::Fsk`: orthogonal $M$-FSK with a continuous phase and a
+    noncoherent receiver at any number of samples per symbol, with `timing`, the start
+    of the symbols in a recording.
+  - `comnum_math::bits::text_to_bits` and `bits_to_text` (UTF-8, most significant bit
+    first, a byte in error becoming U+FFFD).
+  - Python: `comnum.audio_upconvert`, `audio_downconvert`, `write_wav`, `read_wav`,
+    `Fsk`, `theory_ber_fsk_noncoherent`, `text_to_bits`, `bits_to_text`, and the HDLC
+    framing `hdlc_frame`, `hdlc_frames`; the gallery tutorial
+    `receiver/plot_05_acoustic_modem.py` sends a text through a simulated room.
+  - Specifications: the blocks `text_source` (a text as the bits of an HDLC frame, or
+    bare, mapped to a constellation), `fsk_tx` and `fsk_rx`;
+    `specs/tutorial/13_text_fsk.yaml`.
+  - Playground: a **WAV** button on a scope tab downloads the signal of the scope on an
+    audio carrier (`wav` of `comnum-wasm`); the page exports only.
 - Frequency-hopping spread spectrum: `comnum_waveform::fhss::Fhss`, noncoherent
   $M$-FSK on the tones of a band of $Q$ channels along a hopping pattern (slow
   hopping), with a DFT receiver; `comnum_channel::jamming::partial_band_noise`, a

@@ -52,6 +52,7 @@ macro_rules! wrapper_methods {
 
 mod ais;
 mod amplifier;
+mod audio;
 mod blind;
 mod cdl;
 mod chain;
@@ -394,6 +395,7 @@ fn _comnum(m: &Bound<'_, PyModule>) -> PyResult<()> {
     fiber::register(m)?;
     fm::register(m)?;
     ais::register(m)?;
+    audio::register(m)?;
     gn::register(m)?;
     devices::register(m)?;
     mimo::register(m)?;

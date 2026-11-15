@@ -1,12 +1,13 @@
 //! WebAssembly bindings of comnum for the browser playground.
 //!
-//! Four functions, exported by `wasm-bindgen` to the page (`playground/`): [`specs`],
+//! Five functions, exported by `wasm-bindgen` to the page (`playground/`): [`specs`],
 //! the specifications of the repository; [`inspect`], what a specification will run,
 //! before it runs (its link, its conditions, its metrics, the published and theoretical
 //! points of its expectations); [`run`], the campaign itself on the calling thread, a
 //! JavaScript callback receiving every condition as it completes and the progress of
-//! every batch; [`trace`], the signals at the `scope` blocks of one trial. Every value
-//! crosses to JavaScript as JSON text.
+//! every batch; [`trace`], the signals at the `scope` blocks of one trial; [`wav`], a
+//! traced signal as the WAV file of a sound card. Every value crosses to JavaScript as
+//! JSON text, but the bytes of the WAV file.
 //!
 //! The engine is the one of the native build: the same runner of `comnum_sim`, the
 //! same blocks and seeds, so that a point computed in the browser is the point of
@@ -212,6 +213,43 @@ pub fn trace(yaml: &str, condition: usize) -> Result<String, JsValue> {
     Ok(Json::Array(items).to_string())
 }
 
+/// The peak of the samples of an exported WAV file, of a full scale of 1.
+const WAV_PEAK: f64 = 0.8;
+
+/// The silence before and after the signal of an exported WAV file (s).
+const WAV_SILENCE_S: f64 = 0.25;
+
+/// The bytes of [`wav`], with the errors of the library.
+fn wav_bytes(re: &[f64], im: &[f64], fs: f64, carrier_hz: f64, audio_rate: u32) -> comnum::Result<Vec<u8>> {
+    if re.len() != im.len() {
+        return Err(comnum::Error::Shape(format!("{} real parts for {} imaginary parts", re.len(), im.len())));
+    }
+    let x: Vec<comnum::math::C64> = re.iter().zip(im).map(|(a, b)| comnum::math::C64::new(*a, *b)).collect();
+    let signal = comnum::dsp::audio::upconvert(&x, fs, carrier_hz, f64::from(audio_rate))?;
+    let peak = signal.iter().fold(0.0f64, |m, v| m.max(v.abs()));
+    let gain = if peak > 0.0 { WAV_PEAK / peak } else { 0.0 };
+    let silence = vec![0.0; (WAV_SILENCE_S * f64::from(audio_rate)) as usize];
+    let mut samples = silence.clone();
+    samples.extend(signal.iter().map(|v| v * gain));
+    samples.extend(silence);
+    comnum::dsp::audio::wav_encode(&samples, audio_rate)
+}
+
+/// The WAV file (mono, 16-bit PCM at `audio_rate`) that plays a traced signal on a
+/// sound card: the complex baseband samples `re + j im`, taken as sampled at `fs` (Hz),
+/// on the carrier `carrier_hz` (`comnum::dsp::audio::upconvert`), scaled to a peak of
+/// 0.8 of the full scale, between two silences of a quarter of a second. A recording
+/// of it comes back to baseband with `comnum.audio_downconvert(recording, carrier_hz,
+/// fs)` of the Python package. The page only exports: it reads no recording.
+///
+/// # Errors
+/// The message of a band `carrier_hz ± fs/2` that does not fit under half the audio
+/// rate, or of rates that are not whole numbers of hertz.
+#[wasm_bindgen]
+pub fn wav(re: &[f64], im: &[f64], fs: f64, carrier_hz: f64, audio_rate: u32) -> Result<Vec<u8>, JsValue> {
+    wav_bytes(re, im, fs, carrier_hz, audio_rate).map_err(js_error)
+}
+
 /// The index of a condition in the list (the conditions are compared by their entries).
 fn c_index(c: &comnum::sim::grid::Condition, all: &[comnum::sim::grid::Condition]) -> usize {
     all.iter().position(|x| x.entries() == c.entries()).unwrap_or(0)
@@ -303,4 +341,54 @@ pub fn run(yaml: &str, on_condition: &js_sys::Function, on_batch: &js_sys::Funct
         "wall_s": t.elapsed().as_secs_f64(),
     })
     .to_string())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::wav_bytes;
+    use comnum::dsp::audio::{downconvert, wav_decode};
+
+    #[test]
+    fn an_exported_signal_comes_back_from_its_wav_file() {
+        // 64 symbols of a QPSK-like signal at 8 samples per symbol, played at 100 baud
+        let (re, im): (Vec<f64>, Vec<f64>) = (0..512)
+            .map(|n| (if (n / 8) % 2 == 0 { 1.0 } else { -1.0 }, if (n / 16) % 2 == 0 { 1.0 } else { -1.0 }))
+            .unzip();
+        let bytes = wav_bytes(&re, &im, 800.0, 6000.0, 48_000).unwrap();
+        let wav = wav_decode(&bytes).unwrap();
+        // a quarter of a second of silence on each side of 0.64 s of signal
+        assert_eq!((wav.sample_rate, wav.channels[0].len()), (48_000, 12_000 + 30_720 + 12_000));
+        assert!(wav.channels[0][..11_000].iter().all(|v| *v == 0.0));
+        let peak = wav.channels[0].iter().fold(0.0f64, |m, v| m.max(v.abs()));
+        assert!((peak - 0.8).abs() < 1e-3);
+        // back at baseband, the samples sent to a scale
+        let y = downconvert(&wav.channels[0][12_000..42_720], 48_000.0, 6000.0, 800.0).unwrap();
+        let scale = y[100].re / re[100];
+        let (a, b) = (y[300], y[404]);
+        assert!((a.re - scale * re[300]).abs() < 0.05 * scale && (b.im - scale * im[404]).abs() < 0.05 * scale);
+        assert!(wav_bytes(&re, &im[..10], 800.0, 6000.0, 48_000).is_err());
+        assert!(wav_bytes(&re, &im, 800.0, 300.0, 48_000).is_err());
+    }
+
+    /// What the page does with `specs/tutorial/13_text_fsk.yaml`, then what its header
+    /// tells the reader to do in Python: the text comes back from the exported file.
+    #[test]
+    fn the_text_of_the_tutorial_comes_back_from_the_exported_wav_file() {
+        use comnum::spec::Spec;
+        use comnum::systems::hdlc;
+        use comnum::waveform::fsk::Fsk;
+        let yaml = include_str!("../../../specs/tutorial/13_text_fsk.yaml");
+        let traces = Spec::from_yaml(yaml).unwrap().trace(0, 0).unwrap();
+        let signal = traces.iter().find(|t| t.label == "message").unwrap();
+        let (re, im): (Vec<f64>, Vec<f64>) = signal.streams[0].iter().map(|z| (z.re, z.im)).unzip();
+        // 100 baud at the 24 samples per symbol of the scope, a carrier of 6 kHz
+        let fs = 100.0 * signal.sps;
+        let wav = wav_decode(&wav_bytes(&re, &im, fs, 6000.0, 48_000).unwrap()).unwrap();
+        let y = downconvert(&wav.channels[0], 48_000.0, 6000.0, fs).unwrap();
+        let fsk = Fsk::new(4, 24, 2).unwrap();
+        let decided = fsk.demodulate(&y[fsk.timing(&y).unwrap()..]).unwrap();
+        let bits: Vec<u8> = decided.iter().flat_map(|d| [(d >> 1) as u8, (d & 1) as u8]).collect();
+        let text = "Bonjour ! Ce message est passé par le haut-parleur.";
+        assert!(hdlc::frames(&bits).iter().any(|f| f.fcs_ok && f.payload == text.as_bytes()));
+    }
 }

@@ -55,6 +55,8 @@ Sources
    o150_sequence
    symbols
    maxwell_boltzmann
+   text_to_bits
+   bits_to_text
 
 Constellations
 ~~~~~~~~~~~~~~
@@ -256,6 +258,15 @@ and its rake receiver, the exact error rates and the large-system limits.
    cdma_sinr_large_system
    cdma_sinr_mmse_large_system
    cdma_spectral_efficiency
+
+Frequency-shift keying
+~~~~~~~~~~~~~~~~~~~~~~
+
+.. autosummary::
+   :toctree: generated
+
+   Fsk
+   theory_ber_fsk_noncoherent
 
 Frequency-hopping spread spectrum
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -539,6 +550,20 @@ Equalisation and compensation
    cd_ls_taps
    cd_ls_error
 
+Sound cards
+~~~~~~~~~~~
+
+A complex baseband signal played on an audio carrier and recorded back, and the WAV
+files of the samples.
+
+.. autosummary::
+   :toctree: generated
+
+   audio_upconvert
+   audio_downconvert
+   write_wav
+   read_wav
+
 Blind estimation
 ~~~~~~~~~~~~~~~~
 
@@ -697,6 +722,15 @@ LTE
    lte_cell_search
    lte_decode_mib
    zadoff_chu
+
+HDLC framing
+~~~~~~~~~~~~
+
+.. autosummary::
+   :toctree: generated
+
+   hdlc_frame
+   hdlc_frames
 
 AIS
 ~~~

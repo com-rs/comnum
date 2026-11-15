@@ -2,7 +2,7 @@
 // page's messages. A run blocks this worker, not the page; the module calls back for
 // every completed condition and for the progress of the batches, relayed as messages.
 
-import init, { inspect, run, specs, trace, version } from "./pkg/comnum.js";
+import init, { inspect, run, specs, trace, version, wav } from "./pkg/comnum.js";
 
 // A short campaign, run on request to measure the speed of the module: V8 starts a
 // module in its baseline tier (Liftoff) and installs the optimised code (TurboFan) in
@@ -47,6 +47,15 @@ onmessage = async (e) => {
       postMessage({ type: "trace", ok: true, data: JSON.parse(trace(yaml, e.data.condition || 0)) });
     } catch (err) {
       postMessage({ type: "trace", ok: false, error: String(err) });
+    }
+  } else if (type === "wav") {
+    // a traced signal as the WAV file of a sound card: the bytes are transferred
+    const { re, im, fs, carrier, rate, name } = e.data;
+    try {
+      const bytes = wav(Float64Array.from(re), Float64Array.from(im), fs, carrier, rate);
+      postMessage({ type: "wav", ok: true, name, fs, carrier, rate, bytes }, [bytes.buffer]);
+    } catch (err) {
+      postMessage({ type: "wav", ok: false, error: String(err) });
     }
   } else if (type === "probe") {
     const t0 = performance.now();

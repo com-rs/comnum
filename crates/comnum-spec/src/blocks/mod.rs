@@ -79,6 +79,7 @@ pub mod coding;
 pub mod cpm;
 pub mod dsp;
 pub mod fiber;
+pub mod fsk;
 pub mod optical;
 pub mod source;
 pub mod systems;
