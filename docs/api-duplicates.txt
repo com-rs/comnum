@@ -36,7 +36,7 @@ constellation           8  # the constellation of three standards (dvbs2, dvbt, 
 data_res                2  # ofdm::link::OfdmFrame::data_res (the data REs of a generic grid) / nr::pdsch::Pdsch::data_res (those of a PDSCH slot, TS 38.211 Sec. 7.3.1.5): the same notion on two grids
 decode                 13  # the decoder of each code (BCH, RS, OSTBC, differential, the FEC of the standards, the BCH of LTE): one verb, different codes / ais::message::decode (the fields of an AIS message)
 deinterleave            2  # Interleaver::deinterleave (a permutation) / dvbt::InnerInterleaver::deinterleave (the LLRs of a DVB-T symbol): the same verb
-detect                  5  # differential::detect, ofdm::detection::detect (per RE), OfdmFrame::detect (calls the former), Gamp::detect, Photodiode::detect
+detect                  6  # differential::detect, ofdm::detection::detect (per RE), OfdmFrame::detect (calls the former), Gamp::detect, Photodiode::detect, Dsss::detect (calls a detector of comnum-mimo on the signature matrix)
 encode                 10  # the encoder of each code (BCH, RS, trellis, OSTBC, differential, the FEC of the standards): one verb, different codes
 energy                  2  # Constellation::energy calls comnum_math::power on its points
 ensure                  2  # comnum_core::ensure (an error unless a condition holds) / SamplingCheck::ensure (the sampling conditions of a split-step run)
@@ -119,7 +119,7 @@ dbp                     2
 decoder_mut             2
 delays                  5  # DoublySelective::delays: the taps of the SIR model on its grid
 demap_bits              2
-demodulate              10  # ais::demodulate (the line levels of an AIS channel)
+demodulate              11  # ais::demodulate (the line levels of an AIS channel); Dsss::demodulate (the bank of matched filters of a direct-sequence link)
 describe                2
 draw                    6
 field                   3
@@ -138,7 +138,7 @@ m                       3
 map_bits                2
 mean                    2
 merge                   2
-modulate               13
+modulate               14
 mul                     2
 n                       3
 n_clusters              2

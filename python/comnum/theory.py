@@ -12,6 +12,9 @@ from comnum import (
     theory_ber_binary_fading as ber_binary_fading,
 )
 from comnum import (
+    theory_ber_cdma as ber_cdma,
+)
+from comnum import (
     theory_ber_dpsk as ber_dpsk,
 )
 from comnum import (
@@ -129,6 +132,7 @@ from comnum import (
 __all__ = [
     "ber",
     "ber_binary_fading",
+    "ber_cdma",
     "ber_dpsk",
     "ber_dpsk_jakes",
     "ber_gray",

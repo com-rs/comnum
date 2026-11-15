@@ -22,7 +22,7 @@
 //! | [`bigint`] | unsigned integers of arbitrary size, for enumerative coding |
 //! | [`bits`] | the Gray code [`gray`], [`gray_inverse`], and the conversions [`bits_to_index`], [`index_to_bits`] (most significant bit first) |
 //! | [`search`] | [`bisect`], [`golden_max`], [`argmax`] and [`gcd`] |
-//! | [`sequences`] | linear-feedback shift registers and the Gold sequence of 3GPP |
+//! | [`sequences`] | linear-feedback shift registers, the Gold sequence of 3GPP, spreading codes (m-sequences, Gold, Kasami, Walsh–Hadamard, Barker) and their correlations, Zadoff–Chu sequences |
 //!
 //! At the root (the functions of [`special`], [`quadrature`] and [`log_domain`] are
 //! re-exported there):

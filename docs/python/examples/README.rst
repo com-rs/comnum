@@ -81,6 +81,14 @@ equations they use. The table below gathers every comparison of this gallery.
      - BPSK, 16-QAM and DPSK over Rayleigh, Rice, Nakagami-m and Hoyt fading, and with
        maximal-ratio combining, against the MGF averages
      - :ref:`sphx_glr_auto_examples_foundations_plot_04_fading_channels.py`
+   * - D. N. C. Tse, S. V. Hanly, *IEEE Trans. Inf. Theory* 45(2), 1999, eq. (9); S.
+       Verdú, S. Shamai, same issue, eqs. (9)–(12) and Fig. 1; R. Lupas, S. Verdú, *IEEE
+       Trans. Inf. Theory* 35(1), 1989
+     - Spread spectrum: the correlations of the m-sequences and Gold codes, the
+       rejection of a tone jammer, the near–far problem with the conventional,
+       decorrelating and MMSE receivers, random signatures in large systems, the rake
+       receiver against maximal-ratio combining
+     - :ref:`sphx_glr_auto_examples_waveforms_plot_09_spread_spectrum.py`
    * - H. Ochiai, H. Imai, *IEEE Trans. Commun.* 49(2), 2001, eqs. (11) and (27)
      - The distribution of the PAPR of OFDM at the Nyquist rate and oversampled
      - :ref:`sphx_glr_auto_examples_waveforms_plot_01_papr_ccdf.py`

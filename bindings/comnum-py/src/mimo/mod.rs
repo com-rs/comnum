@@ -74,7 +74,7 @@ fn received(y: &Bound<'_, PyAny>) -> PyResult<(Array2<C64>, bool)> {
     }
 }
 
-fn detector(
+pub(crate) fn detector(
     method: &str,
     c: &comnum::mapping::constellation::Constellation,
     k: usize,

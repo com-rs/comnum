@@ -291,6 +291,59 @@ def test_css_round_trip_orthogonality_and_simulated_ser():
         comnum.Css(7, oversampling=2, waveform="fsk")
 
 
+def test_dsss_codes_cdma_receivers_and_rake():
+    # the codes: Gold 1967, three correlation values; Walsh codes orthogonal
+    gold = comnum.gold_codes(5)
+    assert gold.shape == (33, 31) and comnum.kasami_codes(6).shape == (8, 63)
+    u = comnum.m_sequence(5)
+    assert comnum.periodic_correlation(u, u).tolist() == [31] + [-1] * 30
+    assert set(comnum.periodic_correlation(gold[3], gold[9]).tolist()) <= {-9, -1, 7}
+    barker = comnum.barker_code(13)
+    assert np.abs(np.delete(comnum.aperiodic_correlation(barker, barker), 12)).max() == 1
+    walsh = comnum.Dsss(comnum.walsh_codes(8))
+    np.testing.assert_allclose(walsh.signatures.conj().T @ walsh.signatures, np.eye(8), atol=1e-12)
+    # eight users with unequal powers: round trip, receivers, exact error rates
+    bpsk = comnum.Constellation("psk", 2)
+    cdma = comnum.Dsss(gold[1:9], amplitudes=[1, 1, 2, 2, 1, 1, 3, 1])
+    assert (cdma.n_users, cdma.spreading_factor) == (8, 31)
+    rng = comnum.Rng(5)
+    labels = rng.integers(2, 8 * 100_000).reshape(8, -1)
+    chips = cdma.modulate(bpsk.points[labels])
+    np.testing.assert_array_equal(cdma.detect(chips, bpsk, 1e-3, "zf"), labels)
+    noise_var = 1 / comnum.db2lin(4.0)
+    noisy = chips + rng.complex_noise(chips.size, noise_var)
+    for receiver in ("mr", "zf"):
+        ber = np.mean(cdma.detect(noisy, bpsk, noise_var, receiver)[0] != labels[0])
+        assert ber == pytest.approx(
+            comnum.theory_ber_cdma(cdma.signatures, noise_var, receiver), rel=0.08
+        )
+    np.testing.assert_array_equal(
+        bpsk.decide(cdma.demodulate(noisy)[0]), cdma.detect(noisy, bpsk, noise_var, "mr")[0]
+    )
+    sinr = {r: cdma.sinr(noise_var, r) for r in ("mr", "zf", "mmse")}
+    assert np.all(sinr["mmse"] > sinr["zf"]) and np.all(sinr["mmse"] > sinr["mr"])
+    eta = comnum.cdma_near_far_resistance(cdma.signatures)
+    assert sinr["zf"][0] == pytest.approx(eta / noise_var)
+    # large systems: Tse and Hanly 1999, Fig. 2 (N = 128, K = 80, 20 dB), and eq. (6)
+    assert comnum.cdma_sinr_large_system(80 / 128, 20.0) == pytest.approx(15.92, abs=0.01)
+    assert comnum.cdma_sinr_mmse_large_system(1.0, [1.0] * 80, 128, 0.01) == pytest.approx(
+        comnum.db2lin(15.917), rel=1e-3
+    )
+    assert comnum.cdma_spectral_efficiency(1.0, "zf", ebn0_db=10.0) == 0.0
+    with pytest.raises(ValueError, match="exactly one"):
+        comnum.cdma_spectral_efficiency(0.5)
+    with pytest.raises(ValueError, match="linear receiver"):
+        cdma.sinr(noise_var, "ml")
+    # the rake: one finger per path, the symbols back without noise
+    link = comnum.Dsss(comnum.m_sequence(7))
+    x = link.modulate(bpsk.points[labels[0, :50]])
+    delays, gains = np.array([0, 3, 9]), np.array([0.7, -0.4j, 0.3 + 0.2j])
+    received = np.zeros(x.size + 9, complex)
+    for d, g in zip(delays, gains, strict=True):
+        received[d : d + x.size] += g * x
+    np.testing.assert_array_equal(bpsk.decide(link.rake(received, delays, gains)), labels[0, :50])
+
+
 def test_css_waveforms_spectrum_and_interference():
     # Chiani and Elzanaty 2019, Table I and Property 4
     assert comnum.css_max_cross_correlation(5) == pytest.approx(0.091, abs=5e-4)

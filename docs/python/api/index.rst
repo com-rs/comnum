@@ -234,6 +234,29 @@ The modulation of LoRa and its theory.
    css_interference_pattern
    theory_css_ser_interference
 
+Direct-sequence spread spectrum and CDMA
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Spreading codes and their correlations, the DS-CDMA link with its multiuser receivers
+and its rake receiver, the exact error rates and the large-system limits.
+
+.. autosummary::
+   :toctree: generated
+
+   Dsss
+   m_sequence
+   gold_codes
+   kasami_codes
+   walsh_codes
+   barker_code
+   periodic_correlation
+   aperiodic_correlation
+   theory_ber_cdma
+   cdma_near_far_resistance
+   cdma_sinr_large_system
+   cdma_sinr_mmse_large_system
+   cdma_spectral_efficiency
+
 Filtered multicarrier and OTFS
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 

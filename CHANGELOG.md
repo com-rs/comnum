@@ -8,6 +8,28 @@ and follow [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Direct-sequence spread spectrum and synchronous DS-CDMA:
+  - Rust: `comnum_math::sequences` gains the spreading codes `m_sequence` (orders 2 to
+    16), `gold_codes` (Gold 1967), `kasami_codes` (small set), `walsh_codes` and
+    `barker_code`, with `periodic_correlation` and `aperiodic_correlation`.
+    `comnum_waveform::dsss::Dsss` holds the signature matrix $H = SA$ of $K$ users:
+    `modulate`, `demodulate` (the bank of matched filters), `detect` with any detector
+    of `comnum_mimo::detection` (conventional, decorrelator, MMSE, SIC, maximum
+    likelihood), `sinr` of the linear receivers, and `rake` over a multipath channel.
+    `dsss::theory`: the exact error rates of the conventional receiver and of the
+    decorrelator, the near–far resistance (Lupas & Verdú 1989), the large-system SINR of
+    random signatures (`sinr_large_system`, `sinr_mmse_large_system`; Tse & Hanly 1999,
+    eqs. (6), (9)) and the spectral efficiency of Verdú & Shamai 1999, eqs. (9)–(12).
+  - Python: `comnum.Dsss`, `m_sequence`, `gold_codes`, `kasami_codes`, `walsh_codes`,
+    `barker_code`, `periodic_correlation`, `aperiodic_correlation`, `theory_ber_cdma`,
+    `cdma_near_far_resistance`, `cdma_sinr_large_system`,
+    `cdma_sinr_mmse_large_system`, `cdma_spectral_efficiency`; the gallery tutorial
+    `waveforms/plot_09_spread_spectrum.py`.
+  - Validation: cards `tse1999_fig1` (the SIR of 100 draws of random signatures within
+    0.15 dB of the limit at $N = 128$), `verdu1999_fig1` (eqs. (9)–(12) and six points
+    of Fig. 1), `lupas1989_ber` (simulated error rates of eight users within the
+    sampling error of the exact ones) and `proakis2008_rake` (a rake of one to three
+    fingers within 4 % of maximal-ratio combining).
 - Flat fading as one object, for the simulation and for the theory:
   - Rust: `comnum_core::channel::FlatFading` (Rayleigh, Rice, Nakagami-m, Hoyt) names
     the distribution, once, for the medium and for the theory;

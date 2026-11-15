@@ -1,0 +1,32 @@
+id: lupas1989_ber
+title: Simulated BER of the conventional receiver and of the decorrelator in synchronous DS-CDMA against the exact error rates
+literature: lupas1989
+evidence: [closed_form]
+source:
+  kind: paper
+  reference: "R. Lupas, S. Verdu, Linear multiuser detectors for synchronous code-division multiple-access channels, IEEE Trans. Inf. Theory 35(1), 123-136, 1989"
+  locator: "the error probability of the conventional detector (the mean of the Gaussian tail over the patterns of the interfering bits) and of the decorrelating detector (the Gaussian tail with the noise enhanced by the diagonal of the inverse correlation matrix), evaluated by theory::ber_matched_filter and theory::ber_decorrelator for the signatures of the test"
+description: >
+  Eight synchronous users with BPSK on Gold codes of length 31 (the decimated
+  m-sequence and seven sums of the set of order 5: normalised correlations of -9/31,
+  7/31 and -1/31), received with the amplitudes 1, 1, 2, 2, 1, 1, 3, 1, complex white
+  Gaussian noise at Eb/N0 = 4 and 7 dB for the first user; 1 000 000 symbols per point
+  (seed 1989). Receivers: the bank of matched filters (Linear::mr on the signature
+  matrix) and the decorrelator (Linear::zf). Measured: the ratio of the simulated bit
+  error rate of the first user to the exact one.
+run:
+  test: validation/tests/mimo/dsss.rs::lupas_verdu_1989_the_simulated_error_rates_of_the_linear_receivers_are_the_exact_ones
+tier: ci
+duration: "2 s on an Apple M6"
+tolerance: {rtol: 0.03}
+why: >
+  1 000 000 symbols count 75 000 errors and more with the conventional receiver and
+  24 000 at 4 dB with the decorrelator (a relative standard deviation below 0.7 %);
+  the decorrelator at 7 dB counts 2700 errors, 1.9 %, and has its own tolerance.
+findings:
+  - "the conventional receiver has an error rate of 9.6e-2 at 4 dB and 7.5e-2 at 7 dB (an interferer 9.5 dB above the user: the eye is nearly closed), the decorrelator 2.4e-2 and 2.7e-3; the simulation is within the sampling error of the exact values"
+cases:
+  - {inputs: {receiver: mr, ebn0_db: 4.0}, expected: 1.0}
+  - {inputs: {receiver: zf, ebn0_db: 4.0}, expected: 1.0}
+  - {inputs: {receiver: mr, ebn0_db: 7.0}, expected: 1.0}
+  - {inputs: {receiver: zf, ebn0_db: 7.0}, expected: 1.0, tolerance: {rtol: 0.06}, why: "2700 errors: three standard deviations of 1.9 %"}

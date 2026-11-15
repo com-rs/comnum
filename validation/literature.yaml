@@ -68,10 +68,11 @@
   area: Foundations
   ref: "J. G. Proakis, M. Salehi, Digital Communications, 5th ed., 2008"
   module: comnum_mapping::theory, comnum_waveform::cpm, comnum_mapping::differential
-  tested: "the error rates over AWGN (47 checks), MSK, DBPSK, MRC (eq. 13.4-15)"
+  tested: "the error rates over AWGN (47 checks), MSK, DBPSK, MRC (eq. 13.4-15); a simulated rake receiver of one to three fingers over three Rayleigh paths within 4 % of the MRC of as many branches"
   tests:
     - specs/validation/proakis_awgn.yaml
     - specs/mimo_diversity.yaml
+    - validation/tests/mimo/dsss.rs::a_rake_receiver_over_rayleigh_paths_has_the_error_rate_of_maximal_ratio_combining
   badge: orange
   not_covered: "the textbook is not in references/: the formulas are quoted"
 - id: o150
@@ -1543,6 +1544,51 @@
   remarks:
     - "the text calls the table of Fig. 3 'Table III'; eq. (23) reads log(rho log log M) for log(rho log M); Sec. V-2 gives -b_N/beta_N = c_N where the definitions give 1/c_N"
     - "Fig. 2(b) follows Rayleigh fading without path loss, not the caption's 5 m and alpha = 2"
+- id: tse1999
+  area: Waveforms
+  ref: "D. N. C. Tse, S. V. Hanly, Linear multiuser receivers: effective interference, effective bandwidth and user capacity, IEEE Trans. Inf. Theory 45(2), 641-657, 1999"
+  module: comnum_waveform::dsss, comnum_waveform::dsss::theory
+  tested: "eq. (9) and Fig. 1: the SIR of the MMSE receiver of user 1 over 100 draws of random signatures at P/sigma^2 = 20 dB, mean within 0.15 dB of the limit at N = 128 for K/N = 0.25 to 1.5 (0.3 dB at N = 64, 0.5 dB at N = 32), the spread between draws falling with N; Fig. 2 (N = 128, K = 80): the 80 users from 14.6 to 17.5 dB around 15.92 dB; Proposition 3.3 and Theorem 7.2 (conventional receiver, decorrelator) within 0.25 dB at N = 128; eq. (6): the fixed point with equal powers is eq. (9), and a strong interferer costs at most P/gamma; eq. (10)"
+  tests:
+    - validation/tests/mimo/tse1999.rs::tse_hanly_1999_figs_1_and_2_the_sir_of_random_signatures_tends_to_its_limit
+    - crates/comnum-waveform/src/dsss/theory.rs::the_mmse_limits_of_tse_hanly_and_verdu_shamai_agree
+    - crates/comnum-waveform/src/dsss/mod.rs::the_sinr_of_the_linear_receivers_is_the_one_measured
+  badge: green
+  not_covered: "the effective bandwidths and the user capacity under power control (Secs. V and VI, Figs. 3, 5, 6), antenna arrays and fading (Sec. VIII, Fig. 4), the fluctuations around the limit"
+- id: verdu1999
+  area: Waveforms
+  ref: "S. Verdu, S. Shamai (Shitz), Spectral efficiency of CDMA with random spreading, IEEE Trans. Inf. Theory 45(2), 622-640, 1999"
+  module: comnum_waveform::dsss::theory
+  tested: "eqs. (9)-(12) at SNR = 10 dB against an independent evaluation (1e-9); eq. (11) at Eb/N0 = 10 dB; the limit of the matched filter at a large load, log2(e)/2 - N0/(2 Eb); Fig. 1 (Eb/N0 = 10 dB): the maxima of the decorrelator (1.25 bit/chip near K/N = 0.65) and of the MMSE receiver (1.36 near 0.75) and four other points within the reading (0.07 bit/chip); eq. (12) is eq. (9) of Tse & Hanly"
+  tests:
+    - validation/cards/verdu1999_fig1.yaml
+    - crates/comnum-waveform/src/dsss/theory.rs::the_efficiency_at_a_given_ebn0_has_the_limits_of_verdu_shamai
+    - crates/comnum-waveform/src/dsss/theory.rs::the_receivers_are_ordered_and_meet_at_a_vanishing_load
+  badge: green
+  not_covered: "finite K and N (Figs. 5-8, Sec. II to V), the orthogonal signatures of eq. (8), the optimum load of Figs. 2-4, binary inputs"
+- id: lupas1989
+  area: Waveforms
+  ref: "R. Lupas, S. Verdu, Linear multiuser detectors for synchronous code-division multiple-access channels, IEEE Trans. Inf. Theory 35(1), 123-136, 1989"
+  module: comnum_waveform::dsss, comnum_waveform::dsss::theory
+  tested: "the exact error rates of the conventional receiver (mean over the patterns of the interfering bits) and of the decorrelator, against a simulation of eight users on Gold codes of length 31 with unequal amplitudes (1e6 symbols, within 0.2 % and 3.4 %, the sampling error); the floor of the conventional receiver when the interference closes the eye, the near-far resistance 1 - rho^2 of two users"
+  tests:
+    - validation/tests/mimo/dsss.rs::lupas_verdu_1989_the_simulated_error_rates_of_the_linear_receivers_are_the_exact_ones
+    - crates/comnum-waveform/src/dsss/theory.rs::the_matched_filter_has_a_floor_and_the_decorrelator_has_none
+    - crates/comnum-waveform/src/dsss/theory.rs::orthogonal_signatures_give_the_single_user_error_rate
+  badge: orange
+  not_covered: "the paper is not in references/: the expressions are the standard ones, not checked against its equation numbers or figures; linearly dependent signatures (the generalised inverse), the optimum linear detector"
+- id: gold1967
+  area: Foundations
+  ref: "R. Gold, Optimal binary sequences for spread spectrum multiplexing, IEEE Trans. Inf. Theory 13(4), 619-621, 1967; D. V. Sarwate, M. B. Pursley, Crosscorrelation properties of pseudorandom and related sequences, Proc. IEEE 68(5), 593-619, 1980"
+  module: comnum_math::sequences
+  tested: "the three correlation values {-1, -t, t - 2}, t = 1 + 2^floor((r+2)/2), of the Gold sets of order 3, 5, 6, 7 (every pair and every lag) and of the preferred pairs of order 9, 10, 11; the values {-1, -s, s - 2} of the small Kasami sets of order 4, 6, 8; the two-valued autocorrelation of the m-sequences; the 15 tabulated polynomials are primitive (period 2^r - 1); the Barker codes have unit aperiodic sidelobes"
+  tests:
+    - crates/comnum-math/src/sequences.rs::gold_codes_have_the_three_correlation_values_of_gold_1967
+    - crates/comnum-math/src/sequences.rs::kasami_codes_have_the_three_correlation_values_of_the_small_set
+    - crates/comnum-math/src/sequences.rs::every_tabulated_polynomial_is_primitive
+    - crates/comnum-math/src/sequences.rs::barker_codes_have_unit_aperiodic_sidelobes
+  badge: orange
+  not_covered: "the papers are not in references/: the theorems are checked exhaustively on the sets generated, not against their tables; the large Kasami set, the aperiodic correlation parameters of asynchronous CDMA"
 - id: eun1997
   area: Hardware impairments
   ref: "C. Eun, E. J. Powers, A new Volterra predistorter based on the indirect learning architecture, TSP 45(1), 1997"

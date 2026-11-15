@@ -1,0 +1,59 @@
+id: tse1999_fig1
+title: SIR of the linear multiuser receivers of DS-CDMA with random signatures against its large-system limit (Tse & Hanly 1999, Figs. 1 and 2)
+literature: tse1999
+evidence: [closed_form, claim]
+source:
+  kind: paper
+  reference: "D. N. C. Tse, S. V. Hanly, Linear multiuser receivers: effective interference, effective bandwidth and user capacity, IEEE Trans. Inf. Theory 45(2), 641-657, 1999"
+  locator: "eq. (9) (the asymptotic SIR of the MMSE receiver with equal powers), which Fig. 1 compares with 100 draws of random +1/-1 signatures at N = 32, 64, 128 and P/sigma^2 = 20 dB; Fig. 2 (N = 128, K = 80, one draw); Proposition 3.3 (conventional receiver) and Theorem 7.2 (decorrelator); the text of Sec. III on the spread around the limit"
+  file: multiple-access/1999_tse_linear-multiuser-receivers-effective-interference_tit.pdf
+description: >
+  K = alpha N users with independent random binary signatures of N chips and equal
+  received powers, P/sigma^2 = 20 dB. For each of 100 draws of the signatures (seed
+  1999), the SIR of user 1 at the output of the linear receiver, computed for the
+  signatures at hand by the linear detectors of comnum-mimo on the signature matrix
+  (Dsss::sinr). Measured: the mean over the draws of the SIR in dB, against the limit
+  of eq. (9) (theory::sinr_large_system, the expected values below), and the standard
+  deviation of the draws at N = 128; for Fig. 2, the mean and the extremes of the SIRs
+  of the 80 users of one draw.
+run:
+  test: validation/tests/mimo/tse1999.rs::tse_hanly_1999_figs_1_and_2_the_sir_of_random_signatures_tends_to_its_limit
+tier: ci
+duration: "1 s on an Apple M6"
+tolerance: {atol: 0.25}
+why: >
+  The limit is that of an infinite system. At N = 128 the mean of 100 draws has a
+  sampling error of 0.03 to 0.11 dB (standard deviations of 0.3 to 1.1 dB between
+  draws) and lies within 0.15 dB of the limit, 0.22 dB for the conventional receiver:
+  0.25 dB is the agreement obtained. The cases at N = 32 and 64, and at full load,
+  where the draws spread more and the finite size shifts the mean in dB, have their
+  own tolerance.
+findings:
+  - "the mean SIR of the MMSE receiver over 100 draws is 18.81, 17.08, 9.93 and 2.90 dB at N = 128 for alpha = 0.25, 0.5, 1 and 1.5, against 18.77, 17.07, 9.78 and 2.77 dB for eq. (9); 18.89, 17.09, 10.12, 3.05 dB at N = 64 and 19.02, 17.15, 10.26, 2.66 dB at N = 32"
+  - "the standard deviation of the draws falls with N at every load (0.5, 1.0, 2.2, 1.5 dB at N = 32; 0.3, 0.5, 1.1, 0.7 dB at N = 128): the spread of 1 or 2 dB at N = 128 of the text of Sec. III"
+  - "Fig. 2: the 80 users of one draw lie from 14.6 to 17.5 dB around the limit of 15.92 dB, mean 16.04 dB (the trace of the figure: from about 14.8 to 17.3 dB)"
+  - "conventional receiver at N = 128: 5.99 and 3.14 dB against 5.85 and 2.92 dB (Proposition 3.3); decorrelator: 18.78 and 17.00 dB against 18.75 and 16.99 dB (Theorem 7.2)"
+cases:
+  - {inputs: {figure: 1, receiver: mmse, n: 32, alpha: 0.25}, expected: 18.77, tolerance: {atol: 0.5}, why: "N = 32: the mean in dB is 0.25 dB above the limit, five sampling errors: a finite-size shift"}
+  - {inputs: {figure: 1, receiver: mmse, n: 32, alpha: 0.5}, expected: 17.07, tolerance: {atol: 0.5}, why: "N = 32: a standard deviation of 1.0 dB between draws"}
+  - {inputs: {figure: 1, receiver: mmse, n: 32, alpha: 1.0}, expected: 9.78, tolerance: {atol: 1.0}, why: "N = 32 at full load: a standard deviation of 2.2 dB between draws and a mean in dB 0.5 dB above the limit"}
+  - {inputs: {figure: 1, receiver: mmse, n: 32, alpha: 1.5}, expected: 2.77, tolerance: {atol: 0.5}, why: "a standard deviation of 1.5 dB between draws at N = 32"}
+  - {inputs: {figure: 1, receiver: mmse, n: 64, alpha: 0.25}, expected: 18.77, tolerance: {atol: 0.4}, why: "N = 64: the agreement obtained"}
+  - {inputs: {figure: 1, receiver: mmse, n: 64, alpha: 0.5}, expected: 17.07, tolerance: {atol: 0.4}, why: "N = 64: the agreement obtained"}
+  - {inputs: {figure: 1, receiver: mmse, n: 64, alpha: 1.0}, expected: 9.78, tolerance: {atol: 0.5}, why: "a standard deviation of 1.5 dB between draws"}
+  - {inputs: {figure: 1, receiver: mmse, n: 64, alpha: 1.5}, expected: 2.77, tolerance: {atol: 0.4}, why: "a standard deviation of 1.2 dB between draws: 0.28 dB above the limit is 2.4 sampling errors"}
+  - {inputs: {figure: 1, receiver: mmse, n: 128, alpha: 0.25}, expected: 18.77}
+  - {inputs: {figure: 1, receiver: mmse, n: 128, alpha: 0.5}, expected: 17.07}
+  - {inputs: {figure: 1, receiver: mmse, n: 128, alpha: 1.0}, expected: 9.78, tolerance: {atol: 0.4}, why: "a standard deviation of 1.1 dB between draws"}
+  - {inputs: {figure: 1, receiver: mmse, n: 128, alpha: 1.5}, expected: 2.77}
+  - {inputs: {figure: 1, quantity: "standard deviation at N = 128 (dB)", alpha: 0.25}, expected: {max: 1.0}, why: "the text of Sec. III: a spread of about 1 or 2 dB when N = 128"}
+  - {inputs: {figure: 1, quantity: "standard deviation at N = 128 (dB)", alpha: 0.5}, expected: {max: 1.0}, why: "the text of Sec. III: a spread of about 1 or 2 dB when N = 128"}
+  - {inputs: {figure: 1, quantity: "standard deviation at N = 128 (dB)", alpha: 1.0}, expected: {max: 2.0}, why: "the text of Sec. III: a spread of about 1 or 2 dB when N = 128"}
+  - {inputs: {figure: 1, quantity: "standard deviation at N = 128 (dB)", alpha: 1.5}, expected: {max: 1.0}, why: "the text of Sec. III: a spread of about 1 or 2 dB when N = 128"}
+  - {inputs: {figure: 2, quantity: "mean over the 80 users (dB)"}, expected: 15.92}
+  - {inputs: {figure: 2, quantity: "lowest of the 80 users (dB)"}, expected: {min: 12.9, max: 15.9}, why: "Fig. 2: a spread of about 1 dB around the limit, the trace of the figure down to about 14.8 dB; 3 dB allowed for another draw"}
+  - {inputs: {figure: 2, quantity: "highest of the 80 users (dB)"}, expected: {min: 15.9, max: 18.9}, why: "Fig. 2: the trace of the figure up to about 17.3 dB; 3 dB allowed for another draw"}
+  - {inputs: {figure: 1, receiver: mr, n: 128, alpha: 0.25}, expected: 5.85, note: "Proposition 3.3: P/(sigma^2 + alpha P)"}
+  - {inputs: {figure: 1, receiver: mr, n: 128, alpha: 0.5}, expected: 2.92, note: "Proposition 3.3"}
+  - {inputs: {figure: 1, receiver: zf, n: 128, alpha: 0.25}, expected: 18.75, note: "Theorem 7.2: P (1 - alpha)/sigma^2"}
+  - {inputs: {figure: 1, receiver: zf, n: 128, alpha: 0.5}, expected: 16.99, note: "Theorem 7.2"}

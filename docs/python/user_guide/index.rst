@@ -15,7 +15,7 @@ A :doc:`chain <chains>` of named blocks bridges the two: built and inspected in
 Python, it runs on the Rust runner and converts to and from a specification. The
 blocks cover :doc:`wireless and coded links <wireless>` (antennas, fading, OFDM, MIMO
 detection, channel codes), the :doc:`waveforms beyond OFDM <waveforms>` (FBMC/OQAM,
-UFMC, OTFS, chirp spread spectrum), :doc:`optical links <optical>` (WDM, dual
+UFMC, OTFS, chirp and direct-sequence spread spectrum), :doc:`optical links <optical>` (WDM, dual
 polarisation, nonlinear propagation, back-propagation, and :doc:`how the fibre
 solvers are validated <fibre_validation>`) and :doc:`optical wireless links
 <optical_wireless>` (visible light and infrared indoors, free-space optics), and the

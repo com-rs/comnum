@@ -1,9 +1,11 @@
 //! Constant-envelope waveforms: continuous-phase modulation (CPFSK, MSK, GMSK),
-//! constant-envelope OFDM and chirp spread spectrum.
+//! constant-envelope OFDM and chirp spread spectrum, and direct-sequence spread
+//! spectrum.
 
 mod ce_ofdm;
 mod continuous_phase;
 mod css;
+mod dsss;
 
 use crate::comm::PyConstellation;
 use crate::kind;
@@ -21,5 +23,6 @@ pub(crate) fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     continuous_phase::register(m)?;
     ce_ofdm::register(m)?;
     css::register(m)?;
+    dsss::register(m)?;
     Ok(())
 }

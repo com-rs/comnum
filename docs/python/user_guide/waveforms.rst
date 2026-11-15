@@ -76,3 +76,39 @@ up-chirp, detected by dechirping and an FFT. :func:`~comnum.theory_css_ser` and
 :func:`~comnum.theory_css_ber` give the error rates over AWGN, the ``css_*`` functions the
 spectrum and the interference between two signals; the gallery page
 :doc:`../auto_examples/waveforms/plot_07_lora` compares them with three papers.
+
+Direct-sequence spread spectrum and CDMA
+----------------------------------------
+
+:class:`~comnum.Dsss` spreads the symbols of one or several synchronous users on
+signature codes of :math:`N` chips: :func:`~comnum.m_sequence`,
+:func:`~comnum.gold_codes`, :func:`~comnum.kasami_codes`, :func:`~comnum.walsh_codes` and
+:func:`~comnum.barker_code`, whose correlations :func:`~comnum.periodic_correlation` and
+:func:`~comnum.aperiodic_correlation` give. One symbol period is :math:`y = SAb + w`,
+the model of a MIMO link with the signatures :math:`H = SA` (``Dsss.signatures``) in
+place of the channel, so the multiuser receivers are the detectors of
+:func:`~comnum.mimo_detect`:
+
+.. code-block:: python
+
+   cdma = comnum.Dsss(comnum.gold_codes(5)[1:9], amplitudes=[1, 1, 2, 2, 1, 1, 3, 1])
+   chips = cdma.modulate(symbols)                    # (8, n) symbols -> 31 n chips
+   chips += rng.complex_noise(chips.size, noise_var)
+   soft = cdma.demodulate(chips)                     # the bank of matched filters
+   labels = cdma.detect(chips, bpsk, noise_var, "mmse")   # or "mr", "zf", "mmse_sic", "ml"
+   sinr = cdma.sinr(noise_var, "mmse")               # of every user, for these codes
+
+``"mr"`` is the conventional receiver, limited by the other users (the near–far
+problem), ``"zf"`` the decorrelator of Lupas and Verdú (*IEEE Trans. Inf. Theory* 35(1),
+1989), whose error rate does not depend on their powers. :func:`~comnum.theory_ber_cdma`
+gives the exact error rate of both for the signatures at hand and
+:func:`~comnum.cdma_near_far_resistance` the loss of the decorrelator. For random
+signatures, :func:`~comnum.cdma_sinr_large_system` and
+:func:`~comnum.cdma_sinr_mmse_large_system` are the limits of the SINR at the load
+:math:`K/N` (Tse and Hanly, *IEEE Trans. Inf. Theory* 45(2), 1999, eqs. (6) and (9)) and
+:func:`~comnum.cdma_spectral_efficiency` the spectral efficiency of Verdú and Shamai
+(same issue, eqs. (9)–(12)). Over a multipath channel, ``Dsss.rake`` combines one
+finger per path. The users are synchronous and sampled at the chip rate, with one
+period of the code per symbol. The gallery page
+:doc:`../auto_examples/waveforms/plot_09_spread_spectrum` goes through the codes, a tone
+jammer, the near–far problem, large systems and the rake receiver.
