@@ -1,6 +1,6 @@
 """
-Spread spectrum: codes, processing gain, CDMA and the rake receiver
-===================================================================
+Spread spectrum: codes, processing gain, CDMA, rake and frequency hopping
+=========================================================================
 
 A spread-spectrum link sends every symbol on many more degrees of freedom than it
 needs: :math:`N` chips per symbol, the *spreading factor* or *processing gain*. The
@@ -9,8 +9,9 @@ and whatever does not carry the code (a jammer, another user, a delayed echo) is
 spread out, at about :math:`1/N` of its power. This tutorial follows the idea through
 direct-sequence spreading: the codes and their correlations, the rejection of a
 jammer, several users on the same band (CDMA) with the receivers that separate them,
-and the rake receiver that turns the echoes of a multipath channel into diversity.
-The chirp form of spread spectrum is in :doc:`plot_07_lora`.
+the rake receiver that turns the echoes of a multipath channel into diversity, and
+last frequency hopping against a jammer that picks its band. The chirp form of spread
+spectrum is in :doc:`plot_07_lora`.
 
 **Direct sequence.** User :math:`k` sends the symbol :math:`b_k` on the signature
 :math:`s_k \\in \\mathbb{C}^N`, :math:`\\lVert s_k\\rVert = 1`, with the amplitude
@@ -73,6 +74,12 @@ w[n]`, one matched filter per path (a *finger*) sees its own path at full streng
 the others through the autocorrelation of the code; combining the fingers with the
 weights :math:`g_l^*` (``Dsss.rake``; R. Price, P. E. Green, *Proc. IRE* 46(3), 1958) is
 maximal-ratio combining of :math:`L` branches.
+
+**Frequency hopping.** Instead of spreading every symbol over the band, the link
+moves a narrowband signal around it: :class:`comnum.Fhss` sends noncoherent
+:math:`M`-FSK on one of :math:`Q` channels, changed along a pattern known to both
+ends. An interferer must then cover :math:`Q` times the band of the message, or
+guess where it is.
 """
 
 import matplotlib.pyplot as plt
@@ -435,3 +442,87 @@ for fingers in (1, 2, 3):
     keep = expected * BURSTS * BURST_SYMBOLS >= 400
     gap = np.max(np.abs(rake_sim[keep, fingers - 1] / expected[keep] - 1))
     print(f"{fingers} finger(s): simulated within {100 * gap:.0f} % of maximal-ratio combining")
+
+# %%
+# Frequency hopping and the partial-band jammer
+# ---------------------------------------------
+# Binary FSK hops over 50 channels, one symbol per hop. A noise jammer that spreads
+# its power over the whole band is white noise of the density :math:`N_J`, and the
+# error rate is :math:`\tfrac12 e^{-E_b/(2N_J)}`: the processing gain of 50 at work.
+# But the jammer can do better with the same power. On a fraction :math:`\rho` of the
+# band it hits a hop with the probability :math:`\rho` only, with a density
+# :math:`N_J/\rho`:
+#
+# .. math::
+#
+#    P_b(\rho) = \frac{\rho}{2}\,e^{-\rho E_b/(2N_J)}, \qquad
+#    \max_\rho P_b = \frac{e^{-1}}{E_b/N_J} \ \text{ at } \ \rho^\star = \frac{2}{E_b/N_J}
+#
+# (A. J. Viterbi, I. M. Jacobs, 1975; Proakis & Salehi, Sec. 12.3). Each curve for a
+# given :math:`\rho` falls exponentially, but their envelope, the worst case at every
+# :math:`E_b/N_J`, falls as :math:`1/(E_b/N_J)` only, like a Rayleigh fading channel.
+# The simulated points use :func:`comnum.partial_band_noise` on the grid of the link;
+# the envelope is :func:`comnum.fh_worst_case_partial_band`.
+CHANNELS = 50
+FH_SYMBOLS = 100_000
+ebnj_db = np.arange(0.0, 31.0, 5.0)
+ebnj_fine = np.linspace(0, 30, 121)
+fractions = [
+    (50, r"$\rho$ = 1"),
+    (10, r"$\rho$ = 0.2"),
+    (2, r"$\rho$ = 0.04"),
+    (1, r"$\rho$ = 0.02"),
+]
+
+
+def hopping_ber(jammed: int, ebnj: float, tag: int) -> float:
+    """The simulated BER of binary FSK with `jammed` channels of 50 under the jammer."""
+    rng = comnum.Rng.stream(9, "hopping", jammed, tag)
+    link = comnum.Fhss(CHANNELS, 2, comnum.Fhss.random_pattern(CHANNELS, FH_SYMBOLS, rng))
+    symbols = rng.integers(2, FH_SYMBOLS)
+    x = link.modulate(symbols)
+    power = link.symbol_len / comnum.db2lin(ebnj)  # Eb/NJ = N / J for a unit envelope
+    x += comnum.partial_band_noise(x.size, link.symbol_len, 0, 2 * jammed, power, rng)
+    return float(np.mean(link.demodulate(x) != symbols))
+
+
+fig, ax = plt.subplots()
+hopping = {}
+for color, (jammed, name) in zip(SERIES, fractions, strict=False):
+    rho = jammed / CHANNELS
+    ax.semilogy(
+        ebnj_fine, comnum.theory_ber_fh_partial_band(ebnj_fine, rho), color=color, linewidth=1.4
+    )
+    sim = np.array([hopping_ber(jammed, e, i) for i, e in enumerate(ebnj_db)])
+    hopping[name] = (comnum.theory_ber_fh_partial_band(ebnj_db, rho), sim)
+    keep = sim > 0
+    ax.plot(ebnj_db[keep], sim[keep], "o", color=color, markeredgecolor=BACKGROUND, label=name)
+ax.semilogy(
+    ebnj_fine,
+    [comnum.fh_worst_case_partial_band(e)[1] for e in ebnj_fine],
+    color=MUTED,
+    linestyle="--",
+    linewidth=1.2,
+    label="worst case",
+)
+ax.set(
+    ylim=(1e-5, 1),
+    xlim=(0, 30),
+    xlabel="$E_b/N_J$ (dB)",
+    ylabel="bit error rate",
+    title="Binary FSK hopping over 50 channels, partial-band noise jammer",
+)
+ax.legend()
+fig.tight_layout()
+
+# %%
+# At a bit error rate of :math:`10^{-3}` the worst jammer costs the uncoded link more
+# than 14 dB against the full-band one. The classical answers, a code with
+# interleaving across the hops or several hops per symbol, are not in this tutorial.
+for name, (expected, sim) in hopping.items():
+    keep = expected * FH_SYMBOLS >= 400
+    gap = np.max(np.abs(sim[keep] / expected[keep] - 1))
+    label = name.replace("$\\rho$", "rho")
+    print(f"{label:>12}: simulated within {100 * gap:.0f} % of the closed form")
+rho_star, worst = comnum.fh_worst_case_partial_band(20.0)
+print(f"worst case at 20 dB: {worst:.2e} with {100 * rho_star:.0f} % of the band jammed")

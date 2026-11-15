@@ -39,6 +39,7 @@ DEGENERATE: list[Any] = [
 # classes whose docstrings construct no instance
 EXTRA = {
     "Edfa": "comnum.Edfa()",
+    "Fhss": "comnum.Fhss(4, 2, [0, 3, 1])",
     "LowRank": "comnum.LowRank(np.eye(4, dtype=complex), 0.1, 2)",
     "ManakovPmd": "comnum.ManakovPmd(comnum.FiberParams(n_spans=1))",
     "ManakovSsfm": "comnum.ManakovSsfm(comnum.FiberParams(n_spans=1))",

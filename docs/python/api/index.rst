@@ -257,6 +257,20 @@ and its rake receiver, the exact error rates and the large-system limits.
    cdma_sinr_mmse_large_system
    cdma_spectral_efficiency
 
+Frequency-hopping spread spectrum
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Noncoherent M-FSK on a hopping pattern, the partial-band noise jammer and the error
+rates under it.
+
+.. autosummary::
+   :toctree: generated
+
+   Fhss
+   partial_band_noise
+   theory_ber_fh_partial_band
+   fh_worst_case_partial_band
+
 Filtered multicarrier and OTFS
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 

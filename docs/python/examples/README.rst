@@ -87,7 +87,8 @@ equations they use. The table below gathers every comparison of this gallery.
      - Spread spectrum: the correlations of the m-sequences and Gold codes, the
        rejection of a tone jammer, the near–far problem with the conventional,
        decorrelating and MMSE receivers, random signatures in large systems, the rake
-       receiver against maximal-ratio combining
+       receiver against maximal-ratio combining, frequency hopping under a
+       partial-band noise jammer and its worst case
      - :ref:`sphx_glr_auto_examples_waveforms_plot_09_spread_spectrum.py`
    * - H. Ochiai, H. Imai, *IEEE Trans. Commun.* 49(2), 2001, eqs. (11) and (27)
      - The distribution of the PAPR of OFDM at the Nyquist rate and oversampled

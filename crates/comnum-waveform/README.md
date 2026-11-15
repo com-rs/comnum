@@ -7,7 +7,7 @@ Part of [comnum](https://github.com/com-rs/comnum), link-level simulation of dig
 wireless and optical. Layer 2 (link blocks) of the workspace, whose dependencies
 point downward only ([architecture](https://github.com/com-rs/comnum/blob/main/docs/ARCHITECTURE.md)).
 
-OFDM and DFT-spread OFDM with resource grids, pilots, LS and LMMSE channel estimation, Schmidl–Cox synchronisation and MIMO-OFDM detection; continuous-phase modulation (CPFSK, MSK, GMSK) with its detectors; constant-envelope OFDM and the theory of its error rates; the distribution of the PAPR and its reduction (clipping, SLM, PTS, tone reservation, ACE, companding); chirp spread spectrum; direct-sequence spread spectrum and synchronous DS-CDMA with its multiuser receivers and rake receiver.
+OFDM and DFT-spread OFDM with resource grids, pilots, LS and LMMSE channel estimation, Schmidl–Cox synchronisation and MIMO-OFDM detection; continuous-phase modulation (CPFSK, MSK, GMSK) with its detectors; constant-envelope OFDM and the theory of its error rates; the distribution of the PAPR and its reduction (clipping, SLM, PTS, tone reservation, ACE, companding); chirp spread spectrum; direct-sequence spread spectrum and synchronous DS-CDMA with its multiuser receivers and rake receiver; frequency hopping with noncoherent M-FSK under partial-band jamming.
 
 Most users depend on the facade [`comnum`](https://crates.io/crates/comnum), which
 re-exports this crate as `comnum::waveform`. The API is documented on

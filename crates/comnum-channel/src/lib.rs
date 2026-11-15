@@ -8,6 +8,7 @@
 //! | [`cdl`] | the clustered delay lines CDL-A to CDL-E of 3GPP TR 38.901 ([`cdl::Cdl`]): ray geometry, antenna arrays, polarisation, Doppler from the velocity |
 //! | [`awgn`] | additive white Gaussian noise at an $E_{s}/N_{0}$ ([`awgn::Awgn`]) or of a given variance ([`awgn::Noise`]), and its kernel [`awgn::add_noise`] |
 //! | [`fading`] | flat fading: single-antenna Rayleigh ([`fading::Rayleigh`]) and MIMO Rayleigh or Rician, block or fast ([`fading::Mimo`]) |
+//! | [`jamming`] | jammers: partial-band Gaussian noise on the grid of a DFT |
 //! | [`multipath`] | frequency-selective fading: tapped delay lines (EPA, EVA, ETU of 3GPP TS 36.101 Annex B, ITU-R Pedestrian/Vehicular A, TDL-A to TDL-E of 3GPP TR 38.901, TDLA30 to TDLD30 of TS 38.101-4, exponential) with the Clarke spectrum by sums of sinusoids (Zheng & Xiao), SISO or MIMO; the delay–Doppler channel of discrete paths ([`multipath::DelayDoppler`]) and its random model |
 //! | [`pathloss`] | the path loss, line-of-sight probability, shadow fading and outdoor-to-indoor penetration of 3GPP TR 38.901 §7.4 (RMa, UMa, UMi, InH, InF) |
 //! | [`owc`] | optical wireless: the indoor room channel of visible-light and infrared links (Lambertian LEDs, reflections of every order, illuminance) and the free-space optical channel (turbulence, pointing errors, weather) |
@@ -25,6 +26,7 @@
 pub mod awgn;
 pub mod cdl;
 pub mod fading;
+pub mod jamming;
 pub mod multipath;
 #[cfg(feature = "optical")]
 pub mod optical;

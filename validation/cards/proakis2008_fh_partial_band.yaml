@@ -1,0 +1,36 @@
+id: proakis2008_fh_partial_band
+title: Simulated BER of frequency hopping with noncoherent M-FSK under a partial-band noise jammer
+literature: proakis2008
+evidence: [closed_form]
+source:
+  kind: paper
+  reference: "J. G. Proakis, M. Salehi, Digital Communications, 5th ed., McGraw-Hill, 2008"
+  locator: "Sec. 12.3 (frequency-hopped spread spectrum signals): the error rate of slow FH with noncoherent FSK under partial-band interference, rho Pb(rho Eb/NJ) without thermal noise, and its worst case exp(-1)/(Eb/NJ) at rho = 2/(Eb/NJ) for binary FSK (the textbook is not in references/: the formulas are quoted)"
+description: >
+  A band of 50 channels of M tones, one symbol per hop on a random pattern as long as the run, noncoherent
+  detection in the channel of the pattern; a Gaussian noise jammer of the power that
+  gives Eb/NJ over the whole band, concentrated on the first 50, 10 or 1 channels;
+  no thermal noise; 400 000 symbols per case (seed 1975). Measured: the ratio of the
+  simulated bit error rate to rho Pb(rho Eb/NJ), Pb the bit error rate of noncoherent
+  M-FSK (ber_orthogonal_noncoherent); and the worst case computed by
+  theory::worst_case_partial_band at 20 dB.
+run:
+  test: validation/tests/modulation/fhss.rs::a_hopping_link_under_partial_band_noise_has_the_error_rate_of_the_jammed_hops
+tier: ci
+duration: "3 s on an Apple M6"
+tolerance: {rtol: 0.06}
+why: >
+  400 000 symbols count between 1300 and 15 000 bit errors per case, a relative
+  standard deviation of 1 to 3 %, to which the share of the hops that fall on the
+  jammed channels adds 1 % at rho = 0.02: 6 % is twice the largest. (A pattern of
+  4096 hops, shorter than the run, leaves that share 3 to 11 % off rho.)
+findings:
+  - "the five simulated error rates are within 1.5 % of rho Pb(rho Eb/NJ); at Eb/NJ = 20 dB a jammer on one channel of 50 gives binary FSK an error rate of 3.7e-3, the worst case exp(-1)/(Eb/NJ), where the same power over the whole band gives 1e-22"
+cases:
+  - {inputs: {m: 2, ebnj_db: 10.0, rho: 1.0}, expected: 1.0}
+  - {inputs: {m: 2, ebnj_db: 10.0, rho: 0.2}, expected: 1.0}
+  - {inputs: {m: 2, ebnj_db: 20.0, rho: 0.02}, expected: 1.0}
+  - {inputs: {m: 4, ebnj_db: 10.0, rho: 0.2}, expected: 1.0}
+  - {inputs: {m: 4, ebnj_db: 16.0, rho: 0.02}, expected: 1.0}
+  - {inputs: {quantity: "worst fraction of the band at 20 dB"}, expected: 0.02, tolerance: {rtol: 1.0e-5}, why: "2/(Eb/NJ), found by a golden-section search"}
+  - {inputs: {quantity: "worst error rate at 20 dB"}, expected: 3.678794412e-3, tolerance: {rtol: 1.0e-8}, why: "exp(-1)/(Eb/NJ), ten digits"}

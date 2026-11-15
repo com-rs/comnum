@@ -112,3 +112,17 @@ finger per path. The users are synchronous and sampled at the chip rate, with on
 period of the code per symbol. The gallery page
 :doc:`../auto_examples/waveforms/plot_09_spread_spectrum` goes through the codes, a tone
 jammer, the near–far problem, large systems and the rake receiver.
+
+Frequency hopping
+-----------------
+
+:class:`~comnum.Fhss` is slow frequency hopping with noncoherent :math:`M`-FSK: a band
+of :math:`Q` channels of :math:`M` orthogonal tones, :math:`QM` samples per symbol, the
+channel changed along a pattern (``Fhss.random_pattern``) that the receiver follows
+with a DFT. :func:`~comnum.partial_band_noise` is a Gaussian jammer on a part of the
+same grid. A jammer of the density :math:`N_J` over the whole band that concentrates
+its power on the fraction :math:`\rho` hits a hop with the probability :math:`\rho`,
+:math:`1/\rho` times denser: :func:`~comnum.theory_ber_fh_partial_band` is the
+resulting error rate and :func:`~comnum.fh_worst_case_partial_band` the fraction that
+maximises it, :math:`e^{-1}N_J/E_b` for binary FSK. Only whole symbols per hop are
+modelled, without coding.

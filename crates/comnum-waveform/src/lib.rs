@@ -12,6 +12,7 @@
 //! | [`ce_ofdm`] | constant-envelope OFDM (Thompson et al. 2008): modulator, phase demodulator (principal or unwrapped phase), and the error rates of its linear regime |
 //! | [`css`] | chirp spread spectrum (the frequency-shift chirp modulation of LoRa): modulator at any oversampling, noncoherent DFT receiver, exact error rates, cross-correlation, spectrum in Fresnel functions, same-SF interference (Chiani & Elzanaty 2019, Afisiadis et al. 2020) |
 //! | [`dsss`] | direct-sequence spread spectrum and synchronous DS-CDMA: spreading by signature codes, the bank of matched filters, the multiuser detectors of `comnum-mimo` on the signature matrix, the rake receiver, the exact error rates and the large-system limits for random signatures (Lupas & Verdú 1989, Tse & Hanly 1999, Verdú & Shamai 1999) |
+//! | [`fhss`] | frequency-hopping spread spectrum with noncoherent $M$-FSK: tones on the grid of the whole band, a hopping pattern, the DFT receiver, the error rates under partial-band noise jamming and its worst case |
 //! | [`fbmc`] | filter-bank multicarrier with offset QAM (FBMC/OQAM): PHYDYAS prototype, polyphase modulator and demodulator, OQAM staggering, intrinsic interference |
 //! | [`sir`] | the signal-to-interference ratio of any multicarrier scheme with a one-tap equaliser over a doubly-selective WSSUS channel with Jakes' Doppler, in closed form from its pulses (Nissel, Schwarz & Rupp 2017) |
 //! | [`ufmc`] | universal filtered multicarrier: OFDM filtered per sub-band by Dolph–Chebyshev filters, no prefix, receiver on the even bins of a DFT of twice the size (Schaich & Wild 2014) |
@@ -41,6 +42,7 @@ pub mod cpm;
 pub mod css;
 pub mod dsss;
 pub mod fbmc;
+pub mod fhss;
 pub mod ofdm;
 pub mod otfs;
 pub mod papr;

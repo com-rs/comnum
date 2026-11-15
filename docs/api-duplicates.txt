@@ -38,6 +38,7 @@ decode                 13  # the decoder of each code (BCH, RS, OSTBC, different
 deinterleave            2  # Interleaver::deinterleave (a permutation) / dvbt::InnerInterleaver::deinterleave (the LLRs of a DVB-T symbol): the same verb
 detect                  6  # differential::detect, ofdm::detection::detect (per RE), OfdmFrame::detect (calls the former), Gamp::detect, Photodiode::detect, Dsss::detect (calls a detector of comnum-mimo on the signature matrix)
 encode                 10  # the encoder of each code (BCH, RS, trellis, OSTBC, differential, the FEC of the standards): one verb, different codes
+energies                2  # Css::energies / Fhss::energies: the energies of the candidates of a noncoherent receiver, by two different transforms (dechirp and DFT; the DFT bins of a hop)
 energy                  2  # Constellation::energy calls comnum_math::power on its points
 ensure                  2  # comnum_core::ensure (an error unless a condition holds) / SamplingCheck::ensure (the sampling conditions of a split-step run)
 estimate                8  # the estimators of different quantities (OFDM channel, MIMO channel, symbols, cumulants); OfdmFrame::estimate calls the OFDM kernel
@@ -89,6 +90,7 @@ ser                     2  # the closed forms of two modulations, mapping::theor
 ser_esn0                2  # comnum_mapping::theory (a constellation) / ce_ofdm::theory (the waveform at the SNR of its linear regime, on the former)
 snr                     2  # GnModel::snr (the SNR of a WDM channel) / ce_ofdm::theory::snr (that of a CE-OFDM subcarrier)
 source                  2  # dvbt::InnerInterleaver::source (the punctured bit a cell carries) / verify::Expectation::source (where an expected value comes from, for the reader): an accessor
+symbol_len              2  # Css::symbol_len / Fhss::symbol_len: the samples per symbol of two waveforms
 trace                   2  # comnum.Chain.trace (Python: a copy of the frame after every block of a chain) / comnum_spec::Spec::trace (the signals at the scope blocks of one trial of a specification): the same verb on different types
 specular                2  # Profile::specular (the delay and power of the specular component of a profile) / Tdl::specular (its tap index and normalised power in a built channel)
 sss                     2  # ofdm::nr::sss (the Gold sequence of length 127 of NR) / ofdm::lte::sss (the two interleaved m-sequences of LTE): the SSS of two standards
@@ -111,7 +113,7 @@ bind                    2
 bit_map                 2
 bits_per_symbol         3
 block_len               4
-check                  22
+check                  23
 code                    5
 conditions              2
 config                  2
@@ -119,7 +121,7 @@ dbp                     2
 decoder_mut             2
 delays                  5  # DoublySelective::delays: the taps of the SIR model on its grid
 demap_bits              2
-demodulate              11  # ais::demodulate (the line levels of an AIS channel); Dsss::demodulate (the bank of matched filters of a direct-sequence link)
+demodulate              12  # ais::demodulate (the line levels of an AIS channel); Dsss::demodulate (the bank of matched filters of a direct-sequence link); Fhss::demodulate (the noncoherent decisions of a hopping link)
 describe                2
 draw                    6
 field                   3
@@ -138,7 +140,7 @@ m                       3
 map_bits                2
 mean                    2
 merge                   2
-modulate               14
+modulate               15
 mul                     2
 n                       3
 n_clusters              2

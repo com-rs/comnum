@@ -344,6 +344,34 @@ def test_dsss_codes_cdma_receivers_and_rake():
     np.testing.assert_array_equal(bpsk.decide(link.rake(received, delays, gains)), labels[0, :50])
 
 
+def test_fhss_round_trip_and_partial_band_jamming():
+    rng = comnum.Rng(6)
+    link = comnum.Fhss(50, 2, comnum.Fhss.random_pattern(50, 100_000, rng))
+    assert (link.n_channels, link.m, link.symbol_len) == (50, 2, 100)
+    symbols = rng.integers(2, 100_000)
+    x = link.modulate(symbols)
+    np.testing.assert_allclose(np.abs(x[:1000]), 1.0, atol=1e-12)
+    np.testing.assert_array_equal(link.demodulate(x), symbols)
+    assert link.energies(x[:200]).reshape(2, 2)[0, symbols[0]] == pytest.approx(1e4)
+    # a jammer at Eb/NJ = 10 dB on a fifth of the band: rho/2 exp(-rho Eb/(2 NJ))
+    jammer = comnum.partial_band_noise(x.size, 100, 0, 20, 100 / comnum.db2lin(10.0), rng)
+    ber = np.mean(link.demodulate(x + jammer) != symbols)
+    expected = comnum.theory_ber_fh_partial_band(10.0, 0.2)
+    assert expected == pytest.approx(0.1 * np.exp(-1.0))
+    assert ber == pytest.approx(expected, rel=0.08)
+    # the worst case of Viterbi and Jacobs 1975, and the same search with 4-FSK
+    rho, worst = comnum.fh_worst_case_partial_band(20.0)
+    assert rho == pytest.approx(0.02, rel=1e-5)
+    assert worst == pytest.approx(np.exp(-1) / 100)
+    assert comnum.fh_worst_case_partial_band(20.0, m=4)[1] > comnum.theory_ber_fh_partial_band(
+        20.0, 1.0, m=4
+    )
+    with pytest.raises(ValueError, match="hopping pattern"):
+        comnum.Fhss(4, 2, [4])
+    with pytest.raises(ValueError, match="fraction"):
+        comnum.theory_ber_fh_partial_band(10.0, 0.0)
+
+
 def test_css_waveforms_spectrum_and_interference():
     # Chiani and Elzanaty 2019, Table I and Property 4
     assert comnum.css_max_cross_correlation(5) == pytest.approx(0.091, abs=5e-4)

@@ -8,6 +8,14 @@ and follow [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Frequency-hopping spread spectrum: `comnum_waveform::fhss::Fhss`, noncoherent
+  $M$-FSK on the tones of a band of $Q$ channels along a hopping pattern (slow
+  hopping), with a DFT receiver; `comnum_channel::jamming::partial_band_noise`, a
+  Gaussian jammer on a part of the band; `fhss::theory::ber_partial_band` and
+  `worst_case_partial_band` ($e^{-1} N_{J}/E_{b}$ at $\rho = 2 N_{J}/E_{b}$ for binary
+  FSK). Python: `comnum.Fhss`, `partial_band_noise`, `theory_ber_fh_partial_band`,
+  `fh_worst_case_partial_band`. Card `proakis2008_fh_partial_band`: the simulated error
+  rates within 1.5 % of the closed form.
 - Direct-sequence spread spectrum and synchronous DS-CDMA:
   - Rust: `comnum_math::sequences` gains the spreading codes `m_sequence` (orders 2 to
     16), `gold_codes` (Gold 1967), `kasami_codes` (small set), `walsh_codes` and

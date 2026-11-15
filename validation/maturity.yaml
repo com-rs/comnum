@@ -278,6 +278,16 @@
     - self: "`crates/comnum-waveform/src/dsss/mod.rs::every_multiuser_detector_recovers_the_symbols_without_noise`, `::despreading_divides_a_tone_jammer_by_the_processing_gain`, `::the_rake_combines_the_paths_with_their_gains`; `tests/test_waveform.py::test_dsss_codes_cdma_receivers_and_rake`"
   gaps: "• synchronous users and chip-rate sampling only: no asynchronous CDMA (aperiodic correlations, the Gaussian approximations of Pursley 1977), no chip pulse shaping, no code acquisition or tracking<br>• short codes (one period per symbol): no long scrambling code over several symbols, no variable spreading factor (OVSF)<br>• the rake receiver takes the delays and gains of the paths: no path search, no channel estimation<br>• frequency hopping is not implemented<br>• Lupas & Verdú 1989, Gold 1967 and Sarwate & Pursley 1980 are not in `references/`: their results are checked as theorems, not against their figures"
 - theme: Waveforms
+  name: "Frequency-hopping spread spectrum"
+  short: "Frequency hopping"
+  modules: "`comnum_waveform::fhss`, `comnum_channel::jamming`"
+  summary: "slow FH with noncoherent M-FSK under partial-band noise jamming, against its closed form and worst case"
+  evidence:
+    - closed_form: "card [`proakis2008_fh_partial_band`](../validation/cards/proakis2008_fh_partial_band.yaml): 50 channels, 2- and 4-FSK, a noise jammer on the whole band, a fifth of it and one channel, the simulated BER within 1.5 % of ρ P_b(ρ E_b/N_J) (Proakis & Salehi, 5th ed., Sec. 12.3, quoted)"
+    - closed_form: "`crates/comnum-waveform/src/fhss/theory.rs::binary_fsk_has_the_closed_form_and_its_worst_case` (the worst fraction 2 N_J/E_b and the error rate e⁻¹ N_J/E_b of Viterbi & Jacobs 1975, from 5 to 40 dB), `::the_thermal_noise_and_the_alphabet_enter_as_in_awgn`"
+    - self: "`crates/comnum-waveform/src/fhss/mod.rs::the_tones_are_orthogonal_and_the_round_trip_is_exact`, `::the_link_follows_its_pattern`; `crates/comnum-channel/src/jamming.rs::the_jammer_fills_its_bins_only_with_its_power`; `tests/test_waveform.py::test_fhss_round_trip_and_partial_band_jamming`"
+  gaps: "• slow hopping only (whole symbols per hop): no fast hopping with several hops per symbol and their combining, no coding with interleaving against the jammer<br>• the tones lie on the grid of the whole band and the jammer on the same grid, symbol-synchronous: no hop synthesiser transient, no frequency or timing offset, no pattern acquisition<br>• noise jammers only: no multitone or follower jammer<br>• no reference in `references/`: the formulas of Proakis & Salehi and of Viterbi & Jacobs are quoted, and checked against the simulation"
+- theme: Waveforms
   name: "Continuous-phase modulation"
   modules: "`comnum_waveform::cpm`"
   summary: "Murota & Hirade 1981 Table I and Fig. 5; Sundberg 1986 Fig. 5; MSK of Proakis & Salehi"

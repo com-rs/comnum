@@ -68,11 +68,13 @@
   area: Foundations
   ref: "J. G. Proakis, M. Salehi, Digital Communications, 5th ed., 2008"
   module: comnum_mapping::theory, comnum_waveform::cpm, comnum_mapping::differential
-  tested: "the error rates over AWGN (47 checks), MSK, DBPSK, MRC (eq. 13.4-15); a simulated rake receiver of one to three fingers over three Rayleigh paths within 4 % of the MRC of as many branches"
+  tested: "the error rates over AWGN (47 checks), MSK, DBPSK, MRC (eq. 13.4-15); a simulated rake receiver of one to three fingers over three Rayleigh paths within 4 % of the MRC of as many branches; slow frequency hopping with noncoherent 2- and 4-FSK under a partial-band noise jammer (Sec. 12.3) within 1.5 % of rho Pb(rho Eb/NJ), the worst case exp(-1)/(Eb/NJ) of binary FSK"
   tests:
     - specs/validation/proakis_awgn.yaml
     - specs/mimo_diversity.yaml
     - validation/tests/mimo/dsss.rs::a_rake_receiver_over_rayleigh_paths_has_the_error_rate_of_maximal_ratio_combining
+    - validation/tests/modulation/fhss.rs::a_hopping_link_under_partial_band_noise_has_the_error_rate_of_the_jammed_hops
+    - crates/comnum-waveform/src/fhss/theory.rs::binary_fsk_has_the_closed_form_and_its_worst_case
   badge: orange
   not_covered: "the textbook is not in references/: the formulas are quoted"
 - id: o150

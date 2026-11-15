@@ -4,5 +4,6 @@
 
 mod closed_forms;
 mod css;
+mod fhss;
 mod goldsmith1997;
 mod o150;

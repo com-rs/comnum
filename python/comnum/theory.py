@@ -21,6 +21,9 @@ from comnum import (
     theory_ber_dpsk_jakes as ber_dpsk_jakes,
 )
 from comnum import (
+    theory_ber_fh_partial_band as ber_fh_partial_band,
+)
+from comnum import (
     theory_ber_gray as ber_gray,
 )
 from comnum import (
@@ -135,6 +138,7 @@ __all__ = [
     "ber_cdma",
     "ber_dpsk",
     "ber_dpsk_jakes",
+    "ber_fh_partial_band",
     "ber_gray",
     "ber_imperfect_csi",
     "ber_noncoherent_binary_fading",
