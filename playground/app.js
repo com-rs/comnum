@@ -13,7 +13,7 @@ const $ = (id) => document.getElementById(id);
 const ui = {
   list: $("spec-list"), run: $("run"), stop: $("stop"), status: $("status"), engine: $("engine"),
   error: $("error"), xAxis: $("x-axis"), metric: $("metric"), logY: $("log-y"),
-  plot: $("plot"), plotTabs: $("plot-tabs"), chain: $("chain"), plotControls: document.querySelector(".plot-controls:not(#trace-controls)"), version: $("version"), caption: $("caption"), traceControls: $("trace-controls"), traceCondition: $("trace-condition"), wavControls: $("wav-controls"), wavBaud: $("wav-baud"), wavCarrier: $("wav-carrier"), wavExport: $("wav-export"), terminal: $("terminal"), clear: $("clear"),
+  plot: $("plot"), plotTabs: $("plot-tabs"), chain: $("chain"), plotControls: $("curve-controls"), version: $("version"), caption: $("caption"), traceControls: $("trace-controls"), traceCondition: $("trace-condition"), wavControls: $("wav-controls"), wavBaud: $("wav-baud"), wavCarrier: $("wav-carrier"), wavExport: $("wav-export"), terminal: $("terminal"), clear: $("clear"),
   tabName: $("tab-name"), share: $("share"), openName: $("open-name"), theme: $("theme"),
   sidebar: $("sidebar"), backdrop: $("sidebar-backdrop"), explorerOpen: $("explorer-toggle"), explorerClose: $("explorer-close"),
   splitH: $("split-h"), splitV: $("split-v"), workbench: document.querySelector(".workbench"), editorArea: document.querySelector(".editor-area"),
