@@ -476,6 +476,11 @@ def updating_section() -> list[str]:
         "",
         "``just check`` fails when one of these pages is older than its sources.",
         "",
+        ".. toctree::",
+        "   :hidden:",
+        "",
+        "   benchmarks",
+        "",
     ]
 
 

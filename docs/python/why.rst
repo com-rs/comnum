@@ -177,3 +177,8 @@ The numbers of this page come from files that scripts regenerate:
    python tools/highlights.py         # this page and the front pages
 
 ``just check`` fails when one of these pages is older than its sources.
+
+.. toctree::
+   :hidden:
+
+   benchmarks

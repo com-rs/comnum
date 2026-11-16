@@ -94,7 +94,7 @@ html_theme_options = {
     "external_links": [
         {"name": "Playground", "url": "https://com-rs.github.io/comnum/playground/"}
     ],
-    "header_links_before_dropdown": 6,
+    "header_links_before_dropdown": 8,
     "navbar_align": "left",
     "show_toc_level": 2,
     "navigation_with_keys": False,
@@ -102,5 +102,5 @@ html_theme_options = {
     "footer_start": ["copyright"],
     "footer_end": ["sphinx-version", "theme-version"],
 }
-html_sidebars = {"index": [], "getting_started": [], "performance": []}
+html_sidebars = {"index": [], "getting_started": []}
 html_context = {"default_mode": "light"}

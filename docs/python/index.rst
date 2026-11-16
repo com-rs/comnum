@@ -172,14 +172,9 @@ Reference
    :maxdepth: 2
 
    getting_started
-   auto_basics/index
-   auto_tutorials/index
+   learn
    user_guide/index
-   auto_examples/index
-   validation
-   maturity
-   comparisons
+   Examples <auto_examples/index>
+   Validation <validation>
    why
-   benchmarks
-   performance
    api/index

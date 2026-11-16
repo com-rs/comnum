@@ -8,6 +8,11 @@ and follow [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- The top bar of the Python documentation has seven entries and the playground, none
+  under "More": Getting started, Learn (a new page leading to the course and the
+  tutorials), User guide, Examples, Validation (with the maturity, the comparisons and
+  the classical performance under it), Why comnum (with the benchmarks) and the API
+  reference. The addresses of the pages are unchanged.
 - The API reference of the Python package has two parts: the functions and objects,
   which take and return NumPy arrays, by theme; and the blocks and chains, with a page
   per block of `comnum.blocks`, grouped by role in the link. Every block of the registry

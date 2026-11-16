@@ -118,3 +118,10 @@ the document. The issue template *validation discrepancy* asks for the reference
 its locator, the values, and the specification or the card that reproduces the gap.
 `Contributing a validation <https://github.com/com-rs/comnum/blob/main/CONTRIBUTING.md>`_
 is the shortest way into the project: a paper to reproduce is a self-contained task with a clear end.
+
+.. toctree::
+   :hidden:
+
+   maturity
+   comparisons
+   performance
