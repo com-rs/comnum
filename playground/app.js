@@ -606,6 +606,8 @@ function drawCurves(colorOf) {
   }
   const traces = [];
   const shown = new Set();   // the expectations already in the legend: one entry each
+  const log = ui.logY.checked;
+  let measured = 0, zeros = 0;   // the points of the shown series, and those at zero
   for (const s of series.values()) {
     if (view.key !== null && s.key !== view.key) continue;
     const color = colorOf.get(s.key) || palette()[0];
@@ -614,18 +616,33 @@ function drawCurves(colorOf) {
     const label = esc(s.key || name);
     const [xName, metricName] = [esc(x), esc(metric)];
     s.sim.sort((a, b) => a.x - b.x);
+    // a zero has no logarithm and Plotly leaves it out: on a log axis a point with no
+    // error breaks the line (a null, not joined across) and is drawn at the upper bound
+    // of its interval, an open triangle pointing down
+    const line = log ? s.sim.map((p) => (p.y > 0 ? p : { ...p, y: null, lo: null, hi: null })) : s.sim;
+    const bounded = log ? s.sim.filter((p) => !(p.y > 0) && p.hi > 0) : [];
+    measured += s.sim.length;
+    zeros += s.sim.filter((p) => p.y === 0).length;
     traces.push({
-      name: label, legendgroup: label, x: s.sim.map((p) => p.x), y: s.sim.map((p) => p.y),
-      mode: "lines+markers", type: "scatter", line: { color, width: 2 }, marker: { color, size: 7 },
+      name: label, legendgroup: label, x: line.map((p) => p.x), y: line.map((p) => p.y),
+      mode: "lines+markers", type: "scatter", connectgaps: false, line: { color, width: 2 }, marker: { color, size: 7 },
       error_y: {
-        type: "data", symmetric: false, visible: s.sim.some((p) => p.hi > p.y),
-        array: s.sim.map((p) => p.hi - p.y),
+        type: "data", symmetric: false, visible: line.some((p) => p.hi > p.y),
+        array: line.map((p) => p.hi - p.y),
         // a lower bound at zero has no logarithm: no lower bar then
-        arrayminus: s.sim.map((p) => (ui.logY.checked && !(p.lo > 0) ? 0 : p.y - p.lo)),
+        arrayminus: line.map((p) => (log && !(p.lo > 0) ? 0 : p.y - p.lo)),
         color, thickness: 1,
       },
       hovertemplate: `${label}<br>${xName}=%{x}<br>${metricName}=%{y:.4g}<extra></extra>`,
     });
+    if (bounded.length) {
+      traces.push({
+        name: label, legendgroup: label, showlegend: !line.some((p) => p.y !== null), x: bounded.map((p) => p.x), y: bounded.map((p) => p.hi),
+        mode: "markers", type: "scatter",
+        marker: { color, size: 9, symbol: "triangle-down-open", line: { width: 2, color } },
+        hovertemplate: `${label}<br>${xName}=%{x}<br>${metricName}=0, below %{y:.2g} (upper bound)<extra></extra>`,
+      });
+    }
     for (const [rawLabel, e] of s.expected) {
       const elabel = esc(rawLabel);
       e.points.sort((a, b) => a.x - b.x);
@@ -644,8 +661,13 @@ function drawCurves(colorOf) {
     ...baseLayout(),
     margin: { l: 56, r: 16, t: 12, b: 48 },
     xaxis: { ...axisStyle(), title: { text: esc(x) } },
-    yaxis: { ...axisStyle(), title: { text: esc(metric) }, type: ui.logY.checked ? "log" : "linear", exponentformat: "power" },
+    yaxis: { ...axisStyle(), title: { text: esc(metric) }, type: log ? "log" : "linear", exponentformat: "power" },
   };
+  if (log && zeros) {
+    ui.caption.textContent += zeros === measured
+      ? ` · no ${metric} error in any condition: each triangle is the upper bound of the interval, run more trials to measure the rate`
+      : ` · a triangle is a condition with no ${metric} error, drawn at the upper bound of its interval`;
+  }
   Plotly.react(ui.plot, traces, layout, plotConfig());
 }
 

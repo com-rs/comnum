@@ -504,6 +504,12 @@ and follow [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- Playground: on a logarithmic axis, an error rate of zero was left out by Plotly, so a
+  curve with no error at any condition was drawn empty (the tutorials, one trial each:
+  the SER of `04_nyquist`, `06_carrier_sync`, `10_iq_imbalance` and `13_text_fsk`). A
+  condition with no error now breaks the line and is drawn at the upper bound of its
+  confidence interval, an open triangle pointing down; the caption says so. The linear
+  axis is unchanged.
 - The step rule `StepRule::Fwm` (the default of `ManakovPmd`) restarted from the step
   cut at the end of a section of the birefringence: the steps shrank at every section
   and did not recover. 80 km of standard fibre in ten sections: 46142 steps, 80 without
