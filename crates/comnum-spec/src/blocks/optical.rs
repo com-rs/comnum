@@ -98,6 +98,7 @@ pub struct WdmFrame {
 pub(super) fn blocks() -> Vec<Extension> {
     vec![
         builtin!(
+            Waveform,
             "wdm_tx",
             "WDM transmitter: the channel under test and independently modulated neighbours on the grid of OptiCommPy's simpleWDMTx.",
             WdmTxSpec,
@@ -106,7 +107,7 @@ pub(super) fn blocks() -> Vec<Extension> {
             |q, _, _| Ok(Box::new(WdmTx::new(&q)?)),
         ),
         builtin!(
-            "manakov",
+            OpticalChannel, "manakov",
             "Dual-polarisation nonlinear propagation over the link (Manakov equation, split step with the phase at the middle of the step, Optilux's effective-length one or OptiCommPy's trapezoidal one), EDFAs with ASE.",
             ManakovSpec,
             needs [Samples],
@@ -114,7 +115,7 @@ pub(super) fn blocks() -> Vec<Extension> {
             |q, label, ctx| Ok(Box::new(ManakovBlock::new(&q, ctx, label)?)),
         ),
         builtin!(
-            "pmd",
+            OpticalChannel, "pmd",
             "Random rotation of the polarisations and polarisation-mode dispersion of a dual-polarisation signal, a new realisation every trial.",
             PmdBlock,
             needs [Samples],
@@ -122,7 +123,7 @@ pub(super) fn blocks() -> Vec<Extension> {
             |q, label, _| Ok(Box::new(Pmd { p: q, label })),
         ),
         builtin!(
-            "manakov_dbp",
+            Receiver, "manakov_dbp",
             "Dual-polarisation digital back-propagation of the link (Manakov equation, coefficients negated).",
             DbpSpec,
             needs [Samples],
@@ -130,7 +131,7 @@ pub(super) fn blocks() -> Vec<Extension> {
             |q, _, ctx| Ok(Box::new(ManakovDbpBlock::new(&q, ctx)?)),
         ),
         builtin!(
-            "wdm_rx",
+            Waveform, "wdm_rx",
             "Bring the channel under test to baseband and keep its band (ideal low-pass by resampling).",
             WdmRx,
             needs [Samples, Wdm],

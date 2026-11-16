@@ -27,7 +27,7 @@ use std::f64::consts::{FRAC_PI_2, PI};
 pub(super) fn blocks() -> Vec<Extension> {
     vec![
         builtin!(
-            per_polarization "pulse_shape",
+            Waveform, per_polarization "pulse_shape",
             "Upsample and filter with a transmit pulse, then normalise to unit power.",
             PulseSpec,
             needs [Samples],
@@ -35,11 +35,11 @@ pub(super) fn blocks() -> Vec<Extension> {
             |q, _, _| Ok(Box::new(PulseShaping::new(&q)?)),
         ),
         builtin!(
-            "normalize", "Scale the samples to a mean power.", Normalize, needs [Samples], gives [],
+            Receiver, "normalize", "Scale the samples to a mean power.", Normalize, needs [Samples], gives [],
             |q, _, _| Ok(Box::new(q)),
         ),
         builtin!(
-            per_polarization "resample",
+            Receiver, per_polarization "resample",
             "Band-limited resampling of the block (FFT) to a number of samples per symbol.",
             Resample,
             needs [Samples],
@@ -47,7 +47,7 @@ pub(super) fn blocks() -> Vec<Extension> {
             |q, _, _| Ok(Box::new(q)),
         ),
         builtin!(
-            per_polarization "matched_filter",
+            Receiver, per_polarization "matched_filter",
             "Filter with a receive pulse at the current samples per symbol.",
             MatchedSpec,
             needs [Samples],
@@ -55,15 +55,15 @@ pub(super) fn blocks() -> Vec<Extension> {
             |q, _, _| Ok(Box::new(MatchedFilter::new(q)?)),
         ),
         builtin!(
-            per_polarization "decimate", "Reduce the samples per symbol.", DecimateSpec, needs [Samples], gives [],
+            Receiver, per_polarization "decimate", "Reduce the samples per symbol.", DecimateSpec, needs [Samples], gives [],
             |q, _, _| Ok(Box::new(Decimate::new(&q))),
         ),
         builtin!(
-            per_polarization "gardner", "Gardner clock recovery at 2 samples per symbol.", Gardner, needs [Samples], gives [],
+            Receiver, per_polarization "gardner", "Gardner clock recovery at 2 samples per symbol.", Gardner, needs [Samples], gives [],
             |q, _, _| Ok(Box::new(q)),
         ),
         builtin!(
-            "adaptive_equalizer",
+            Receiver, "adaptive_equalizer",
             "Adaptive FIR equaliser, output at 1 sample per symbol; the n × n butterfly over the polarisations or antennas.",
             EqualizerSpec,
             needs [Samples, Constellation],
@@ -71,7 +71,7 @@ pub(super) fn blocks() -> Vec<Extension> {
             |q, label, _| Ok(Box::new(Equalizer::new(&q, label)?)),
         ),
         builtin!(
-            per_polarization "foe",
+            Receiver, per_polarization "foe",
             "Frequency-offset estimation by the M-th power and correction; records foe_hz.",
             FoeSpec,
             needs [Samples],
@@ -79,7 +79,7 @@ pub(super) fn blocks() -> Vec<Extension> {
             |q, label, _| Ok(Box::new(Foe { p: q, label })),
         ),
         builtin!(
-            per_polarization "bps",
+            Receiver, per_polarization "bps",
             "Blind phase search, unwrapped with a period of π/2, and correction.",
             Bps,
             needs [Samples, Constellation],
@@ -87,15 +87,15 @@ pub(super) fn blocks() -> Vec<Extension> {
             |q, _, _| Ok(Box::new(q)),
         ),
         builtin!(
-            per_polarization "viterbi", "Viterbi–Viterbi phase estimation and correction.", Viterbi, needs [Samples], gives [],
+            Receiver, per_polarization "viterbi", "Viterbi–Viterbi phase estimation and correction.", Viterbi, needs [Samples], gives [],
             |q, _, _| Ok(Box::new(q)),
         ),
         builtin!(
-            per_polarization "ddpll", "Decision-directed phase-locked loop.", Ddpll, needs [Samples, Constellation], gives [],
+            Receiver, per_polarization "ddpll", "Decision-directed phase-locked loop.", Ddpll, needs [Samples, Constellation], gives [],
             |q, _, _| Ok(Box::new(q)),
         ),
         builtin!(
-            "frame_sync",
+            Receiver, "frame_sync",
             "Delay and rotation on known symbols, output aligned on the transmitted symbols; records delay and quality.",
             FrameSyncSpec,
             needs [Samples, Symbols],

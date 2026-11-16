@@ -17,7 +17,7 @@ use serde_json::Value as Json;
 pub(super) fn blocks() -> Vec<Extension> {
     vec![
         builtin!(
-            start "source",
+            Source, start "source",
             "Draw the bits and symbols of a block (Gray labels of OptiCommPy).",
             SourceSpec,
             needs [],
@@ -25,7 +25,7 @@ pub(super) fn blocks() -> Vec<Extension> {
             |q, _, _| Ok(Box::new(Source::new(&q)?)),
         ),
         builtin!(
-            start "capture",
+            Source, start "capture",
             "A measured recording as the source: one segment per trial, the reference sequence not yet aligned.",
             CaptureSpec,
             needs [],
@@ -33,7 +33,7 @@ pub(super) fn blocks() -> Vec<Extension> {
             |q, _, ctx| Ok(Box::new(Capture::new(&q, ctx)?)),
         ),
         builtin!(
-            "reference_sync",
+            Receiver, "reference_sync",
             "Align the periodic reference of a capture on the received symbols (circular correlation); records offset and quality.",
             ReferenceSyncSpec,
             needs [Samples, Constellation, Capture],

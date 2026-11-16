@@ -20,7 +20,7 @@ use serde_json::Value as Json;
 pub(super) fn blocks() -> Vec<Extension> {
     vec![
         builtin!(
-            "cpm_tx",
+            Waveform, "cpm_tx",
             "Continuous-phase modulator of the symbols of a real constellation (CPFSK, MSK, GMSK, raised-cosine CPM): a unit-envelope signal at sps samples per symbol.",
             CpmSpec,
             needs [Samples, Constellation],
@@ -28,7 +28,7 @@ pub(super) fn blocks() -> Vec<Extension> {
             |q, _, _| Ok(Box::new(CpmTx(q))),
         ),
         builtin!(
-            "cpm_rx",
+            Waveform, "cpm_rx",
             "CPM detector (maximum-likelihood sequence detection over the phase trellis, or one-symbol differential detection) back to the symbols.",
             CpmRxSpec,
             needs [Samples, Constellation],

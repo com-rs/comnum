@@ -18,7 +18,7 @@ use serde_json::Value as Json;
 pub(super) fn blocks() -> Vec<Extension> {
     vec![
         builtin!(
-            per_polarization "fiber",
+            OpticalChannel, per_polarization "fiber",
             "Linear fibre (loss and dispersion, OptiCommPy linearFiberChannel).",
             FiberBlock,
             needs [Samples],
@@ -30,22 +30,22 @@ pub(super) fn blocks() -> Vec<Extension> {
             },
         ),
         builtin!(
-            per_polarization "ssfm", "Split-step Fourier propagation over the link, one polarisation.", SsfmBlock, needs [Samples], gives [],
+            OpticalChannel, per_polarization "ssfm", "Split-step Fourier propagation over the link, one polarisation.", SsfmBlock, needs [Samples], gives [],
             |q, _, ctx| Ok(Box::new(SplitStep::new(&q, ctx)?)),
         ),
         builtin!(
-            per_polarization "edfa", "Erbium-doped fibre amplifier with ASE.", EdfaBlock, needs [Samples], gives [],
+            OpticalChannel, per_polarization "edfa", "Erbium-doped fibre amplifier with ASE.", EdfaBlock, needs [Samples], gives [],
             |q, _, _| Ok(Box::new(EdfaStage(Edfa { gain_db: q.gain_db, nf_db: q.nf_db, fc_hz: q.fc_hz }))),
         ),
         builtin!(
-            per_polarization "cdc", "Chromatic-dispersion compensation in the frequency domain.", CdcBlock, needs [Samples], gives [],
+            Receiver, per_polarization "cdc", "Chromatic-dispersion compensation in the frequency domain.", CdcBlock, needs [Samples], gives [],
             |q, _, ctx| {
                 let fiber = ctx.fiber(fiber_json(q.fiber.as_ref()))?;
                 Ok(Box::new(Cdc { length_km: q.length_km.unwrap_or(fiber.total_km()), fiber }))
             },
         ),
         builtin!(
-            per_polarization "dbp", "Digital back-propagation by the split-step method.", DbpBlock, needs [Samples], gives [],
+            Receiver, per_polarization "dbp", "Digital back-propagation by the split-step method.", DbpBlock, needs [Samples], gives [],
             |q, _, ctx| Ok(Box::new(Dbp::new(&q, ctx)?)),
         ),
     ]

@@ -34,7 +34,7 @@ use comnum_systems::dvbs2::{Dvbs2, FrameSize, Modcod, PLHEADER_LEN, bbframe, bbf
 pub(super) fn blocks() -> Vec<Extension> {
     vec![
         builtin!(
-            start "dvbs2_tx",
+            System, start "dvbs2_tx",
             "DVB-S2 transmitter: BBFRAME, BCH and LDPC, bit interleaving, mapping, PL framing.",
             Dvbs2Spec,
             needs [],
@@ -42,7 +42,7 @@ pub(super) fn blocks() -> Vec<Extension> {
             |q, _, _| Ok(Box::new(Dvbs2Tx(Dvbs2Link::new(&q)?))),
         ),
         builtin!(
-            "dvbs2_rx",
+            System, "dvbs2_rx",
             "DVB-S2 receiver of frame-aligned PLFRAMEs: descrambling, demapping, decoding.",
             Dvbs2Spec,
             needs [Samples, Noise],

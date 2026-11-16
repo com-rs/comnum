@@ -5,7 +5,7 @@
 the same objects by theme, for discovery by completion: ``comnum.optical.Ssfm`` is
 ``comnum.Ssfm``, and ``comnum.theory.ber`` is ``comnum.theory_ber`` (the closed forms
 lose their ``theory_`` prefix there). They are read from the sections of the API
-reference, ``docs/python/api/index.rst``, so that a name documented in a theme is in
+reference, ``docs/python/api/functions.rst``, so that a name documented in a theme is in
 its namespace::
 
     python tools/gen_namespaces.py           # write the modules
@@ -24,12 +24,12 @@ import sys
 
 from _common import ROOT, ruff_format, write_or_check
 
-INDEX = ROOT / "docs" / "python" / "api" / "index.rst"
+INDEX = ROOT / "docs" / "python" / "api" / "functions.rst"
 PACKAGE = ROOT / "python" / "comnum"
 
 # the themes of the API reference that get a namespace, and its name; Foundations
-# (generators, sources, constellations) stays at the top level, and Simulation is
-# comnum.sim and the classes of the chains
+# (generators, sources, constellations) and Recordings stay at the top level; the chains
+# and the runners are in the second part of the reference (blocks.rst)
 THEMES = {
     "Coding and shaping": "coding",
     "Waveforms": "waveforms",

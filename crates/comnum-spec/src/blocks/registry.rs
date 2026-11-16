@@ -19,18 +19,20 @@ use std::sync::{Mutex, MutexGuard, OnceLock, PoisonError};
 /// parameters, declared with [`block_params!`](crate::block_params), and its ports.
 ///
 /// ```text
-/// block_info!([start | per_polarization] NAME, SUMMARY, PARAMS, needs [FACT, …], gives [FACT, …])
+/// block_info!([start | per_polarization] NAME, SUMMARY, PARAMS, needs [FACT, …], gives [FACT, …] [, role ROLE])
 /// ```
 ///
 /// `start` marks a block that starts a link (it draws or reads the transmitted signal),
 /// `per_polarization` a block written for one polarisation, applied to each
 /// polarisation of a dual-polarisation channel with its own symbols; the facts are
-/// variants of [`Fact`](crate::blocks::Fact). See [`register`](crate::blocks::register)
+/// variants of [`Fact`](crate::blocks::Fact), the role a variant of
+/// [`Role`](crate::blocks::Role) ([`Role::Other`](crate::blocks::Role::Other) when it is
+/// left out). See [`register`](crate::blocks::register)
 /// for a block of another crate.
 #[macro_export]
 macro_rules! block_info {
     (@info $starts:expr, $per_pol:expr, $name:expr, $summary:expr, $params:ty,
-        needs [$($n:ident),* $(,)?], gives [$($g:ident),* $(,)?] $(,)?) => {
+        needs [$($n:ident),* $(,)?], gives [$($g:ident),* $(,)?] $(, role $role:ident)? $(,)?) => {
         $crate::blocks::BlockInfo {
             name: $name,
             summary: $summary,
@@ -39,23 +41,26 @@ macro_rules! block_info {
             gives: &[$($crate::blocks::Fact::$g),*],
             starts: $starts,
             per_polarization: $per_pol,
+            role: $crate::block_info!(@role $($role)?),
         }
     };
+    (@role) => { $crate::blocks::Role::Other };
+    (@role $role:ident) => { $crate::blocks::Role::$role };
     (start $($rest:tt)+) => { $crate::block_info!(@info true, false, $($rest)+) };
     (per_polarization $($rest:tt)+) => { $crate::block_info!(@info false, true, $($rest)+) };
     ($($rest:tt)+) => { $crate::block_info!(@info false, false, $($rest)+) };
 }
 
-/// A block of this crate as an [`Extension`]: the arguments of
+/// A block of this crate as an [`Extension`]: its [`Role`], the arguments of
 /// [`block_info!`](crate::block_info), then its builder
 /// `|params, label, ctx| -> Result<Box<dyn Block>>`, which receives the parameters
 /// parsed with their `block_params!` declaration (the name of the block in the errors).
 macro_rules! builtin {
-    ($($flag:ident)? $name:literal, $summary:expr, $params:ty,
+    ($role:ident, $($flag:ident)? $name:literal, $summary:expr, $params:ty,
         needs [$($n:ident),* $(,)?], gives [$($g:ident),* $(,)?],
         |$q:pat_param, $label:pat_param, $ctx:pat_param| $body:expr $(,)?) => {
         $crate::blocks::Extension {
-            info: block_info!($($flag)? $name, $summary, $params, needs [$($n),*], gives [$($g),*]),
+            info: block_info!($($flag)? $name, $summary, $params, needs [$($n),*], gives [$($g),*], role $role),
             build: |p, label, ctx| {
                 let build = |$q: $params,
                              $label: String,
@@ -86,6 +91,82 @@ pub struct BlockInfo {
     /// ([`Layout::polarisations`](super::Layout::polarisations)) each polarisation goes
     /// through it with its own symbols.
     pub per_polarization: bool,
+    /// Its place in a link, which groups the blocks in the documentation.
+    pub role: Role,
+}
+
+/// The place of a block in a link, in the order of a link; the documentation lists the
+/// blocks by role, in this order.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub enum Role {
+    /// Draws or reads the transmitted bits and symbols.
+    Source,
+    /// Channel coding, shaping and the mapping of bits onto symbols.
+    Coding,
+    /// Modulators and demodulators of a waveform, pulse shaping.
+    Waveform,
+    /// Noise, fading and multipath.
+    WirelessChannel,
+    /// Fibre, optical amplifiers and polarisation.
+    OpticalChannel,
+    /// Oscillators, IQ imbalance and converters.
+    Hardware,
+    /// Filtering, synchronisation, equalisation and compensation.
+    Receiver,
+    /// Measurements, recordings and classification.
+    Analysis,
+    /// Complete transmitters and receivers of a standard.
+    System,
+    /// A block of another crate that declares no role.
+    Other,
+}
+
+impl Role {
+    /// Every role, in the order of a link.
+    pub const ALL: [Role; 10] = [
+        Role::Source,
+        Role::Coding,
+        Role::Waveform,
+        Role::WirelessChannel,
+        Role::OpticalChannel,
+        Role::Hardware,
+        Role::Receiver,
+        Role::Analysis,
+        Role::System,
+        Role::Other,
+    ];
+
+    /// The name of the role in the JSON description of a block (`wireless_channel`…).
+    pub fn name(self) -> &'static str {
+        match self {
+            Role::Source => "source",
+            Role::Coding => "coding",
+            Role::Waveform => "waveform",
+            Role::WirelessChannel => "wireless_channel",
+            Role::OpticalChannel => "optical_channel",
+            Role::Hardware => "hardware",
+            Role::Receiver => "receiver",
+            Role::Analysis => "analysis",
+            Role::System => "system",
+            Role::Other => "other",
+        }
+    }
+
+    /// The title of the role in the documentation.
+    pub fn title(self) -> &'static str {
+        match self {
+            Role::Source => "Sources",
+            Role::Coding => "Coding and mapping",
+            Role::Waveform => "Waveforms",
+            Role::WirelessChannel => "Wireless channels",
+            Role::OpticalChannel => "Optical channels",
+            Role::Hardware => "Hardware impairments",
+            Role::Receiver => "Receiver DSP",
+            Role::Analysis => "Measurements and analysis",
+            Role::System => "Systems and standards",
+            Role::Other => "Other blocks",
+        }
+    }
 }
 
 impl BlockInfo {
@@ -111,6 +192,8 @@ impl BlockInfo {
             "summary": self.summary,
             "starts": self.starts,
             "per_polarization": self.per_polarization,
+            "role": self.role.name(),
+            "role_title": self.role.title(),
             "needs": self.needs.iter().map(|f| f.name()).collect::<Vec<_>>(),
             "gives": self.gives.iter().map(|f| f.name()).collect::<Vec<_>>(),
             "required": self.params.iter().filter(|p| matches!(p.default, ParamDefault::Required)).map(|p| p.name).collect::<Vec<_>>(),

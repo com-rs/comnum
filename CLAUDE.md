@@ -82,7 +82,7 @@ is rewritten by `just regen`.
   extension) and `python tools/gen_blocks.py --check` (`python/comnum/blocks.py`, the classes of the
   declarative blocks, matches the registry)
 - `python tools/gen_namespaces.py --check` (the thematic namespaces `python/comnum/<theme>.py`,
-  `comnum.theory`, `comnum.optical`…, match the sections of `docs/python/api/index.rst`)
+  `comnum.theory`, `comnum.optical`…, match the sections of `docs/python/api/functions.rst`)
 
 CI also runs the Python tests (`just test`: `maturin develop`, then `python -m pytest`;
 `just setup-py` makes `.venv` with `uv sync --locked`), `just deny` and the MSRV build.

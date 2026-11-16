@@ -6,11 +6,12 @@ named in CamelCase (``awgn_ebn0`` → ``AwgnEbn0``), with an explicit keyword-on
 signature ``__init__(self, *, param: type = default, …)`` (the defaults of the
 registry when they are Python literals, ``None`` otherwise, the block then choosing
 its default), the documentation of the registry as docstring and its ports
-(``needs``, ``gives``). Run it after changing a block, with the extension built
-(``maturin develop``)::
+(``needs``, ``gives``) and its ``role``. It also writes the list of the blocks by role
+of the API reference, between the markers of ``docs/python/api/blocks.rst``. Run it
+after changing a block, with the extension built (``maturin develop``)::
 
-    python tools/gen_blocks.py           # write python/comnum/blocks.py
-    python tools/gen_blocks.py --check   # fail if the file is out of date (CI)
+    python tools/gen_blocks.py           # write python/comnum/blocks.py and the list
+    python tools/gen_blocks.py --check   # fail if one is out of date (CI)
 
 The output is formatted by ``ruff format`` (the ``lint`` dependency group).
 """
@@ -25,6 +26,9 @@ import sys
 from _common import ROOT, extension, ruff_format, write_or_check
 
 OUT = ROOT / "python" / "comnum" / "blocks.py"
+PAGE = ROOT / "docs" / "python" / "api" / "blocks.rst"
+BEGIN = ".. the blocks by role, written by tools/gen_blocks.py: do not edit below"
+END = ".. end of the blocks by role"
 
 PY_TYPES = {
     "number": "float",
@@ -193,6 +197,7 @@ def generate() -> str:
             "",
             f"    needs = {tuple(needs)!r}",
             f"    gives = {tuple(gives)!r}",
+            f"    role = {info.get('role', 'other')!r}",
             f"    param_names = {tuple(params)!r}",
             "",
             f"    def __init__(self{', *, ' + ', '.join(sig) if sig else ''}) -> None:",
@@ -211,17 +216,62 @@ def generate() -> str:
     return ruff_format(text, OUT, "gen_blocks.py")
 
 
+def by_role() -> str:
+    """The page of the blocks with its list by role regenerated: a section per role, in
+    the order of a link (the order of the registry within a role)."""
+    registry = _registry()
+    roles: dict[str, tuple[str, list[str]]] = {}
+    for kind, info in registry.items():
+        title = info.get("role_title", "Other blocks")
+        roles.setdefault(info.get("role", "other"), (title, []))[1].append(_class_name(kind))
+    # the order of `Role::ALL` (crates/comnum-spec/src/blocks/registry.rs)
+    order = [
+        "source",
+        "coding",
+        "waveform",
+        "wireless_channel",
+        "optical_channel",
+        "hardware",
+        "receiver",
+        "analysis",
+        "system",
+        "other",
+    ]
+    if unknown := sorted(set(roles) - set(order)):
+        raise SystemExit(f"roles of the registry missing from gen_blocks.py: {unknown}")
+    lines = [BEGIN, "", ".. currentmodule:: comnum.blocks", ""]
+    for role in sorted(roles, key=order.index):
+        title, names = roles[role]
+        lines += [title, "~" * len(title), "", ".. autosummary::", "   :toctree: generated", ""]
+        lines += [f"   {n}" for n in names]
+        lines.append("")
+    lines += [".. currentmodule:: comnum", "", END]
+    page = PAGE.read_text(encoding="utf-8")
+    head, rest = page.split(BEGIN, 1)
+    tail = rest.split(END, 1)[1]
+    return head + "\n".join(lines) + tail
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     ap.add_argument("--check", action="store_true", help="fail if the file is out of date")
     args = ap.parse_args()
     text = generate()
-    return write_or_check(
+    status = write_or_check(
         OUT,
         text,
         args.check,
         fix="python tools/gen_blocks.py",
         written=f"wrote {{path}} ({text.count('class ')} blocks)",
+        up_to_date=True,
+        stream=sys.stdout,
+    )
+    return status | write_or_check(
+        PAGE,
+        by_role(),
+        args.check,
+        fix="python tools/gen_blocks.py",
+        written="wrote {path}",
         up_to_date=True,
         stream=sys.stdout,
     )

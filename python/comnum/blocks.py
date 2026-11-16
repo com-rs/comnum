@@ -39,6 +39,7 @@ class Source(Native):
 
     needs = ()
     gives = ("bits", "symbols", "constellation", "samples")
+    role = "source"
     param_names = ("constellation", "n_symbols", "symbol_rate", "mb_lambda", "pols")
 
     def __init__(
@@ -80,6 +81,7 @@ class Capture(Native):
 
     needs = ()
     gives = ("bits", "symbols", "constellation", "samples", "capture")
+    role = "source"
     param_names = (
         "file",
         "channel",
@@ -133,6 +135,7 @@ class ReferenceSync(Native):
 
     needs = ("samples", "constellation", "capture")
     gives = ("bits", "symbols")
+    role = "receiver"
     param_names = ("window", "start", "symmetry")
 
     def __init__(
@@ -154,6 +157,7 @@ class Awgn(Native):
 
     needs = ("samples",)
     gives = ("noise",)
+    role = "wireless_channel"
     param_names = ("snr_db", "reference", "bandwidth_hz")
 
     def __init__(
@@ -177,6 +181,7 @@ class AwgnEbn0(Native):
 
     needs = ("samples", "constellation")
     gives = ("noise",)
+    role = "wireless_channel"
     param_names = ("ebn0_db",)
 
     def __init__(self, *, ebn0_db: float | Var) -> None:
@@ -196,6 +201,7 @@ class PhaseNoise(Native):
 
     needs = ("samples",)
     gives = ()
+    role = "hardware"
     param_names = ("linewidth_hz", "sigma_rad", "origin")
 
     def __init__(
@@ -221,6 +227,7 @@ class Cfo(Native):
 
     needs = ("samples",)
     gives = ()
+    role = "hardware"
     param_names = ("offset_hz", "omega_rad", "centred")
 
     def __init__(
@@ -244,6 +251,7 @@ class ClockOffset(Native):
 
     needs = ("samples",)
     gives = ()
+    role = "hardware"
     param_names = ("ppm",)
 
     def __init__(self, *, ppm: float | Var) -> None:
@@ -262,6 +270,7 @@ class Fir(Native):
 
     needs = ("samples",)
     gives = ()
+    role = "wireless_channel"
     param_names = ("h", "alignment")
 
     def __init__(self, *, h: list | Var, alignment: str | Var = "causal") -> None:
@@ -279,6 +288,7 @@ class RxIq(Native):
 
     needs = ("samples",)
     gives = ()
+    role = "hardware"
     param_names = ("t",)
 
     def __init__(self, *, t: list | Var) -> None:
@@ -296,6 +306,7 @@ class TxIq(Native):
 
     needs = ("samples",)
     gives = ()
+    role = "hardware"
     param_names = ("beta",)
 
     def __init__(self, *, beta: list | Var) -> None:
@@ -318,6 +329,7 @@ class Adc(Native):
 
     needs = ("samples",)
     gives = ()
+    role = "hardware"
     param_names = ("bits", "full_scale", "loading", "enob", "jitter_s", "bandwidth_hz")
 
     def __init__(
@@ -356,6 +368,7 @@ class Dac(Native):
 
     needs = ("samples",)
     gives = ()
+    role = "hardware"
     param_names = ("bits", "full_scale", "loading", "bandwidth_hz")
 
     def __init__(
@@ -389,6 +402,7 @@ class Fiber(Native):
 
     needs = ("samples",)
     gives = ()
+    role = "optical_channel"
     param_names = ("fiber", "length_km", "compensate_loss")
 
     def __init__(
@@ -419,6 +433,7 @@ class Ssfm(Native):
 
     needs = ("samples",)
     gives = ()
+    role = "optical_channel"
     param_names = (
         "fiber",
         "step_km",
@@ -469,6 +484,7 @@ class Edfa(Native):
 
     needs = ("samples",)
     gives = ()
+    role = "optical_channel"
     param_names = ("gain_db", "nf_db", "fc_hz")
 
     def __init__(
@@ -493,6 +509,7 @@ class Cdc(Native):
 
     needs = ("samples",)
     gives = ()
+    role = "receiver"
     param_names = ("fiber", "length_km")
 
     def __init__(
@@ -522,6 +539,7 @@ class Dbp(Native):
 
     needs = ("samples",)
     gives = ()
+    role = "receiver"
     param_names = (
         "fiber",
         "steps_per_span",
@@ -582,6 +600,7 @@ class PulseShape(Native):
 
     needs = ("samples",)
     gives = ()
+    role = "waveform"
     param_names = ("kind", "rolloff", "n_taps", "sps")
 
     def __init__(
@@ -606,6 +625,7 @@ class Normalize(Native):
 
     needs = ("samples",)
     gives = ()
+    role = "receiver"
     param_names = ("power_dbm",)
 
     def __init__(self, *, power_dbm: float | Var | None = None) -> None:
@@ -623,6 +643,7 @@ class Resample(Native):
 
     needs = ("samples",)
     gives = ()
+    role = "receiver"
     param_names = ("sps",)
 
     def __init__(self, *, sps: float | Var = 2.0) -> None:
@@ -642,6 +663,7 @@ class MatchedFilter(Native):
 
     needs = ("samples",)
     gives = ()
+    role = "receiver"
     param_names = ("kind", "rolloff", "n_taps")
 
     def __init__(
@@ -663,6 +685,7 @@ class Decimate(Native):
 
     needs = ("samples",)
     gives = ()
+    role = "receiver"
     param_names = ("sps_out", "method", "offset")
 
     def __init__(
@@ -684,6 +707,7 @@ class Gardner(Native):
 
     needs = ("samples",)
     gives = ()
+    role = "receiver"
     param_names = ("kp", "ki", "nyquist")
 
     def __init__(
@@ -708,6 +732,7 @@ class AdaptiveEqualizer(Native):
 
     needs = ("samples", "constellation")
     gives = ()
+    role = "receiver"
     param_names = ("algorithm", "n_taps", "mu", "passes", "update_rule", "kikuchi")
 
     def __init__(
@@ -744,6 +769,7 @@ class Foe(Native):
 
     needs = ("samples",)
     gives = ()
+    role = "receiver"
     param_names = ("m", "refined")
 
     def __init__(self, *, m: int | Var = 4, refined: bool | Var = True) -> None:
@@ -762,6 +788,7 @@ class Bps(Native):
 
     needs = ("samples", "constellation")
     gives = ()
+    role = "receiver"
     param_names = ("n", "b")
 
     def __init__(self, *, n: int | Var = 35, b: int | Var = 64) -> None:
@@ -780,6 +807,7 @@ class Viterbi(Native):
 
     needs = ("samples",)
     gives = ()
+    role = "receiver"
     param_names = ("n", "m")
 
     def __init__(self, *, n: int | Var = 35, m: int | Var = 4) -> None:
@@ -799,6 +827,7 @@ class Ddpll(Native):
 
     needs = ("samples", "constellation")
     gives = ()
+    role = "receiver"
     param_names = ("kv", "tau1_s", "tau2_s")
 
     def __init__(
@@ -826,6 +855,7 @@ class FrameSync(Native):
 
     needs = ("samples", "symbols")
     gives = ()
+    role = "receiver"
     param_names = ("start", "length", "max_delay", "symmetry", "exclude")
 
     def __init__(
@@ -862,6 +892,7 @@ class CeOfdmTx(Native):
 
     needs = ("samples",)
     gives = ()
+    role = "waveform"
     param_names = ("n_subcarriers", "oversampling", "h", "n_cp")
 
     def __init__(
@@ -899,6 +930,7 @@ class CeOfdmRx(Native):
 
     needs = ("samples", "constellation")
     gives = ()
+    role = "waveform"
     param_names = ("n_subcarriers", "oversampling", "h", "n_cp", "unwrap", "receiver", "esn0_db")
 
     def __init__(
@@ -941,6 +973,7 @@ class CpmTx(Native):
 
     needs = ("samples", "constellation")
     gives = ()
+    role = "waveform"
     param_names = ("h", "pulse", "length", "bt", "sps", "precode")
 
     def __init__(
@@ -974,6 +1007,7 @@ class CpmRx(Native):
 
     needs = ("samples", "constellation")
     gives = ()
+    role = "waveform"
     param_names = ("h", "pulse", "length", "bt", "sps", "detector", "rx_bt", "precode")
 
     def __init__(
@@ -1017,6 +1051,7 @@ class TextSource(Native):
 
     needs = ()
     gives = ("bits", "symbols", "constellation", "samples")
+    role = "source"
     param_names = ("text", "constellation", "framing", "flags", "symbol_rate")
 
     def __init__(
@@ -1051,6 +1086,7 @@ class FskTx(Native):
 
     needs = ("samples", "constellation")
     gives = ()
+    role = "waveform"
     param_names = ("sps", "spacing")
 
     def __init__(self, *, sps: int | Var = 16, spacing: int | Var = 1) -> None:
@@ -1069,6 +1105,7 @@ class FskRx(Native):
 
     needs = ("samples", "constellation")
     gives = ()
+    role = "waveform"
     param_names = ("sps", "spacing")
 
     def __init__(self, *, sps: int | Var = 16, spacing: int | Var = 1) -> None:
@@ -1089,6 +1126,7 @@ class Probe(Native):
 
     needs = ("samples",)
     gives = ()
+    role = "analysis"
     param_names = ("metrics", "skip_start", "skip_end", "scale")
 
     def __init__(
@@ -1115,6 +1153,7 @@ class Dump(Native):
 
     needs = ("samples",)
     gives = ()
+    role = "analysis"
     param_names = ("dir", "trials", "datatype")
 
     def __init__(
@@ -1140,6 +1179,7 @@ class Scope(Native):
 
     needs = ("samples",)
     gives = ()
+    role = "analysis"
     param_names = ("view", "max_samples", "nfft")
 
     def __init__(
@@ -1163,6 +1203,7 @@ class NoiseEstimate(Native):
 
     needs = ("samples", "symbols", "constellation")
     gives = ("noise",)
+    role = "analysis"
     param_names = ("mode",)
 
     def __init__(self, *, mode: str | Var = "decisions") -> None:
@@ -1181,6 +1222,7 @@ class Classify(Native):
 
     needs = ("samples",)
     gives = ()
+    role = "analysis"
     param_names = ("candidates", "method")
 
     def __init__(self, *, candidates: list | Var | None = None, method: str | Var = "ml") -> None:
@@ -1207,6 +1249,7 @@ class WdmTx(Native):
 
     needs = ("samples",)
     gives = ("wdm",)
+    role = "waveform"
     param_names = (
         "n_channels",
         "spacing_hz",
@@ -1273,6 +1316,7 @@ class Manakov(Native):
 
     needs = ("samples",)
     gives = ()
+    role = "optical_channel"
     param_names = (
         "fiber",
         "step_rule",
@@ -1338,6 +1382,7 @@ class Pmd(Native):
 
     needs = ("samples",)
     gives = ()
+    role = "optical_channel"
     param_names = ("mean_dgd_ps", "sections", "theta_deg")
 
     def __init__(
@@ -1367,6 +1412,7 @@ class ManakovDbp(Native):
 
     needs = ("samples",)
     gives = ()
+    role = "receiver"
     param_names = (
         "fiber",
         "steps_per_span",
@@ -1412,6 +1458,7 @@ class WdmRx(Native):
 
     needs = ("samples", "wdm")
     gives = ()
+    role = "waveform"
     param_names = ("sps",)
 
     def __init__(self, *, sps: int | Var = 2) -> None:
@@ -1430,6 +1477,7 @@ class MimoTx(Native):
 
     needs = ("samples",)
     gives = ()
+    role = "waveform"
     param_names = ("n_tx", "scheme")
 
     def __init__(self, *, n_tx: int | Var = 2, scheme: str | Var = "spatial") -> None:
@@ -1452,6 +1500,7 @@ class Rayleigh(Native):
 
     needs = ("samples",)
     gives = ("csi",)
+    role = "wireless_channel"
     param_names = (
         "n_rx",
         "coherence_samples",
@@ -1497,6 +1546,7 @@ class FlatFading(Native):
 
     needs = ("samples",)
     gives = ("csi",)
+    role = "wireless_channel"
     param_names = ("fading", "parameter", "coherence_samples", "seed")
 
     def __init__(
@@ -1532,6 +1582,7 @@ class Tdl(Native):
 
     needs = ("samples",)
     gives = ("csi",)
+    role = "wireless_channel"
     param_names = ("profile", "delay_spread_s", "doppler_hz", "n_rx", "seed")
 
     def __init__(
@@ -1570,6 +1621,7 @@ class Cdl(Native):
 
     needs = ("samples",)
     gives = ("csi",)
+    role = "wireless_channel"
     param_names = (
         "profile",
         "delay_spread_s",
@@ -1620,6 +1672,7 @@ class OfdmTx(Native):
 
     needs = ("samples",)
     gives = ("ofdm",)
+    role = "waveform"
     param_names = (
         "n_fft",
         "n_subcarriers",
@@ -1675,6 +1728,7 @@ class OfdmRx(Native):
 
     needs = ("samples", "constellation", "ofdm")
     gives = ("noise", "llr")
+    role = "waveform"
     param_names = ("estimation", "detector", "k", "iterations", "llr")
 
     def __init__(
@@ -1711,6 +1765,7 @@ class MimoRx(Native):
 
     needs = ("samples", "constellation", "csi")
     gives = ("noise", "llr")
+    role = "waveform"
     param_names = ("detector", "k", "iterations", "llr")
 
     def __init__(
@@ -1746,6 +1801,7 @@ class PasEncode(Native):
 
     needs = ()
     gives = ("bits", "symbols", "constellation", "samples", "payload")
+    role = "coding"
     param_names = (
         "constellation",
         "mb_lambda",
@@ -1817,6 +1873,7 @@ class PasDecode(Native):
 
     needs = ("samples", "symbols", "noise")
     gives = ("decoded",)
+    role = "coding"
     param_names = (
         "constellation",
         "mb_lambda",
@@ -1880,6 +1937,7 @@ class FecEncode(Native):
 
     needs = ()
     gives = ("bits", "payload")
+    role = "coding"
     param_names = ("code", "blocks", "interleave", "seed")
 
     def __init__(
@@ -1905,6 +1963,7 @@ class Map(Native):
 
     needs = ("bits",)
     gives = ("symbols", "constellation", "samples")
+    role = "coding"
     param_names = ("constellation", "symbol_rate")
 
     def __init__(
@@ -1924,6 +1983,7 @@ class Demap(Native):
 
     needs = ("samples", "symbols", "constellation", "noise")
     gives = ("llr",)
+    role = "coding"
     param_names = ("max_log",)
 
     def __init__(self, *, max_log: bool | Var = False) -> None:
@@ -1943,6 +2003,7 @@ class FecDecode(Native):
 
     needs = ("llr",)
     gives = ("decoded",)
+    role = "coding"
     param_names = ("code", "interleave", "seed")
 
     def __init__(
@@ -1970,6 +2031,7 @@ class Dvbs2Tx(Native):
 
     needs = ()
     gives = ("samples", "payload")
+    role = "system"
     param_names = (
         "modulation",
         "rate",
@@ -2029,6 +2091,7 @@ class Dvbs2Rx(Native):
 
     needs = ("samples", "noise")
     gives = ("decoded",)
+    role = "system"
     param_names = (
         "modulation",
         "rate",

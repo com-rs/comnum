@@ -21,7 +21,7 @@ use comnum_waveform::fsk::Fsk;
 pub(super) fn blocks() -> Vec<Extension> {
     vec![
         builtin!(
-            start "text_source",
+            Source, start "text_source",
             "A text as the bits and symbols of a block: its UTF-8 bytes in an HDLC frame (or bare), the same in every trial.",
             TextSourceSpec,
             needs [],
@@ -29,7 +29,7 @@ pub(super) fn blocks() -> Vec<Extension> {
             |q, _, _| Ok(Box::new(TextSource::new(&q)?)),
         ),
         builtin!(
-            "fsk_tx",
+            Waveform, "fsk_tx",
             "Orthogonal FSK modulator: the index of every symbol of the constellation chooses one of its M tones, a unit-envelope signal at sps samples per symbol.",
             FskSpec,
             needs [Samples, Constellation],
@@ -37,7 +37,7 @@ pub(super) fn blocks() -> Vec<Extension> {
             |q, _, _| Ok(Box::new(FskTx(q))),
         ),
         builtin!(
-            "fsk_rx",
+            Waveform, "fsk_rx",
             "Noncoherent FSK detector, aligned on the symbols: the tone of largest energy, back to the symbols of the constellation.",
             FskSpec,
             needs [Samples, Constellation],

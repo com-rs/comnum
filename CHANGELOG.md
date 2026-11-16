@@ -8,6 +8,14 @@ and follow [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- The API reference of the Python package has two parts: the functions and objects,
+  which take and return NumPy arrays, by theme; and the blocks and chains, with a page
+  per block of `comnum.blocks`, grouped by role in the link. Every block of the registry
+  declares its role (`comnum_spec::blocks::Role`: source, coding, waveform, wireless or
+  optical channel, hardware, receiver, analysis, system), given by `comnum.spec_blocks`
+  and the JSON description of the blocks and held by the `role` attribute of the classes;
+  `block_info!` takes an optional `role`, a block of another crate without one is
+  listed among the other blocks.
 - Documentation: a section **Learn the basics**, a short course in digital
   communications written as programs (`docs/python/basics/`): a quickstart, bits and
   symbols, the noisy channel, decisions and error rates, pulse shaping and the matched

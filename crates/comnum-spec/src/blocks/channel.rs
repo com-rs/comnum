@@ -21,6 +21,7 @@ use std::f64::consts::PI;
 pub(super) fn blocks() -> Vec<Extension> {
     vec![
         builtin!(
+            WirelessChannel,
             "awgn",
             "Add white Gaussian noise for an SNR in a bandwidth.",
             AwgnSpec,
@@ -29,7 +30,7 @@ pub(super) fn blocks() -> Vec<Extension> {
             |q, _, _| Ok(Box::new(Awgn::new(&q))),
         ),
         builtin!(
-            "awgn_ebn0",
+            WirelessChannel, "awgn_ebn0",
             "Add white Gaussian noise for an E_b/N_0 (matched-filter definition).",
             AwgnEbn0,
             needs [Samples, Constellation],
@@ -37,32 +38,32 @@ pub(super) fn blocks() -> Vec<Extension> {
             |q, _, _| Ok(Box::new(q)),
         ),
         builtin!(
-            "phase_noise", "Wiener phase noise.", PhaseNoiseSpec, needs [Samples], gives [],
+            Hardware, "phase_noise", "Wiener phase noise.", PhaseNoiseSpec, needs [Samples], gives [],
             |q, _, _| Ok(Box::new(PhaseNoise::new(&q)?)),
         ),
         builtin!(
-            "cfo", "Carrier frequency offset.", CfoSpec, needs [Samples], gives [],
+            Hardware, "cfo", "Carrier frequency offset.", CfoSpec, needs [Samples], gives [],
             |q, _, _| Ok(Box::new(Cfo::new(&q)?)),
         ),
         builtin!(
-            "clock_offset", "Sampling clock offset: the samples at m (1 + ζ) T (cubic interpolation).", ClockOffsetSpec,
+            Hardware, "clock_offset", "Sampling clock offset: the samples at m (1 + ζ) T (cubic interpolation).", ClockOffsetSpec,
             needs [Samples], gives [],
             |q, _, _| Ok(Box::new(q)),
         ),
         builtin!(
-            per_polarization "fir", "Linear channel with complex taps.", FirSpec, needs [Samples], gives [],
+            WirelessChannel, per_polarization "fir", "Linear channel with complex taps.", FirSpec, needs [Samples], gives [],
             |q, _, _| Ok(Box::new(Fir::new(&q)?)),
         ),
         builtin!(
-            per_polarization "rx_iq", "Receiver IQ imbalance [Re y; Im y] = T [Re x; Im x].", RxIq, needs [Samples], gives [],
+            Hardware, per_polarization "rx_iq", "Receiver IQ imbalance [Re y; Im y] = T [Re x; Im x].", RxIq, needs [Samples], gives [],
             |q, _, _| Ok(Box::new(q)),
         ),
         builtin!(
-            per_polarization "tx_iq", "Transmitter IQ imbalance y = x + β x*.", TxIq, needs [Samples], gives [],
+            Hardware, per_polarization "tx_iq", "Transmitter IQ imbalance y = x + β x*.", TxIq, needs [Samples], gives [],
             |q, _, _| Ok(Box::new(q)),
         ),
         builtin!(
-            per_polarization "adc",
+            Hardware, per_polarization "adc",
             "Analogue-to-digital converter: front-end bandwidth, clock jitter, ENOB noise and uniform quantisation with clipping.",
             AdcSpec,
             needs[Samples],
@@ -70,7 +71,7 @@ pub(super) fn blocks() -> Vec<Extension> {
             |q, _, _| Ok(Box::new(q)),
         ),
         builtin!(
-            per_polarization "dac",
+            Hardware, per_polarization "dac",
             "Digital-to-analogue converter: uniform quantisation with clipping and output bandwidth.",
             DacSpec,
             needs[Samples],

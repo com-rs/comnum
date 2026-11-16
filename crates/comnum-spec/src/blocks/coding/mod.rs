@@ -62,7 +62,7 @@ use pas::{PasDecode, PasEncode, PasLink, PasSpec};
 pub(super) fn blocks() -> Vec<Extension> {
     vec![
         builtin!(
-            start "pas_encode",
+            Coding, start "pas_encode",
             "Probabilistic amplitude shaping: CCDM-shaped amplitudes, an LDPC code whose parity bits are the signs, square QAM (the first block of a link).",
             PasSpec,
             needs [],
@@ -70,7 +70,7 @@ pub(super) fn blocks() -> Vec<Extension> {
             |q, _, _| Ok(Box::new(PasEncode(PasLink::new(&q)?))),
         ),
         builtin!(
-            "pas_decode",
+            Coding, "pas_decode",
             "PAS receiver: bit LLRs with the amplitude priors, LDPC decoding, dematching (the parameters of pas_encode).",
             PasSpec,
             needs [Samples, Symbols, Noise],
@@ -78,7 +78,7 @@ pub(super) fn blocks() -> Vec<Extension> {
             |q, _, _| Ok(Box::new(PasDecode(PasLink::new(&q)?))),
         ),
         builtin!(
-            start "fec_encode",
+            Coding, start "fec_encode",
             "Draw the information bits of the coded blocks and encode them (the first block of a coded link).",
             EncodeSpec,
             needs [],
@@ -86,7 +86,7 @@ pub(super) fn blocks() -> Vec<Extension> {
             |q, _, _| Ok(Box::new(Encode::new(&q)?)),
         ),
         builtin!(
-            "map",
+            Coding, "map",
             "Map the coded bits on a constellation (Gray labels, the last symbol padded with random bits).",
             MapSpec,
             needs [Bits],
@@ -94,7 +94,7 @@ pub(super) fn blocks() -> Vec<Extension> {
             |q, _, _| Ok(Box::new(Map::new(&q)?)),
         ),
         builtin!(
-            "demap",
+            Coding, "demap",
             "Bit LLRs of the received symbols, with the noise variance of every symbol (from the receiver, or the noise block).",
             Demap,
             needs [Samples, Symbols, Constellation, Noise],
@@ -102,6 +102,7 @@ pub(super) fn blocks() -> Vec<Extension> {
             |q, _, _| Ok(Box::new(q)),
         ),
         builtin!(
+            Coding,
             "fec_decode",
             "Deinterleave and decode the LLRs into the information bits.",
             DecodeSpec,

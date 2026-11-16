@@ -86,7 +86,7 @@ pub use comnum_waveform::ofdm::link::OfdmFrame;
 pub(super) fn blocks() -> Vec<Extension> {
     vec![
         builtin!(
-            "mimo_tx",
+            Waveform, "mimo_tx",
             "Spread the symbols over n_tx antennas: spatial multiplexing (power 1/n_tx per antenna) or Alamouti's code.",
             MimoTxSpec,
             needs [Samples],
@@ -94,6 +94,7 @@ pub(super) fn blocks() -> Vec<Extension> {
             |q, _, _| Ok(Box::new(MimoTx::new(&q)?)),
         ),
         builtin!(
+            WirelessChannel,
             "rayleigh",
             "Flat fading y = H x on every antenna; records the channel for a genie-aided receiver.",
             RayleighSpec,
@@ -102,6 +103,7 @@ pub(super) fn blocks() -> Vec<Extension> {
             |q, _, _| Ok(Box::new(Rayleigh { p: q })),
         ),
         builtin!(
+            WirelessChannel,
             "flat_fading",
             "Flat fading of every stream by its own gain, Rayleigh, Rice, Nakagami-m or Hoyt; records the gains for a genie-aided receiver.",
             FlatFadingSpec,
@@ -110,6 +112,7 @@ pub(super) fn blocks() -> Vec<Extension> {
             |q, _, _| Ok(Box::new(FlatFadingBlock::new(&q)?)),
         ),
         builtin!(
+            WirelessChannel,
             "tdl",
             "Tapped-delay-line multipath fading with Clarke/Jakes Doppler; records the taps for a genie-aided receiver.",
             TdlSpec,
@@ -118,6 +121,7 @@ pub(super) fn blocks() -> Vec<Extension> {
             |q, _, _| Ok(Box::new(TdlBlock::new(&q)?)),
         ),
         builtin!(
+            WirelessChannel,
             "cdl",
             "Clustered delay line of 3GPP TR 38.901 between uniform linear arrays (one tap per cluster, random ray phases and coupling); records the taps for a genie-aided receiver.",
             CdlSpec,
@@ -126,6 +130,7 @@ pub(super) fn blocks() -> Vec<Extension> {
             |q, _, _| Ok(Box::new(CdlBlock::new(&q)?)),
         ),
         builtin!(
+            Waveform,
             "ofdm_tx",
             "Map every antenna's symbols on resource grids with pilots and OFDM-modulate them (power K/(LN) per sample).",
             OfdmTxSpec,
@@ -134,7 +139,7 @@ pub(super) fn blocks() -> Vec<Extension> {
             |q, _, _| Ok(Box::new(OfdmTx::new(&q)?)),
         ),
         builtin!(
-            "ofdm_rx",
+            Waveform, "ofdm_rx",
             "Demodulate the OFDM grids, estimate the channel and detect every data resource element; output the symbols and their noise variances.",
             OfdmRxSpec,
             needs [Samples, Constellation, Ofdm],
@@ -142,7 +147,7 @@ pub(super) fn blocks() -> Vec<Extension> {
             |q, _, _| Ok(Box::new(OfdmRx::new(&q)?)),
         ),
         builtin!(
-            "mimo_rx",
+            Waveform, "mimo_rx",
             "Detect a single-carrier link over flat fading with the known channel; output the symbols and their noise variances.",
             DetectorSpec,
             needs [Samples, Constellation, Csi],

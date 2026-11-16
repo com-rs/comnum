@@ -1087,8 +1087,10 @@ with a Git tag `vX.Y.Z` (`release.yml`). Papers depend on a tag, never on a bran
    `specs/validation/` with `expect`; its entry in `validation/maturity.yaml` and, for a
    document, in `validation/literature.yaml` (`just maturity`, `just literature`).
 7. Add the Python binding if users need it (`bindings/comnum-py`), then `just gen-python`
-   and `just api-index`, and list it in its theme of `docs/python/api/index.rst` (a test
-   fails otherwise).
+   and `just api-index`, and list it in its theme of `docs/python/api/functions.rst` (a
+   test fails otherwise). A block of the specifications needs no listing: it declares
+   its `Role` in the registry, and `tools/gen_blocks.py` lists it in
+   `docs/python/api/blocks.rst`.
 8. Update the changelog.
 
 ### Working with a coding agent

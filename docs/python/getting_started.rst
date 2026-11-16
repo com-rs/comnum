@@ -62,7 +62,7 @@ Namespaces
    their prefix: ``comnum.theory.ber`` is ``comnum.theory_ber``), ``comnum.coding``,
    ``comnum.waveforms``, ``comnum.mimo``, ``comnum.channels``, ``comnum.optical``,
    ``comnum.hardware``, ``comnum.dsp``, ``comnum.metrics`` and ``comnum.systems``, the
-   themes of the :doc:`API reference <api/index>`.
+   themes of the :doc:`API reference <api/functions>`.
 
 Channels
    A flat fading channel is one object for the simulation and for the theory:

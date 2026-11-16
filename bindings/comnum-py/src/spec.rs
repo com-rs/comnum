@@ -264,7 +264,10 @@ fn _grid_conditions<'py>(py: Python<'py>, axes: &Bound<'py, PyAny>) -> PyResult<
 ///
 /// Returns:
 ///     dict[str, dict]: for every block, its ``summary``, ``starts`` (it starts a link),
-///     ``needs`` and ``gives`` (the facts of the frame it reads and may add: ``samples``,
+///     ``role`` and ``role_title`` (its place in a link: ``source``, ``coding``,
+///     ``waveform``, ``wireless_channel``, ``optical_channel``, ``hardware``,
+///     ``receiver``, ``analysis``, ``system`` or ``other``, and its title), ``needs`` and
+///     ``gives`` (the facts of the frame it reads and may add: ``samples``,
 ///     ``symbols``, ``constellation``, ``noise``, ``llr``…) and its ``params``
 ///     (``{name: {default, doc, unit, choices, type, minimum, exclusive_minimum,
 ///     maximum, required}}``, ``type`` being a JSON Schema).
@@ -276,8 +279,8 @@ fn _grid_conditions<'py>(py: Python<'py>, axes: &Bound<'py, PyAny>) -> PyResult<
 /// Examples:
 ///     >>> import comnum
 ///     >>> b = comnum.spec_blocks()["awgn_ebn0"]
-///     >>> b["params"]["ebn0_db"]["required"], b["gives"]
-///     (True, ['noise'])
+///     >>> b["params"]["ebn0_db"]["required"], b["gives"], b["role"]
+///     (True, ['noise'], 'wireless_channel')
 #[pyfunction]
 fn spec_blocks(py: Python<'_>) -> PyResult<Bound<'_, PyDict>> {
     let out = PyDict::new(py);
@@ -285,6 +288,8 @@ fn spec_blocks(py: Python<'_>) -> PyResult<Bound<'_, PyDict>> {
         let d = PyDict::new(py);
         d.set_item("summary", b.summary)?;
         d.set_item("starts", b.starts)?;
+        d.set_item("role", b.role.name())?;
+        d.set_item("role_title", b.role.title())?;
         d.set_item("needs", b.needs.iter().map(|f| f.name()).collect::<Vec<_>>())?;
         d.set_item("gives", b.gives.iter().map(|f| f.name()).collect::<Vec<_>>())?;
         let params = PyDict::new(py);

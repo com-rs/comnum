@@ -13,7 +13,7 @@ use comnum_waveform::ce_ofdm::{Receiver, Unwrap};
 pub(super) fn blocks() -> Vec<Extension> {
     vec![
         builtin!(
-            "ce_ofdm_tx",
+            Waveform, "ce_ofdm_tx",
             "Constant-envelope OFDM modulator (Thompson et al. 2008): K symbols per block on the bins 1..K of an N = 2J(K + 1) DFT, exp(j2πh x).",
             CeOfdmSpec,
             needs [Samples],
@@ -21,7 +21,7 @@ pub(super) fn blocks() -> Vec<Extension> {
             |q, _, _| Ok(Box::new(CeOfdmTx(q.link()))),
         ),
         builtin!(
-            "ce_ofdm_rx",
+            Waveform, "ce_ofdm_rx",
             "CE-OFDM receiver back to the symbols: the arctangent phase demodulator, the linear and enhanced receivers of Ahmed and Zeidler (2015) or GAMP (López Morales et al. 2022); records ser_theory and ber_theory when esn0_db is given.",
             CeOfdmRxSpec,
             needs [Samples, Constellation],

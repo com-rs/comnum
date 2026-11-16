@@ -16,7 +16,7 @@ use std::path::PathBuf;
 pub(super) fn blocks() -> Vec<Extension> {
     vec![
         builtin!(
-            "probe",
+            Analysis, "probe",
             "Measure metrics at this point of the link; reported as <label>.<metric> (label: probe by default).",
             ProbeSpec,
             needs [Samples],
@@ -24,7 +24,7 @@ pub(super) fn blocks() -> Vec<Extension> {
             |q, label, _| Ok(Box::new(Probe::new(q, label)?)),
         ),
         builtin!(
-            "dump",
+            Analysis, "dump",
             "Save the samples at this point of the link for the first trials (by index) of every condition, as SigMF recordings <dir>/<campaign>/<condition>/<label>_<trial>.sigmf-meta and -data (one per stream, suffixed _s<stream> after the first).",
             DumpSpec,
             needs [Samples],
@@ -32,7 +32,7 @@ pub(super) fn blocks() -> Vec<Extension> {
             |q, label, ctx| Ok(Box::new(Dump::new(&q, label, ctx)?)),
         ),
         builtin!(
-            "scope",
+            Analysis, "scope",
             "View the signal at this point of the link in one traced trial (Spec::trace, the playground): constellation, spectrum, eye or time; nothing in a campaign.",
             ScopeSpec,
             needs [Samples],
@@ -40,7 +40,7 @@ pub(super) fn blocks() -> Vec<Extension> {
             |q, label, _| Ok(Box::new(Scope::new(q, label))),
         ),
         builtin!(
-            "noise_estimate",
+            Analysis, "noise_estimate",
             "Declare the receiver's posterior: the noise variance of the aligned samples; records sigma2.",
             NoiseEstimateSpec,
             needs [Samples, Symbols, Constellation],
@@ -48,7 +48,7 @@ pub(super) fn blocks() -> Vec<Extension> {
             |q, label, _| Ok(Box::new(NoiseEstimate::new(&q, label)?)),
         ),
         builtin!(
-            "classify",
+            Analysis, "classify",
             "Blind modulation classification at one sample per symbol, by fourth-order cumulants or by likelihood; records class (the index of the decided candidate), correct (1 if it is the transmitted alphabet) and snr_m2m4_db (M2M4 for the decided alphabet).",
             ClassifySpec,
             needs [Samples],

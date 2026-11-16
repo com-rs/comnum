@@ -268,11 +268,14 @@ def listed_in_the_docstring():
 
 
 def listed_in_the_api_reference():
-    """The names of the API reference, ``docs/python/api/index.rst``, one per theme."""
-    page = ROOT / "docs" / "python" / "api" / "index.rst"
-    return re.findall(
-        r"^   ([A-Za-z_][A-Za-z0-9_]*)$", page.read_text(encoding="utf-8"), flags=re.M
-    )
+    """The names of the API reference: its two parts, ``docs/python/api/functions.rst``
+    and ``docs/python/api/blocks.rst`` (the chains and the runners, not the classes of
+    :mod:`comnum.blocks` that its generated list by role holds)."""
+    api = ROOT / "docs" / "python" / "api"
+    text = (api / "functions.rst").read_text(encoding="utf-8")
+    text += (api / "blocks.rst").read_text(encoding="utf-8").split(".. the blocks by role")[0]
+    names = re.findall(r"^   ([A-Za-z_][A-Za-z0-9_]*)$", text, flags=re.M)
+    return names + re.findall(r"^\.\. automodule:: comnum\.(\w+)$", text, flags=re.M)
 
 
 def test_the_lists_of_names_agree():
@@ -288,7 +291,7 @@ def test_the_lists_of_names_agree():
     assert sorted(bound - exported - set(sim.__all__)) == [], "bound but not exported"
     for listed, where in [
         (listed_in_the_docstring(), "the docstring of comnum"),
-        (listed_in_the_api_reference(), "docs/python/api/index.rst"),
+        (listed_in_the_api_reference(), "the API reference (docs/python/api)"),
     ]:
         assert sorted(exported - set(listed)) == [], f"exported but not in {where}"
         assert sorted(set(listed) - exported) == [], f"in {where} but not exported"

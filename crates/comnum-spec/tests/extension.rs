@@ -86,6 +86,7 @@ fn register() {
                 LearnedSpec,
                 needs [Samples],
                 gives [],
+                role Receiver,
             ),
             build: build_learned,
         })
@@ -112,6 +113,10 @@ fn an_external_block_is_described_like_the_others() {
     assert_eq!(info.params[0].default_text(), "2.0");
     assert_eq!(info.params[1].choices, ["power", "none"]);
     assert!(info.describe().contains("amplitude factor"));
+    // a block that declares no role is listed among the other blocks
+    assert_eq!(info.role, blocks::Role::Other);
+    let learned = blocks::registry().into_iter().find(|b| b.name == "learned_gain").unwrap();
+    assert_eq!(learned.role, blocks::Role::Receiver);
     let schema = blocks::json_schema();
     let alt = schema["oneOf"].as_array().unwrap().iter().find(|a| a["title"] == json!("scale_probe")).unwrap();
     assert_eq!(alt["properties"]["factor"]["anyOf"][0]["default"], json!(2.0));

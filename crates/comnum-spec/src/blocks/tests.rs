@@ -41,6 +41,20 @@ fn ce_ofdm_blocks_round_trip_and_record_the_theory() {
 }
 
 #[test]
+fn every_block_of_this_crate_has_a_role_and_every_role_a_block() {
+    let blocks = registry();
+    for b in &blocks {
+        assert_ne!(b.role, Role::Other, "{} has no role", b.name);
+        assert_eq!(b.to_json()["role"], json!(b.role.name()));
+    }
+    for role in Role::ALL.into_iter().filter(|&r| r != Role::Other) {
+        assert!(blocks.iter().any(|b| b.role == role), "no block of the role {}", role.name());
+    }
+    let source = blocks.iter().find(|b| b.name == "awgn").unwrap();
+    assert_eq!(source.to_json()["role_title"], json!("Wireless channels"));
+}
+
+#[test]
 fn every_accepted_parameter_is_documented() {
     // serde names the accepted fields when it refuses an unknown one
     for info in registry() {
