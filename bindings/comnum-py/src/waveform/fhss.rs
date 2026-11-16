@@ -10,6 +10,12 @@ use comnum::waveform::fhss::{Fhss, theory as fhss_theory};
 /// changed every `symbols_per_hop` symbols along a pattern known to both ends; the receiver
 /// keeps the :math:`M` bins of the current channel of a DFT.
 ///
+/// The symbol :math:`a` sent while the link sits on the channel :math:`q` is the tone
+///
+/// .. math::
+///
+///     x[n] = e^{j 2\pi (qM + a) n / N}, \qquad 0 \le n < N.
+///
 /// Args:
 ///     n_channels (int): the channels :math:`Q` of the band.
 ///     m (int): the tones :math:`M` of a channel, the size of the alphabet.
@@ -144,9 +150,15 @@ impl PyFhss {
 }
 
 /// A partial-band noise jammer: Gaussian noise of mean power `power` per sample in
-/// `n_bins` consecutive bins of DFT blocks of `n_fft` samples, nothing elsewhere. In
-/// its bins it is white noise of variance
-/// :math:`\mathrm{power} \cdot n_{\mathrm{fft}} / n_{\mathrm{bins}}` per sample.
+/// `n_bins` consecutive bins of DFT blocks of `n_fft` samples, nothing elsewhere.
+///
+/// In its bins it is white noise of variance
+///
+/// .. math::
+///
+///     \sigma_J^2 = \mathrm{power} \cdot n_{\mathrm{fft}} / n_{\mathrm{bins}}
+///
+/// per sample.
 ///
 /// Args:
 ///     n (int): the number of samples.
@@ -182,7 +194,10 @@ fn partial_band_noise<'py>(
 }
 
 /// The bit error rate of slow frequency hopping with noncoherent :math:`M`-FSK under a noise
-/// jammer on the fraction `rho` of the band:
+/// jammer on the fraction `rho` of the band.
+///
+/// With :math:`P_b(\gamma)` the bit error rate of noncoherent :math:`M`-FSK at
+/// :math:`E_b/N_0 = \gamma`,
 ///
 /// .. math::
 ///

@@ -14,7 +14,10 @@ use pyo3::types::PyDict;
 ///
 /// .. math::
 ///
-///     \sigma^2 = \frac{f_s}{B} \, \frac{P_x}{\mathrm{SNR}}
+///     y[k] = x[k] + n[k], \qquad n[k] \sim \mathcal{CN}(0, \sigma^2), \qquad
+///     \sigma^2 = \frac{f_s}{B} \, \frac{P_x}{\mathrm{SNR}},
+///
+/// with :math:`P_x` the mean power of `x`.
 ///
 /// Args:
 ///     x (array_like): the signal.
@@ -54,7 +57,10 @@ fn awgn<'py>(
 ///
 /// .. math::
 ///
-///     \sigma^2 = \frac{P_x \cdot \mathrm{sps}}{b \cdot E_b/N_0}
+///     y[k] = x[k] + n[k], \qquad n[k] \sim \mathcal{CN}(0, \sigma^2), \qquad
+///     \sigma^2 = \frac{P_x \cdot \mathrm{sps}}{b \cdot E_b/N_0},
+///
+/// with :math:`P_x` the mean power of `x`.
 ///
 /// Args:
 ///     x (array_like): the signal.
@@ -90,10 +96,16 @@ fn awgn_ebn0<'py>(
     Ok(carr(py, awgn_ch::awgn_ebn0(&cvec(x)?, ebn0_db, bits_per_symbol, sps, &mut rng.inner)))
 }
 
-/// The samples of a receiver whose sampling clock is off by ``ppm`` parts per million:
-/// sample :math:`m` at the instant :math:`m (1 + 10^{-6}\, \mathrm{ppm})` of ``x``,
-/// interpolated by the cubic
-/// Lagrange kernel, zero beyond the end (Speth et al. 1999, eqs. (12)-(13)).
+/// The samples of a receiver whose sampling clock is off by ``ppm`` parts per million.
+///
+/// Sample :math:`m` is taken at the instant :math:`m (1 + \zeta)` of ``x`` (Speth et al.
+/// 1999, eqs. (12)-(13)):
+///
+/// .. math::
+///
+///     y[m] = x\big(m (1 + \zeta)\big), \qquad \zeta = 10^{-6}\, \mathrm{ppm},
+///
+/// interpolated by the cubic Lagrange kernel, zero beyond the end.
 ///
 /// Args:
 ///     x (array_like): the samples (complex).
@@ -110,7 +122,12 @@ fn clock_offset<'py>(py: Python<'py>, x: &Bound<'py, PyAny>, ppm: f64) -> PyResu
 }
 
 /// Wiener phase noise of a laser: a random walk starting at 0 whose increments have
-/// the variance :math:`2\pi \Delta\nu / f_s`.
+/// the variance :math:`2\pi \Delta\nu / f_s`:
+///
+/// .. math::
+///
+///     \phi_{n+1} = \phi_n + \Delta_n, \qquad \Delta_n \sim \mathcal{N}(0, 2\pi \Delta\nu / f_s),
+///     \qquad \phi_0 = 0.
 ///
 /// Args:
 ///     linewidth_hz (float): the linewidth :math:`\Delta\nu` (Hz).
@@ -137,6 +154,16 @@ fn phase_noise<'py>(
 
 /// The field of a laser: power, Wiener phase noise, relative intensity noise and
 /// frequency offset (OptiCommPy `basicLaserModel`).
+///
+/// Sample :math:`k` of the field is
+///
+/// .. math::
+///
+///     E[k] = \sqrt{P (1 + r_k)}\, e^{j(\phi_k + 2\pi \Delta f k / f_s)},
+///
+/// with :math:`\phi_k` the Wiener phase of the linewidth (`phase_noise`), :math:`\Delta f`
+/// the frequency offset and :math:`r_k \sim \mathcal{N}(0, \mathrm{rin\_var})` the relative
+/// intensity noise, clipped at -1.
 ///
 /// Args:
 ///     n (int): number of samples.
@@ -178,7 +205,13 @@ fn laser<'py>(
     Ok(carr(py, Laser { power_dbm, linewidth_hz, rin_var, freq_shift_hz }.field(n, fs, &mut rng.inner).py()?))
 }
 
-/// Phase modulator :math:`E e^{j\pi u/V_\pi}` (OptiCommPy `pm`).
+/// Phase modulator (OptiCommPy `pm`).
+///
+/// The output field is
+///
+/// .. math::
+///
+///     E_{\mathrm{out}} = E\, e^{j\pi u/V_\pi}.
 ///
 /// Args:
 ///     e (array_like): the optical field (√W).
@@ -205,11 +238,13 @@ fn phase_modulator<'py>(
 ///
 /// .. math::
 ///
-///     E \left[ c_I \cos\theta + j c_Q \sin\theta \right], \qquad
+///     E_{\mathrm{out}} = E \left[ c_I \cos\theta + j c_Q \sin\theta \right], \qquad
 ///     \theta = \frac{\pi (u + V_b)}{2 V_\pi},
 ///
-/// with the arm coefficients of the extinction ratio (:math:`\cos\theta` for an infinite
-/// one); the bias :math:`-V_\pi` is the null (carrier suppression), :math:`-V_\pi/2` the
+/// with the arm coefficients of the extinction ratio,
+/// :math:`c_{I,Q} = (\sqrt{1+\gamma} \pm \sqrt{1-\gamma})/2`,
+/// :math:`\gamma = 2\sqrt{\mathrm{ER}}/(\mathrm{ER}+1)` (ER linear; :math:`\cos\theta` for
+/// an infinite one); the bias :math:`-V_\pi` is the null (carrier suppression), :math:`-V_\pi/2` the
 /// quadrature point.
 ///
 /// Args:
@@ -284,9 +319,15 @@ fn iqm<'py>(
     Ok(carr(py, m.modulate(&cvec(e)?, &cvec(u)?).py()?))
 }
 
-/// A PIN photodiode (OptiCommPy `photodiode`): responsivity, shot noise
-/// :math:`2q(I + I_d)B`, thermal noise :math:`4 k_B T B/R_L`, and a low-pass FIR of
-/// bandwidth :math:`B`.
+/// A PIN photodiode (OptiCommPy `photodiode`): responsivity, shot noise, thermal noise,
+/// and a low-pass FIR of bandwidth :math:`B`.
+///
+/// The photocurrent and the variances of the noises are
+///
+/// .. math::
+///
+///     I = R |E|^2, \qquad \sigma^2_{\mathrm{shot}} = 2q(I + I_d)B, \qquad
+///     \sigma^2_{\mathrm{th}} = \frac{4 k_B T B}{R_L}.
 ///
 /// Every attribute is readable and writable; `ideal=True` gives :math:`R|E|^2` without
 /// noise nor filter.
@@ -480,7 +521,11 @@ fn photodiode_or_ideal(pd: Option<&PyPhotodiode>) -> Photodiode {
     pd.map_or_else(Photodiode::ideal, |p| p.inner.clone())
 }
 
-/// Balanced detection :math:`i(E_1) - i(E_2)`.
+/// Balanced detection: the difference of the photocurrents of two photodiodes,
+///
+/// .. math::
+///
+///     i = i(E_1) - i(E_2).
 ///
 /// Args:
 ///     e1 (array_like): the field on the first photodiode (√W).
@@ -509,8 +554,11 @@ fn balanced_photodiode<'py>(
 }
 
 /// The 90° optical hybrid (OptiCommPy `hybrid_2x4_90deg`): the four outputs
-/// :math:`(E_s - E_{lo})/2`, :math:`j(E_s + E_{lo})/2`, :math:`(jE_s - E_{lo})/2` and
-/// :math:`(-E_s + jE_{lo})/2`.
+///
+/// .. math::
+///
+///     \frac{E_s - E_{lo}}{2}, \quad \frac{j(E_s + E_{lo})}{2}, \quad
+///     \frac{jE_s - E_{lo}}{2}, \quad \frac{-E_s + jE_{lo}}{2}.
 ///
 /// Args:
 ///     es (array_like): the signal field (√W).
@@ -534,7 +582,11 @@ fn hybrid_2x4<'py>(
 }
 
 /// Single-polarisation coherent receiver (OptiCommPy `coherentReceiver`): the hybrid
-/// and two balanced photodiodes; equals :math:`R E_s E_{lo}^*` with ideal photodiodes.
+/// and two balanced photodiodes. With ideal photodiodes its output is
+///
+/// .. math::
+///
+///     i = R\, E_s E_{lo}^*.
 ///
 /// Args:
 ///     es (array_like): the signal field (√W).

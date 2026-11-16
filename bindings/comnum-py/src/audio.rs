@@ -99,9 +99,14 @@ fn hdlc_frames<'py>(
 }
 
 /// The real signal of a sound card that carries a complex baseband signal on an audio
-/// carrier: :math:`\operatorname{Re}(\tilde{x}[n] \exp(j 2\pi f_c n / f_a))`, :math:`\tilde{x}`
-/// the signal resampled to the audio rate. The band :math:`f_c \pm f_s/2` must lie between
-/// 0 and half the audio rate.
+/// carrier:
+///
+/// .. math::
+///
+///     s[n] = \operatorname{Re}\left(\tilde{x}[n]\, e^{j 2\pi f_c n / f_a}\right),
+///
+/// with :math:`\tilde{x}` the signal resampled to the audio rate :math:`f_a`. The band
+/// :math:`f_c \pm f_s/2` must lie between 0 and half the audio rate.
 ///
 /// Args:
 ///     x (array_like): the complex baseband samples.
@@ -133,7 +138,15 @@ fn audio_upconvert<'py>(
 }
 
 /// The complex baseband of the band around a carrier of a real recording: the mixing
-/// to 0 Hz, the low-pass filter and the resampling to `fs`. What comes back has an
+/// to 0 Hz, the low-pass filter and the resampling to `fs`,
+///
+/// .. math::
+///
+///     y[m] = 2\, \mathrm{LPF}\left\{ r[n]\, e^{-j 2\pi f_c n / f_a} \right\}
+///     \ \text{resampled to } f_s,
+///
+/// with :math:`f_a` the audio rate; the low-pass filter removes the image at
+/// :math:`-2 f_c` and the factor 2 restores the amplitude. What comes back has an
 /// unknown delay and phase, and the clock difference of the two cards.
 ///
 /// Args:

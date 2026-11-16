@@ -175,6 +175,16 @@ fn uma_environment_height(d2d_m: f64, h_ut_m: f64, mut rng: PyRefMut<'_, PyRng>)
 
 /// The outdoor-to-indoor penetration of a building (TR 38.901 eq. (7.4-2), Table 7.4.3-2).
 ///
+/// The mean loss is :math:`PL_{tw} + PL_{in}` (dB), with
+///
+/// .. math::
+///
+///     PL_{tw} = 5 - 10\log_{10}\sum_i p_i 10^{-L_i/10}, \qquad
+///     PL_{in} = 0.5\, d_{2D\text{-}in},
+///
+/// :math:`L_i = a_i + b_i f` the loss (dB) of material :math:`i` at the frequency
+/// :math:`f` (GHz, Table 7.4.3-1) and :math:`p_i` its proportion.
+///
 /// Args:
 ///     model (str): ``"low"``, ``"high"`` or ``"low-a"``.
 ///     fc_hz (float): the carrier frequency (Hz).

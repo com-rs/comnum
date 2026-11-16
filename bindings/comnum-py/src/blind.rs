@@ -24,6 +24,17 @@ fn cumulant_dict<'py>(py: Python<'py>, c: &Cumulants) -> PyResult<Bound<'py, PyD
 /// The sample cumulants of order two and four of a zero-mean signal, and the normalised
 /// :math:`C_{40}/C_{21}^2`, :math:`C_{42}/C_{21}^2` (Swami & Sadler 2000).
 ///
+/// With the moments :math:`M_{pq} = \mathbb{E}[r^{p-q} (r^*)^q]`, replaced by sample means,
+///
+/// .. math::
+///
+///     \begin{aligned}
+///     C_{20} &= M_{20}, \quad C_{21} = M_{21}, \quad C_{40} = M_{40} - 3 M_{20}^2, \\
+///     C_{41} &= M_{41} - 3 M_{20} M_{21}, \quad C_{42} = M_{42} - |M_{20}|^2 - 2 M_{21}^2,
+///     \end{aligned}
+///
+/// and :math:`\tilde{C}_{4k} = C_{4k}/C_{21}^2`.
+///
 /// Args:
 ///     x (array_like): the samples (complex).
 ///
@@ -81,6 +92,15 @@ fn theory_cumulants<'py>(
 /// fourth-order features :math:`|C_{40}|/C_{21}^2`, :math:`C_{42}/C_{21}^2`, Swami & Sadler
 /// 2000; with ``noise_var``, normalised by :math:`C_{21} - \mathrm{noise\_var}`).
 ///
+/// The score of a candidate alphabet :math:`\{a\}` of :math:`M` points under `"ml_known"` is
+/// the mean log-likelihood of the :math:`L` samples in noise of variance :math:`N`:
+///
+/// .. math::
+///
+///     \frac{1}{L} \sum_{n} \ln \frac{1}{M} \sum_{a} e^{-|r_n - a|^2/N},
+///
+/// up to a constant common to the candidates.
+///
 /// Args:
 ///     x (array_like): the samples (complex).
 ///     candidates (list[Constellation]): the candidate alphabets (scaled to unit energy).
@@ -124,6 +144,17 @@ fn classify_modulation<'py>(
 /// The M2M4 estimate of the SNR (Pauluzzi & Beaulieu 2000), generalised to alphabets of
 /// several amplitudes by their kurtosis; it degrades at high SNR for QAM.
 ///
+/// With :math:`M_2 = \mathbb{E}|r|^2` and :math:`M_4 = \mathbb{E}|r|^4` (sample means) and
+/// the kurtosis :math:`k_a = \mathbb{E}|a|^4/(\mathbb{E}|a|^2)^2` of the alphabet (1 for
+/// PSK), the signal and noise powers are
+///
+/// .. math::
+///
+///     \hat{S} = \sqrt{\frac{2 M_2^2 - M_4}{2 - k_a}}, \qquad \hat{N} = M_2 - \hat{S},
+///
+/// and the SNR is :math:`\hat{S}/\hat{N}` (eq. (37) of the paper with the kurtosis 2 of
+/// complex noise, eq. (39) for PSK).
+///
 /// Args:
 ///     x (array_like): the samples (complex), at one sample per symbol.
 ///     constellation (Constellation): the alphabet.
@@ -149,7 +180,14 @@ fn snr_m2m4_db(x: &Bound<'_, PyAny>, constellation: &PyConstellation) -> PyResul
 
 /// The Cramér–Rao bound on the normalised mean squared error of an unbiased SNR
 /// estimator from known PSK symbols (Pauluzzi & Beaulieu 2000, eq. (65) in complex AWGN,
-/// eq. (67), twice it, in real AWGN).
+/// eq. (67), twice it, in real AWGN):
+///
+/// .. math::
+///
+///     \mathrm{NMSE}(\hat{\rho}) \ge \frac{2}{\rho N_{\mathrm{sym}}} + \frac{1}{N_{\mathrm{ss}} N_{\mathrm{sym}}},
+///
+/// with :math:`\rho` the SNR, :math:`N_{\mathrm{sym}}` = `n_symbols` and
+/// :math:`N_{\mathrm{ss}}` = `sps`.
 ///
 /// Args:
 ///     snr_db (float | array_like): the true SNR (dB).
@@ -176,6 +214,16 @@ fn snr_crb_nmse(snr_db: &Bound<'_, PyAny>, n_symbols: usize, sps: usize, real: b
 /// The symbol rate of a linearly modulated signal from the strongest line of the
 /// spectrum of its instantaneous power (cyclostationarity, Gardner 1991); the pulse must
 /// have an excess bandwidth.
+///
+/// At :math:`\tau = 0` the cyclic autocorrelation (`cyclic_autocorrelation`),
+///
+/// .. math::
+///
+///     R_x^\alpha(0) = \frac{1}{N} \sum_n |x[n]|^2\, e^{-j 2\pi \alpha n/f_s},
+///
+/// has a line at :math:`\alpha = 1/T`; the estimate is the strongest line of the spectrum
+/// of :math:`|x|^2` (its mean removed) in the search band, refined by a parabola through
+/// the log-magnitudes of the three bins around the peak.
 ///
 /// Args:
 ///     x (array_like): the samples (complex).

@@ -9,8 +9,17 @@ use num_complex::Complex64 as C64;
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 
-/// Bussgang's decomposition :math:`y = Kx + d` of a memoryless amplifier driven by a
-/// circular complex Gaussian signal: the complex gain and the power of the distortion.
+/// Bussgang's decomposition of a memoryless amplifier driven by a circular complex
+/// Gaussian signal: the complex gain and the power of the distortion.
+///
+/// The output is written
+///
+/// .. math::
+///
+///     y = K x + d,
+///
+/// with :math:`K` the complex gain and :math:`d` a distortion uncorrelated with :math:`x`,
+/// of power :math:`\sigma_d^2`.
 ///
 /// The parameters of each model default to those of :func:`pa_rapp` and
 /// :func:`pa_saleh` (Rapp with :math:`p = 2`, Saleh's fit of 1981).
@@ -150,6 +159,13 @@ fn rapp_predistort<'py>(
 /// Saleh's travelling-wave tube amplifier (AM/AM and AM/PM; Saleh 1981, default
 /// coefficients of his fit).
 ///
+/// An input :math:`x = r e^{j\theta}` gives :math:`y = A(r)\, e^{j(\theta + \Phi(r))}` with
+///
+/// .. math::
+///
+///     A(r) = \frac{\alpha_a r}{1 + \beta_a r^2}, \qquad
+///     \Phi(r) = \frac{\alpha_\phi r^2}{1 + \beta_\phi r^2}.
+///
 /// Args:
 ///     x (array_like): the input envelope.
 ///     alpha_a (float): AM/AM coefficient :math:`\alpha_a`.
@@ -184,6 +200,14 @@ fn pa_saleh<'py>(
 
 /// The memory-polynomial amplifier of Ding et al. (2004): orders 1, 3, 5, memory 3.
 ///
+/// The output is
+///
+/// .. math::
+///
+///     y[n] = \sum_{k} \sum_{m} a_{km}\, x[n-m]\, |x[n-m]|^{k-1},
+///
+/// with the coefficients :math:`a_{km}` of the paper.
+///
 /// Args:
 ///     x (array_like): the input envelope.
 ///
@@ -199,6 +223,15 @@ fn pa_memory_polynomial<'py>(py: Python<'py>, x: &Bound<'py, PyAny>) -> PyResult
 
 /// A memory-polynomial digital predistorter, trained by indirect learning (Eun & Powers
 /// 1997; Ding et al. 2004; Morgan et al. 2006).
+///
+/// The predistorter placed before the amplifier is the memory polynomial
+///
+/// .. math::
+///
+///     z[n] = \sum_{k \in \mathcal{K}} \sum_{m=0}^{M-1} c_{km}\, x[n-m]\, |x[n-m]|^{k-1},
+///
+/// with :math:`\mathcal{K}` the orders, so that the cascade with the amplifier is linear,
+/// :math:`F(P(x)) \approx G x`.
 ///
 /// Args:
 ///     orders (list[int]): nonlinearity orders (odd: 1, 3, 5, …).
@@ -258,6 +291,15 @@ impl PyDpd {
     }
 
     /// Fit the polynomial mapping `x` to `y` by regularised least squares.
+    ///
+    /// With the basis matrix :math:`\Phi(x)` of the polynomial (one column per term
+    /// :math:`k, m`), the coefficients solve
+    ///
+    /// .. math::
+    ///
+    ///     \left(\Phi^H \Phi + \lambda I\right) c = \Phi^H y,
+    ///
+    /// with :math:`\lambda` the regularisation.
     ///
     /// Args:
     ///     x (array_like): the input of the polynomial.

@@ -196,8 +196,13 @@ impl PyCpm {
         farr(py, self.inner.phase_response().to_vec())
     }
 
-    /// The symbol levels :math:`a = 2i - (M-1)` of symbol indices (for binary CPM, the bits
-    /// :math:`b` give the levels :math:`2b - 1`).
+    /// The symbol levels of symbol indices:
+    ///
+    /// .. math::
+    ///
+    ///     a = 2i - (M-1),
+    ///
+    /// for binary CPM the bits :math:`b` giving the levels :math:`2b - 1`.
     ///
     /// Args:
     ///     indices (array_like): symbol indices below :math:`M`.
@@ -278,10 +283,19 @@ impl PyCpm {
         Ok((iarr(py, path.symbols), iarr(py, path.phase_states)))
     }
 
-    /// The quadrature detector of MSK: the boundary bits :math:`d_n` of the equivalent OQPSK
-    /// signal (the information bits of :func:`msk_precode`), each decided from the
-    /// correlation with a half-sinusoid over two symbols, with the BER of antipodal
-    /// signalling over AWGN (Proakis & Salehi, Sec. 3.3-2).
+    /// The quadrature detector of MSK.
+    ///
+    /// The boundary bits :math:`d_n` of the equivalent OQPSK signal (the information bits
+    /// of :func:`msk_precode`, :math:`d_n = +1` for the bit 1) are each decided from the
+    /// correlation with a half-sinusoid over two symbols,
+    ///
+    /// .. math::
+    ///
+    ///     \operatorname{Re}\left[(-j)^{n} \int_{(n-1)T}^{(n+1)T} r(t)
+    ///     \cos \frac{\pi (t - nT)}{2T} \, dt\right],
+    ///
+    /// the last window truncated to the signal, with the BER of antipodal signalling over
+    /// AWGN (Proakis & Salehi, Sec. 3.3-2).
     ///
     /// Args:
     ///     samples (array_like): a whole number of symbols of an MSK signal.
@@ -295,11 +309,17 @@ impl PyCpm {
         Ok(self.inner.msk_detect(&cvec(samples)?).py()?.into_pyarray(py))
     }
 
-    /// The one-symbol differential phase detector of binary CPM: after an optional
-    /// Gaussian low-pass predetection filter of normalised 3 dB bandwidth `bt`, the
-    /// sign of :math:`\operatorname{Im}(r_n r_{n-1}^*)` sampled once per symbol decides
-    /// :math:`a_n` (Simon & Wang, *IEEE Trans. Veh. Technol.* 33(4), 1984). Exact for MSK
-    /// without noise; the partial response of GMSK closes the eye.
+    /// The one-symbol differential phase detector of binary CPM.
+    ///
+    /// After an optional Gaussian low-pass predetection filter of normalised 3 dB
+    /// bandwidth `bt`, the signal sampled once per symbol decides
+    ///
+    /// .. math::
+    ///
+    ///     \hat{a}_n = \operatorname{sign} \operatorname{Im}(r_n r_{n-1}^*)
+    ///
+    /// (Simon & Wang, *IEEE Trans. Veh. Technol.* 33(4), 1984). Exact for MSK without
+    /// noise; the partial response of GMSK closes the eye.
     ///
     /// Args:
     ///     samples (array_like): a whole number of symbols of received samples.
@@ -322,13 +342,22 @@ impl PyCpm {
         Ok(iarr(py, py.detach(|| self.inner.differential_detect(&r, bt)).py()?))
     }
 
-    /// The normalised minimum squared Euclidean distance over the pairs of sequences
-    /// that diverge at :math:`t = 0` and merge within `max_len` symbols (the bound
-    /// :math:`d_B^2` of
-    /// Anderson, Aulin & Sundberg, *Digital Phase Modulation*, 1986, ch. 3; Aulin &
-    /// Sundberg, *IEEE Trans. Commun.* 29(3), 1981, for full response): antipodal
-    /// signalling and MSK have :math:`d^2 = 2`, and the asymptotic gain over BPSK is
-    /// :math:`10 \log_{10}(d^2/2)` dB.
+    /// The normalised minimum squared Euclidean distance of the CPM signal.
+    ///
+    /// The minimum is taken over the pairs of sequences that diverge at :math:`t = 0` and
+    /// merge within `max_len` :math:`= N` symbols (the bound :math:`d_B^2` of Anderson,
+    /// Aulin & Sundberg, *Digital Phase Modulation*, 1986, ch. 3; Aulin & Sundberg, *IEEE
+    /// Trans. Commun.* 29(3), 1981, for full response):
+    ///
+    /// .. math::
+    ///
+    ///     d^{2} = \frac{\log_{2} M}{T} \int_{0}^{(N + L - 1) T}
+    ///     \left[1 - \cos \Delta \varphi(t)\right] dt,
+    ///     \qquad \Delta \varphi(t) = 2 \pi h \sum_{k=0}^{N-1} \gamma_{k} \, q(t - kT),
+    ///
+    /// over the difference sequences :math:`\gamma_k = a_k - a'_k` with
+    /// :math:`\gamma_0 \ne 0` that merge. Antipodal signalling and MSK have
+    /// :math:`d^2 = 2`, and the asymptotic gain over BPSK is :math:`10 \log_{10}(d^2/2)` dB.
     ///
     /// Args:
     ///     max_len (int): the longest merge considered (the search is exhaustive,
@@ -357,11 +386,17 @@ impl PyCpm {
     }
 }
 
-/// The differential precoder of MSK: the bits :math:`b_1 \dots b_N` give the boundary signs
-/// :math:`d_n = 2b_n - 1` (:math:`d_0 = +1`) and the CPM symbols :math:`a_n = d_n d_{n+1}`,
-/// as indices :math:`(a_n + 1)/2`, so that the signal is OQPSK with half-sinusoid pulses
-/// carrying :math:`d_n` (Proakis & Salehi, Sec. 3.3-2); the ML detector then has the BER of
-/// BPSK.
+/// The differential precoder of MSK.
+///
+/// The bits :math:`b_1 \dots b_N` give the boundary signs and the CPM symbols
+///
+/// .. math::
+///
+///     d_n = 2b_n - 1, \qquad a_n = d_n d_{n+1},
+///
+/// with :math:`d_0 = +1`, as indices :math:`(a_n + 1)/2`, so that the signal is OQPSK with
+/// half-sinusoid pulses carrying :math:`d_n` (Proakis & Salehi, Sec. 3.3-2); the ML
+/// detector then has the BER of BPSK.
 ///
 /// Args:
 ///     bits (array_like): the information bits.

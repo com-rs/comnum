@@ -144,7 +144,12 @@ fn w2dbm(p_w: &Bound<'_, PyAny>) -> PyResult<Py<PyAny>> {
     map_real(p_w, |v| Ok(comnum::math::w2dbm(v)))
 }
 
-/// The Gaussian tail function :math:`Q(x) = \operatorname{erfc}(x/\sqrt{2})/2`.
+/// The Gaussian tail function, the probability that a standard normal variable exceeds
+/// :math:`x`:
+///
+/// .. math::
+///
+///     Q(x) = \frac{1}{2} \operatorname{erfc}\!\left(\frac{x}{\sqrt{2}}\right).
 ///
 /// Args:
 ///     x (float | array_like): the argument.
@@ -164,7 +169,13 @@ fn qfunc(x: &Bound<'_, PyAny>) -> PyResult<Py<PyAny>> {
     map_real(x, |v| Ok(comnum::math::qfunc(v)))
 }
 
-/// The Q factor (dB) of a bit error rate, :math:`20 \log_{10}(\sqrt{2}\, \operatorname{erfc}^{-1}(2\, \mathrm{BER}))`.
+/// The Q factor (dB) of a bit error rate.
+///
+/// The factor is
+///
+/// .. math::
+///
+///     Q_{\mathrm{dB}} = 20 \log_{10}\left(\sqrt{2}\, \operatorname{erfc}^{-1}(2\, \mathrm{BER})\right).
 ///
 /// Args:
 ///     ber (float | array_like): the bit error rate, in :math:`(0, 0.5)`.
@@ -199,10 +210,15 @@ fn bessel_j0(x: &Bound<'_, PyAny>) -> PyResult<Py<PyAny>> {
     map_real(x, |v| Ok(comnum::math::bessel_j0(v)))
 }
 
-/// Register the bindings of this module.
-/// The Zadoff–Chu sequence :math:`x_u(n) = \exp(-j\pi u n (n + 1) / N)` of root :math:`u`
-/// and odd length :math:`N` (constant amplitude, zero periodic autocorrelation at every
-/// nonzero lag; the PSS of LTE is the one of length 63, its middle element punctured).
+/// The Zadoff–Chu sequence of root :math:`u` and odd length :math:`N` (constant
+/// amplitude, zero periodic autocorrelation at every nonzero lag; the PSS of LTE is the
+/// one of length 63, its middle element punctured).
+///
+/// Its values are
+///
+/// .. math::
+///
+///     x_u(n) = \exp\left(-j\pi u n (n + 1) / N\right), \qquad n = 0, \dots, N - 1.
 ///
 /// Args:
 ///     u (int): the root, nonzero modulo `n_zc` and prime to it.
@@ -224,6 +240,7 @@ fn zadoff_chu(py: Python<'_>, u: u32, n_zc: u32) -> PyResult<CArr<'_>> {
     Ok(carr(py, comnum::math::sequences::zadoff_chu(u, n_zc).py()?))
 }
 
+/// Register the bindings of this module.
 pub(crate) fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(zadoff_chu, m)?)?;
     m.add_function(wrap_pyfunction!(db2lin, m)?)?;

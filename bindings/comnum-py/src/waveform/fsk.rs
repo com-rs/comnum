@@ -3,11 +3,17 @@
 use super::*;
 use comnum::waveform::fsk::Fsk;
 
-/// Orthogonal :math:`M`-FSK with a continuous phase and a noncoherent receiver: the symbol
-/// :math:`a` is the tone of :math:`a \cdot \mathrm{spacing}` cycles per symbol, held for
-/// `sps` samples. The receiver correlates every symbol with the :math:`M` tones and needs
-/// neither the phase nor
-/// the exact frequency of the carrier; its error rate over white noise is
+/// Orthogonal :math:`M`-FSK with a continuous phase and a noncoherent receiver.
+///
+/// The symbol :math:`a` is the tone of :math:`a \Delta` cycles per symbol,
+/// :math:`\Delta` the `spacing`, held for :math:`N` = `sps` samples:
+///
+/// .. math::
+///
+///     x[n] = e^{j 2\pi a \Delta n / N}, \qquad 0 \le n < N.
+///
+/// The receiver correlates every symbol with the :math:`M` tones and needs neither the
+/// phase nor the exact frequency of the carrier; its error rate over white noise is
 /// `theory_ber_fsk_noncoherent`.
 ///
 /// Args:
@@ -121,11 +127,22 @@ impl PyFsk {
 }
 
 /// The bit error rate of :math:`M` orthogonal signals detected noncoherently over white
-/// noise (noncoherent :math:`M`-FSK; Proakis & Salehi, Sec. 4.5), for :math:`M = 2`:
+/// noise (noncoherent :math:`M`-FSK; Proakis & Salehi, Sec. 4.5).
+///
+/// The magnitude of the matched filter of the sent signal is Rice of location
+/// :math:`v = \sqrt{2 E_s/N_0}`, :math:`E_s = E_b \log_2 M`, the :math:`M - 1` others
+/// Rayleigh, and the largest wins:
 ///
 /// .. math::
 ///
-///     P_b = \tfrac{1}{2} \exp(-E_b/(2 N_0)).
+///     \begin{aligned}
+///     P_{s} &= \int_{0}^{\infty} y\, e^{-(y^{2} + v^{2})/2} I_{0}(v y)
+///     \left[1 - \left(1 - e^{-y^{2}/2}\right)^{M - 1}\right] dy, \\
+///     P_b &= P_s \frac{M}{2(M - 1)},
+///     \end{aligned}
+///
+/// every wrong symbol being equally likely; for :math:`M = 2`,
+/// :math:`P_b = \tfrac{1}{2} \exp(-E_b/(2 N_0))`.
 ///
 /// Args:
 ///     m (int): the number of tones.

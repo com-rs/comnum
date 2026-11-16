@@ -51,6 +51,24 @@ fn nr_mcs(table: &str, index: usize) -> PyResult<(usize, f64)> {
 
 /// The transport block size of a PDSCH (TS 38.214 Sec. 5.1.3.2).
 ///
+/// The resource elements and the information bits are
+///
+/// .. math::
+///
+///     N_{RE} = \min(156, 12 N_{symb} - N_{DMRS} - N_{oh})\, n_{PRB}, \qquad
+///     N_{info} = N_{RE} R Q_{m} \upsilon,
+///
+/// with the code rate :math:`R` and the order :math:`Q_m` of the MCS and :math:`\upsilon`
+/// layers. For :math:`N_{info} \le 3824`, the TBS is the smallest of the table of the
+/// standard not below :math:`N'_{info} = \max(24, 2^{n} \lfloor N_{info}/2^{n} \rfloor)`,
+/// :math:`n = \max(3, \lfloor \log_{2} N_{info} \rfloor - 6)`; otherwise it is
+/// :math:`8 C \lceil (N'_{info} + 24)/(8C) \rceil - 24` with
+/// :math:`N'_{info} = \max(3840, 2^{n}\, \mathrm{round}((N_{info} - 24)/2^{n}))` (ties up),
+/// :math:`n = \lfloor \log_{2}(N_{info} - 24) \rfloor - 5`, and
+/// :math:`C = \lceil (N'_{info} + 24)/3816 \rceil` for :math:`R \le 1/4`,
+/// :math:`C = \lceil (N'_{info} + 24)/8424 \rceil` for :math:`N'_{info} > 8424`, 1
+/// otherwise.
+///
 /// Args:
 ///     n_prb (int): the allocated PRBs.
 ///     n_symb (int): the PDSCH symbols of the slot.
@@ -152,6 +170,16 @@ impl PyNrTransportBlock {
     }
 
     /// The rate-matched length ``E_r`` of every code block (TS 38.212 Sec. 5.4.2.1).
+    ///
+    /// For :math:`G` channel bits, :math:`Q_m` bits per symbol, :math:`N_L` layers and
+    /// :math:`C` code blocks,
+    ///
+    /// .. math::
+    ///
+    ///     E_r = \begin{cases}
+    ///     N_{L} Q_{m} \lfloor G/(N_{L} Q_{m} C) \rfloor, & r < C - (G/(N_{L} Q_{m}) \bmod C), \\
+    ///     N_{L} Q_{m} \lceil G/(N_{L} Q_{m} C) \rceil, & \text{otherwise}.
+    ///     \end{cases}
     ///
     /// Args:
     ///     g (int): the channel bits of the transport block.

@@ -96,10 +96,20 @@ fn py_rms_delay_spread(taps: &Bound<'_, PyAny>) -> PyResult<f64> {
 }
 
 /// A tapped-delay-line multipath channel with Clarke/Jakes Doppler (sum of sinusoids of
-/// Zheng & Xiao 2003), SISO or MIMO: every tap is Rayleigh with its power, the delays
-/// are rounded to the sampling grid and the powers normalised. The first tap of TDL-D,
-/// TDL-E and TDLD30 is Ricean: a specular component of Doppler shift :math:`0.7 f_D`
-/// is added (TR 38.901 §7.7.2).
+/// Zheng & Xiao 2003), SISO or MIMO.
+///
+/// Every tap is Rayleigh with its power :math:`p_l`, varying in time with the Doppler
+/// spectrum of the maximum shift :math:`f_D`:
+///
+/// .. math::
+///
+///     y[n] = \sum_{l} h_{l}[n]\, x[n - d_{l}], \qquad
+///     \mathbb{E}\left[h_{l}[n] h_{l}^{*}[n + m]\right] = p_{l}\, J_{0}(2\pi f_{D} m / f_{s}),
+///
+/// the delays rounded to the sampling grid, :math:`d_l = \mathrm{round}(\tau_l f_s)`, and
+/// the powers normalised; with MIMO dimensions every tap is a matrix of independent such
+/// processes. The first tap of TDL-D, TDL-E and TDLD30 is Ricean: a specular component of
+/// Doppler shift :math:`0.7 f_D` is added (TR 38.901 §7.7.2).
 ///
 /// Args:
 ///     profile (str | array_like): a profile name (see `power_delay_profile`) or taps
@@ -455,6 +465,16 @@ impl PyGrid {
 /// the power-delay profile `delays`, `powers`, or the robust uniform profile over
 /// `max_delay` samples (Edfors et al. 1998); linear in time.
 ///
+/// The LS estimates at the pilots and the frequency correlation of the profile that
+/// LMMSE uses are
+///
+/// .. math::
+///
+///     \hat H = Y / X, \qquad
+///     R(\Delta k) = \sum_{l} p_{l}\, e^{-j 2\pi \Delta k\, d_{l} / N},
+///
+/// :math:`d_l` and :math:`p_l` the delays and powers of the profile, :math:`N` = `n_fft`.
+///
 /// Args:
 ///     grid (ResourceGrid): the grid and its pilots.
 ///     rx (array_like): the received grid `(n_subcarriers, n_symbols)`, or the symbols
@@ -527,7 +547,16 @@ fn ofdm_preamble<'py>(py: Python<'py>, ofdm: &PyOfdm, seed: u64) -> PyResult<CAr
     Ok(carr(py, sync::preamble(&ofdm.inner, seed).py()?))
 }
 
-/// The timing metric of Schmidl & Cox, :math:`|P(d)|^2 / R(d)^2`.
+/// The timing metric of Schmidl & Cox.
+///
+/// With the halves of :math:`L` = `half` samples, the correlation and the energy of the
+/// second half give (Schmidl & Cox 1997)
+///
+/// .. math::
+///
+///     P(d) = \sum_{m=0}^{L-1} r^{*}[d + m]\, r[d + m + L], \qquad
+///     R(d) = \sum_{m=0}^{L-1} |r[d + m + L]|^{2}, \qquad
+///     M(d) = \frac{|P(d)|^{2}}{R(d)^{2}}.
 ///
 /// Args:
 ///     r (array_like): the received samples.
@@ -545,6 +574,13 @@ fn schmidl_cox<'py>(py: Python<'py>, r: &Bound<'py, PyAny>, half: usize) -> PyRe
 
 /// Timing and fractional frequency offset of the preamble of `ofdm` in `r` (Schmidl &
 /// Cox 1997).
+///
+/// The timing :math:`\hat d` is on the plateau of the metric of :func:`schmidl_cox`, and
+/// the offset, in subcarrier spacings, is the phase of the correlation there:
+///
+/// .. math::
+///
+///     \hat\varepsilon = \angle P(\hat d) / \pi.
 ///
 /// Args:
 ///     r (array_like): the received samples.
@@ -605,7 +641,18 @@ fn ofdm_budget<'py>(py: Python<'py>, snr_db: f64, loss_db: f64) -> PyResult<Boun
 
 /// The power of the intersymbol and intercarrier interference of an FFT window
 /// ``offset`` samples late (positive) or early (negative) of the end of the guard
-/// interval, relative to a subcarrier (Speth et al. 1999, eqs. (30)-(31)).
+/// interval, relative to a subcarrier (Speth et al. 1999, eqs. (30)-(31)):
+///
+/// .. math::
+///
+///     \sigma_{\varepsilon}^{2} = \sum_{i} p_{i} \left(\frac{2\Delta_{i}}{N}
+///     - \left(\frac{\Delta_{i}}{N}\right)^{2}\right),
+///
+/// with :math:`\Delta_i` the samples of the window of :math:`N` points that fall outside
+/// the symbol of tap :math:`i` (delay :math:`\tau_i`, power :math:`p_i`) for the offset
+/// :math:`n_\varepsilon`: :math:`n_\varepsilon - \tau_i` if :math:`n_\varepsilon > \tau_i`,
+/// :math:`\tau_i - N_g - n_\varepsilon` if :math:`n_\varepsilon < \tau_i - N_g`, 0
+/// otherwise (:math:`N_g` the guard interval).
 ///
 /// Args:
 ///     offset (float): the timing offset (samples).
@@ -639,10 +686,20 @@ fn ofdm_timing_noise(
 }
 
 /// The two-dimensional Wiener interpolator of pilots in time and frequency (Hoeher,
-/// Kaiser & Robertson 1997), for a WSSUS channel of uniform delay spectrum: every
-/// position is estimated from the ``n_taps`` nearest pilots (the weighted distance
+/// Kaiser & Robertson 1997), for a WSSUS channel of uniform delay spectrum.
+///
+/// Every position :math:`(l, k)` is estimated from the LS estimates
+/// :math:`\tilde{h}` of the ``n_taps`` nearest pilots (the weighted distance
 /// :math:`|\Delta l| \, f_D T_s + |\Delta k| \, \tau_{\max} \Delta F`) by the linear MMSE
-/// filter of their eq. (9).
+/// filter of their eqs. (2) and (9),
+///
+/// .. math::
+///
+///     \hat{h}_{l,k} = \underline{\theta}^{T}\, \Phi^{-1} \underline{\tilde{h}}, \qquad
+///     \Phi = R + \frac{\sigma^{2}}{E_{p}} I,
+///
+/// with :math:`\theta = \mathbb{E}[h_{l,k} \tilde{h}^{*}]` and the separable correlation
+/// :math:`R(\Delta l, \Delta k) = r_t(\Delta l)\, r_f(\Delta k)` of the channel (eq. (15)).
 ///
 /// Args:
 ///     pilots (list[tuple[int, int]]): the ``(symbol, subcarrier)`` positions of the pilots.
@@ -712,7 +769,11 @@ impl PyWiener2d {
         Ok(carr(py, self.inner.estimate(&cvec(h_ls)?, &targets).py()?))
     }
 
-    /// The mean square error of the estimate at every position (their eq. (12)).
+    /// The mean square error of the estimate at every position (their eq. (12)):
+    ///
+    /// .. math::
+    ///
+    ///     J_{o}(l, k) = 1 - \underline{\theta}^{T} \Phi^{-1} \underline{\theta}^{*}.
     ///
     /// Args:
     ///     targets (list[tuple[int, int]]): the ``(symbol, subcarrier)`` positions.
@@ -783,7 +844,14 @@ impl PyRobustDesign {
     }
 
     /// The MSE of the infinite-length estimator (their eq. (57)), normalised to the
-    /// power of the channel.
+    /// power of the channel:
+    ///
+    /// .. math::
+    ///
+    ///     \overline{\mathrm{MMSE}} = \frac{K_{o}\rho}{K}\left(1 - \left[\frac{\pi K}{K_{o} \rho
+    ///     \omega_{d}} + 1\right]^{-\omega_{d}/\pi}\right),
+    ///
+    /// with :math:`\omega_d = 2\pi f_{\max} T_f` and :math:`\rho` the noise to signal ratio.
     ///
     /// Args:
     ///     rho (float): the noise to signal ratio.
@@ -795,6 +863,16 @@ impl PyRobustDesign {
     }
 
     /// The coefficients and the MSE of the ``taps``-tap temporal filter (eqs. (69)-(74)).
+    ///
+    /// For :math:`L` taps,
+    ///
+    /// .. math::
+    ///
+    ///     (c_{0}, \dots, c_{L-1})^{T} = \left(\bar{R}_{t} + \frac{K_{o}\rho}{K} I\right)^{-1}
+    ///     \bar{r}_{t}, \qquad \overline{\mathrm{MSE}} = \frac{K_{o} c_{0} \rho}{K},
+    ///
+    /// with :math:`\bar{R}_t` and :math:`\bar{r}_t` the temporal correlations of the flat
+    /// Doppler spectrum, :math:`\mathrm{sinc}(n\omega_{d}/\pi)`.
     ///
     /// Args:
     ///     taps (int): the length of the filter.
@@ -815,9 +893,13 @@ impl PyRobustDesign {
     }
 }
 
-/// The noise enhancement of LS estimates over a constellation,
-/// :math:`\beta = \mathbb{E}|x|^2 \, \mathbb{E}|1/x|^2` (Edfors et al. 1998): 1 for a constant
-/// modulus, 17/9 for 16-QAM.
+/// The noise enhancement of LS estimates over a constellation (Edfors et al. 1998):
+///
+/// .. math::
+///
+///     \beta = \mathbb{E}|x|^2 \, \mathbb{E}|1/x|^2,
+///
+/// 1 for a constant modulus, 17/9 for 16-QAM.
 ///
 /// Args:
 ///     points (array_like): the points of the constellation (complex), equiprobable.
@@ -842,6 +924,16 @@ fn ls_noise_factor(points: &Bound<'_, PyAny>) -> PyResult<f64> {
 /// 1998, Sec. II): equal powers (``tau_rms=None``, their uniform channel) or
 /// :math:`\exp(-\tau / \tau_{\mathrm{rms}})`, the first impulse at 0 with ``first_at_zero``
 /// (their synchronized channel).
+///
+/// For one random delay of power :math:`w(\tau)` over :math:`[0, L]`, :math:`L` =
+/// ``max_delay``, the correlation of subcarriers :math:`\Delta k` apart is
+///
+/// .. math::
+///
+///     \mathbb{E}\left[w(\tau)\, e^{-j 2\pi \Delta k \tau / N}\right] = \frac{1 - e^{-aL}}{aL},
+///     \qquad a = \frac{1}{\tau_{\mathrm{rms}}} + j\frac{2\pi \Delta k}{N},
+///
+/// normalised to a unit power.
 ///
 /// Args:
 ///     n (int): the subcarriers.
@@ -883,9 +975,9 @@ fn random_delay_correlation<'py>(
 /// .. math::
 ///
 ///     \hat{\mathbf{h}}_p = \mathbf{U} \mathbf{D}_p \mathbf{U}^{\mathsf{H}}
-///     \hat{\mathbf{h}}_{\mathrm{ls}}
+///     \hat{\mathbf{h}}_{\mathrm{ls}},
 ///
-/// with :math:`\mathbf{D}_p` diagonal of
+/// with :math:`\mathbf{U}` the eigenvectors of the correlation, :math:`\mathbf{D}_p` diagonal of
 /// :math:`\delta_k = \lambda_k / (\lambda_k + \mathrm{noise})` for :math:`k < p` and of 0
 /// beyond.
 ///

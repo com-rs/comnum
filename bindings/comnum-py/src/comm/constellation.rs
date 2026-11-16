@@ -268,10 +268,18 @@ impl PyConstellation {
         Ok(self.inner.demap_bits(&cvec(z)?).into_pyarray(py))
     }
 
-    /// Bit log-likelihood ratios :math:`\ln p(b=0|y) - \ln p(b=1|y)` of every sample.
+    /// Bit log-likelihood ratios of every sample (OptiCommPy `calcLLR`).
     ///
-    /// The likelihood of point :math:`s` is :math:`\exp(-|y - s|^2/\sigma^2)` (OptiCommPy
-    /// `calcLLR`).
+    /// For every bit :math:`b` of the label, with the priors :math:`p(s)` of the points
+    /// and :math:`\sigma^2` the variance of the complex noise:
+    ///
+    /// .. math::
+    ///
+    ///     L(b) = \ln \sum_{s:\, b = 0} p(s)\, e^{-|y - s|^2/\sigma^2}
+    ///     - \ln \sum_{s:\, b = 1} p(s)\, e^{-|y - s|^2/\sigma^2},
+    ///
+    /// that is :math:`\ln p(b=0|y) - \ln p(b=1|y)`, positive for a 0. The max-log
+    /// approximation keeps the largest term of each sum.
     ///
     /// Args:
     ///     z (array_like): received samples.

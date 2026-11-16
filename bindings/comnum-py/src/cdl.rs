@@ -21,8 +21,14 @@ fn profile(name: &str) -> PyResult<Profile> {
 /// CDL-B and CDL-C without line of sight (23, 23 and 24 clusters), CDL-D and CDL-E
 /// with a specular component in the first cluster (13 and 14 clusters). The delays of
 /// the tables are normalised to a unit RMS delay spread and scaled by the desired one
-/// (Sec. 7.7.3, eq. 7.7-1), ``tau_n = tau_n,model * DS``; the powers are the table
-/// entries normalised to a unit sum, the specular row of CDL-D/E added to its cluster.
+/// :math:`\mathrm{DS}` (Sec. 7.7.3, eq. 7.7-1),
+///
+/// .. math::
+///
+///     \tau_{n} = \tau_{n, \mathrm{model}}\, \mathrm{DS};
+///
+/// the powers are the table entries normalised to a unit sum, the specular row of
+/// CDL-D/E added to its cluster.
 /// The result is the tap array `TdlChannel` takes, for a CDL profile with Clarke/Jakes
 /// fading instead of the ray geometry of `CdlChannel`.
 ///
@@ -83,7 +89,29 @@ fn cdl_k_factor_db(name: &str) -> PyResult<Option<f64>> {
 /// each ray with its departure and arrival angles, its random initial phases, the
 /// cross-polarisation ratio of the table and the phase it accumulates across the
 /// elements of the arrays, so the spatial correlation follows from the geometry
-/// (Sec. 7.5 step 11, eq. 7.5-22). The delays of the table are scaled by the desired
+/// (Sec. 7.5 step 11, eq. 7.5-22):
+///
+/// .. math::
+///
+///     \begin{aligned}
+///     h_{u, s, n}(t) = \sqrt{\frac{P_{n}}{M}} \sum_{m = 1}^{M}
+///     &\begin{bmatrix} F_{\mathrm{rx}, u, \theta} \\ F_{\mathrm{rx}, u, \phi} \end{bmatrix}^{T}
+///     \begin{bmatrix}
+///     e^{j \Phi^{\theta\theta}_{n, m}} & \sqrt{\kappa^{-1}}\, e^{j \Phi^{\theta\phi}_{n, m}} \\
+///     \sqrt{\kappa^{-1}}\, e^{j \Phi^{\phi\theta}_{n, m}} & e^{j \Phi^{\phi\phi}_{n, m}}
+///     \end{bmatrix}
+///     \begin{bmatrix} F_{\mathrm{tx}, s, \theta} \\ F_{\mathrm{tx}, s, \phi} \end{bmatrix} \\
+///     &\times e^{j 2\pi \hat{r}_{\mathrm{rx}, n, m}^{T} \bar{d}_{\mathrm{rx}, u} / \lambda}\,
+///     e^{j 2\pi \hat{r}_{\mathrm{tx}, n, m}^{T} \bar{d}_{\mathrm{tx}, s} / \lambda}\,
+///     e^{j 2\pi \hat{r}_{\mathrm{rx}, n, m}^{T} \bar{v}\, t / \lambda},
+///     \end{aligned}
+///
+/// the coefficient between transmit element :math:`s` and receive element :math:`u` of
+/// cluster :math:`n` (:math:`M = 20` rays), with the field patterns :math:`F` at the
+/// angles of the ray, the cross-polarisation ratio :math:`\kappa`, the initial phases
+/// :math:`\Phi` uniform on :math:`(-\pi, \pi)`, the unit vectors :math:`\hat{r}` of the
+/// rays, the element positions :math:`\bar{d}` and the velocity :math:`\bar{v}` of the
+/// receiver. The delays of the table are scaled by the desired
 /// RMS delay spread (Sec. 7.7.3, eq. 7.7-1) and rounded to the sampling grid; the
 /// cluster powers are normalised to a unit sum (the specular component of CDL-D/E,
 /// eq. 7.5-29, counted in the first cluster), so the mean gain of every link is 1.

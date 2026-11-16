@@ -15,6 +15,17 @@ use pyo3::prelude::*;
 /// Doppler :math:`n`) through the ISFFT and the Heisenberg transform, one cyclic prefix per
 /// frame.
 ///
+/// Both transforms together reduce to an IDFT along the Doppler axis (Raviteja et al.
+/// 2019, eqs. (1)–(2)):
+///
+/// .. math::
+///
+///     \mathbf{s} = \operatorname{vec}(X F_{N}^{H}) = (F_{N}^{H} \otimes I_{M})\, \mathbf{x},
+///     \qquad \mathbf{x} = \operatorname{vec}(X);
+///
+/// with :math:`X` the :math:`M \times N` grid and :math:`F_N` the unitary DFT matrix of size
+/// :math:`N`; the receiver drops the prefix and applies :math:`F_{N} \otimes I_{M}` (eq. (11)).
+///
 /// Args:
 ///     n_fft (int): delay bins :math:`M` (subcarriers).
 ///     n_symbols (int): Doppler bins :math:`N` (symbols of a frame).
@@ -99,6 +110,18 @@ impl PyOtfs {
 
     /// The effective :math:`MN \times MN` delay–Doppler channel of paths (Raviteja et al. 2019,
     /// Theorem 1, eq. (12)), the prefix phase included.
+    ///
+    /// The frames see :math:`\mathbf{y} = H_{\mathrm{eff}} \mathbf{x} + \mathbf{w}`, with
+    /// :math:`H_{\mathrm{eff}}` the sum over the paths of their gains times
+    ///
+    /// .. math::
+    ///
+    ///     T^{(i)}(p, q) = \begin{cases} e^{-j 2\pi n/N} z^{k_{i}([m - l_{i}]_{M})} &
+    ///     m < l_{i}, \\ z^{k_{i}([m - l_{i}]_{M})} & m \ge l_{i}, \end{cases}
+    ///     \qquad q = [m - l_{i}]_{M} + M[n - k_{i}]_{N},
+    ///
+    /// :math:`p = nM + m`, zero elsewhere, with :math:`z = e^{j 2\pi/(MN)}`, the delays
+    /// :math:`l_i` and the Doppler shifts in bins :math:`k_{i} = \nu_{i} MN / f_{s}`.
     ///
     /// Args:
     ///     paths (list[tuple[complex, int, float]]): `(gain, delay in samples, Doppler

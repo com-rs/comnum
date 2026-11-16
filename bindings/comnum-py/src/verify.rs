@@ -7,9 +7,16 @@ use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 
 /// The acceptance rule of a measured value `v` against an expected value `e`, as
-/// ``comnum verify`` and the validation cards apply it: `|v - e| <= atol + rtol |e|`
-/// (with ``atol`` or ``rtol``), or `e/factor <= v <= factor e` for a positive `e` (with
-/// ``factor``); a value passes when one of the given rules accepts it.
+/// ``comnum verify`` and the validation cards apply it.
+///
+/// With ``atol`` or ``rtol``, and with ``factor`` for a positive `e`, the rules are
+///
+/// .. math::
+///
+///     |v - e| \le \mathrm{atol} + \mathrm{rtol}\, |e|, \qquad
+///     \frac{e}{\mathrm{factor}} \le v \le \mathrm{factor}\, e;
+///
+/// a value passes when one of the given rules accepts it.
 ///
 /// Args:
 ///     atol (float | None): the absolute tolerance.

@@ -149,7 +149,13 @@ impl PyRng {
         Ok(farr(py, (0..n).map(|_| self.inner.gamma(shape)).collect()))
     }
 
-    /// Circular complex Gaussian draws of variance `noise_var` (:math:`\mathbb{E}|w|^2 =` `noise_var`).
+    /// Circular complex Gaussian draws of variance `noise_var`.
+    ///
+    /// With :math:`\sigma^2` = `noise_var`, every draw is
+    ///
+    /// .. math::
+    ///
+    ///     w \sim \mathcal{CN}(0, \sigma^2), \qquad \mathbb{E}|w|^2 = \sigma^2.
     ///
     /// Args:
     ///     n (int): number of draws.

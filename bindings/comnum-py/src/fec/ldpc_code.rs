@@ -61,6 +61,18 @@ impl PyLdpc {
 
     /// Choose the decoder.
     ///
+    /// A variable node sends the sum of its channel LLR and of the other incoming
+    /// messages; a check node sends
+    ///
+    /// .. math::
+    ///
+    ///     L_{c \to v} = 2 \operatorname{atanh} \prod_{v' \ne v} \tanh\frac{L_{v' \to c}}{2}
+    ///     \quad \text{(sum-product)}, \qquad
+    ///     L_{c \to v} \approx \alpha \prod_{v' \ne v} \operatorname{sgn} L_{v' \to c}
+    ///     \min_{v' \ne v} |L_{v' \to c}| \quad \text{(min-sum)},
+    ///
+    /// with the normalisation :math:`\alpha` (Chen & Fossorier 2002) or an offset.
+    ///
     /// Args:
     ///     rule (str): the check-node rule, ``"sum_product"``, ``"min_sum"``,
     ///         ``"normalized_min_sum"`` (scaled by ``alpha``) or ``"offset_min_sum"``

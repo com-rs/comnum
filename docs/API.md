@@ -3343,7 +3343,7 @@ one layer down, instead of written again (`docs/ARCHITECTURE.md`, placement).
 
 ### `src/devices.rs`
 
-- `struct PyPhotodiode` — A PIN photodiode (OptiCommPy `photodiode`): responsivity, shot noise
+- `struct PyPhotodiode` — A PIN photodiode (OptiCommPy `photodiode`): responsivity, shot noise, thermal noise,
 
 ### `src/differential.rs`
 
@@ -3394,7 +3394,7 @@ one layer down, instead of written again (`docs/ARCHITECTURE.md`, placement).
 
 ### `src/mimo/estimation.rs`
 
-- `struct PyMimoTraining` — A training matrix :math:`\mathbf{P}` (:math:`t \times N`) for the estimation of a flat
+- `struct PyMimoTraining` — A training matrix for the estimation of a flat MIMO channel (Biguesh & Gershman 2006).
 
 ### `src/mimo/mod.rs`
 
@@ -3436,7 +3436,7 @@ one layer down, instead of written again (`docs/ARCHITECTURE.md`, placement).
 - `struct PyIllumination` — The light of a set of emitters carried to the elements of a room
 - `struct PyGammaGamma` — The gamma–gamma distribution of the intensity, of unit mean (Al-Habash, Andrews &
 - `struct PyPointingError` — The misalignment of a Gaussian beam on a circular aperture, a Rayleigh radial
-- `struct PyFso` — A free-space optical link: a deterministic loss, turbulence and pointing errors, the
+- `struct PyFso` — A free-space optical link: a deterministic loss, turbulence and pointing errors.
 - `struct PyPinFet` — A PIN photodiode with a FET preamplifier: shot and thermal noise (Komine & Nakagawa
 
 ### `src/rng.rs`
@@ -3484,7 +3484,7 @@ one layer down, instead of written again (`docs/ARCHITECTURE.md`, placement).
 
 ### `src/waveform/fsk.rs`
 
-- `struct PyFsk` — Orthogonal :math:`M`-FSK with a continuous phase and a noncoherent receiver: the symbol
+- `struct PyFsk` — Orthogonal :math:`M`-FSK with a continuous phase and a noncoherent receiver.
 
 ## comnum (Python) (178 items)
 

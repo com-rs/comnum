@@ -8,6 +8,17 @@ and follow [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- The docstrings of the Python package state the model of each function and class as
+  a displayed equation (267 blocks in the bindings, 48 before), with its
+  conventions (normalisation, sign of the exponent, units), so that a reader can check
+  that the function computes what they are looking for. The equations are those of the
+  rustdoc of the Rust item called; the summary lines are sentences in words. The
+  split-step solvers (`Ssfm`, its back-propagation, `ManakovSsfm`) and the Raman
+  functions (`raman_profile`, `raman_design`) explain their equations term by term: the
+  operators and the symmetric step, the spectrum of the linear step, the three
+  nonlinear phases, the logarithmic steps, the gain efficiencies, the boundary
+  conditions, the gains and the noise. The stray first line of the docstring of
+  `zadoff_chu` is removed.
 - The top bar of the Python documentation has seven entries and the playground, none
   under "More": Getting started, Learn (a new page leading to the course and the
   tutorials), User guide, Examples, Validation (with the maturity, the comparisons and

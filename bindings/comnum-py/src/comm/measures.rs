@@ -23,8 +23,16 @@ fn ber(rx_bits: &Bound<'_, PyAny>, tx_bits: &Bound<'_, PyAny>) -> PyResult<f64> 
     metrics::ber(&bvec(rx_bits)?, &bvec(tx_bits)?).py()
 }
 
-/// SNR (dB) of a received sequence against the transmitted one,
-/// :math:`10 \log_{10}(P_{tx}/P_{rx-tx})`.
+/// SNR (dB) of a received sequence against the transmitted one.
+///
+/// The ratio of the powers is
+///
+/// .. math::
+///
+///     \mathrm{SNR} = 10 \log_{10}(P_{tx}/P_{rx-tx}),
+///
+/// with :math:`P_{tx}` the power of the transmitted sequence and :math:`P_{rx-tx}` that
+/// of the difference.
 ///
 /// Args:
 ///     rx (array_like): the received samples.
@@ -42,9 +50,19 @@ fn snr_db(rx: &Bound<'_, PyAny>, tx: &Bound<'_, PyAny>) -> PyResult<f64> {
 
 /// The standard deviation (rad) of the phase error of received symbols against the
 /// transmitted ones, once the constant gain and phase of the least-squares fit are
-/// removed: :math:`\sqrt{\operatorname{mean}(\arg(g z x^*)^2)}`, the metric of Ip & Kahn
-/// (J. Lightw. Technol. 26(20), 2008) for a phase-modulated signal; over AWGN at high SNR
-/// it tends to :math:`1/\sqrt{2\,\mathrm{SNR}}`. Transmitted symbols at zero are skipped.
+/// removed.
+///
+/// With the received symbols :math:`z_k`, the transmitted ones :math:`x_k` and the
+/// least-squares gain :math:`g`:
+///
+/// .. math::
+///
+///     \sigma_\theta = \sqrt{\frac{1}{N}\sum_k \arg(g z_k x_k^*)^2}, \qquad
+///     g = \frac{\sum_k x_k z_k^*}{\sum_k |z_k|^2},
+///
+/// the metric of Ip & Kahn (J. Lightw. Technol. 26(20), 2008) for a phase-modulated
+/// signal; over AWGN at high SNR it tends to :math:`1/\sqrt{2\,\mathrm{SNR}}`.
+/// Transmitted symbols at zero are skipped.
 ///
 /// Args:
 ///     rx (array_like): the received symbols.
@@ -92,8 +110,15 @@ fn fast_ber_calc(
     Ok((r.ber, r.ser, r.snr_db))
 }
 
-/// Error vector magnitude as a power ratio :math:`\mathbb{E}|y - \hat x|^2 / \mathbb{E}|\hat x|^2`
-/// (OptiCommPy `calcEVM`); the EVM in percent is :math:`100 \sqrt{\mathrm{evm}}`.
+/// Error vector magnitude as a power ratio (OptiCommPy `calcEVM`).
+///
+/// The ratio of the power of the error vector to that of the reference :math:`\hat x`:
+///
+/// .. math::
+///
+///     \mathrm{evm} = \frac{\mathbb{E}|y - \hat x|^2}{\mathbb{E}|\hat x|^2};
+///
+/// the EVM in percent is :math:`100 \sqrt{\mathrm{evm}}`.
 ///
 /// With `tx`, :math:`\hat x` is the transmitted sequence (after the same preprocessing as
 /// `fast_ber_calc`); without, the nearest points of the normalised constellation.

@@ -12,6 +12,21 @@ use pyo3::prelude::*;
 /// (first order), the noise of the effective number of bits, then a uniform mid-rise
 /// quantiser of ``bits`` bits with clipping at the full scale.
 ///
+/// The quantiser of step :math:`\Delta = 2A/2^N` maps each of the in-phase and
+/// quadrature components to
+///
+/// .. math::
+///
+///     q(x) = \min\left(\max\left(\Delta \left(\left\lfloor x/\Delta \right\rfloor + \tfrac{1}{2}\right),
+///     -A + \tfrac{\Delta}{2}\right), A - \tfrac{\Delta}{2}\right),
+///
+/// and an effective number of bits :math:`\mathrm{ENOB} < N` adds before it white noise of
+/// variance, per dimension,
+///
+/// .. math::
+///
+///     \sigma^2_{\mathrm{ENOB}} = \frac{\Delta^2}{12} \left(4^{N - \mathrm{ENOB}} - 1\right).
+///
 /// Args:
 ///     x (array_like): the analogue signal (complex).
 ///     bits (int): resolution :math:`N`.
@@ -71,6 +86,13 @@ fn adc<'py>(
 /// in-phase and quadrature components, a zero-order hold of ``hold`` output samples per
 /// input sample, then the analogue bandwidth (Gaussian, 3 dB at ``bandwidth_hz``).
 ///
+/// The quantiser is that of `adc`, of step :math:`\Delta = 2A/2^N`:
+///
+/// .. math::
+///
+///     q(x) = \min\left(\max\left(\Delta \left(\left\lfloor x/\Delta \right\rfloor + \tfrac{1}{2}\right),
+///     -A + \tfrac{\Delta}{2}\right), A - \tfrac{\Delta}{2}\right).
+///
 /// Args:
 ///     x (array_like): the digital samples (complex).
 ///     bits (int): resolution :math:`N`.
@@ -109,8 +131,11 @@ fn dac<'py>(
     Ok(carr(py, py.detach(|| d.convert(&x, fs)).py()?))
 }
 
-/// The SQNR of a full-scale sine through an ideal quantiser: :math:`6.02 N + 1.76` dB
-/// (Bennett 1948).
+/// The SQNR of a full-scale sine through an ideal quantiser (Bennett 1948):
+///
+/// .. math::
+///
+///     \mathrm{SQNR} = 10 \log_{10}\left(\tfrac{3}{2}\, 4^N\right) = 6.02 N + 1.76 \ \mathrm{dB}.
 ///
 /// Args:
 ///     bits (int): resolution :math:`N`.
@@ -129,7 +154,13 @@ fn theory_sqnr_sine_db(bits: u32) -> f64 {
 
 /// The exact mean squared error of a uniform mid-rise quantiser of ``bits`` bits and full
 /// scale ``full_scale`` for a Gaussian input of standard deviation ``sigma`` (one
-/// dimension): granular and overload (clipping) noise together.
+/// dimension): granular and overload (clipping) noise together,
+///
+/// .. math::
+///
+///     \mathrm{MSE} = \mathbb{E}\left[(X - q(X))^2\right], \qquad X \sim \mathcal{N}(0, \sigma^2),
+///
+/// with :math:`q` the quantiser of `adc`.
 ///
 /// Args:
 ///     bits (int): resolution :math:`N`.
@@ -153,7 +184,13 @@ fn theory_quantization_mse(bits: u32, full_scale: f64, sigma: f64) -> PyResult<f
 }
 
 /// The loading factor :math:`A/\sigma` that minimises the error of a Gaussian input (the
-/// optimal uniform quantiser of Max 1960).
+/// optimal uniform quantiser of Max 1960):
+///
+/// .. math::
+///
+///     \lambda^\star = \arg\min_{\lambda = A/\sigma} \mathrm{MSE}(N, A, \sigma),
+///
+/// with :math:`\mathrm{MSE}` that of `theory_quantization_mse`.
 ///
 /// Args:
 ///     bits (int): resolution :math:`N`.
@@ -170,8 +207,12 @@ fn optimal_loading(bits: u32) -> f64 {
     conv::optimal_loading(bits)
 }
 
-/// The SNR of a sine of frequency ``f_hz`` sampled with an RMS clock jitter ``jitter_s``:
-/// :math:`-20 \log_{10}(2\pi f \sigma_j)` dB (Walden 1999).
+/// The SNR of a sine of frequency ``f_hz`` sampled with an RMS clock jitter ``jitter_s``
+/// (Walden 1999):
+///
+/// .. math::
+///
+///     \mathrm{SNR} = -20 \log_{10}(2\pi f \sigma_j) \ \mathrm{dB}.
 ///
 /// Args:
 ///     f_hz (float | array_like): frequency of the sine (Hz).
@@ -192,8 +233,11 @@ fn theory_jitter_snr_db(f_hz: &Bound<'_, PyAny>, jitter_s: f64) -> PyResult<Py<P
     map_real(f_hz, |f| Ok(conv::jitter_snr_db(f, jitter_s)))
 }
 
-/// The effective number of bits of a SINAD measured on a full-scale sine:
-/// :math:`(\mathrm{SINAD} - 1.76) / 6.02` (IEEE Std 1241).
+/// The effective number of bits of a SINAD measured on a full-scale sine (IEEE Std 1241):
+///
+/// .. math::
+///
+///     \mathrm{ENOB} = \frac{\mathrm{SINAD} - 1.76}{6.02}.
 ///
 /// Args:
 ///     sinad_db (float | array_like): the SINAD (dB).
@@ -214,8 +258,13 @@ fn enob_from_sinad_db(sinad_db: &Bound<'_, PyAny>) -> PyResult<Py<PyAny>> {
 }
 
 /// The amplitude response of a zero-order hold of ``hold`` output samples per input
-/// sample at the input rate ``fs``: :math:`|\sin(\pi f/f_s) / (H \sin(\pi f/(H f_s)))|`,
-/// which tends to :math:`|\operatorname{sinc}(f/f_s)|`.
+/// sample at the input rate ``fs``:
+///
+/// .. math::
+///
+///     |G(f)| = \left| \frac{\sin(\pi f/f_s)}{H \sin(\pi f/(H f_s))} \right|,
+///
+/// with :math:`H` = ``hold``; it tends to :math:`|\operatorname{sinc}(f/f_s)|`.
 ///
 /// Args:
 ///     f_hz (float | array_like): frequency (Hz).

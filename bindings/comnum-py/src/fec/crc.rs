@@ -83,6 +83,20 @@ impl PyCrc {
 
 /// The Gold scrambler of 3GPP (TS 38.211, Sec. 5.2.1).
 ///
+/// The pseudo-random sequence is
+///
+/// .. math::
+///
+///     \begin{aligned}
+///     c(n) &= \left(x_1(n + N_c) + x_2(n + N_c)\right) \bmod 2, \qquad N_c = 1600, \\
+///     x_1(n + 31) &= \left(x_1(n + 3) + x_1(n)\right) \bmod 2, \\
+///     x_2(n + 31) &= \left(x_2(n + 3) + x_2(n + 2) + x_2(n + 1) + x_2(n)\right) \bmod 2,
+///     \end{aligned}
+///
+/// with :math:`x_1(0) = 1`, :math:`x_1(1), \dots, x_1(30) = 0` and :math:`x_2` initialised
+/// by :math:`c_{\mathrm{init}} = \sum_i x_2(i) 2^i`. Scrambling adds :math:`c(n)` to the
+/// bits; descrambling LLRs flips the sign of those where :math:`c(n) = 1`.
+///
 /// Args:
 ///     c_init (int): the initial value of the second register.
 ///
@@ -205,7 +219,13 @@ impl PyInterleaver {
         PyInterleaver { inner: Interleaver::block(rows, cols) }
     }
 
-    /// The quadratic permutation polynomial :math:`(f_1 i + f_2 i^2) \bmod k`.
+    /// The quadratic permutation polynomial interleaver.
+    ///
+    /// Output :math:`i` is input
+    ///
+    /// .. math::
+    ///
+    ///     \pi(i) = (f_1 i + f_2 i^2) \bmod k.
     ///
     /// Args:
     ///     k (int): the block length.

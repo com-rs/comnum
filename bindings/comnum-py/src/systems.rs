@@ -247,7 +247,13 @@ impl PyDvbs {
         self.inner.symbols_len(n_packets)
     }
 
-    /// The useful bit rate at a symbol rate, :math:`2 R_s r \cdot 188/204` (Annexes C and D).
+    /// The useful bit rate at a symbol rate (Annexes C and D):
+    ///
+    /// .. math::
+    ///
+    ///     R_u = 2 R_s r \cdot \frac{188}{204},
+    ///
+    /// :math:`R_s` the symbol rate (baud) and :math:`r` the inner code rate.
     ///
     /// Args:
     ///     symbol_rate (float): the symbol rate (baud).
@@ -258,13 +264,18 @@ impl PyDvbs {
         self.inner.useful_bit_rate(symbol_rate)
     }
 
-    /// The :math:`E_s/N_0` (dB) of an :math:`E_b/N_0` per useful bit, the abscissa of Table 3.
+    /// The :math:`E_s/N_0` (dB) of an :math:`E_b/N_0` per useful bit, the abscissa of Table 3:
+    ///
+    /// .. math::
+    ///
+    ///     \frac{E_s}{N_0}\Big|_{\mathrm{dB}} = \frac{E_b}{N_0}\Big|_{\mathrm{dB}}
+    ///     + 10 \log_{10}\left(2 r \cdot \frac{188}{204}\right).
     ///
     /// Args:
     ///     ebn0_db (float): :math:`E_b/N_0` per useful bit (dB).
     ///
     /// Returns:
-    ///     float: :math:`E_s/N_0` (dB), :math:`E_b/N_0 + 10 \log_{10}(2 r \cdot 188/204)`.
+    ///     float: :math:`E_s/N_0` (dB).
     fn esn0_db(&self, ebn0_db: f64) -> f64 {
         self.inner.esn0_db(ebn0_db)
     }
@@ -463,7 +474,17 @@ impl PyDvbt {
         self.inner.symbols_len(n_packets)
     }
 
-    /// The useful bit rate in a channel of a bandwidth (Table 17).
+    /// The useful bit rate in a channel of a bandwidth (Table 17 and the bit-rate columns
+    /// of Tables A.1 to A.3):
+    ///
+    /// .. math::
+    ///
+    ///     R_u = \frac{v N_{\max} r \cdot 188/204}{T_{S}}, \qquad
+    ///     T_{S} = T_{U} + \Delta,
+    ///
+    /// with :math:`v` the bits per cell, :math:`N_{\max}` the data cells of a symbol,
+    /// :math:`r` the inner code rate, :math:`T_U` the useful duration and :math:`\Delta`
+    /// the guard interval, in elementary periods :math:`T = 7 / (8 B)`.
     ///
     /// Args:
     ///     bandwidth_hz (float): 8e6, 7e6, 6e6 or 5e6 (any value: :math:`T = 7 / (8 B)`).
@@ -488,19 +509,31 @@ impl PyDvbt {
     }
 
     /// The noise variance of a sample of :meth:`modulate` that gives a noise variance on
-    /// every carrier.
+    /// every carrier:
+    ///
+    /// .. math::
+    ///
+    ///     \sigma_{\mathrm{sample}}^{2} = \sigma_{\mathrm{carrier}}^{2}\, \frac{N}{K},
+    ///
+    /// :math:`N` the FFT size and :math:`K` the carriers (the OFDM modulator keeps the power
+    /// of a carrier).
     ///
     /// Args:
     ///     carrier_noise_var (float): the noise variance of a carrier.
     ///
     /// Returns:
-    ///     float: the complex noise variance of a sample,
-    ///         :math:`\mathrm{carrier\_noise\_var} \cdot N / K`.
+    ///     float: the complex noise variance of a sample.
     fn sample_noise_var(&self, carrier_noise_var: f64) -> f64 {
         self.inner.sample_noise_var(carrier_noise_var)
     }
 
-    /// The baseband frequency of every carrier, :math:`k' / T_U` with :math:`k' = k - (K - 1)/2`.
+    /// The baseband frequency of every carrier (Sec. 4.4):
+    ///
+    /// .. math::
+    ///
+    ///     f_k = \frac{k'}{T_U}, \qquad k' = k - (K - 1)/2,
+    ///
+    /// :math:`T_U` the useful duration of a symbol in the channel of the bandwidth.
     ///
     /// Args:
     ///     bandwidth_hz (float): the channel bandwidth (Hz).
@@ -679,6 +712,17 @@ impl PyDvbt {
 /// frequencies: the fixed reception F1 (20 echoes and a direct path, Ricean factor 10 dB)
 /// and the portable reception P1 (the 20 echoes of Table B.1), normalised to a unit power
 /// gain.
+///
+/// The echoes of amplitude :math:`\rho_i`, delay :math:`\tau_i` and phase
+/// :math:`\theta_i` of Table B.1 give
+///
+/// .. math::
+///
+///     H(f) = \frac{\rho_{0} + \sum_{i=1}^{20} \rho_{i}\, e^{-j\theta_{i}}\,
+///     e^{-j 2\pi f \tau_{i}}}{\sqrt{\sum_{i=0}^{20} \rho_{i}^{2}}},
+///
+/// with the direct path :math:`\rho_{0} = \sqrt{10 \sum_{i} \rho_{i}^{2}}` for F1 and
+/// :math:`\rho_0 = 0` for P1.
 ///
 /// Args:
 ///     profile (str): ``"F1"`` or ``"P1"``.

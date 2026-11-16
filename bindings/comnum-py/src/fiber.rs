@@ -111,7 +111,12 @@ wrapper_methods! {
         self.inner.wavelength_m()
     }
 
-    /// float: Group-velocity dispersion :math:`\beta_2 = -D\lambda^2/(2\pi c)` (s²/km).
+    /// float: Group-velocity dispersion :math:`\beta_2` (s²/km):
+    ///
+    /// .. math::
+    ///
+    ///     \beta_2 = -\frac{D\lambda^2}{2\pi c}.
+    ///
     #[getter]
     fn beta2_s2_km(&self) -> f64 {
         self.inner.beta2_s2_km()
@@ -135,7 +140,12 @@ wrapper_methods! {
         self.inner.span_gain_db()
     }
 
-    /// float: Effective length of a span :math:`(1 - e^{-\alpha L})/\alpha` (km).
+    /// float: Effective length of a span (km):
+    ///
+    /// .. math::
+    ///
+    ///     L_{\mathrm{eff}} = \frac{1 - e^{-\alpha L}}{\alpha}.
+    ///
     #[getter]
     fn effective_length_km(&self) -> f64 {
         self.inner.effective_length_km()
@@ -147,8 +157,15 @@ wrapper_methods! {
         self.inner.accumulated_dispersion_ps_nm()
     }
 
-    /// Dispersion memory of the link for a signal of bandwidth `bandwidth_hz`,
-    /// :math:`2\pi |\beta_2| L B f_s`.
+    /// Dispersion memory of the link for a signal of bandwidth `bandwidth_hz`.
+    ///
+    /// The number of samples at :math:`f_s` spanned by the dispersion is
+    ///
+    /// .. math::
+    ///
+    ///     N = 2\pi |\beta_2| L B f_s,
+    ///
+    /// with :math:`L` the total length and :math:`B` the bandwidth.
     ///
     /// Args:
     ///     bandwidth_hz (float): bandwidth of the signal (Hz).
@@ -184,15 +201,18 @@ wrapper_methods! {
 
 /// An ideal erbium-doped fibre amplifier: flat gain and white ASE.
 ///
-/// The spontaneous-emission factor is
+/// The spontaneous-emission factor :math:`n_{\mathrm{sp}}` and the variance
+/// :math:`\sigma^2` of the complex Gaussian noise the ASE adds per sample at the sampling
+/// rate :math:`f_s` are
 ///
 /// .. math::
 ///
-///     n_{\mathrm{sp}} = \frac{G \cdot \mathrm{NF} - 1}{2(G - 1)}
+///     \begin{aligned}
+///     n_{\mathrm{sp}} &= \frac{G \cdot \mathrm{NF} - 1}{2(G - 1)}, \\
+///     \sigma^2 &= (G - 1)\, n_{\mathrm{sp}}\, h f_c f_s
+///     \end{aligned}
 ///
-/// and the ASE adds complex Gaussian noise of variance
-/// :math:`(G - 1)\, n_{\mathrm{sp}}\, h f_c f_s` per sample at the sampling rate
-/// :math:`f_s` (OptiCommPy `edfa`). The defaults are those of OptiCommPy.
+/// (OptiCommPy `edfa`). The defaults are those of OptiCommPy.
 ///
 /// Args:
 ///     gain_db (float): gain (dB, positive).
@@ -226,7 +246,12 @@ wrapper_methods! {
         self.inner.n_sp()
     }
 
-    /// float: ASE power spectral density :math:`(G - 1)\, n_{\mathrm{sp}}\, h f_c` (W/Hz).
+    /// float: ASE power spectral density (W/Hz):
+    ///
+    /// .. math::
+    ///
+    ///     N_{\mathrm{ASE}} = (G - 1)\, n_{\mathrm{sp}}\, h f_c.
+    ///
     #[getter]
     fn ase_psd(&self) -> f64 {
         self.inner.ase_psd()
@@ -284,6 +309,13 @@ wrapper_methods! {
 /// Loss and dispersion of `length_km` of fibre on a block sampled at `fs`
 /// (OptiCommPy `linearFiberChannel`).
 ///
+/// The channel is exact in the frequency domain on the block:
+///
+/// .. math::
+///
+///     A(L, \omega) = A(0, \omega)\, \exp\left(-\frac{\alpha L}{2}
+///     + j \frac{\beta_2 \omega^2 L}{2}\right).
+///
 /// Args:
 ///     x (array_like): the field (√W).
 ///     fiber (FiberParams): the fibre.
@@ -330,19 +362,104 @@ fn nonlinear_step_name(step: NonlinearStep) -> &'static str {
 
 /// The symmetric split-step Fourier method of OptiCommPy (`ssfm`), one polarisation.
 ///
-/// Every span is cut into :math:`n = \lceil L_{\mathrm{span}}/h \rceil` equal steps of
-/// :math:`\delta = L_{\mathrm{span}}/n` (:math:`h` itself when it divides the span); a
-/// step applies half of the linear operator (loss and dispersion) in the frequency
-/// domain, the nonlinear phase :math:`\gamma |A|^2 \delta`, then the other half
-/// (``nonlinear_step="midpoint"``; ``"effective_length"`` is Optilux's scheme, the phase
-/// of the power at the start of the nonlinear block over the effective length
-/// :math:`(1 - e^{-\alpha\delta})/\alpha` of the step, the attenuation of the step after
-/// it). After every span:
+/// **The model.** The complex envelope :math:`A(z, t)` of the field (√W), at the distance
+/// :math:`z` (km) and the time :math:`t` of the frame that moves with the group velocity,
+/// follows the nonlinear Schrödinger equation
+///
+/// .. math::
+///
+///     \frac{\partial A}{\partial z} =
+///     \underbrace{-\frac{\alpha}{2} A}_{\text{loss}}
+///     \; \underbrace{- \, j \frac{\beta_2}{2} \frac{\partial^2 A}{\partial t^2}}_{\text{dispersion}}
+///     \; + \underbrace{j \gamma |A|^2 A}_{\text{Kerr effect}},
+///
+/// with :math:`\alpha` the attenuation of the power (1/km, from ``alpha_db_km``),
+/// :math:`\beta_2` the group-velocity dispersion (s²/km, from the dispersion parameter
+/// :math:`D`, :attr:`FiberParams.beta2_s2_km`) and :math:`\gamma` the nonlinear
+/// coefficient (1/(W·km)). The loss and the dispersion act on the spectrum, the Kerr
+/// effect on the instantaneous power: written
+///
+/// .. math::
+///
+///     \frac{\partial A}{\partial z} = (\hat D + \hat N) A, \qquad
+///     \hat N = j \gamma |A|^2,
+///
+/// each operator alone has an exact solution over a step, the linear one :math:`\hat D` in
+/// the frequency domain and the nonlinear one :math:`\hat N` in the time domain, but not
+/// their sum: the split step alternates them.
+///
+/// **One step.** A step of length :math:`h` applies half of the linear operator, the
+/// nonlinear phase over the whole step, then the other half,
+///
+/// .. math::
+///
+///     A(z + h) \approx e^{\hat D h/2}\, e^{\hat N h}\, e^{\hat D h/2} A(z),
+///
+/// a symmetric splitting whose local error is of the third order in :math:`h` (G. P.
+/// Agrawal, *Nonlinear Fiber Optics*, 5th ed., Sec. 2.4). The half linear step multiplies
+/// the spectrum of the block,
+///
+/// .. math::
+///
+///     \tilde A(\omega) \leftarrow \tilde A(\omega)\,
+///     \exp\left(-\frac{\alpha h}{4}
+///     + j \left(\frac{\beta_2}{2} + \frac{\beta_3 \omega}{6}\right) \frac{\omega^2 h}{2}\right),
+///
+/// with :math:`\tilde A` the discrete Fourier transform of the block (kernel
+/// :math:`e^{-j\omega t}`, the block is periodic), :math:`\omega = 2\pi f` the angular
+/// frequency of its bins and :math:`\beta_3` the third-order dispersion of
+/// ``slope_ps_nm2_km`` (0 by default). The nonlinear step rotates every sample by a phase
+/// proportional to its own power, which it leaves unchanged (hence an exact solution):
+///
+/// .. math::
+///
+///     A(t) \leftarrow A(t)\, e^{j \phi(t)}.
+///
+/// **The phase of the nonlinear step** (``nonlinear_step``), with
+/// :math:`A_{1/2} = e^{\hat D h/2} A(z)` the field after the first half step:
+///
+/// .. math::
+///
+///     \begin{aligned}
+///     \texttt{midpoint}: &\quad \phi = \gamma\, |A_{1/2}|^2\, h, \\
+///     \texttt{effective\_length}: &\quad \phi = \gamma\, |A_{1/2}|^2\,
+///     \frac{1 - e^{-\alpha h}}{\alpha}, \\
+///     \texttt{trapezoidal}: &\quad \phi = \gamma\, \frac{|A(z)|^2 + |A(z + h)|^2}{2}\, h.
+///     \end{aligned}
+///
+/// The midpoint rule takes the power at the middle of the step (Sinkin et al. 2003, eq.
+/// (3)). Optilux's effective length integrates the loss within the step exactly: its first
+/// half step carries the dispersion only, and the attenuation of the whole step,
+/// :math:`e^{-\alpha h/2}` on the field, follows the phase with the second half of the
+/// dispersion (Shao, Liang & Kumar 2014). OptiCommPy's trapezoidal mean needs the field at
+/// the end of the step, which depends on the phase: the step is iterated until it
+/// converges.
+///
+/// **The steps.** Every span is cut into :math:`n = \lceil L_{\mathrm{span}}/h \rceil`
+/// equal steps of :math:`\delta = L_{\mathrm{span}}/n` (:math:`h` itself when it divides
+/// the span), or, with ``steps_per_span``, into the logarithmic steps of Bosco et al. (IEEE
+/// PTL 12(5), 2000, eq. (6)),
+///
+/// .. math::
+///
+///     \Delta z_k = -\frac{1}{\alpha} \ln \frac{1 - k\sigma}{1 - (k - 1)\sigma}, \qquad
+///     \sigma = \frac{1 - e^{-\alpha L_{\mathrm{span}}}}{n}, \qquad k = 1, \dots, n,
+///
+/// which carry the same integrated power :math:`\int e^{-\alpha z}\, dz = \sigma/\alpha`
+/// each: short at the start of the span, where the power is high, they keep the spurious
+/// four-wave mixing of the method near :math:`1/n` of the true one.
+///
+/// **The amplifiers.** After every span:
 ///
 /// - `"edfa"`: an EDFA of gain :math:`\alpha L` and the noise figure of the fibre (ASE
 ///   drawn from `rng`, noiseless without one);
 /// - `"ideal"`: a noiseless gain :math:`e^{\alpha L/2}` on the field;
 /// - `"none"`: nothing.
+///
+/// With ``raman``, the profile of every span (:func:`raman_profile`, solved for slices of
+/// the spectrum of the field at its input) replaces :math:`\alpha` by a gain that depends
+/// on the position and the frequency, and the amplifier after the span restores every
+/// frequency to its launch power.
 ///
 /// Args:
 ///     fiber (FiberParams): the link.
@@ -465,11 +582,36 @@ impl PySsfm {
         Ok(carr(py, y))
     }
 
-    /// Digital back-propagation with `steps_per_span` symmetric steps per span (the
-    /// split step with :math:`-\alpha`, :math:`-\beta_2`, :math:`-\gamma`, spans in reverse
-    /// order, amplifier gain removed first). With the forward step and no noise it inverts
-    /// `propagate` exactly; with coarser steps the nonlinear phase of a step uses its
-    /// effective length :math:`2\sinh(\alpha\delta/2)/\alpha`.
+    /// Digital back-propagation with `steps_per_span` symmetric steps per span.
+    ///
+    /// The receiver runs the split step of :class:`Ssfm` through the fibre with its
+    /// coefficients negated, the spans in reverse order and the gain of each amplifier
+    /// removed first:
+    ///
+    /// .. math::
+    ///
+    ///     \frac{\partial A}{\partial z} = \frac{\alpha}{2} A
+    ///     + j \frac{\beta_2}{2} \frac{\partial^2 A}{\partial t^2} - j \xi \gamma |A|^2 A.
+    ///
+    /// With the forward steps, :math:`\xi = 1` and no noise, it inverts `propagate` exactly.
+    /// With coarser steps of length :math:`\delta` the phase of a nonlinear step is
+    ///
+    /// .. math::
+    ///
+    ///     \phi(t) = -\xi \gamma\, L_{\mathrm{NL}} \sum_{k=-K}^{K} c_k |A(t - k T_s)|^2, \qquad
+    ///     L_{\mathrm{NL}} = \frac{2 \sinh(\alpha \delta / 2)}{\alpha},
+    ///
+    /// with :math:`L_{\mathrm{NL}}` the effective length of the symmetric step (the power at
+    /// its middle times :math:`L_{\mathrm{NL}}` is the power integrated over the step;
+    /// ``nonlinear_length="step"`` takes :math:`\delta` itself), :math:`\xi` the scale of the
+    /// optimised DBP (Ip & Kahn 2008) and :math:`c_k` the taps of the filter on the power:
+    /// :math:`c_0 = 1` by default, the Gaussian weights of unit sum
+    /// :math:`c_k \propto e^{-k^2/(2\sigma^2)}` with ``power_filter_taps`` :math:`= 2K + 1`
+    /// (the weighted DBP of Rafique et al. 2011, eq. (2); the enhanced split step of Häger &
+    /// Pfister 2021, eq. (9)): over a long step the dispersion has spread the power of a sample
+    /// over its neighbours. A step that covers :math:`s` spans (``steps_per_link``) carries
+    /// :math:`s` times the phase of a span, :math:`L_{\mathrm{NL}} = s(1 - e^{-\alpha L})/\alpha`,
+    /// applied at its middle.
     ///
     /// Args:
     ///     x (array_like): the received field (√W).
@@ -536,8 +678,13 @@ impl PySsfm {
 ///
 /// Every span is cut into `sections_per_span` sections; a section applies the loss and
 /// the dispersion, a random rotation and a differential group delay (the PMD), then the
-/// averaged Kerr phase :math:`(8/9)\, \gamma L_{\mathrm{eff}} (|A_x|^2 + |A_y|^2)`. The
-/// amplification after every span is an EDFA (ASE from `rng` if given).
+/// averaged Kerr phase
+///
+/// .. math::
+///
+///     \phi = \frac{8}{9}\, \gamma L_{\mathrm{eff}} \left(|A_x|^2 + |A_y|^2\right).
+///
+/// The amplification after every span is an EDFA (ASE from `rng` if given).
 ///
 /// Args:
 ///     fiber (FiberParams): the link.
@@ -652,15 +799,36 @@ impl PyManakov {
 /// by the symmetric split-step method (``nonlinear_step="trapezoidal"`` is OptiCommPy's
 /// ``manakovSSF``, ``"effective_length"`` Optilux's ``fiber``).
 ///
-/// Each step is a half linear step, the nonlinear phase :math:`(8/9)\, \gamma h P`
-/// (:math:`P = |A_x|^2 + |A_y|^2` at the middle of the step; with
-/// ``nonlinear_step="trapezoidal"``, OptiCommPy's :math:`(P(z) + P(z+h))/2`, iterated
-/// until the relative change of the fields falls below ``tolerance``; with
-/// ``"effective_length"``, Optilux's :math:`P` at the start of the nonlinear block over
-/// the effective length :math:`(1 - e^{-\alpha h})/\alpha` of the step, the attenuation
-/// of the step after it) and a half linear step. The step is fixed (``step_km``) or
-/// adaptive (``step_rule``). An amplifier follows every span. Polarisation-mode
-/// dispersion is neglected (see :class:`ManakovPmd`).
+/// Averaged over the fast rotations of the birefringence, the two polarisations
+/// :math:`A_x`, :math:`A_y` obey
+///
+/// .. math::
+///
+///     \frac{\partial A_{x,y}}{\partial z} = -\frac{\alpha}{2} A_{x,y}
+///     - j \frac{\beta_2}{2} \frac{\partial^2 A_{x,y}}{\partial t^2}
+///     + j \frac{8}{9} \gamma \left(|A_x|^2 + |A_y|^2\right) A_{x,y}.
+///
+/// The factor :math:`8/9` is the average of the self- and cross-phase modulation of the two
+/// polarisations over the Poincaré sphere. The equation is solved by the symmetric split
+/// step of :class:`Ssfm`: a half linear step (the same on both polarisations), the phase
+/// :math:`\phi(t)` on both, then a half linear step, with
+///
+/// .. math::
+///
+///     \begin{aligned}
+///     \texttt{midpoint}: &\quad \phi = \tfrac{8}{9} \gamma\, P_{1/2}\, h, \\
+///     \texttt{effective\_length}: &\quad \phi = \tfrac{8}{9} \gamma\, P_{1/2}\,
+///     \frac{1 - e^{-\alpha h}}{\alpha}, \\
+///     \texttt{trapezoidal}: &\quad \phi = \tfrac{8}{9} \gamma\, \frac{P(z) + P(z + h)}{2}\, h,
+///     \end{aligned}
+///
+/// :math:`P = |A_x|^2 + |A_y|^2` the total power and :math:`P_{1/2}` that after the first
+/// half step. The trapezoidal rule (OptiCommPy) is iterated until the relative change of
+/// the fields falls below ``tolerance``; its mean smooths the cross-phase modulation of
+/// channels that walk off within a step. The effective length (Optilux) carries the
+/// dispersion only in the first half step and the attenuation of the whole step after the
+/// phase. The step is fixed (``step_km``) or adaptive (``step_rule``). An amplifier follows
+/// every span. Polarisation-mode dispersion is neglected (see :class:`ManakovPmd`).
 ///
 /// Args:
 ///     fiber (FiberParams): the link.

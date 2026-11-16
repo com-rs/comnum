@@ -56,8 +56,15 @@ fn emitters(
     Ok((0..pos.len()).map(|i| Emitter::new(pos[i], dir[i], modes[i], powers[i])).collect())
 }
 
-/// The Lambertian mode :math:`n = -\ln 2 / \ln\cos\Phi_{1/2}` of a source of semi-angle at
-/// half power :math:`\Phi_{1/2}` (rad): 1 for 60°, 0.65 for 70°.
+/// The Lambertian mode of a source of semi-angle at half power :math:`\Phi_{1/2}` (rad).
+///
+/// The mode is
+///
+/// .. math::
+///
+///     n = -\frac{\ln 2}{\ln\cos\Phi_{1/2}},
+///
+/// which gives 1 for 60°, 0.65 for 70°.
 ///
 /// Args:
 ///     semi_angle_rad (float): the semi-angle at half power, in :math:`(0, \pi/2)`.
@@ -92,7 +99,14 @@ fn owc_direction(py: Python<'_>, elevation_rad: f64, azimuth_rad: f64) -> FArr<'
 }
 
 /// The illuminance (lx) at `point`, on a surface of normal `normal`, of LED chips of
-/// centre luminous intensity `intensity_cd` (Komine & Nakagawa 2004, eq. (5)).
+/// centre luminous intensity `intensity_cd` (Komine & Nakagawa 2004, eq. (5)):
+///
+/// .. math::
+///
+///     E = \sum \frac{I(0) \cos^n\phi \cos\psi}{D^2},
+///
+/// the sum over the chips, of mode :math:`n`, at the distance :math:`D` of the point,
+/// :math:`\phi` the angle of emission and :math:`\psi` the angle of incidence.
 ///
 /// Args:
 ///     positions (array_like): `(n, 3)` positions of the chips (m).
@@ -159,8 +173,14 @@ impl PyImpulseResponse {
         self.inner.first_arrival_s()
     }
 
-    /// The frequency response :math:`H(f) = \sum_i P_i \exp(-j2\pi f(i + \tfrac{1}{2})\Delta t)`
-    /// (Barry et al. 1993, eq. (15)).
+    /// The frequency response of the channel (Barry et al. 1993, eq. (15)):
+    ///
+    /// .. math::
+    ///
+    ///     H(f) = \sum_i P_i \exp\left(-j2\pi f\left(i + \tfrac{1}{2}\right)\Delta t\right),
+    ///
+    /// with :math:`P_i` the power received in bin :math:`i` and :math:`\Delta t` the
+    /// width of the bins.
     ///
     /// Args:
     ///     f_hz (array_like): the frequencies (Hz).
@@ -224,6 +244,27 @@ impl PyImpulseResponse {
 /// An empty rectangular room :math:`[0, L] \times [0, W] \times [0, H]` with Lambertian walls
 /// (Barry et al. 1993): north and south are the walls :math:`x = L` and :math:`x = 0`,
 /// west and east :math:`y = W` and :math:`y = 0`.
+///
+/// An emitter of power :math:`P` and mode :math:`n` gives a detector of area :math:`A`,
+/// field of view :math:`\Psi`, optical filter gain :math:`T_s` and concentrator gain
+/// :math:`g(\psi)` at the distance :math:`R`, along the line of sight, the power
+/// (Barry et al. 1993, eqs. (4)–(9); Komine & Nakagawa 2004, eqs. (6)–(8))
+///
+/// .. math::
+///
+///     P_r = P \frac{n + 1}{2\pi R^2} \cos^n\phi \; A \cos\psi \; T_s\, g(\psi),
+///     \qquad 0 \le \psi \le \Psi.
+///
+/// A reflecting element is a detector with a field of view of 90° and then a source of
+/// mode 1, so that the light reflected :math:`k` times follows from the light reflected
+/// :math:`k - 1` times (Barry et al. 1993, eqs. (10)–(13)):
+///
+/// .. math::
+///
+///     h^{(k)}(t; S, R) = \sum_i h^{(0)}(t; S, \mathcal{E}_i) \otimes
+///     h^{(k-1)}(t; \mathcal{E}_i, R),
+///
+/// the surfaces being divided into the elements :math:`\mathcal{E}_i`.
 ///
 /// Args:
 ///     size_m (array_like): :math:`(L, W, H)` (m).
@@ -368,7 +409,15 @@ impl PyIllumination {
     }
 }
 
-/// The Rytov variance :math:`\sigma_1^2 = 1.23\, C_n^2 k^{7/6} L^{11/6}` of a plane wave.
+/// The Rytov variance of a plane wave.
+///
+/// The variance is
+///
+/// .. math::
+///
+///     \sigma_1^2 = 1.23\, C_n^2 k^{7/6} L^{11/6},
+///
+/// with :math:`k` the wave number and :math:`L` the length of the link.
 ///
 /// Args:
 ///     cn2 (float): the refractive-index structure parameter (m^-2/3).
@@ -384,6 +433,16 @@ fn rytov_variance(cn2: f64, wavelength_m: f64, length_m: f64) -> f64 {
 
 /// The attenuation (dB/km) of haze and fog for a visibility `visibility_km` (Kim et al.
 /// 2001).
+///
+/// The attenuation is
+///
+/// .. math::
+///
+///     10 \log_{10}(e)\, \frac{3.91}{V} \left(\frac{\lambda}{550}\right)^{-q},
+///
+/// with :math:`V` the visibility (km), :math:`\lambda` the wavelength (nm), and
+/// :math:`q = 1.6` above 50 km, 1.3 above 6 km, :math:`0.16V + 0.34` above 1 km,
+/// :math:`V - 0.5` above 0.5 km and 0 below.
 ///
 /// Args:
 ///     visibility_km (float): the visibility (km).
@@ -401,6 +460,14 @@ fn fog_attenuation_db_per_km(visibility_km: f64, wavelength_nm: f64) -> PyResult
 
 /// The gamma–gamma distribution of the intensity, of unit mean (Al-Habash, Andrews &
 /// Phillips 2001).
+///
+/// The density and the scintillation index are (their eqs. (10)–(15))
+///
+/// .. math::
+///
+///     p(I) = \frac{2(\alpha\beta)^{(\alpha+\beta)/2}}{\Gamma(\alpha)\Gamma(\beta)}
+///     I^{(\alpha+\beta)/2 - 1} K_{\alpha-\beta}\left(2\sqrt{\alpha\beta I}\right), \qquad
+///     \sigma_I^2 = \frac{1}{\alpha} + \frac{1}{\beta} + \frac{1}{\alpha\beta}.
 ///
 /// Args:
 ///     alpha (float): the effective number of large-scale cells.
@@ -460,7 +527,11 @@ impl PyGammaGamma {
         self.inner.beta
     }
 
-    /// The scintillation index :math:`1/\alpha + 1/\beta + 1/(\alpha\beta)`.
+    /// The scintillation index of the distribution:
+    ///
+    /// .. math::
+    ///
+    ///     \sigma_I^2 = \frac{1}{\alpha} + \frac{1}{\beta} + \frac{1}{\alpha\beta}.
     ///
     /// Returns:
     ///     float: the scintillation index.
@@ -505,6 +576,21 @@ impl PyGammaGamma {
 /// The misalignment of a Gaussian beam on a circular aperture, a Rayleigh radial
 /// displacement (Farid & Hranilovic 2007).
 ///
+/// A beam of radius :math:`w_z` at the receiver, an aperture of radius :math:`a` and a
+/// radial displacement :math:`r` collect the fraction
+///
+/// .. math::
+///
+///     \begin{aligned}
+///     h_p &= A_0 \exp\left(-\frac{2r^2}{w_{z,\mathrm{eq}}^2}\right), \\
+///     A_0 &= \operatorname{erf}^2(v), \qquad
+///     v = \frac{\sqrt{\pi} a}{\sqrt{2} w_z}, \qquad
+///     w_{z,\mathrm{eq}}^2 = w_z^2 \frac{\sqrt{\pi}\operatorname{erf}(v)}{2v e^{-v^2}},
+///     \end{aligned}
+///
+/// with :math:`r` of Rayleigh distribution (independent Gaussian sway of standard
+/// deviation :math:`\sigma_s` in both directions).
+///
 /// Args:
 ///     beam_radius_m (float): the beam radius at the receiver (m).
 ///     aperture_radius_m (float): the radius of the aperture (m).
@@ -537,7 +623,11 @@ impl PyPointingError {
         Ok(PyPointingError { inner: PointingError::new(beam_radius_m, aperture_radius_m, jitter_m).py()? })
     }
 
-    /// The fraction :math:`A_0 = \operatorname{erf}^2(v)` collected without displacement.
+    /// The fraction collected without displacement:
+    ///
+    /// .. math::
+    ///
+    ///     A_0 = \operatorname{erf}^2(v), \qquad v = \frac{\sqrt{\pi} a}{\sqrt{2} w_z}.
     ///
     /// Returns:
     ///     float: :math:`A_0`.
@@ -553,7 +643,11 @@ impl PyPointingError {
         self.inner.equivalent_radius_m()
     }
 
-    /// The fraction of the power collected at a radial displacement.
+    /// The fraction of the power collected at a radial displacement:
+    ///
+    /// .. math::
+    ///
+    ///     h_p = A_0 \exp\left(-\frac{2r^2}{w_{z,\mathrm{eq}}^2}\right).
     ///
     /// Args:
     ///     r_m (float | array_like): the displacements (m).
@@ -567,7 +661,14 @@ impl PyPointingError {
         map_real(r_m, |x| Ok(self.inner.collected(x)))
     }
 
-    /// The density of the collected fraction.
+    /// The density of the collected fraction:
+    ///
+    /// .. math::
+    ///
+    ///     f(h_p) = \frac{\xi^2}{A_0^{\xi^2}} h_p^{\xi^2 - 1}, \qquad
+    ///     \xi = \frac{w_{z,\mathrm{eq}}}{2\sigma_s},
+    ///
+    /// on :math:`(0, A_0]`.
     ///
     /// Args:
     ///     h (float | array_like): the fractions, in :math:`(0, A_0]`.
@@ -597,8 +698,16 @@ impl PyPointingError {
     }
 }
 
-/// A free-space optical link: a deterministic loss, turbulence and pointing errors, the
-/// gain of the intensity :math:`h = h_l h_a h_p`.
+/// A free-space optical link: a deterministic loss, turbulence and pointing errors.
+///
+/// The gain of the intensity is
+///
+/// .. math::
+///
+///     h = h_l h_a h_p,
+///
+/// the deterministic loss :math:`h_l` of the weather, the turbulence :math:`h_a` of unit
+/// mean and the misalignment :math:`h_p`.
 ///
 /// Args:
 ///     loss_db (float): the loss of the weather and of the geometry (dB).
@@ -682,6 +791,26 @@ impl PyFso {
 /// A PIN photodiode with a FET preamplifier: shot and thermal noise (Komine & Nakagawa
 /// 2004, eqs. (18)–(21)).
 ///
+/// The variances of the shot and thermal noise and the SNR of on–off keying are (their
+/// eqs. (16)–(18), (20)–(21))
+///
+/// .. math::
+///
+///     \begin{aligned}
+///     \sigma_{\mathrm{shot}}^2 &= 2q\gamma (P_s + P_{\mathrm{ISI}}) B + 2 q I_{bg} I_2 B, \\
+///     \sigma_{\mathrm{th}}^2 &= \frac{8\pi k T}{G} \eta A I_2 B^2
+///     + \frac{16 \pi^2 k T \Gamma}{g_m} \eta^2 A^2 I_3 B^3, \\
+///     \mathrm{SNR} &= \frac{\gamma^2 P_s^2}{\sigma_{\mathrm{shot}}^2
+///     + \sigma_{\mathrm{th}}^2 + \gamma^2 P_{\mathrm{ISI}}^2},
+///     \end{aligned}
+///
+/// with :math:`\gamma` the responsivity, :math:`I_{bg}` the background current,
+/// :math:`G` the open-loop gain, :math:`\eta` the capacitance per unit area,
+/// :math:`\Gamma` the FET channel noise factor, :math:`g_m` the transconductance,
+/// :math:`T` the temperature, :math:`A` the area of the photodiode, :math:`B` the noise
+/// bandwidth, and :math:`P_s`, :math:`P_{\mathrm{ISI}}` the powers inside the bit and
+/// spilled out of it.
+///
 /// Args:
 ///     responsivity (float): the responsivity (A/W).
 ///     background_current_a (float): the background current of the ambient light (A).
@@ -763,7 +892,11 @@ wrapper_methods! {
         PyPinFet { inner: PinFetReceiver::komine2004() }
     }
 
-    /// The variance of the shot noise (A²) of the signal and of the ambient light.
+    /// The variance of the shot noise (A²) of the signal and of the ambient light:
+    ///
+    /// .. math::
+    ///
+    ///     \sigma_{\mathrm{shot}}^2 = 2q\gamma (P_s + P_{\mathrm{ISI}}) B + 2 q I_{bg} I_2 B.
     ///
     /// Args:
     ///     signal_w (float): the power received inside the bit (W).
@@ -776,7 +909,12 @@ wrapper_methods! {
         self.inner.shot_variance(signal_w, isi_w, bandwidth_hz)
     }
 
-    /// The variance of the thermal noise (A²) of the feedback resistor and of the FET.
+    /// The variance of the thermal noise (A²) of the feedback resistor and of the FET:
+    ///
+    /// .. math::
+    ///
+    ///     \sigma_{\mathrm{th}}^2 = \frac{8\pi k T}{G} \eta A I_2 B^2
+    ///     + \frac{16 \pi^2 k T \Gamma}{g_m} \eta^2 A^2 I_3 B^3.
     ///
     /// Args:
     ///     area_m2 (float): the area of the photodiode (m²).
@@ -788,7 +926,12 @@ wrapper_methods! {
         self.inner.thermal_variance(area_m2, bandwidth_hz)
     }
 
-    /// The SNR (dB) of on–off keying with intersymbol interference (their eq. (16)).
+    /// The SNR (dB) of on–off keying with intersymbol interference (their eq. (16)):
+    ///
+    /// .. math::
+    ///
+    ///     \mathrm{SNR} = \frac{\gamma^2 P_s^2}{\sigma_{\mathrm{shot}}^2
+    ///     + \sigma_{\mathrm{th}}^2 + \gamma^2 P_{\mathrm{ISI}}^2}.
     ///
     /// Args:
     ///     signal_w (float): the power received inside the bit (W).

@@ -201,7 +201,14 @@ fn lte_decode_mib<'py>(
 }
 
 /// The PSS of LTE of the identity :math:`N_{\mathrm{ID}}^{(2)}` (the 62 values of the punctured
-/// Zadoff–Chu sequence of length 63, roots 25, 29, 34; TS 36.211 Sec. 6.11.1.1).
+/// Zadoff–Chu sequence of length 63, roots 25, 29, 34; TS 36.211 Sec. 6.11.1.1):
+///
+/// .. math::
+///
+///     d_{u}(n) = \begin{cases} e^{-j\pi u n (n + 1)/63}, & n = 0, \dots, 30, \\
+///     e^{-j\pi u (n + 1)(n + 2)/63}, & n = 31, \dots, 61, \end{cases}
+///
+/// with the root :math:`u = 25, 29, 34` for :math:`N_{\mathrm{ID}}^{(2)} = 0, 1, 2`.
 ///
 /// Args:
 ///     n_id2 (int): 0, 1 or 2.

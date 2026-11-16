@@ -18,18 +18,29 @@ use pyo3::types::PyDict;
 /// The GN model of the nonlinear interference of a WDM link (Poggiolini 2012).
 ///
 /// The NLI power spectral density at the receiver is the double integral of the GN
-/// reference formula, computed on a grid, with the coherent accumulation of the spans
-/// (``coherent=True``, the phased-array factor) or the incoherent one (:math:`N_s` times a
+/// reference formula,
+///
+/// .. math::
+///
+///     G_{\mathrm{NLI}}(f) = \frac{16}{27} \gamma^2 \iint G(f_1) G(f_2) G(f_1 + f_2 - f)\,
+///     |\rho(f_1, f_2, f)|^2\, \chi(f_1, f_2, f)\, df_1\, df_2,
+///
+/// with :math:`G` the power spectral density of the transmitted signal (both
+/// polarisations), the span efficiency and the phased-array factor of the spans
+///
+/// .. math::
+///
+///     \begin{aligned}
+///     \rho &= \frac{1 - e^{-\alpha L_s} e^{j 4 \pi^2 \beta_2 L_s \Delta}}
+///     {\alpha - j 4 \pi^2 \beta_2 \Delta}, \qquad \Delta = (f_1 - f)(f_2 - f), \\
+///     \chi &= \frac{\sin^2(2 N_s \pi^2 \beta_2 L_s \Delta)}{\sin^2(2 \pi^2 \beta_2 L_s \Delta)},
+///     \end{aligned}
+///
+/// computed on a grid, with the coherent accumulation of the spans (``coherent=True``,
+/// the phased-array factor :math:`\chi`) or the incoherent one (:math:`\chi = N_s`, :math:`N_s` times a
 /// span). Channels have raised-cosine spectra of roll-off ``rolloff`` at the symbol rate
 /// ``symbol_rate``, centred on ``freqs`` (Hz, relative to the carrier), with the launch
 /// powers ``power_dbm`` (one per channel or one for all, both polarisations).
-///
-/// Returns:
-///     dict: ``nli_psd`` and ``ase_psd`` (W/Hz, both polarisations, at the frequency of
-///     channel ``channel``), ``snr_db`` (after a matched filter), ``eta`` (NLI PSD per
-///     W³ of launch power per channel) and ``p_opt_dbm`` (the optimal launch power per
-///     channel for equal powers; with ``raman``, ``eta`` and ``p_opt_dbm`` are those of
-///     the profiles of 1 mW per channel).
 ///
 /// With ``raman`` (the keys of ``fiber.raman``, see :func:`raman_profile`), the power
 /// profiles of the channels along the span replace the exponential decay in the link
@@ -58,6 +69,13 @@ use pyo3::types::PyDict;
 ///     modulation (Constellation | str, optional): the modulation format of the EGN
 ///         model.
 ///     px (array_like, optional): the probabilities of its points.
+///
+/// Returns:
+///     dict: ``nli_psd`` and ``ase_psd`` (W/Hz, both polarisations, at the frequency of
+///     channel ``channel``), ``snr_db`` (after a matched filter), ``eta`` (NLI PSD per
+///     W³ of launch power per channel) and ``p_opt_dbm`` (the optimal launch power per
+///     channel for equal powers; with ``raman``, ``eta`` and ``p_opt_dbm`` are those of
+///     the profiles of 1 mW per channel).
 ///
 /// Raises:
 ///     ValueError: for an invalid parameter or input (the message names it).
@@ -160,10 +178,66 @@ fn format_moments(
     Ok((f.phi, f.psi))
 }
 
-/// The power profiles of a span with distributed Raman amplification: the coupled
-/// equations of stimulated Raman scattering for the co-propagating channels and any
-/// number of co- and counter-propagating pumps (RK4, forward-backward sweeps), and the
-/// spontaneous Raman noise of every channel (see ``comnum_channel::optical::raman``).
+/// The power profiles of a span with distributed Raman amplification: the signals, any
+/// number of co- and counter-propagating pumps, the power they exchange and the spontaneous
+/// Raman noise of every channel.
+///
+/// **The model.** Every wave :math:`k` (a channel, a slice of the spectrum of a field in
+/// the split-step solvers, or a pump) of frequency :math:`f_k` and power :math:`P_k(z)` (W)
+/// obeys the coupled power equations of stimulated Raman scattering (Bromage 2004, eq. (1);
+/// Agrawal, *Nonlinear Fiber Optics*, ch. 8)
+///
+/// .. math::
+///
+///     \pm \frac{d P_k}{d z} = P_k \left(-\alpha_k + \sum_j C_{kj} P_j\right),
+///
+/// with :math:`+` for the waves that travel with the signals and :math:`-` for the
+/// counter-propagating pumps, :math:`\alpha_k` the attenuation of the power at
+/// :math:`f_k` (1/km) and :math:`C_{kj}` the Raman gain efficiency (1/(W·km)). A wave gains
+/// power from the waves of higher frequency, at the rate of the gain spectrum of silica
+/// at their frequency offset, and gives it to those of lower frequency:
+///
+/// .. math::
+///
+///     C_{kj} = \frac{g_R(f_j - f_k)}{A_{kj}}\, \frac{f_j}{f_{\mathrm{ref}}}, \qquad
+///     A_{kj} = \frac{A_{\mathrm{eff}}(f_k) + A_{\mathrm{eff}}(f_j)}{2}, \qquad f_j > f_k,
+///
+/// with :math:`g_R` the measured gain spectrum of a pump at :math:`f_{\mathrm{ref}}`
+/// (``gain``), scaled with the frequency of the pump, and :math:`A_{kj}` the overlap
+/// area of the two modes. The wave of higher frequency loses the photons that the other
+/// gains, :math:`C_{jk} = -(f_j/f_k)\, C_{kj}`: without loss,
+/// :math:`\sum_k \pm P_k/f_k` (the photon flux) is constant along :math:`z`. With ``isrs``
+/// the channels also pump each other (inter-channel stimulated Raman scattering), which
+/// tilts the spectrum towards the low frequencies.
+///
+/// **The solution.** The co-propagating waves are known at :math:`z = 0` and the
+/// counter-propagating pumps at :math:`z = L`, a two-point boundary-value problem: the
+/// logarithms of the powers are integrated by the fourth-order Runge-Kutta method on a
+/// grid of ``step_km``, forward for the co-propagating waves and backward for the
+/// counter-propagating ones, sweep after sweep until they change by less than a tolerance
+/// (the relaxation method of Perlin & Winful 2002).
+///
+/// **The gains and the noise.** For channel :math:`k`, with
+/// :math:`G_k(z) = P_k(z)/P_k(0)`, the net gain of the span is :math:`G_k(L)`, the on-off
+/// gain is the net gain with the pumps and ISRS over that of the loss alone,
+/// :math:`G_k(L)\, e^{\alpha_k L}`, and the spontaneous scattering of the pumps adds a noise
+/// of power spectral density, both polarisations (Bromage 2004, eq. (4)),
+///
+/// .. math::
+///
+///     N_k(L) = \int_0^L 2 h f_k \sum_{j \in \mathrm{pumps}} C_{kj} P_j(z)\,
+///     (1 + \eta_{kj})\, \frac{G_k(L)}{G_k(z)}\, dz, \qquad
+///     \eta_{kj} = \frac{1}{e^{h (f_j - f_k)/(k_B T)} - 1},
+///
+/// with :math:`\eta_{kj}` the phonon occupancy at the temperature :math:`T`: noise
+/// generated at :math:`z` is amplified by the rest of the span. With ``rayleigh_db_km``, a
+/// fraction :math:`\kappa` (1/km) of the signal is backscattered by Rayleigh scattering,
+/// and the light scattered twice travels with the signal again; its power over that of the
+/// signal at the end of the span is (Bromage 2004, Sec. V-A)
+///
+/// .. math::
+///
+///     R_k^2 = \kappa^2 \int_0^L \frac{1}{G_k(z)^2} \int_z^L G_k(z')^2\, dz'\, dz.
 ///
 /// Args:
 ///     fiber (FiberParams): the span (length, attenuation, carrier frequency).
@@ -255,6 +329,22 @@ fn raman_profile<'py>(
 /// whose profiles have these integrals (Newton's method on the solved profiles), until
 /// the integrals match within ``1e-5``. See ``comnum_channel::optical::raman::design``.
 ///
+/// The on-off gain of channel :math:`k` is linear in the integrated powers :math:`I_j`
+/// of the waves,
+///
+/// .. math::
+///
+///     \ln G^{\mathrm{on/off}}_k = \sum_{j \in \mathrm{pumps}} C_{kj} I_j
+///     + \sum_{s \in \mathrm{signals}} C_{ks} I_s,
+///
+/// with :math:`I_j = \int_0^L P_j(z)\, dz` the power of wave :math:`j` integrated over the
+/// span (W·km) and :math:`C_{kj}` the gain efficiencies of :func:`raman_profile`: dividing
+/// the equation of :math:`P_k` by :math:`P_k` and integrating it over the span gives
+/// :math:`\ln G_k(L) = -\alpha_k L + \sum_j C_{kj} I_j`, and the on-off gain removes the
+/// loss. The targets fix the integrals of the pumps (a linear fit), then the launch powers
+/// are searched whose solved profiles have these integrals: the design splits in two
+/// (Perlin & Winful 2002, Sec. II).
+///
 /// Args:
 ///     fiber (FiberParams): the span (length, attenuation, carrier frequency).
 ///     freqs (array_like): centre frequencies of the channels relative to the carrier
@@ -325,6 +415,18 @@ fn raman_design<'py>(
 /// Poggiolini's closed form of the NLI power spectral density at the centre of
 /// ``n_channels`` rectangular channels spaced by ``spacing`` (incoherent accumulation).
 ///
+/// The closed form is
+///
+/// .. math::
+///
+///     G_{\mathrm{NLI}} \approx N_s \frac{8}{27} \gamma^2 G_{\mathrm{ch}}^3 L_{\mathrm{eff}}^2
+///     \frac{\operatorname{asinh}\left(\frac{\pi^2}{2} |\beta_2| L_{\mathrm{eff},a} R_s^2
+///     N_{\mathrm{ch}}^{2 R_s / \Delta f}\right)}{\pi |\beta_2| L_{\mathrm{eff},a}},
+///
+/// with :math:`G_{\mathrm{ch}} = P_{\mathrm{ch}}/R_s`,
+/// :math:`L_{\mathrm{eff}} = (1 - e^{-\alpha L_s})/\alpha` and
+/// :math:`L_{\mathrm{eff},a} = 1/\alpha`.
+///
 /// Args:
 ///     fiber (FiberParams): the link.
 ///     n_channels (int): number of channels.
@@ -345,8 +447,14 @@ fn gn_closed_form(fiber: &PyFiber, n_channels: usize, symbol_rate: f64, spacing_
 /// scattering, in microseconds instead of the minutes of the integral of
 /// :func:`gn_model`. The SPM of
 /// the channel (eq. (10)) and the XPM of every other channel (eq. (11)) are summed over
-/// the spans by eq. (5), the SPM coherently as :math:`n^{1 + \epsilon}`, the XPM
-/// incoherently; the ISRS enters to first order in the total launch power times the
+/// the :math:`n` spans by eq. (5), the SPM coherently, the XPM incoherently:
+///
+/// .. math::
+///
+///     \eta_n(f_i) \approx \eta_{\mathrm{SPM}}(f_i)\, n^{1 + \epsilon}
+///     + \eta_{\mathrm{XPM}}(f_i)\, n;
+///
+/// the ISRS enters to first order in the total launch power times the
 /// slope ``raman_slope_w_km_thz`` of the Raman gain spectrum (0.028 /W/km/THz for
 /// standard single-mode fibre; 0 for no ISRS). Channels have rectangular spectra of
 /// bandwidth ``symbol_rate * (1 + rolloff)``; ``fiber`` gives the loss, the dispersion

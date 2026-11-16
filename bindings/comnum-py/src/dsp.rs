@@ -56,7 +56,17 @@ fn pulse_shape<'py>(py: Python<'py>, kind: &str, sps: usize, n_taps: usize, roll
 
 /// Root of the raised-cosine spectrum on the :math:`n_{\mathrm{symbols}} \cdot \mathrm{sps}` bins
 /// of a periodic block (1 in the passband): shaping and matched filtering with it are
-/// exactly Nyquist.
+/// exactly Nyquist. The gain of bin :math:`k` is
+///
+/// .. math::
+///
+///     H_k = \sqrt{\mathrm{RC}(f_k)}, \qquad
+///     \mathrm{RC}(f) = \begin{cases} 1, & |f| \le f_1, \\
+///     \frac{1}{2}\left[1 + \cos\left(\frac{\pi}{\beta}\left(|f| - f_1\right)\right)\right],
+///     & f_1 < |f| < f_2, \\ 0, & |f| \ge f_2, \end{cases}
+///
+/// with :math:`f_k` the frequency of bin :math:`k` in symbol-rate units,
+/// :math:`f_{1,2} = (1 \mp \beta)/2` and :math:`\beta` the roll-off.
 ///
 /// Args:
 ///     n_symbols (int): symbols of the block.
@@ -77,9 +87,9 @@ fn rrc_spectrum(py: Python<'_>, n_symbols: i64, sps: usize, rolloff: f64) -> PyR
 ///
 /// .. math::
 ///
-///     \frac{\sin(\pi t'(1-\beta)) + 4\beta t' \cos(\pi t'(1+\beta))}{\pi t'(1 - (4\beta t')^2)}
+///     h(t) = \frac{1}{T_s} \frac{\sin(\pi t'(1-\beta)) + 4\beta t' \cos(\pi t'(1+\beta))}{\pi t'(1 - (4\beta t')^2)},
 ///
-/// with :math:`t' = t/T_s`, divided by :math:`T_s`, and its limits at :math:`t = 0` and
+/// with :math:`t' = t/T_s`, and its limits at :math:`t = 0` and
 /// :math:`|t| = T_s/(4\beta)` (Proakis & Salehi, *Digital Communications*, 5th ed.,
 /// Sec. 9.2-1).
 ///
@@ -110,9 +120,9 @@ fn rrc_taps<'py>(py: Python<'py>, t: &Bound<'py, PyAny>, rolloff: f64, ts: f64) 
 ///
 /// .. math::
 ///
-///     \frac{\operatorname{sinc}(t/T_s) \cos(\pi \beta t/T_s)}{1 - (2\beta t/T_s)^2}
+///     h(t) = \frac{1}{T_s} \frac{\operatorname{sinc}(t/T_s) \cos(\pi \beta t/T_s)}{1 - (2\beta t/T_s)^2},
 ///
-/// divided by :math:`T_s`, Nyquist (zero at the other symbol instants).
+/// Nyquist (zero at the other symbol instants).
 ///
 /// Args:
 ///     t (array_like): the times.
@@ -374,7 +384,13 @@ fn anorm<'py>(py: Python<'py>, x: &Bound<'py, PyAny>) -> PyResult<CArr<'py>> {
     Ok(carr(py, signal::anorm(&cvec(x)?)))
 }
 
-/// Frequency shift :math:`x[n] e^{j 2\pi \Delta f\, n/f_s}`.
+/// Shift the frequency of a signal.
+///
+/// The output is
+///
+/// .. math::
+///
+///     y[n] = x[n]\, e^{j 2\pi \Delta f\, n/f_s}.
 ///
 /// Args:
 ///     x (array_like): the signal.
@@ -392,7 +408,11 @@ fn freq_shift<'py>(py: Python<'py>, x: &Bound<'py, PyAny>, offset_hz: f64, fs: f
 }
 
 /// Centred moving average over `n` samples with zeros outside (OptiCommPy
-/// `movingAverage`).
+/// `movingAverage`):
+///
+/// .. math::
+///
+///     y[i] = \frac{1}{n} \sum_{m=i+c-n+1}^{i+c} x[m], \qquad c = \lfloor (n-1)/2 \rfloor.
 ///
 /// Args:
 ///     x (array_like): the signal.
@@ -410,6 +430,14 @@ fn moving_average<'py>(py: Python<'py>, x: &Bound<'py, PyAny>, n: i64) -> PyResu
 
 /// Delay a periodic block by `delay` seconds (FFT phase ramp).
 ///
+/// The spectrum of the block is multiplied by
+///
+/// .. math::
+///
+///     Y(f) = X(f)\, e^{-j 2\pi f \tau},
+///
+/// with :math:`\tau` the delay `delay_s`.
+///
 /// Args:
 ///     x (array_like): the block.
 ///     delay_s (float): the delay (s), fractional delays included.
@@ -426,7 +454,13 @@ fn delay_fft<'py>(py: Python<'py>, x: &Bound<'py, PyAny>, delay_s: f64, fs: f64)
 }
 
 /// Compensate the dispersion of `length_km` of `fiber` on a block sampled at `fs`
-/// (frequency domain, exact on a periodic block).
+/// (frequency domain, exact on a periodic block):
+///
+/// .. math::
+///
+///     Y(\omega) = X(\omega)\, e^{-j \beta_2 \omega^2 L/2},
+///
+/// with :math:`\beta_2` the group-velocity dispersion of the fibre and :math:`L` the length.
 ///
 /// Args:
 ///     x (array_like): the field.
@@ -445,8 +479,13 @@ fn cdc<'py>(py: Python<'py>, x: &Bound<'py, PyAny>, fiber: &PyFiber, length_km: 
     Ok(carr(py, py.detach(|| cd::cdc(&x, f.beta2_s2_km(), length_km, fs))))
 }
 
-/// Taps of the dispersion-compensating FIR (OptiCommPy `edc` rule,
-/// :math:`2 \lceil 6.67\, |\beta_2| L R_s^2 (f_s/R_s) \rceil`).
+/// Taps of the dispersion-compensating FIR (OptiCommPy `edc` rule):
+///
+/// .. math::
+///
+///     N = 2 \lceil 6.67\, |\beta_2| L R_s^2 (f_s/R_s) \rceil,
+///
+/// with :math:`R_s` the symbol rate.
 ///
 /// Args:
 ///     fiber (FiberParams): the fibre.
@@ -462,6 +501,13 @@ fn cd_taps_needed(fiber: &PyFiber, length_km: f64, symbol_rate: f64, fs: f64) ->
 }
 
 /// Centred taps of the dispersion compensation of `length_km` (frequency sampling).
+///
+/// The taps are the inverse DFT, centred, of the compensating response on the `n_taps`
+/// angular frequencies :math:`\omega_k` of the block:
+///
+/// .. math::
+///
+///     H_k = e^{-j \beta_2 \omega_k^2 L/2}.
 ///
 /// Args:
 ///     fiber (FiberParams): the fibre.
@@ -479,9 +525,13 @@ fn cd_fir_taps<'py>(py: Python<'py>, fiber: &PyFiber, length_km: f64, fs: f64, n
     Ok(carr(py, cd::cd_fir_taps(fiber.inner.beta2_s2_km(), length_km, fs, count(n_taps, "n_taps")?)))
 }
 
-/// The dispersion factor :math:`K = -\beta_2 L f_s^2/2` of the digital compensation
-/// :math:`e^{jK\omega^2}` (:math:`\omega` in radians per sample; Savory 2008, Eghbali et
-/// al. 2014).
+/// The dispersion factor of the digital compensation (Savory 2008, Eghbali et al. 2014):
+///
+/// .. math::
+///
+///     K = -\frac{\beta_2 L f_s^2}{2}, \qquad H_{\mathrm{des}}(e^{j\omega}) = e^{jK\omega^2},
+///
+/// with :math:`\omega` in radians per sample.
 ///
 /// Args:
 ///     fiber (FiberParams): the fibre.
@@ -495,9 +545,15 @@ fn cd_dispersion_factor(fiber: &PyFiber, length_km: f64, fs: f64) -> f64 {
     cd::cd_dispersion_factor(fiber.inner.beta2_s2_km(), length_km, fs)
 }
 
-/// Centred taps of Savory's dispersion-compensating FIR, :math:`\sqrt{j/(4K\pi)}\, e^{-jn^2/(4K)}`.
+/// Centred taps of Savory's dispersion-compensating FIR:
 ///
-/// After S. J. Savory, *Opt. Express* 16(2), 2008.
+/// .. math::
+///
+///     h(n) = \sqrt{\frac{j}{4K\pi}}\, e^{-j n^2/(4K)},
+///
+/// with :math:`K` the dispersion factor (`cd_dispersion_factor`).
+///
+/// After S. J. Savory, *Opt. Express* 16(2), 2008 (eqs. 9–10).
 ///
 /// Args:
 ///     fiber (FiberParams): the fibre.
@@ -529,6 +585,18 @@ fn cd_savory_taps<'py>(
 /// :math:`|f| \le f_{\mathrm{band}}` (`band_hz`).
 ///
 /// After Eghbali, Johansson, Gustafsson & Savory, *J. Lightw. Technol.* 32(8), 2014.
+/// The taps minimise the energy of the error over :math:`[-\Omega, \Omega]` (see
+/// `cd_ls_error`), with :math:`\Omega` the band in radians per sample:
+///
+/// .. math::
+///
+///     \begin{aligned}
+///     \hat{\mathbf{h}} &= (\mathbf{Q} + \epsilon \mathbf{I})^{-1} \mathbf{D}, \\
+///     Q(n, m) &= \frac{\sin((n - m)\Omega)}{\pi (n - m)}, \qquad
+///     D(n) = \frac{1}{2\pi} \int_{-\Omega}^{\Omega} e^{j(K\omega^2 + n\omega)}\, d\omega,
+///     \end{aligned}
+///
+/// with :math:`\Omega/\pi` on the diagonal of :math:`\mathbf{Q}`.
 ///
 /// Over the whole band the taps are closed-form; over the band of the signal
 /// (:math:`f_s (1 + \beta) / (2\, \mathrm{sps})`, :math:`\beta` the roll-off) fewer taps
@@ -569,7 +637,7 @@ fn cd_ls_taps<'py>(
 ///
 /// .. math::
 ///
-///     E = \frac{1}{2\pi} \int \left| H(e^{j\omega}) - e^{jK\omega^2} \right|^2 d\omega
+///     E = \frac{1}{2\pi} \int \left| H(e^{j\omega}) - e^{jK\omega^2} \right|^2 d\omega.
 ///
 /// Args:
 ///     taps (array_like): the centred taps (odd in number).
@@ -606,9 +674,21 @@ fn cd_ls_error(
 ///
 /// (input padded with :math:`\lfloor n_{\mathrm{taps}}/2 \rfloor` zeros at both ends,
 /// diagonal centre taps initialised at 1); the taps follow
-/// :math:`h \leftarrow h + \mu e x^*` with the error :math:`e` of the current algorithm:
-/// CMA :math:`(R - |y|^2) y`, RDE :math:`(\hat{R}^2 - |y|^2) y`, NLMS
-/// :math:`(s - y)/\lVert x \rVert^2` (needs `reference`), DD-LMS :math:`\hat{s} - y`.
+///
+/// .. math::
+///
+///     h \leftarrow h + \mu e x^*
+///
+/// with the error :math:`e` of the current algorithm:
+///
+/// .. math::
+///
+///     e_{\mathrm{CMA}} = (R - |y|^2) y, \quad
+///     e_{\mathrm{RDE}} = (\hat{R}^2 - |y|^2) y, \quad
+///     e_{\mathrm{NLMS}} = \frac{s - y}{\lVert x \rVert^2}, \quad
+///     e_{\mathrm{DD}} = \hat{s} - y
+///
+/// (NLMS needs `reference`; DD is DD-LMS).
 ///
 /// Args:
 ///     x (array_like): input of shape `(modes, samples)` (a 1-D array is one mode).
@@ -689,7 +769,13 @@ fn adaptive_equalizer<'py>(
     Ok((mat(py, out.symbols)?, mat(py, out.taps)?, mat(py, out.error)?))
 }
 
-/// Multiply every sample by :math:`e^{j \cdot \mathrm{sign} \cdot \theta[n]}`.
+/// Rotate every sample by a given phase.
+///
+/// The output is
+///
+/// .. math::
+///
+///     y[n] = x[n]\, e^{j \cdot \mathrm{sign} \cdot \theta[n]}.
 ///
 /// Args:
 ///     x (array_like): the signal.
@@ -729,6 +815,13 @@ fn unwrap<'py>(py: Python<'py>, phi: &Bound<'py, PyAny>, period: f64) -> PyResul
 /// Frequency offset of an :math:`m`-fold symmetric signal by its :math:`m`-th power spectrum
 /// (OptiCommPy `fourthPowerFOE` with `refined=False`).
 ///
+/// The power :math:`m` removes the symmetry of the constellation; the offset is the
+/// frequency of the largest bin of the spectrum of :math:`x^m`, divided by :math:`m`:
+///
+/// .. math::
+///
+///     \hat{f} = \frac{1}{m} \arg\max_{f} \left| \sum_n x^m[n]\, e^{-j 2\pi f n/f_s} \right|.
+///
 /// Args:
 ///     x (array_like): signal at one sample per symbol.
 ///     fs (float): its sampling rate (Hz).
@@ -766,7 +859,14 @@ fn fourth_power_foe<'py>(
 }
 
 /// Viterbi–Viterbi phase estimates (OptiCommPy `viterbi`), to apply with
-/// `derotate(x, θ)`.
+/// `derotate(x, θ)`:
+///
+/// .. math::
+///
+///     \hat{\theta}[n] = -\mathrm{unwrap}_{2\pi/m}\left(\frac{1}{m} \arg \sum_{k \in \mathcal{W}_n} x^m[k]\right) - \frac{\pi}{m},
+///
+/// with :math:`\mathcal{W}_n` the averaging window centred on :math:`n`; the reference
+/// phase :math:`\pi/m` is that of QPSK and square QAM.
 ///
 /// Args:
 ///     x (array_like): signal at one sample per symbol.
@@ -785,9 +885,15 @@ fn viterbi_viterbi<'py>(py: Python<'py>, x: &Bound<'py, PyAny>, n: i64, m: u32) 
 }
 
 /// Frame synchronisation on known symbols: the delay and the rotation of a received
-/// stream against a reference, by the correlation :math:`c(d) = \sum_n z[n + d] x^*[n]` over
-/// the known symbols `x = reference[start:stop]`. The delay is the largest :math:`|c(d)|`;
-/// the rotation is the phase of :math:`c` there, rounded to a multiple of
+/// stream against a reference.
+///
+/// The correlation over the known symbols `x = reference[start:stop]` and the delay are
+///
+/// .. math::
+///
+///     c(d) = \sum_n z[n + d]\, x^*[n], \qquad \hat{d} = \arg\max_{|d| \le D} |c(d)|,
+///
+/// with :math:`D` = `max_delay`; the rotation is the phase of :math:`c(\hat{d})`, rounded to a multiple of
 /// :math:`2\pi/\mathrm{symmetry}` (the ambiguity a blind carrier recovery leaves) or exact.
 ///
 /// Args:
@@ -836,7 +942,14 @@ fn frame_sync(
 ///
 /// Every test phase :math:`b (\pi/2)/B` rotates the samples; the squared distances to the
 /// nearest points are summed over :math:`2n + 1` samples and the phase of the smallest sum
-/// is kept. The constellation is normalised inside, so the signal should have unit mean
+/// is kept:
+///
+/// .. math::
+///
+///     \hat{\theta}[k] = \arg\min_{\varphi_b = b (\pi/2)/B} \sum_{i=-n}^{n} \min_{s}
+///     \left| x[k+i]\, e^{j\varphi_b} - s \right|^2,
+///
+/// with :math:`s` the points of the constellation. The constellation is normalised inside, so the signal should have unit mean
 /// power. Unwrap the result with a period of :math:`\pi/2`, then apply it with
 /// `derotate(x, θ)`.
 ///
@@ -937,7 +1050,13 @@ fn array<const N: usize>(x: &Bound<'_, PyAny>) -> PyResult<[C64; N]> {
     cvec(x)?.try_into().map_err(|v: Vec<C64>| PyValueError::new_err(format!("expected {N} samples, got {}", v.len())))
 }
 
-/// Gardner timing error :math:`\operatorname{Re}\{x[1]^* (x[2] - x[0])\}` of three samples at 2 sps.
+/// Gardner timing error of three samples at 2 sps.
+///
+/// The error is
+///
+/// .. math::
+///
+///     e = \operatorname{Re}\{x[1]^* (x[2] - x[0])\}.
 ///
 /// Args:
 ///     x (array_like): three consecutive samples.
@@ -952,7 +1071,13 @@ fn gardner_ted(x: &Bound<'_, PyAny>) -> PyResult<f64> {
     Ok(clock::gardner_ted(&array::<3>(x)?))
 }
 
-/// Gardner timing error for Nyquist pulses, :math:`|x[1]|^2 (|x[0]|^2 - |x[2]|^2)`.
+/// Gardner timing error for Nyquist pulses.
+///
+/// The error is
+///
+/// .. math::
+///
+///     e = |x[1]|^2 (|x[0]|^2 - |x[2]|^2).
 ///
 /// Args:
 ///     x (array_like): three consecutive samples.
@@ -1015,6 +1140,16 @@ fn gardner_clock_recovery<'py>(
 }
 
 /// The Dolph–Chebyshev window (as `scipy.signal.windows.chebwin`).
+///
+/// The window is the inverse DFT of the samples of the Chebyshev polynomial
+/// :math:`T_{n-1}`, normalised to a maximum of 1:
+///
+/// .. math::
+///
+///     W_k = T_{n-1}\left(x_0 \cos\frac{\pi k}{n}\right), \qquad
+///     x_0 = \cosh\left(\frac{\operatorname{arccosh}(10^{A/20})}{n - 1}\right),
+///
+/// with :math:`A` = `attenuation_db`.
 ///
 /// Args:
 ///     n (int): length.

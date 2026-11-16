@@ -18,6 +18,32 @@ use pyo3::prelude::*;
 /// every linear pilot-assisted estimate has this form). `rho1 = 1`, `rho2 = 0`,
 /// `sigma_ratio = 1`: the perfect channel.
 ///
+/// The received sample of a subcarrier is
+///
+/// .. math::
+///
+///     Y = HX + N,
+///
+/// :math:`H` zero-mean circular Gaussian of variance :math:`2\sigma_1^2`, equalised with an
+/// estimate :math:`\hat{H}` of variance :math:`2\sigma_2^2` and cross-correlation
+/// :math:`\frac{1}{2}\mathbb{E}[\hat{H} H^*] = \mu_1 + j\mu_2`, with
+/// :math:`\rho_i = \mu_i/(\sigma_1\sigma_2)`. At the mean SNR per bit
+/// :math:`\bar{\gamma}_b`, the BER of BPSK (eq. 31) and of Gray QPSK (eq. 32) are
+///
+/// .. math::
+///
+///     \begin{aligned}
+///     P_b^{\mathrm{BPSK}} &= \frac{1}{2}\left[1 - \frac{\rho_1}{\sqrt{1 + 1/\bar{\gamma}_b
+///     - \rho_2^2}}\right], \\
+///     P_b^{\mathrm{QPSK}} &= \frac{1}{2}\left[1 - \frac{1}{2}\frac{(\rho_1 + \rho_2)/\sqrt{2}}
+///     {\sqrt{1 + \frac{1}{2\bar{\gamma}_b} - \frac{(\rho_1 - \rho_2)^2}{2}}} - \frac{1}{2}
+///     \frac{(\rho_1 - \rho_2)/\sqrt{2}}{\sqrt{1 + \frac{1}{2\bar{\gamma}_b}
+///     - \frac{(\rho_1 + \rho_2)^2}{2}}}\right],
+///     \end{aligned}
+///
+/// and that of Gray 16-QAM the sum of 24 terms of eq. 53 with the coefficients of their
+/// Table I.
+///
 /// Args:
 ///     modulation (str): ``"bpsk"``, ``"qpsk"`` (Gray) or ``"16qam"`` (Gray), any name of
 ///         a constellation (``"16-QAM"``, ``"QPSK"``).
@@ -52,8 +78,20 @@ fn theory_ber_imperfect_csi(
 }
 
 /// The bit error rate of DBPSK (`m = 2`) or Gray DQPSK (`m = 4`) over Jakes' Rayleigh
-/// fading of normalised Doppler `fd_ts` (Chang & Su 2002, eqs. 40, 41): an error floor
-/// of :math:`(1 - J_0(2\pi f_d T_s))/2` for DBPSK.
+/// fading of normalised Doppler `fd_ts` (Chang & Su 2002, eqs. 40, 41).
+///
+/// At the mean SNR per bit :math:`\bar{\gamma}_b`:
+///
+/// .. math::
+///
+///     \begin{aligned}
+///     P_b^{\mathrm{DBPSK}} &= \frac{1}{2}\left[1 - \frac{J_0(2\pi f_d T_s)}{1
+///     + 1/\bar{\gamma}_b}\right], \\
+///     P_b^{\mathrm{DQPSK}} &= \frac{1}{2}\left[1 - \frac{J_0(2\pi f_d T_s)}{\sqrt{(2
+///     + 1/\bar{\gamma}_b)(1 + 1/(2\bar{\gamma}_b)) - J_0^2(2\pi f_d T_s)}}\right],
+///     \end{aligned}
+///
+/// an error floor of :math:`(1 - J_0(2\pi f_d T_s))/2` for DBPSK.
 ///
 /// Args:
 ///     m (int): 2 or 4.
@@ -80,6 +118,19 @@ fn theory_ber_dpsk_jakes(m: usize, ebn0_db: &Bound<'_, PyAny>, fd_ts: f64) -> Py
 /// (P. Banelli and S. Cacopardi, *IEEE Trans. Commun.* 48(3), 2000, eq. 7): :math:`c_0` is
 /// the useful power :math:`|\alpha|^2` (Bussgang), the term :math:`n` has the input spectrum
 /// convolved :math:`2n + 1` times with itself, and the coefficients sum to the output power.
+///
+/// For an envelope nonlinearity :math:`y = f(r) e^{j\theta}` and an input of power
+/// :math:`2\sigma^2` (here 1), of autocorrelation :math:`R_{xx}` (eqs. 6–8):
+///
+/// .. math::
+///
+///     R_{yy}(\tau) = \sum_{n=0}^{\infty} c_n \frac{R_{xx}(\tau)^{n+1}
+///     R_{xx}^*(\tau)^n}{(2\sigma^2)^{2n+1}}, \qquad
+///     c_n = \frac{1}{2\sigma^2} \frac{1}{n+1} \left| \int_0^{\infty} f(r)
+///     \frac{r^2}{\sigma^2} e^{-r^2/2\sigma^2} L_n^{(1)}\!\left(\frac{r^2}{2\sigma^2}
+///     \right) dr \right|^2,
+///
+/// with the generalised Laguerre polynomials :math:`L_n^{(1)}`.
 ///
 /// Args:
 ///     f (callable): the complex output envelope :math:`A(r) \exp(j\Phi(r))` of an input

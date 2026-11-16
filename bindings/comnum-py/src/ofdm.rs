@@ -15,9 +15,17 @@ use pyo3::types::PyDict;
 /// An OFDM (or DFT-spread OFDM) modulator and demodulator.
 ///
 /// `n_subcarriers` active subcarriers centred on the carrier, out of a grid of `n_fft`;
-/// the IFFT has :math:`LN` points (4 by default, as the PAPR measurements
-/// need), and the samples have unit average power. With `dft_spread`, the data are
-/// first spread by a unitary DFT (localised SC-FDMA).
+/// the IFFT has :math:`LN` points (:math:`L` = 4 by default, as the PAPR measurements
+/// need). With :math:`X_k` the symbol of subcarrier
+/// :math:`k \in \{-K/2, \dots, K/2 - 1\}` (unit average energy), a block is
+///
+/// .. math::
+///
+///     x[n] = \frac{1}{\sqrt{K}} \sum_{k} X_{k}\, e^{j 2 \pi k n / (L N)}, \qquad
+///     n = 0, \dots, L N - 1,
+///
+/// so that the samples have unit average power, and a cyclic prefix is prepended. With
+/// `dft_spread`, the data are first spread by a unitary DFT (localised SC-FDMA).
 ///
 /// Args:
 ///     n_fft (int): grid size :math:`N`.
@@ -211,12 +219,19 @@ impl PyOfdm {
         Ok(carr(py, x))
     }
 
-    /// The raised-cosine window of whole blocks (prefix included): the first `ramp`
-    /// samples of every prefix rise as a half cosine, a cyclic postfix of `ramp` samples
-    /// falls and overlaps the ramp of the next block (the last wraps onto the first), so
-    /// the output has the length of the input and the FFT part of every block is
-    /// untouched: the raised-cosine impulse shape of windowed OFDM (Saul, VTC2004-Fall,
-    /// eq. (1)).
+    /// The raised-cosine window of whole blocks (prefix included).
+    ///
+    /// The first :math:`R` = `ramp` samples of every prefix rise as a half cosine,
+    ///
+    /// .. math::
+    ///
+    ///     w[n] = \frac{1}{2}\left(1 - \cos\frac{\pi (n + 1/2)}{R}\right), \qquad
+    ///     n = 0 \dots R - 1,
+    ///
+    /// a cyclic postfix of `ramp` samples falls as :math:`1 - w` and overlaps the ramp of
+    /// the next block (the last wraps onto the first), so the output has the length of the
+    /// input and the FFT part of every block is untouched: the raised-cosine impulse shape
+    /// of windowed OFDM (Saul, VTC2004-Fall, eq. (1)).
     ///
     /// Args:
     ///     samples (array_like): whole blocks of `block_len` samples.
@@ -469,6 +484,15 @@ impl PyPaprReduction {
 
     /// :math:`\mu`-law companding (Wang, Tjhung & Ng 1999).
     ///
+    /// The envelope :math:`r` becomes
+    ///
+    /// .. math::
+    ///
+    ///     c(r) = V \frac{\ln(1 + \mu r/V)}{\ln(1 + \mu)},
+    ///
+    /// with :math:`V` at `peak_db` above the average power, times the gain that keeps the
+    /// unit average power of a Rayleigh envelope.
+    ///
     /// Args:
     ///     mu (float): the parameter :math:`\mu`.
     ///     peak_db (float): the peak of the compander (dB above the average power).
@@ -487,6 +511,16 @@ impl PyPaprReduction {
     }
 
     /// Exponential companding (Jiang, Yang & Song 2005).
+    ///
+    /// The envelope :math:`r` becomes
+    ///
+    /// .. math::
+    ///
+    ///     c(r) = \left[\alpha (1 - e^{-r^{2}})\right]^{1/d}, \qquad
+    ///     \alpha = ((d + 2)/d)^{d/2},
+    ///
+    /// which turns the Rayleigh envelope into one of fixed distribution (uniform power
+    /// for :math:`d = 2`).
     ///
     /// Args:
     ///     degree (float): the degree of the compander.
@@ -509,7 +543,11 @@ impl PyPaprReduction {
     }
 }
 
-/// The PAPR of a block of samples, :math:`\max |x|^2 / \operatorname{mean} |x|^2`.
+/// The PAPR of a block of samples.
+///
+/// .. math::
+///
+///     \mathrm{PAPR} = \frac{\max_n |x[n]|^2}{\operatorname{mean}_n |x[n]|^2}.
 ///
 /// Args:
 ///     x (array_like): the samples.
@@ -570,20 +608,19 @@ fn ccdf<'py>(py: Python<'py>, values: &Bound<'py, PyAny>, thresholds: &Bound<'py
     Ok(farr(py, spectrum::ccdf(&fvec(values)?, &fvec(thresholds)?)))
 }
 
-/// The theoretical CCDF of the PAPR of OFDM with `n` subcarriers:
+/// The theoretical CCDF of the PAPR of OFDM with `n` subcarriers.
+///
+/// For the continuous signal (Ochiai & Imai 2001) and at the Nyquist rate (van Nee &
+/// Prasad 2000),
 ///
 /// .. math::
 ///
-///     1 - \exp\left(-n \sqrt{\pi\gamma/3} \, e^{-\gamma}\right)
+///     \begin{aligned}
+///     P(\mathrm{PAPR} > \gamma) &= 1 - \exp\left(-n \sqrt{\pi\gamma/3} \, e^{-\gamma}\right), \\
+///     P(\mathrm{PAPR} > \gamma) &= 1 - (1 - e^{-\gamma})^n;
+///     \end{aligned}
 ///
-/// for the continuous signal (Ochiai & Imai 2001), or
-///
-/// .. math::
-///
-///     1 - (1 - e^{-\gamma})^n
-///
-/// at the Nyquist rate (van Nee & Prasad 2000); with `candidates`, the CCDF after SLM
-/// (raised to that power).
+/// with `candidates`, the CCDF after SLM (raised to that power).
 ///
 /// Args:
 ///     n (int): number of subcarriers.
@@ -611,8 +648,20 @@ fn theory_papr_ccdf(n: i64, papr_db: &Bound<'_, PyAny>, oversampled: bool, candi
     })
 }
 
-/// The Bussgang decomposition :math:`y = \alpha x + d` of clipping at `ratio_db` above the
-/// average power of a complex Gaussian signal (Ochiai & Imai 2002).
+/// The Bussgang decomposition of clipping at `ratio_db` above the average power of a
+/// complex Gaussian signal.
+///
+/// An envelope limiter at the amplitude :math:`A`, :math:`\gamma = A^2` above the unit
+/// average power, gives a gain plus an uncorrelated distortion (Ochiai & Imai 2002):
+///
+/// .. math::
+///
+///     \begin{aligned}
+///     y &= \alpha x + d, \\
+///     \alpha &= 1 - e^{-\gamma} + \frac{\sqrt{\pi \gamma}}{2} \operatorname{erfc}\sqrt{\gamma},
+///     \qquad \mathbb{E}|y|^{2} = 1 - e^{-\gamma},
+///     \qquad \sigma_{d}^{2} = 1 - e^{-\gamma} - \alpha^{2}.
+///     \end{aligned}
 ///
 /// Args:
 ///     ratio_db (float): the clipping ratio (dB above the average power).
@@ -634,8 +683,15 @@ fn clipping_bussgang(py: Python<'_>, ratio_db: f64) -> PyResult<Bound<'_, PyDict
     Ok(d)
 }
 
-/// Pilot-based gain correction limited to `eps` (Cimini 1985, eq. (16)):
-/// :math:`r / (\max(|p|, \epsilon) \, e^{j \arg p})` for every sample.
+/// Pilot-based gain correction limited to `eps` (Cimini 1985, eq. (16)).
+///
+/// Every sample becomes
+///
+/// .. math::
+///
+///     \hat{d} = \frac{r}{\max(|p|, \epsilon) \, e^{j \arg p}},
+///
+/// :math:`p` the complex envelope given by the pilot.
 ///
 /// Args:
 ///     r (array_like): the received samples.
@@ -662,6 +718,16 @@ fn gain_limited_correction<'py>(
 /// The signal-to-distortion ratio (dB) of gain-limited correction against a cochannel
 /// interferer in Rayleigh fading (Cimini 1985, eq. (25); eq. (20) for an ideal pilot).
 ///
+/// With the limit :math:`\varepsilon` and the correlation
+/// :math:`\rho e^{j\phi} = \mathbb{E}[Z_d Z_p^*]` of the data and pilot envelopes,
+///
+/// .. math::
+///
+///     \mathrm{SDR}^{-1} = \frac{\mathrm{SIR} + 1}{\mathrm{SIR}}\,
+///     \frac{1 - e^{-\varepsilon^{2}}}{\varepsilon^{2}} + 1
+///     - \frac{\rho \sqrt{\pi} \cos\phi}{\varepsilon} \operatorname{erf}(\varepsilon)
+///     + \left(1 - \rho^{2} + \frac{1}{\mathrm{SIR}}\right) E_{1}(\varepsilon^{2}).
+///
 /// Args:
 ///     sir_db (float | array_like): the signal-to-interference ratio (dB).
 ///     eps_db (float): the gain limit relative to the RMS gain (dB, :math:`20 \log_{10}`).
@@ -686,7 +752,12 @@ fn theory_sdr_gain_limited(sir_db: &Bound<'_, PyAny>, eps_db: f64, rho: C64) -> 
 }
 
 /// The signal-to-distortion ratio (dB) of the optimum gain correction against a
-/// cochannel interferer in Rayleigh fading (Cimini 1985, eq. (21)).
+/// cochannel interferer in Rayleigh fading (Cimini 1985, eq. (21)):
+///
+/// .. math::
+///
+///     \mathrm{SDR}^{-1} = \frac{1}{\mathrm{SIR} - 1}\left(\frac{\mathrm{SIR}}{\mathrm{SIR} - 1}
+///     \ln \mathrm{SIR} - 1\right).
 ///
 /// Args:
 ///     sir_db (float | array_like): the signal-to-interference ratio (dB).

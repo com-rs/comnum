@@ -10,21 +10,25 @@ use super::*;
 ///
 /// A block carries :math:`K` data symbols :math:`d` (unit mean energy) on the subcarriers
 /// :math:`1, \dots, K` of a DFT of size :math:`N = 2J(K+1)`, :math:`J` the oversampling
-/// factor; the real OFDM signal :math:`x = (F d + F^* d^*)/\sqrt{2K}` has a unit variance
-/// and the samples are
+/// factor; the real OFDM signal :math:`x` and the samples :math:`s_n` are
 ///
 /// .. math::
 ///
-///     s_n = \exp(j 2\pi h x_n),
+///     \begin{aligned}
+///     x &= (F d + F^* d^*)/\sqrt{2K}, \\
+///     s_n &= \exp(j 2\pi h x_n),
+///     \end{aligned}
 ///
-/// so that the phase has the standard deviation :math:`2\pi h`, :math:`h` being the
-/// modulation index (Sec. II). An optional cyclic prefix of :math:`N_{cp}` samples is
-/// prepended. The receiver (Sec. III, Fig. 1) takes the phase of the samples, unwrapped
-/// along the stream or not, removes the prefix and projects it on the data bins:
+/// with :math:`F \in \mathbb{C}^{N \times K}`, :math:`F_{nk} = e^{j2\pi kn/N}`, so that
+/// :math:`x` has a unit variance and the phase has the standard deviation
+/// :math:`2\pi h`, :math:`h` being the modulation index (Sec. II). An optional cyclic
+/// prefix of :math:`N_{cp}` samples is prepended. The receiver (Sec. III, Fig. 1) takes
+/// the phase :math:`\psi` of the samples, unwrapped along the stream or not, removes the
+/// prefix and projects it on the data bins:
 ///
 /// .. math::
 ///
-///     \hat{d} = G \psi/(2\pi h).
+///     \hat{d} = \frac{G \psi}{2\pi h}, \qquad G = \frac{\sqrt{2K}}{N} F^{H}.
 ///
 /// **SNR convention.** :math:`E_s/N_0` is per data symbol: a block of energy
 /// :math:`N + N_{cp}` carries :math:`K` symbols, so the noise variance per sample is
@@ -153,7 +157,13 @@ impl PyCeOfdm {
         map_real(esn0_db, |e| Ok(self.inner.noise_variance(e)))
     }
 
-    /// The real OFDM signal :math:`x = (F d + F^* d^*)/\sqrt{2K}` of every block (no prefix).
+    /// The real OFDM signal of every block (no prefix):
+    ///
+    /// .. math::
+    ///
+    ///     x = (F d + F^* d^*)/\sqrt{2K},
+    ///
+    /// with :math:`F_{nk} = e^{j2\pi kn/N}` on the data subcarriers :math:`k = 1, \dots, K`.
     ///
     /// Args:
     ///     symbols (array_like): a multiple of :math:`K` data symbols.
@@ -167,7 +177,15 @@ impl PyCeOfdm {
         Ok(farr(py, self.inner.ofdm_signal(&cvec(symbols)?).py()?))
     }
 
-    /// The transmitted samples :math:`\exp(j 2\pi h x)` with the cyclic prefix of every block.
+    /// The transmitted samples of every block, with the cyclic prefix.
+    ///
+    /// The samples are
+    ///
+    /// .. math::
+    ///
+    ///     s_n = \exp(j 2\pi h x_n),
+    ///
+    /// :math:`x` the real OFDM signal (:meth:`ofdm_signal`).
     ///
     /// Args:
     ///     symbols (array_like): a multiple of :math:`K` data symbols.
@@ -183,12 +201,24 @@ impl PyCeOfdm {
 
     /// The symbol estimates of every block.
     ///
+    /// The arctangent receiver (Thompson et al. 2008) projects the phase :math:`\psi` of
+    /// the block, prefix removed, on the data bins:
+    ///
+    /// .. math::
+    ///
+    ///     \hat{d} = \frac{G \psi}{2\pi h}, \qquad G = \frac{\sqrt{2K}}{N} F^{H};
+    ///
+    /// the low-complexity receivers of Ahmed and Zeidler (2015) take
+    /// :math:`\operatorname{Im} r` (linear) or
+    /// :math:`\operatorname{Im} r\,(2 - \operatorname{Re} r)` (enhanced) instead of the
+    /// phase, divided by their Bussgang gain.
+    ///
     /// Args:
     ///     samples (array_like): a multiple of :math:`N + N_{cp}` received samples.
     ///     unwrap (str): for the arctangent receiver, `"none"` (the principal phase, wraps
     ///         are errors) or `"stream"` (the phase unwrapped along the stream, the phase
     ///         unwrapper of the paper).
-    ///     receiver (str): `"arctangent"` (:math:`\hat{d} = G \psi/(2\pi h)`, Thompson et al.
+    ///     receiver (str): `"arctangent"` (the phase, Thompson et al.
     ///         2008), `"linear"` (:math:`\operatorname{Im} r`) or `"enhanced"`
     ///         (:math:`\operatorname{Im} r\,(2 - \operatorname{Re} r)`), the low-complexity
     ///         receivers of Ahmed and Zeidler (2015), divided by their Bussgang gain.
@@ -261,8 +291,11 @@ impl PyCeOfdm {
         Ok(farr(py, self.inner.received_phase(&cvec(samples)?, u)))
     }
 
-    /// The SNR of every data subcarrier in the linear regime (linear scale),
-    /// :math:`(2\pi h)^2 (E_s/N_0) N/(N + N_{cp})`.
+    /// The SNR of every data subcarrier in the linear regime (linear scale):
+    ///
+    /// .. math::
+    ///
+    ///     \mathrm{SNR} = (2\pi h)^2 \frac{E_s}{N_0} \frac{N}{N + N_{cp}}.
     ///
     /// Args:
     ///     esn0_db (float | array_like): :math:`E_s/N_0` (dB) per data symbol.
@@ -392,10 +425,17 @@ impl PyCeOfdm {
     }
 }
 
-/// The powers :math:`e^{-\phi^2} \phi^{2i}/i!` of the intermodulation products of a phase
-/// modulator driven by a Gaussian signal of standard deviation :math:`\phi = 2\pi h`
-/// (Guerreiro et al. 2015, eqs. (12)–(14); Pacheco and Hatzinakos 2006, eq. (2)): the
-/// carrier line, the useful term, then the products of order :math:`i`.
+/// The powers of the intermodulation products of a phase modulator driven by a Gaussian
+/// signal.
+///
+/// For a Gaussian signal of standard deviation :math:`\phi = 2\pi h` (Guerreiro et al.
+/// 2015, eqs. (12)–(14); Pacheco and Hatzinakos 2006, eq. (2)):
+///
+/// .. math::
+///
+///     P_i = e^{-\phi^2} \frac{\phi^{2i}}{i!},
+///
+/// the carrier line, the useful term, then the products of order :math:`i`.
 ///
 /// Args:
 ///     two_pi_h (float): :math:`2\pi h`.

@@ -7,6 +7,19 @@ use super::*;
 /// chips, a noncoherent DFT receiver. LoRa is a trademark of Semtech; this models the published
 /// descriptions for research.
 ///
+/// The symbol :math:`a \in \{0, \dots, M - 1\}` is a chirp over the bandwidth :math:`B`
+/// whose initial frequency is shifted by :math:`aB/M` and folded at :math:`B/2`; its
+/// complex envelope over :math:`0 \le t < T_s = M/B` is (Chiani and Elzanaty 2019,
+/// eq. (5))
+///
+/// .. math::
+///
+///     x(t; a) = \exp\left\{j 2\pi B t \left(\frac{a}{M} - \frac{1}{2} + \frac{Bt}{2M} -
+///     u\left(t - \frac{M - a}{B}\right)\right)\right\},
+///
+/// sampled `oversampling` times per chip. The receiver multiplies every symbol by the
+/// conjugate of the chirp of symbol 0, takes a DFT and decides the bin of largest energy.
+///
 /// Args:
 ///     sf (int): spreading factor.
 ///     oversampling (int): samples per chip.
@@ -140,8 +153,18 @@ impl PyCss {
     }
 }
 
-/// The SER of the noncoherent CSS receiver over AWGN at the SNR per sample (dB), exact
-/// (Afisiadis et al. 2020, eq. (16)); `approximation="rice"` or `"gumbel"` gives their
+/// The SER of the noncoherent CSS receiver over AWGN at the SNR per sample (dB).
+///
+/// The exact SER, that of :math:`M` orthogonal signals detected noncoherently, is
+/// (Afisiadis et al. 2020, eq. (16))
+///
+/// .. math::
+///
+///     P_s = \int_{0}^{\infty} f_{\mathrm{Ri}}(y; v, 1)\,\left[1 - \left(1 -
+///     e^{-y^{2}/2}\right)^{M-1}\right] dy,
+///
+/// with :math:`f_{\mathrm{Ri}}` the Rice density of location :math:`v = \sqrt{2M\rho}`,
+/// :math:`\rho` the SNR per sample; `approximation="rice"` or `"gumbel"` gives their
 /// eqs. (17) and (18).
 ///
 /// Args:
@@ -173,7 +196,15 @@ fn theory_css_ser(sf: u32, snr_db: &Bound<'_, PyAny>, approximation: Option<&str
     map_real(snr_db, |s| f(sf, s).py())
 }
 
-/// The BER of the noncoherent CSS receiver over AWGN, :math:`\mathrm{SER} \cdot M/(2(M - 1))`.
+/// The BER of the noncoherent CSS receiver over AWGN.
+///
+/// Every wrong symbol being equally likely,
+///
+/// .. math::
+///
+///     P_b = P_s \frac{M}{2(M - 1)},
+///
+/// with :math:`P_s` the SER of :func:`theory_css_ser`.
 ///
 /// Args:
 ///     sf (int): spreading factor.
@@ -189,8 +220,18 @@ fn theory_css_ber(sf: u32, snr_db: &Bound<'_, PyAny>) -> PyResult<Py<PyAny>> {
     map_real(snr_db, |s| css_theory::ber(sf, s).py())
 }
 
-/// The cross-correlation of two continuous-time LoRa waveforms (Chiani and Elzanaty 2019,
-/// eq. (7)).
+/// The cross-correlation of two continuous-time LoRa waveforms.
+///
+/// The correlation of the waveforms of the symbols :math:`\ell` and :math:`m` (Chiani
+/// and Elzanaty 2019, eq. (7)) is
+///
+/// .. math::
+///
+///     C_{\ell, m} = \frac{1}{T_{s}}\int_{0}^{T_{s}} x(t; \ell)\, x^{*}(t; m)\, dt
+///     = M \frac{e^{j2\pi\ell(m - \ell)/M} - e^{j2\pi m(m - \ell)/M}}
+///     {j2\pi(M - |m - \ell|)\,|m - \ell|}
+///
+/// for :math:`\ell \ne m`, and :math:`1` for :math:`\ell = m`.
 ///
 /// Args:
 ///     sf (int): spreading factor.
@@ -229,7 +270,17 @@ fn css_max_cross_correlation(sf: u32) -> PyResult<f64> {
 }
 
 /// The continuous part of the power spectrum of LoRa, :math:`G^c(f) B`, at :math:`f` in units
-/// of :math:`B` (Chiani and Elzanaty 2019, eqs. (20)–(25)).
+/// of :math:`B`.
+///
+/// With :math:`X(f; \ell)` the Fourier transform of the waveform of symbol :math:`\ell`
+/// (Chiani and Elzanaty 2019, eqs. (20)–(25)),
+///
+/// .. math::
+///
+///     G^{c}(f) B = \frac{1}{T_{s} M} \left(\sum_{\ell} |X(f; \ell)|^{2}
+///     - \frac{1}{M} \Big|\sum_{\ell} X(f; \ell)\Big|^{2}\right),
+///
+/// for independent uniform symbols; its integral is :math:`1 - 1/M`.
 ///
 /// Args:
 ///     sf (int): spreading factor.
@@ -245,8 +296,16 @@ fn css_continuous_spectrum<'py>(py: Python<'py>, sf: u32, f: &Bound<'py, PyAny>)
     Ok(farr(py, css_theory::continuous_spectrum(sf, &fvec(f)?).py()?))
 }
 
-/// The lines of the spectrum of LoRa at :math:`n B/M`, :math:`|n| \le n_{\max}` (Chiani and
-/// Elzanaty 2019, eq. (21)); they hold :math:`1/M` of the power.
+/// The lines of the spectrum of LoRa at :math:`n B/M`, :math:`|n| \le n_{\max}`.
+///
+/// The line :math:`n` has the power (Chiani and Elzanaty 2019, eq. (21))
+///
+/// .. math::
+///
+///     P_n = \frac{1}{T_{s}^{2} M^{2}} \Big|\sum_{\ell} X(nB/M; \ell)\Big|^{2},
+///
+/// :math:`X(f; \ell)` the Fourier transform of the waveform of symbol :math:`\ell`; the
+/// lines hold :math:`1/M` of the power.
 ///
 /// Args:
 ///     sf (int): spreading factor.

@@ -10,7 +10,17 @@ use pyo3::prelude::*;
 ///
 /// `n_fft` subcarriers carry real symbols every half symbol on pulses of unit
 /// energy, orthogonal in the real sense; `oqam_stagger` splits complex symbols into
-/// them. The modulator and the demodulator are polyphase (one FFT per half symbol).
+/// them. With the real symbols :math:`a_{m,n}` and the prototype :math:`h` of
+/// :math:`L = KM - 1` taps (Bouhadda et al. 2014, eqs. (3)–(4); Nissel & Rupp 2017,
+/// eq. (2)),
+///
+/// .. math::
+///
+///     s[k] = \sum_{n} \sum_{m=0}^{M-1} a_{m,n}\, g_{m,n}[k], \qquad
+///     g_{m,n}[k] = h[k - nM/2]\, e^{j 2\pi m (k - nM/2 - D/2)/M}\, e^{j \frac{\pi}{2}(m + n)},
+///
+/// with :math:`D = L - 1`. The modulator and the demodulator are polyphase (one FFT per
+/// half symbol).
 ///
 /// Args:
 ///     n_fft (int): the number of subcarriers `M`, even.
@@ -154,6 +164,18 @@ fn oqam_destagger<'py>(py: Python<'py>, a: &Bound<'py, PyAny>, m: usize) -> PyRe
 /// Universal filtered multicarrier (Schaich & Wild 2014): OFDM filtered per sub-band by
 /// Dolph–Chebyshev filters, no cyclic prefix, `n_fft + filter_len - 1` samples per
 /// symbol.
+///
+/// A symbol is the sum of the :math:`B` filtered sub-bands (Schaich & Wild 2014, Sec. 3):
+///
+/// .. math::
+///
+///     \mathbf{x} = \sum_{i=1}^{B} \mathbf{F}_{i} \mathbf{V}_{i} \mathbf{s}_{i},
+///
+/// with :math:`\mathbf{V}_{i}` the columns of the IDFT of size :math:`N` of the sub-band,
+/// scaled by :math:`1/\sqrt{K}` for unit-energy symbols (:math:`K = BQ`), and
+/// :math:`\mathbf{F}_{i}` the Toeplitz matrix of the filter
+/// :math:`f_{i}[l] = w[l]\, e^{j 2\pi c_{i} l / N}`, :math:`w` a Dolph–Chebyshev window of
+/// unit energy and :math:`c_{i}` the centre of the sub-band.
 ///
 /// Args:
 ///     n_fft (int): grid size `N`.

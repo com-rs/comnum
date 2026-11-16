@@ -22,6 +22,33 @@ fn steps<'py>(py: Python<'py>, se: &[mp::StateEvolutionStep]) -> PyResult<Bound<
 /// iteration, and the decoupled channel of the last one (Jeon et al. 2018; Ma & Ping
 /// 2017).
 ///
+/// Both solve :math:`\mathbf{y} = \mathbf{H}\mathbf{x} + \mathbf{w}` (:math:`M` rows,
+/// :math:`N` columns, :math:`\beta = N/M`) with the posterior mean :math:`F(r, \tau)` and
+/// variance :math:`G(r, \tau)` of a symbol seen in Gaussian noise of variance :math:`\tau`.
+/// LAMA (Jeon et al., Algorithm 2), with the columns of :math:`\mathbf{H}` normalised to a
+/// unit norm, iterates
+///
+/// .. math::
+///
+///     \mathbf{z} = \hat{\mathbf{s}} + \mathbf{H}^{\mathsf{H}} \mathbf{r}, \quad
+///     \hat{\mathbf{s}}' = F(\mathbf{z}, \gamma), \quad
+///     \gamma' = \sigma^{2} + \beta \langle G(\mathbf{z}, \gamma) \rangle, \quad
+///     \mathbf{r}' = \mathbf{y} - \mathbf{H} \hat{\mathbf{s}}'
+///     + \frac{\beta \langle G(\mathbf{z}, \gamma) \rangle}{\gamma}\, \mathbf{r},
+///
+/// and OAMP (Ma & Ping, eqs. 19, 14 and 38)
+///
+/// .. math::
+///
+///     \mathbf{r} = \mathbf{s} + \mathbf{W} (\mathbf{y} - \mathbf{H} \mathbf{s}), \quad
+///     \mathbf{W} = \frac{N}{\operatorname{tr}(\hat{\mathbf{W}} \mathbf{H})} \hat{\mathbf{W}},
+///     \quad
+///     \mathbf{s}' = C \left(F(\mathbf{r}, \tau^{2}) - \frac{\overline{G}}{\tau^{2}}
+///     \mathbf{r}\right), \quad C = \frac{\tau^{2}}{\tau^{2} - \overline{G}},
+///
+/// with :math:`\hat{\mathbf{W}}` the matched filter, the pseudo-inverse or the LMMSE
+/// filter.
+///
 /// Args:
 ///     h (array_like): the channel `(n_rx, n_tx)`.
 ///     y (array_like): the received vector `(n_rx,)`.
@@ -102,6 +129,14 @@ pub(super) fn message_passing<'py>(
 /// The state evolution of LAMA (Jeon et al. 2018, Corollary 2): the variance of the
 /// decoupled channel and the predicted MSE of every iteration, in the large-system limit
 /// with columns of unit norm.
+///
+/// .. math::
+///
+///     \sigma^{2}_{t+1} = \sigma^{2} + \beta \Psi(\sigma^{2}_{t}, \sigma^{2}_{t}), \qquad
+///     \Psi(\sigma^{2}, \gamma^{2}) = \mathbb{E}\left|F(S + \sigma Z, \gamma^{2}) - S\right|^{2},
+///
+/// with :math:`F` the posterior mean of the symbol :math:`S` in Gaussian noise and
+/// :math:`Z` of unit variance.
 ///
 /// Args:
 ///     constellation (Constellation): the alphabet of every stream.

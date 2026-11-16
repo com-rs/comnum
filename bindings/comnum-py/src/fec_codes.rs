@@ -59,10 +59,15 @@ fn symbols_out(py: Python<'_>, v: Vec<u16>) -> IArr<'_> {
 /// (Berlekamp–Massey, Chien search, Forney 1965) and shortening (Lin & Costello 2004,
 /// ch. 7).
 ///
-/// The generator polynomial has the roots :math:`\beta^b, \dots, \beta^{b+2t-1}` with
-/// :math:`\beta = \alpha^c` for the primitive element :math:`\alpha` of the field of the
-/// primitive polynomial ``poly``: ``first_root`` is :math:`b` (1 in the textbooks, 0 in
-/// DVB, 112 in CCSDS) and ``root_step`` is :math:`c` (11 in CCSDS). The code of length
+/// The generator polynomial has the roots :math:`\beta^b, \dots, \beta^{b+2t-1}`,
+///
+/// .. math::
+///
+///     g(x) = \prod_{i=0}^{2t-1} \left(x - \beta^{b+i}\right), \qquad \beta = \alpha^c,
+///
+/// for the primitive element :math:`\alpha` of the field of the primitive polynomial
+/// ``poly``: ``first_root`` is :math:`b` (1 in the textbooks, 0 in DVB, 112 in CCSDS)
+/// and ``root_step`` is :math:`c` (11 in CCSDS). The code of length
 /// :math:`2^m - 1` symbols is shortened to ``n_symbols``; a word carries
 /// :math:`k_\mathrm{symbols} = n_\mathrm{symbols} - 2t` information symbols.
 ///
@@ -370,7 +375,13 @@ fn unpack_symbols<'py>(py: Python<'py>, symbols: &Bound<'py, PyAny>, m: u32) -> 
 /// The word error rate of a bounded-distance decoder of a :math:`t`-error-correcting code
 /// of :math:`n` symbols over a memoryless channel of symbol error probability :math:`p_s`
 /// (Proakis & Salehi, *Digital Communications*, 5th ed., Sec. 7.5.2): the probability
-/// of more than :math:`t` wrong symbols.
+/// of more than :math:`t` wrong symbols,
+///
+/// .. math::
+///
+///     P_w = \sum_{i=t+1}^{n} \binom{n}{i} p_s^i (1 - p_s)^{n-i}
+///
+/// (0 for :math:`t \ge n`).
 ///
 /// Args:
 ///     n (int): word length (symbols).
@@ -395,7 +406,14 @@ fn theory_rs_wer(n: usize, t: usize, p_s: &Bound<'_, PyAny>) -> PyResult<Py<PyAn
 
 /// The symbol error rate after decoding, approximating that a word of :math:`i > t`
 /// errors keeps its :math:`i` wrong symbols (Proakis & Salehi, Sec. 7.5.2; Sklar,
-/// *Digital Communications*, 2nd ed., Sec. 8.1.2).
+/// *Digital Communications*, 2nd ed., Sec. 8.1.2):
+///
+/// .. math::
+///
+///     P_s^{\mathrm{out}} \approx \frac{1}{n} \sum_{i=t+1}^{n} i \binom{n}{i} p_s^i
+///     (1 - p_s)^{n-i}
+///
+/// (0 for :math:`t \ge n`).
 ///
 /// Args:
 ///     n (int): word length (symbols).
@@ -417,8 +435,15 @@ fn theory_rs_ser(n: usize, t: usize, p_s: &Bound<'_, PyAny>) -> PyResult<Py<PyAn
     map_real(p_s, |p| rs::symbol_error_probability(n, t, p).py())
 }
 
-/// The bit error rate after decoding of a code over :math:`\mathrm{GF}(2^m)`: a wrong symbol
-/// carries on average :math:`2^{m-1} / (2^m - 1)` wrong bits per bit (Sklar, Sec. 8.1.2).
+/// The bit error rate after decoding of a code over :math:`\mathrm{GF}(2^m)` (Sklar,
+/// Sec. 8.1.2).
+///
+/// A wrong symbol carries on average :math:`2^{m-1} / (2^m - 1)` wrong bits per bit, so
+/// that, with the symbol error rate :math:`P_s^{\mathrm{out}}` of :func:`theory_rs_ser`,
+///
+/// .. math::
+///
+///     P_b \approx \frac{2^{m-1}}{2^m - 1}\, P_s^{\mathrm{out}}.
 ///
 /// Args:
 ///     n (int): word length (symbols).

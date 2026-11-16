@@ -10,7 +10,11 @@ use pyo3::types::{PyDict, PyList};
 
 /// The complex envelope of the frequency modulation of the message `m` (sampled at
 /// `fs`) with the peak deviation `deviation_hz` for :math:`|m| = 1`: the phase sums
-/// :math:`2\pi \Delta f\, m[n] / f_s`.
+/// the increments :math:`2\pi \Delta f\, m[n] / f_s`,
+///
+/// .. math::
+///
+///     x[n] = \exp\left(j \sum_{k=0}^{n} \frac{2\pi \Delta f\, m[k]}{f_s}\right).
 ///
 /// Args:
 ///     m (array_like): the real message.
@@ -28,9 +32,15 @@ fn fm_modulate<'py>(py: Python<'py>, m: &Bound<'py, PyAny>, fs: f64, deviation_h
     Ok(carr(py, fm::fm_modulate(&fvec(m)?, fs, deviation_hz)))
 }
 
-/// The instantaneous frequency (Hz) of `x` by the polar discriminator,
-/// :math:`f_s/(2\pi) \arg(x[n]\, x^*[n-1])` (0 for the first sample): exact within
-/// :math:`\pm f_s/2`, insensitive to the amplitude.
+/// The instantaneous frequency (Hz) of `x` by the polar discriminator.
+///
+/// The frequency of sample :math:`n` is
+///
+/// .. math::
+///
+///     f[n] = \frac{f_s}{2\pi} \arg\left(x[n]\, x^*[n-1]\right)
+///
+/// (0 for the first sample): exact within :math:`\pm f_s/2`, insensitive to the amplitude.
 ///
 /// Args:
 ///     x (array_like): complex samples at baseband.
@@ -52,7 +62,9 @@ fn fm_discriminator<'py>(py: Python<'py>, x: &Bound<'py, PyAny>, fs: f64) -> PyR
     Ok(farr(py, fm::fm_discriminator(&cvec(x)?, fs)))
 }
 
-/// The de-emphasis :math:`1/(1 + j2\pi f\tau)` of the message `x` by the matched pole
+/// The de-emphasis of the message `x` by a matched pole.
+///
+/// The response :math:`1/(1 + j2\pi f\tau)` is that of the matched pole
 ///
 /// .. math::
 ///
@@ -76,8 +88,12 @@ fn fm_deemphasis<'py>(py: Python<'py>, x: &Bound<'py, PyAny>, fs: f64, tau_s: f6
     Ok(farr(py, Emphasis { tau_s }.deemphasize(&fvec(x)?, fs).py()?))
 }
 
-/// The pre-emphasis of the message `x`, the exact inverse of :func:`fm_deemphasis`
-/// (the FIR :math:`(x[n] - a\, x[n-1]) / (1 - a)`).
+/// The pre-emphasis of the message `x`, the exact inverse of :func:`fm_deemphasis`,
+/// the FIR
+///
+/// .. math::
+///
+///     y[n] = \frac{x[n] - a\, x[n-1]}{1 - a}, \qquad a = \exp(-1/(\tau f_s)).
 ///
 /// Args:
 ///     x (array_like): the real message.
@@ -100,7 +116,7 @@ fn fm_preemphasis<'py>(py: Python<'py>, x: &Bound<'py, PyAny>, fs: f64, tau_s: f
 ///
 /// .. math::
 ///
-///     \Delta_a [M + S \sin 2\theta] + \Delta_p \sin\theta + \Delta_r\, r(t) \sin 3\theta,
+///     m(t) = \Delta_a [M + S \sin 2\theta] + \Delta_p \sin\theta + \Delta_r\, r(t) \sin 3\theta,
 ///     \qquad \theta = 2\pi \cdot 19\,\mathrm{kHz} \cdot t,
 ///
 /// :math:`M = (A + B)/2`, :math:`S = (A - B)/2` after pre-emphasis, :math:`r` the biphase
@@ -143,9 +159,18 @@ fn fm_multiplex<'py>(
     Ok(farr(py, m))
 }
 
-/// The left and right channels of a multiplex (ITU-R BS.450-4 Sec. 2.2): the pilot
-/// found by mixing it down (10 ms average), :math:`S = \mathrm{LP}\{2 m \sin 2\theta\}` and
-/// :math:`M = \mathrm{LP}\{m\}` at 15 kHz, :math:`A = M + S`, :math:`B = M - S`,
+/// The left and right channels of a multiplex (ITU-R BS.450-4 Sec. 2.2).
+///
+/// The pilot is found by mixing it down (10 ms average); with its phase :math:`\theta` and
+/// low-pass filters at 15 kHz,
+///
+/// .. math::
+///
+///     \begin{aligned}
+///     M &= \mathrm{LP}\{m\}, & S &= \mathrm{LP}\{2 m \sin 2\theta\}, \\
+///     A &= M + S, & B &= M - S,
+///     \end{aligned}
+///
 /// de-emphasised and resampled to `fs_audio`; mono (:math:`A = B = M`) when the pilot
 /// deviates by less than 2 kHz.
 ///
@@ -199,7 +224,11 @@ fn rds_group_bits<'py>(py: Python<'py>, blocks: [u16; 4], version_b: bool) -> BA
     rds::group_bits(blocks, version_b).into_pyarray(py)
 }
 
-/// The differential encoding :math:`d[k] = d[k-1] \oplus b[k]` of RDS (NRSC-4 Table 1).
+/// The differential encoding of RDS (NRSC-4 Table 1):
+///
+/// .. math::
+///
+///     d[k] = d[k-1] \oplus b[k].
 ///
 /// Args:
 ///     bits (array_like): the source bits.

@@ -5,6 +5,22 @@ use super::*;
 
 /// The unbiased estimates of a linear detector and their noise variances.
 ///
+/// On the link :math:`\mathbf{y} = \mathbf{H}\mathbf{x} + \mathbf{w}`, the estimates are
+/// :math:`\hat x_{k} = x_{k} + n_{k}`, with the filters
+///
+/// .. math::
+///
+///     \mathbf{W}_{\mathrm{zf}, \mathrm{mmse}}
+///     = (\mathbf{H}^{\mathsf{H}} \mathbf{H} + \lambda \mathbf{I})^{-1} \mathbf{H}^{\mathsf{H}},
+///     \qquad
+///     \mathbf{W}_{\mathrm{mr}} = \mathbf{D}^{-1} \mathbf{H}^{\mathsf{H}},
+///
+/// :math:`\lambda = 0` for ZF and :math:`\sigma^2/E_s` for MMSE (the MMSE estimate then
+/// divided by its bias :math:`1 - E_{kk}/E_s`,
+/// :math:`\mathbf{E} = \sigma^2 (\mathbf{H}^{\mathsf{H}} \mathbf{H} + \lambda \mathbf{I})^{-1}`),
+/// :math:`\mathbf{D} = \operatorname{diag}(\lVert \mathbf{h}_k \rVert^2)`, and
+/// :math:`\sigma^2 = \mathbb{E}|w_i|^2`.
+///
 /// Args:
 ///     h (array_like): the channel, `(n_rx, n_tx)` for every vector or `(n, n_rx, n_tx)`.
 ///     y (array_like): the received streams, `(n_rx, n)` (or one vector `(n_rx,)`).
@@ -72,17 +88,28 @@ fn channel_estimator(name: &str, r_h: Option<Array2<C64>>, trace: Option<f64>) -
     })
 }
 
-/// A training matrix :math:`\mathbf{P}` (:math:`t \times N`) for the estimation of a flat
-/// MIMO channel from :math:`\mathbf{S} = \mathbf{H}\mathbf{P} + \mathbf{V}` (Biguesh &
-/// Gershman 2006).
+/// A training matrix for the estimation of a flat MIMO channel (Biguesh & Gershman 2006).
 ///
-/// The estimators are linear, :math:`\hat{\mathbf{H}} = \mathbf{S}\mathbf{A}`: ``"ls"`` (no
-/// prior), ``"sls"`` (scaled LS, the trace of
+/// The :math:`r \times t` channel :math:`\mathbf{H}` is probed by the :math:`N \ge t`
+/// columns of the :math:`t \times N` training :math:`\mathbf{P}`, and every estimator is
+/// linear (eqs. (2), (4), (25)):
+///
+/// .. math::
+///
+///     \mathbf{S} = \mathbf{H}\mathbf{P} + \mathbf{V}, \qquad
+///     \hat{\mathbf{H}} = \mathbf{S}\mathbf{A},
+///
+/// with :math:`\mathbf{V}` white of variance :math:`\sigma_n^2` per entry and the
+/// :math:`N \times t` matrix :math:`\mathbf{A}`: ``"ls"`` (no prior,
+/// :math:`\mathbf{A} = \mathbf{P}^{\mathsf{H}} (\mathbf{P}\mathbf{P}^{\mathsf{H}})^{-1}`),
+/// ``"sls"`` (scaled LS, the trace of
 /// :math:`\mathbf{R}_H = \mathbb{E}[\mathbf{H}^{\mathsf{H}}\mathbf{H}]` and the noise), ``"mmse"``
-/// (the LMMSE of :math:`\mathbf{R}_H`), ``"rmmse"`` (the LMMSE of :math:`\mathbf{R}_H`
-/// replaced by :math:`\operatorname{tr}(\mathbf{R}_H)/t \, \mathbf{I}`), and ``"ls-sls"`` and
-/// ``"ls-rmmse"``, whose trace is estimated from the LS estimate. ``mse`` is the
-/// closed-form mean square error
+/// (the LMMSE of :math:`\mathbf{R}_H`,
+/// :math:`\mathbf{A} = (\mathbf{P}^{\mathsf{H}} \mathbf{R}_H \mathbf{P} + \sigma_n^2 r
+/// \mathbf{I})^{-1} \mathbf{P}^{\mathsf{H}} \mathbf{R}_H`), ``"rmmse"`` (the LMMSE of
+/// :math:`\mathbf{R}_H` replaced by :math:`\operatorname{tr}(\mathbf{R}_H)/t \, \mathbf{I}`),
+/// and ``"ls-sls"`` and ``"ls-rmmse"``, whose trace is estimated from the LS estimate.
+/// ``mse`` is the closed-form mean square error
 /// :math:`\mathbb{E}\lVert \mathbf{H} - \hat{\mathbf{H}} \rVert_F^2`.
 ///
 /// Args:
@@ -112,9 +139,11 @@ impl PyMimoTraining {
         Ok(PyMimoTraining { inner: Training::new(matrix_in(p, "the training")?).py()? })
     }
 
-    /// The DFT training of orthogonal rows,
-    /// :math:`\mathbf{P}\mathbf{P}^{\mathsf{H}} = (\lVert \mathbf{P} \rVert_F^2 / t) \mathbf{I}`
-    /// (eq. (10)).
+    /// The DFT training of orthogonal rows (eq. (10)), of entries of equal magnitude:
+    ///
+    /// .. math::
+    ///
+    ///     \mathbf{P}\mathbf{P}^{\mathsf{H}} = \frac{\lVert \mathbf{P} \rVert_F^2}{t} \mathbf{I}.
     ///
     /// Args:
     ///     n_tx (int): the transmit antennas :math:`t`.
@@ -175,8 +204,13 @@ impl PyMimoTraining {
         self.inner.total_power()
     }
 
-    /// The estimate :math:`\hat{\mathbf{H}} = \mathbf{S}\mathbf{A}` of the channel from the
-    /// received training.
+    /// The estimate of the channel from the received training:
+    ///
+    /// .. math::
+    ///
+    ///     \hat{\mathbf{H}} = \mathbf{S}\mathbf{A},
+    ///
+    /// with the :math:`N \times t` matrix :math:`\mathbf{A}` of the estimator (see the class).
     ///
     /// Args:
     ///     s (array_like): the ``(r, N)`` received training.
@@ -209,9 +243,18 @@ impl PyMimoTraining {
         Ok(self.inner.estimate(&matrix_in(s, "s")?.view(), &e, noise_var).py()?.into_pyarray(py))
     }
 
-    /// The closed-form MSE :math:`\mathbb{E}\lVert \mathbf{H} - \hat{\mathbf{H}} \rVert_F^2` of
-    /// ``estimator`` on a channel of correlation ``r_h`` (eqs. (7), (13), (28), (46) of
-    /// Biguesh & Gershman).
+    /// The closed-form MSE of ``estimator`` on a channel of correlation ``r_h`` (eqs. (7),
+    /// (13), (28), (46) of Biguesh & Gershman).
+    ///
+    /// With :math:`\mathbf{B} = \mathbf{I} - \mathbf{P}\mathbf{A}`,
+    ///
+    /// .. math::
+    ///
+    ///     J = \mathbb{E}\lVert \mathbf{H} - \hat{\mathbf{H}} \rVert_F^2
+    ///     = \operatorname{tr}(\mathbf{B}^{\mathsf{H}} \mathbf{R}_H \mathbf{B})
+    ///     + \sigma_n^2 r \operatorname{tr}(\mathbf{A}^{\mathsf{H}} \mathbf{A}),
+    ///
+    /// also when the prior of the estimator is not the true :math:`\mathbf{R}_H`.
     ///
     /// Args:
     ///     estimator (str): ``"ls"``, ``"sls"``, ``"mmse"`` or ``"rmmse"`` (``"ls-sls"`` and
@@ -258,8 +301,14 @@ fn trainings(list: &[PyRef<'_, PyMimoTraining>]) -> Vec<Training> {
 }
 
 /// The weights of the best linear unbiased combination of the LS estimates of several
-/// training periods (Biguesh & Gershman, Lemma 4); :math:`P_k / P_{\mathrm{tot}}` for orthogonal
-/// trainings.
+/// training periods (Biguesh & Gershman, Lemma 4, eq. (54)):
+///
+/// .. math::
+///
+///     \alpha_{k} = \frac{1 / \kappa_{k}}{\sum_{l} 1 / \kappa_{l}}, \qquad
+///     \kappa_{k} = \operatorname{tr}\big((\mathbf{P}_{k} \mathbf{P}_{k}^{\mathsf{H}})^{-1}\big),
+///
+/// :math:`P_k / P_{\mathrm{tot}}` for orthogonal trainings.
 ///
 /// Args:
 ///     trainings (list[MimoTraining]): the training of every period.
@@ -275,7 +324,11 @@ pub(super) fn blue_weights<'py>(py: Python<'py>, trainings: Vec<PyRef<'py, PyMim
     Ok(farr(py, est::blue_weights(&self::trainings(&trainings)).py()?))
 }
 
-/// The combination :math:`\sum_k w_k \mathbf{H}_k` of channel estimates (eq. (52)).
+/// The combination of channel estimates (eq. (52)):
+///
+/// .. math::
+///
+///     \hat{\mathbf{H}} = \sum_k w_k \hat{\mathbf{H}}_k.
 ///
 /// Args:
 ///     estimates (list[array_like]): the ``(r, t)`` estimates.
@@ -302,8 +355,10 @@ pub(super) fn blue_combine<'py>(
 ///
 /// .. math::
 ///
-///     \frac{\sigma^2 r}
-///     {\sum_k 1 / \operatorname{tr}\big((\mathbf{P}_k \mathbf{P}_k^{\mathsf{H}})^{-1}\big)}
+///     J = \frac{\sigma^2 r}
+///     {\sum_k 1 / \operatorname{tr}\big((\mathbf{P}_k \mathbf{P}_k^{\mathsf{H}})^{-1}\big)},
+///
+/// :math:`\sigma^2` the noise variance per entry and :math:`r` the receive antennas.
 ///
 /// Args:
 ///     trainings (list[MimoTraining]): the training of every period.

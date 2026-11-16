@@ -205,9 +205,11 @@ fn matrix<T: numpy::Element + Clone>(py: Python<'_>, rows: Vec<Vec<T>>) -> PyRes
 ///
 /// .. math::
 ///
-///     y = S A b + w.
+///     y = S A b + w,
 ///
-/// The receivers are the bank of matched filters (`demodulate`), the multiuser
+/// with :math:`S` the :math:`(N, K)` matrix of the unit-norm signatures, :math:`A` the
+/// diagonal matrix of the received amplitudes, :math:`b` the symbols of the users and
+/// :math:`w` the noise. The receivers are the bank of matched filters (`demodulate`), the multiuser
 /// detectors of `mimo_detect` on the signature matrix (`detect`) and the rake
 /// receiver over a multipath channel (`rake`).
 ///
@@ -287,9 +289,15 @@ impl PyDsss {
         Ok(carr(py, self.inner.modulate(&rows(symbols)?).py()?))
     }
 
-    /// The bank of matched filters: the estimates :math:`s_k^H y / A_k` of the symbols of
-    /// every user (despreading; with several users, the interference of the others
-    /// remains).
+    /// The bank of matched filters: the despread symbols of every user.
+    ///
+    /// The estimate of the symbol of user :math:`k` is
+    ///
+    /// .. math::
+    ///
+    ///     \hat{b}_k = s_k^H y / A_k;
+    ///
+    /// with several users, the interference of the others remains.
     ///
     /// Args:
     ///     chips (array_like): a multiple of :math:`N` chips.
@@ -415,12 +423,21 @@ fn signature_matrix(h: &Bound<'_, PyAny>) -> PyResult<Array2<C64>> {
 }
 
 /// The exact bit error rate of one user of a synchronous DS-CDMA link with BPSK, for
-/// given signatures: the conventional receiver (the mean over the patterns of the
-/// interfering bits, 21 users at most) or the decorrelator (Lupas and Verdú 1989):
+/// given signatures.
+///
+/// With :math:`G = H^H H` the Gram matrix of :math:`H = S A` and :math:`\sigma^2` the
+/// noise variance per chip, the conventional receiver (the mean over the patterns of
+/// the interfering bits, 21 users at most) and the decorrelator (Lupas and Verdú 1989)
+/// give
 ///
 /// .. math::
 ///
-///     P_b = Q\left(\sqrt{\frac{2}{\sigma^2 (G^{-1})_{kk}}}\right).
+///     \begin{aligned}
+///     P_{b,\mathrm{MF}} &= 2^{1-K} \sum_{b \in \{\pm 1\}^{K-1}} Q\!\left(
+///     \frac{G_{kk} + \sum_{j \ne k} b_{j} \operatorname{Re} G_{kj}}
+///     {\sigma \sqrt{G_{kk} / 2}} \right), \\
+///     P_{b,\mathrm{dec}} &= Q\left(\sqrt{\frac{2}{\sigma^2 (G^{-1})_{kk}}}\right).
+///     \end{aligned}
 ///
 /// Args:
 ///     signatures (array_like): :math:`H = S A`, :math:`(N, K)` (`Dsss.signatures`).
@@ -455,9 +472,16 @@ fn theory_ber_cdma(
     }
 }
 
-/// The near–far resistance :math:`1 / (G_{kk} (G^{-1})_{kk})` of one user: the asymptotic
-/// efficiency of the decorrelator, and of the optimum detector against interferers of
-/// the worst amplitudes (Lupas and Verdú 1989).
+/// The near–far resistance of one user.
+///
+/// With :math:`G = H^H H` the Gram matrix of the signatures,
+///
+/// .. math::
+///
+///     \bar\eta_k = \frac{1}{G_{kk} (G^{-1})_{kk}},
+///
+/// the asymptotic efficiency of the decorrelator, and of the optimum detector against
+/// interferers of the worst amplitudes (Lupas and Verdú 1989).
 ///
 /// Args:
 ///     signatures (array_like): :math:`H = S A`, :math:`(N, K)`.
@@ -475,8 +499,21 @@ fn cdma_near_far_resistance(signatures: &Bound<'_, PyAny>, user: usize) -> PyRes
 }
 
 /// The large-system SINR (dB) of a linear receiver for random signatures and users of
-/// equal power, at the load :math:`K/N` (Verdú and Shamai 1999, eqs. (10)–(12); Tse and Hanly
-/// 1999, eq. (9)).
+/// equal power.
+///
+/// At the load :math:`\beta = K/N` and :math:`\mathrm{SNR} = A^2/\sigma^2` (Verdú and
+/// Shamai 1999, eqs. (10)–(12); Tse and Hanly 1999, eq. (9)),
+///
+/// .. math::
+///
+///     \begin{aligned}
+///     \mathrm{SINR}_{\mathrm{MF}} &= \frac{\mathrm{SNR}}{1 + \beta\,\mathrm{SNR}}, \qquad
+///     \mathrm{SINR}_{\mathrm{dec}} = \mathrm{SNR} (1 - \beta), \qquad
+///     \mathrm{SINR}_{\mathrm{MMSE}} = \mathrm{SNR} - \tfrac{1}{4}
+///     \mathcal{F}(\mathrm{SNR}, \beta), \\
+///     \mathcal{F}(x, z) &= \left( \sqrt{x (1 + \sqrt{z})^{2} + 1}
+///     - \sqrt{x (1 - \sqrt{z})^{2} + 1} \right)^{2}.
+///     \end{aligned}
 ///
 /// Args:
 ///     load (float): users per chip, :math:`K/N`.
@@ -504,8 +541,16 @@ fn cdma_sinr_large_system(load: f64, snr_db: &Bound<'_, PyAny>, receiver: &str) 
 }
 
 /// The large-system SINR (linear) of the MMSE receiver of a user among interferers of
-/// any powers, random signatures of `n` chips: the fixed point of eq. (6) of Tse and
-/// Hanly 1999, every interferer counting for the effective interference
+/// any powers, random signatures of `n` chips.
+///
+/// The SINR :math:`\gamma` of a user of power :math:`P` is the fixed point of eq. (6) of
+/// Tse and Hanly 1999,
+///
+/// .. math::
+///
+///     \gamma = \frac{P}{\sigma^{2} + \frac{1}{N} \sum_{i} \frac{P P_{i}}{P + P_{i} \gamma}},
+///
+/// every interferer of power :math:`P_i` counting for the effective interference
 /// :math:`P P_i / (P + P_i \gamma)`.
 ///
 /// Args:
@@ -525,9 +570,24 @@ fn cdma_sinr_mmse_large_system(power: f64, interferers: &Bound<'_, PyAny>, n: us
 }
 
 /// The large-system spectral efficiency (bits per chip, real-valued chips) of DS-CDMA
-/// with random signatures (Verdú and Shamai 1999, eqs. (9)–(12)): a linear receiver
-/// followed by single-user decoders, or the optimum joint decoder. Give the SNR, or
-/// the :math:`E_b/N_0`, in which case the SNR follows from the efficiency itself (their Fig. 1).
+/// with random signatures.
+///
+/// A linear receiver followed by single-user decoders and the optimum joint decoder
+/// reach (Verdú and Shamai 1999, eqs. (9)–(12))
+///
+/// .. math::
+///
+///     \begin{aligned}
+///     \mathsf{C} &= \frac{\beta}{2} \log_{2}(1 + \mathrm{SINR}), \\
+///     \mathsf{C}^{\mathrm{opt}} &= \frac{\beta}{2} \log_{2}\!\left(1 + \mathrm{SNR} -
+///     \tfrac{1}{4} \mathcal{F}\right) + \frac{1}{2} \log_{2}\!\left(1 + \mathrm{SNR} \beta -
+///     \tfrac{1}{4} \mathcal{F}\right) - \frac{\log_{2} e}{8\,\mathrm{SNR}} \mathcal{F},
+///     \end{aligned}
+///
+/// with :math:`\beta = K/N`, the SINR and :math:`\mathcal{F}` of
+/// :func:`cdma_sinr_large_system`. Give the SNR, or the :math:`E_b/N_0`, in which case
+/// the SNR follows from the efficiency itself, :math:`\mathrm{SNR} = 2 \mathsf{C} E_b/(\beta N_0)`
+/// (their Fig. 1).
 ///
 /// Args:
 ///     load (float | array_like): users per chip, :math:`K/N`.

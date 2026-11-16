@@ -3,7 +3,13 @@
 
 use super::*;
 
-/// Maxwell–Boltzmann probabilities :math:`p(x) \propto \exp(-\lambda|x|^2)` of the points.
+/// Maxwell–Boltzmann probabilities of the points.
+///
+/// The probability of the point :math:`x` is
+///
+/// .. math::
+///
+///     p(x) \propto \exp(-\lambda|x|^2).
 ///
 /// Args:
 ///     constellation (Constellation): the alphabet.
@@ -16,8 +22,13 @@ fn maxwell_boltzmann<'py>(py: Python<'py>, constellation: &PyConstellation, lam:
     farr(py, sources::maxwell_boltzmann(&constellation.inner, lam))
 }
 
-/// The entropy :math:`H = -\sum p \log_2 p` of a distribution (bits): the information per
-/// symbol of a shaped source.
+/// The entropy of a distribution (bits): the information per symbol of a shaped source.
+///
+/// For the probabilities :math:`p` of the symbols:
+///
+/// .. math::
+///
+///     H = -\sum p \log_2 p.
 ///
 /// Args:
 ///     px (array_like): the probabilities.

@@ -51,6 +51,15 @@ fn nr_numerology(py: Python<'_>, mu: u32, extended_cp: bool, n_fft: usize) -> Py
 /// every half subframe longer), the IFFT scaled by :math:`1/\sqrt{K}` (unit mean power for
 /// unit-energy symbols).
 ///
+/// The useful part of the OFDM symbol :math:`l`, after its prefix, is
+///
+/// .. math::
+///
+///     x_l[n] = \frac{1}{\sqrt{K}} \sum_{k=0}^{K-1} X_{k,l}\,
+///     e^{j 2\pi (k - K/2) n / N_{\mathrm{FFT}}}, \qquad n = 0, \dots, N_{\mathrm{FFT}} - 1,
+///
+/// at the sampling rate :math:`N_{\mathrm{FFT}} \Delta f`.
+///
 /// Args:
 ///     grid (array_like): the grid, shape `(K, L)` (subcarriers × OFDM symbols), :math:`K`
 ///         even (:math:`12 N_{\mathrm{RB}}`).
@@ -81,7 +90,14 @@ fn nr_ofdm_modulate<'py>(
 }
 
 /// The NR primary synchronisation signal of :math:`N_{\mathrm{ID}}^{(2)}` (TS 38.211, Sec.
-/// 7.4.2.2): the BPSK m-sequence of length 127.
+/// 7.4.2.2): the BPSK m-sequence of length 127,
+///
+/// .. math::
+///
+///     d(n) = 1 - 2x\big((n + 43 N_{\mathrm{ID}}^{(2)}) \bmod 127\big), \qquad
+///     x(i+7) = (x(i+4) + x(i)) \bmod 2,
+///
+/// :math:`n < 127`, with :math:`[x(6) \dots x(0)] = [1\,1\,1\,0\,1\,1\,0]`.
 ///
 /// Args:
 ///     n_id2 (int): 0, 1 or 2.
@@ -98,7 +114,19 @@ fn nr_pss(py: Python<'_>, n_id2: u32) -> PyResult<FArr<'_>> {
 
 /// The NR secondary synchronisation signal of
 /// :math:`(N_{\mathrm{ID}}^{(1)}, N_{\mathrm{ID}}^{(2)})` (TS 38.211, Sec. 7.4.2.3): the BPSK
-/// Gold sequence of length 127.
+/// Gold sequence of length 127,
+///
+/// .. math::
+///
+///     \begin{aligned}
+///     d(n) &= \big[1 - 2x_{0}((n + m_{0}) \bmod 127)\big]\big[1 - 2x_{1}((n + m_{1}) \bmod 127)\big], \\
+///     m_{0} &= 15\lfloor N_{\mathrm{ID}}^{(1)}/112 \rfloor + 5 N_{\mathrm{ID}}^{(2)}, \qquad
+///     m_{1} = N_{\mathrm{ID}}^{(1)} \bmod 112,
+///     \end{aligned}
+///
+/// with :math:`x_{0}(i+7) = (x_{0}(i+4) + x_{0}(i)) \bmod 2` and
+/// :math:`x_{1}(i+7) = (x_{1}(i+1) + x_{1}(i)) \bmod 2`, both started at
+/// :math:`[0 \dots 0\,1]`.
 ///
 /// Args:
 ///     n_id1 (int): 0 to 335.
@@ -114,7 +142,18 @@ fn nr_sss(py: Python<'_>, n_id1: u32, n_id2: u32) -> PyResult<FArr<'_>> {
     Ok(farr(py, nr::sss(n_id1, n_id2).py()?))
 }
 
-/// The 144 QPSK values of the PBCH DMRS (TS 38.211, Sec. 7.4.1.4).
+/// The 144 QPSK values of the PBCH DMRS (TS 38.211, Sec. 7.4.1.4):
+///
+/// .. math::
+///
+///     \begin{aligned}
+///     r(m) &= \frac{(1 - 2c(2m)) + j(1 - 2c(2m+1))}{\sqrt{2}}, \qquad m < 144, \\
+///     c_{\mathrm{init}} &= 2^{11}(\bar{\imath}_{\mathrm{SSB}} + 1)
+///     (\lfloor N_{\mathrm{ID}}^{\mathrm{cell}}/4 \rfloor + 1)
+///     + 2^{6}(\bar{\imath}_{\mathrm{SSB}} + 1) + (N_{\mathrm{ID}}^{\mathrm{cell}} \bmod 4),
+///     \end{aligned}
+///
+/// :math:`c` the Gold sequence of 3GPP started at :math:`c_{\mathrm{init}}`.
 ///
 /// Args:
 ///     n_cell_id (int): the cell identity, 0 to 1007.
@@ -210,6 +249,18 @@ fn nr_detect_cell_id(grid: &Bound<'_, PyAny>) -> PyResult<(u32, f64, f64)> {
 
 /// The DMRS of a PDSCH of mapping type A over a slot of 14 symbols, single-symbol, port
 /// 1000 (TS 38.211, Sec. 7.4.1.1).
+///
+/// In the DMRS symbol :math:`l` of the slot :math:`n_s`, the subcarriers
+/// :math:`k = 4n + 2k'` (configuration type 1) or :math:`k = 6n + k'` (type 2),
+/// :math:`k' \in \{0, 1\}`, carry the QPSK value :math:`r(2n + k')` of the Gold sequence
+/// :math:`c` of
+///
+/// .. math::
+///
+///     c_{\mathrm{init}} = \big(2^{17}(14 n_{s} + l + 1)(2N_{\mathrm{ID}} + 1) + 2N_{\mathrm{ID}}\big)
+///     \bmod 2^{31},
+///
+/// :math:`r(m) = [(1 - 2c(2m)) + j(1 - 2c(2m + 1))]/\sqrt{2}`.
 ///
 /// Args:
 ///     n_rb (int): the resource blocks of the grid (from common resource block 0).

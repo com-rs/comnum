@@ -160,7 +160,7 @@ fn llr_streams(py: Python<'_>, rows: Rows<f64>, bits: usize, single: bool) -> Py
 /// .. math::
 ///
 ///     \mathbf{H} = \sqrt{\tfrac{K}{K+1}}\, \mathbf{H}_{\mathrm{LOS}}
-///     + \sqrt{\tfrac{1}{K+1}}\, \mathbf{L}_r \mathbf{G} \mathbf{L}_t^{\mathsf{T}}
+///     + \sqrt{\tfrac{1}{K+1}}\, \mathbf{L}_r \mathbf{G} \mathbf{L}_t^{\mathsf{T}},
 ///
 /// with :math:`\mathbf{G}` of independent :math:`\mathcal{CN}(0, 1)` entries,
 /// :math:`\mathbf{L}\mathbf{L}^{\mathsf{H}}` the exponential correlation
@@ -254,8 +254,11 @@ fn flat_mimo(n_rx: usize, n_tx: usize, k_factor: f64, rx_correlation: C64, tx_co
     Ok(Mimo { k_factor, correlation, ..Mimo::rayleigh(n_rx, n_tx) })
 }
 
-/// The exponential correlation matrix :math:`[\mathbf{R}]_{ij} = \rho^{j-i}` (Hermitian) of `n`
-/// antennas.
+/// The exponential correlation matrix (Hermitian) of `n` antennas:
+///
+/// .. math::
+///
+///     [\mathbf{R}]_{ij} = \rho^{j-i}.
 ///
 /// Args:
 ///     n (int): number of antennas.
@@ -276,8 +279,17 @@ fn exponential_correlation<'py>(py: Python<'py>, n: i64, rho: C64) -> PyResult<B
     Ok(exp_corr(count(n, "n")?, rho).into_pyarray(py))
 }
 
-/// Detect the transmitted symbols of a MIMO link
-/// :math:`\mathbf{y} = \mathbf{H}\mathbf{x} + \mathbf{w}`.
+/// Detect the transmitted symbols of a MIMO link.
+///
+/// The link is
+///
+/// .. math::
+///
+///     \mathbf{y} = \mathbf{H}\mathbf{x} + \mathbf{w},
+///
+/// with :math:`\mathbf{H}` the :math:`n_{\mathrm{rx}} \times n_{\mathrm{tx}}` channel,
+/// :math:`\mathbf{x}` the transmitted symbols and :math:`\mathbf{w}` the noise of
+/// variance :math:`\mathbb{E}|w_i|^2` per receive antenna.
 ///
 /// Methods: `"mr"` (matched filter), `"zf"`, `"mmse"` (linear, unbiased), `"zf_sic"`, `"mmse_sic"` (ordered
 /// successive interference cancellation, V-BLAST), `"ml"` (exhaustive search),
@@ -330,7 +342,10 @@ fn mimo_detect(
 }
 
 /// Bit log-likelihood ratios of a MIMO link (positive for a 0, most significant bit
-/// first), the LLR sequence of every transmitted stream: exact per-stream LLRs after the unbiased linear filter
+/// first), the LLR sequence of every transmitted stream.
+///
+/// The link is :math:`\mathbf{y} = \mathbf{H}\mathbf{x} + \mathbf{w}`, as for
+/// :func:`mimo_detect`. The LLRs are exact per stream after the unbiased linear filter
 /// for `"mr"`, `"zf"` and `"mmse"`, max-log over all hypotheses for `"ml"`, over the final
 /// list for `"kbest"`, exact LLRs of the decoupled channel for `"amp"` and `"oamp"`.
 ///
@@ -376,12 +391,25 @@ fn mimo_llr(
 /// An orthogonal space-time block code (Alamouti, or the rate-3/4 codes for 3 and 4
 /// antennas), with linear maximum-likelihood decoding.
 ///
-/// A block sends `n_symbols` symbols over `n_slots` channel uses from `n_tx`
-/// antennas, with a unit average transmitted energy per channel use. Decoding turns
-/// the block into one scalar channel per symbol of noise variance
-/// :math:`\sigma^2 / (c^2 \lVert \mathbf{H} \rVert_F^2)`, a diversity of
-/// :math:`n_{\mathrm{tx}} \cdot n_{\mathrm{rx}}`. Build it with `Ostbc.alamouti()` or
-/// `Ostbc.rate_3_4(n_tx)`.
+/// A block sends :math:`K` = `n_symbols` symbols over :math:`T` = `n_slots` channel uses
+/// from `n_tx` antennas, with a unit average transmitted energy per channel use: the
+/// :math:`T \times n_{\mathrm{tx}}` codeword is
+///
+/// .. math::
+///
+///     X(s) = c \sum_{k=1}^{K} \left(\Re(s_{k})\, A_{k} + \Im(s_{k})\, B_{k}\right),
+///
+/// with the dispersion matrices :math:`A_{k} = X(e_{k})` and :math:`B_{k} = X(j e_{k})`
+/// and the scale :math:`c` of the unit energy. Decoding turns the block
+/// :math:`Y = H X^{T} + W` into one scalar channel per symbol,
+///
+/// .. math::
+///
+///     \hat s_{k} = s_{k} + n_{k}, \qquad
+///     \mathbb{E}|n_k|^2 = \sigma^2 / (c^2 \lVert \mathbf{H} \rVert_F^2),
+///
+/// a diversity of :math:`n_{\mathrm{tx}} \cdot n_{\mathrm{rx}}`. Build it with
+/// `Ostbc.alamouti()` or `Ostbc.rate_3_4(n_tx)`.
 ///
 /// Examples:
 ///     >>> import comnum, numpy as np
@@ -505,8 +533,15 @@ impl PyOstbc {
     }
 }
 
-/// Water-filling powers of parallel channels: :math:`p_i = (\mu - 1/g_i)^+` with
-/// :math:`\sum_i p_i` the total power.
+/// Water-filling powers of parallel channels.
+///
+/// The powers that maximise :math:`\sum_i \log_2(1 + p_i g_i)` are
+///
+/// .. math::
+///
+///     p_i = (\mu - 1/g_i)^+,
+///
+/// with the level :math:`\mu` such that :math:`\sum_i p_i` is the total power.
 ///
 /// Args:
 ///     gains (array_like): the gains :math:`g_i` (SNR per unit power).
@@ -536,10 +571,11 @@ fn water_filling_powers<'py>(
 ///
 /// .. math::
 ///
-///     \log_2 \det\left(\mathbf{I} + \frac{\rho}{n_{\mathrm{tx}}}
+///     C = \log_2 \det\left(\mathbf{I} + \frac{\rho}{n_{\mathrm{tx}}}
 ///     \mathbf{H}\mathbf{H}^{\mathsf{H}}\right)
 ///
-/// with equal power, or water-filling on the eigenmodes.
+/// with equal power, or :math:`C = \sum_{i} \log_{2}(1 + p_{i} \sigma_{i}^{2})` with
+/// water-filling on the eigenmodes.
 ///
 /// Args:
 ///     h (array_like): `(n, n_rx, n_tx)`, one matrix per realisation (one matrix
@@ -575,8 +611,18 @@ fn mimo_capacity<'py>(py: Python<'py>, h: &Bound<'py, PyAny>, snr_db: f64, water
 }
 
 /// The ergodic capacity (bits per channel use) of the i.i.d. Rayleigh MIMO channel with
-/// equal power on the transmit antennas, in closed form (Telatar 1999, Theorem 2): the
-/// mean of `mimo_capacity` over the realisations.
+/// equal power on the transmit antennas, in closed form: the mean of `mimo_capacity`
+/// over the realisations.
+///
+/// With :math:`m = \min(n_{r}, n_{t})`, :math:`n = \max(n_{r}, n_{t})` and the
+/// associated Laguerre polynomials :math:`L_{k}^{n-m}` (Telatar 1999, Theorem 2,
+/// eq. (8)),
+///
+/// .. math::
+///
+///     C = \int_{0}^{\infty} \log_{2}\left(1 + \frac{\rho}{n_{t}} \lambda\right)
+///     \sum_{k=0}^{m-1} \frac{k!}{(k+n-m)!} \left[L_{k}^{n-m}(\lambda)\right]^{2}
+///     \lambda^{n-m} e^{-\lambda} \, d\lambda.
 ///
 /// Args:
 ///     n_rx (int): receive antennas.
@@ -603,6 +649,16 @@ fn theory_ergodic_capacity(n_rx: usize, n_tx: usize, snr_db: &Bound<'_, PyAny>) 
 /// channel use with equal power, one antenna on one side (Telatar 1999, eq. (16) and
 /// Example 7).
 ///
+/// :math:`\lVert h \rVert^{2}` is a gamma variable of shape
+/// :math:`k = \max(n_{r}, n_{t})`, so that
+///
+/// .. math::
+///
+///     P_{\mathrm{out}} = P\left(\log_{2} \det\left(I + \frac{\rho}{n_{t}} H H^{H}\right) < R\right)
+///     = P\left(k, \frac{n_{t} (2^{R} - 1)}{\rho}\right),
+///
+/// with the regularized incomplete gamma function :math:`P(k, x)`.
+///
 /// Args:
 ///     n_rx (int): receive antennas.
 ///     n_tx (int): transmit antennas (`n_rx` or `n_tx` is 1).
@@ -621,7 +677,14 @@ fn theory_outage_probability(n_rx: usize, n_tx: usize, snr_db: &Bound<'_, PyAny>
 
 /// The :math:`\epsilon`-capacity (bits per channel use): the rate of outage probability `eps`
 /// over a Rayleigh channel drawn once, one antenna on one side (Telatar 1999, eqs. (17),
-/// (18)).
+/// (18)):
+///
+/// .. math::
+///
+///     R = \log_{2}(1 + \rho x / n_{t}), \qquad P(k, x) = \epsilon,
+///
+/// with :math:`k = \max(n_{r}, n_{t})` and the regularized incomplete gamma function
+/// :math:`P(k, x)` of :func:`theory_outage_probability`.
 ///
 /// Args:
 ///     n_rx (int): receive antennas.
@@ -639,9 +702,16 @@ fn theory_outage_capacity(n_rx: usize, n_tx: usize, snr_db: &Bound<'_, PyAny>, e
     crate::map_real(snr_db, |s| capacity::outage_capacity_rayleigh(n_rx, n_tx, comnum::math::db2lin(s), eps).py())
 }
 
-/// Eigenmode (SVD) transmission over `h`: precoder :math:`\mathbf{V}\mathbf{P}^{1/2}`, receive
-/// filter :math:`\mathbf{U}^{\mathsf{H}}`, gains and powers of the active modes (water-filling
-/// of `total_power` against `noise_var`, or equal power).
+/// Eigenmode (SVD) transmission over `h`: precoder, receive filter, gains and powers of
+/// the active modes (water-filling of `total_power` against `noise_var`, or equal power).
+///
+/// With the SVD :math:`\mathbf{H} = \mathbf{U} \boldsymbol{\Sigma} \mathbf{V}^{\mathsf{H}}`,
+/// sending :math:`\mathbf{x} = \mathbf{V}\mathbf{P}^{1/2} \mathbf{s}` and filtering with
+/// :math:`\mathbf{U}^{\mathsf{H}}` gives parallel scalar channels:
+///
+/// .. math::
+///
+///     \tilde y_{i} = \sigma_{i} \sqrt{p_{i}}\, s_{i} + \tilde w_{i}.
 ///
 /// Args:
 ///     h (array_like): one channel `(n_rx, n_tx)`.
@@ -681,7 +751,8 @@ fn eigenmode<'py>(
 ///
 /// .. math::
 ///
-///     \mathbf{H}^{\mathsf{H}} (\mathbf{H}\mathbf{H}^{\mathsf{H}} + \alpha \mathbf{I})^{-1}
+///     \mathbf{W} \propto \mathbf{H}^{\mathsf{H}} (\mathbf{H}\mathbf{H}^{\mathsf{H}} + \alpha \mathbf{I})^{-1},
+///     \qquad \lVert \mathbf{W} \rVert_{F}^{2} = P,
 ///
 /// with :math:`\alpha = 0` for zero forcing, :math:`K \sigma^2 / P` for the regularised
 /// version.

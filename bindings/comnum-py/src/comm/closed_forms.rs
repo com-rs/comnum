@@ -4,6 +4,22 @@ use super::*;
 
 /// Theoretical BER over AWGN with Gray mapping (OptiCommPy `theoryBER`, exact for BPSK).
 ///
+/// With :math:`L = \sqrt{M}` for the QAM:
+///
+/// .. math::
+///
+///     \begin{aligned}
+///     P_b^{\mathrm{QAM}} &= \frac{2(1 - 1/L)}{\log_2 L}\,
+///     Q\!\left(\sqrt{\frac{3 \log_2 L}{L^2 - 1} \cdot \frac{2 E_b}{N_0}}\right), \\
+///     P_b^{\mathrm{PSK}} &= \frac{2}{\log_2 M}\,
+///     Q\!\left(\sqrt{2 \log_2 M \cdot E_b/N_0}\, \sin(\pi/M)\right), \\
+///     P_b^{\mathrm{PAM}} &= \frac{2(M - 1)}{M \log_2 M}\,
+///     Q\!\left(\sqrt{\frac{6 \log_2 M}{M^2 - 1} \cdot \frac{E_b}{N_0}}\right),
+///     \end{aligned}
+///
+/// and the exact :math:`Q(\sqrt{2 E_b/N_0})` for BPSK (OptiCommPy applies the general
+/// formula of PSK, which doubles the BER of BPSK).
+///
 /// Args:
 ///     m (int): order.
 ///     ebn0_db (float | array_like): :math:`E_b/N_0` (dB).
@@ -30,6 +46,26 @@ fn theory_ber(m: usize, ebn0_db: &Bound<'_, PyAny>, kind: &str) -> PyResult<Py<P
 
 /// Exact BER of Gray-mapped PAM, square QAM or rectangular QAM over AWGN (K. Cho and
 /// D. Yoon, *IEEE Trans. Commun.* 50(7), 2002, eqs. (9)–(22)).
+///
+/// For an :math:`I`-PAM (eqs. (9)–(10)):
+///
+/// .. math::
+///
+///     P_b = \frac{1}{\log_2 I} \sum_{k=1}^{\log_2 I} P_b(k), \qquad
+///     P_b(k) = \frac{1}{I} \sum_i X_{i,k}\, \operatorname{erfc}\!\left((2i + 1)
+///     \sqrt{\frac{3 \log_2 I \cdot E_b/N_0}{I^2 - 1}}\right),
+///
+/// with the coefficients :math:`X_{i,k}` of Table I of the paper. An :math:`I \times J`
+/// QAM is two such PAM in quadrature (eqs. (19)–(22)):
+///
+/// .. math::
+///
+///     P_b = \frac{1}{\log_2(IJ)} \left(\sum_{k=1}^{\log_2 I} P_I(k)
+///     + \sum_{l=1}^{\log_2 J} P_J(l)\right),
+///
+/// the same terms with the argument
+/// :math:`(2i + 1)\sqrt{3 \log_2(IJ)\, E_b/N_0 / (I^2 + J^2 - 2)}`, and
+/// :math:`I = J = \sqrt{M}` for a square QAM.
 ///
 /// Args:
 ///     m (int): order of the PAM (`kind="pam"`), of the square QAM (`kind="qam"`), or the
@@ -228,8 +264,15 @@ impl PyFading {
         map_real(s, |v| self.snr.mgf(v, mean).py())
     }
 
-    /// Average BER of a coherent binary signal of conditional BER :math:`Q(\sqrt{2 g \gamma})`
-    /// (:func:`theory_ber_binary_fading`).
+    /// Average BER of a coherent binary signal (:func:`theory_ber_binary_fading`).
+    ///
+    /// The conditional BER :math:`Q(\sqrt{2 g \gamma})` averaged over the SNR, with
+    /// maximal-ratio combining of :math:`L` branches:
+    ///
+    /// .. math::
+    ///
+    ///     P_b = \frac{1}{\pi} \int_0^{\pi/2}
+    ///     \left[M_\gamma\!\left(-\frac{g}{\sin^2 \varphi}\right)\right]^L d\varphi.
     ///
     /// Args:
     ///     ebn0_db (float | array_like): the mean :math:`E_b/N_0` of one branch (dB).
@@ -247,8 +290,14 @@ impl PyFading {
         map_real(ebn0_db, |e| theory::ber_binary_fading(g, self.snr, e, branches).py())
     }
 
-    /// Average BER of a binary signal detected noncoherently or differentially, of
-    /// conditional BER :math:`0.5 \exp(-g \gamma)` (:func:`theory_ber_noncoherent_binary_fading`).
+    /// Average BER of a binary signal detected noncoherently or differentially
+    /// (:func:`theory_ber_noncoherent_binary_fading`).
+    ///
+    /// The conditional BER :math:`0.5 \exp(-g \gamma)` averaged over the SNR:
+    ///
+    /// .. math::
+    ///
+    ///     P_b = 0.5\, M_\gamma(-g).
     ///
     /// Args:
     ///     ebn0_db (float | array_like): the mean :math:`E_b/N_0` (dB).
@@ -349,11 +398,14 @@ fn theory_ser_fading(
     map_real(esn0_db, |e| theory::ser_fading(k, m, f, e).py())
 }
 
-/// Average bit error rate of a coherent binary signal of conditional BER
-/// :math:`Q(\sqrt{2 g \gamma})` over a flat fading channel, with maximal-ratio combining of
-/// independent branches of the same mean (M. K. Simon and M.-S. Alouini, "A unified
-/// approach to the performance analysis of digital communication over generalized
-/// fading channels," Proc. IEEE 86(9), 1998, eqs. (17), (23) and Table 3):
+/// Average bit error rate of a coherent binary signal over a flat fading channel, with
+/// maximal-ratio combining of independent branches of the same mean (M. K. Simon and
+/// M.-S. Alouini, "A unified approach to the performance analysis of digital
+/// communication over generalized fading channels," Proc. IEEE 86(9), 1998, eqs. (17),
+/// (23) and Table 3).
+///
+/// The conditional BER :math:`Q(\sqrt{2 g \gamma})` at the SNR :math:`\gamma`, averaged
+/// by the moment generating function of the SNR over :math:`L` branches:
 ///
 /// .. math::
 ///
@@ -398,15 +450,18 @@ fn theory_ber_binary_fading(
     map_real(ebn0_db, |e| theory::ber_binary_fading(g, f, e, branches).py())
 }
 
-/// Average bit error rate of a binary signal detected noncoherently or differentially,
-/// of conditional BER :math:`0.5 \exp(-g \gamma)`, over a flat fading channel:
+/// Average bit error rate of a binary signal detected noncoherently or differentially
+/// over a flat fading channel (Simon & Alouini 1998, eq. (53) averaged; eq. (64) over
+/// Rayleigh fading).
+///
+/// The conditional BER :math:`0.5 \exp(-g \gamma)` at the SNR :math:`\gamma`, averaged
+/// by the moment generating function of the SNR:
 ///
 /// .. math::
 ///
-///     P_b = 0.5\, M_\gamma(-g)
+///     P_b = 0.5\, M_\gamma(-g),
 ///
-/// (Simon & Alouini 1998, eq. (53) averaged; eq. (64) over Rayleigh fading), :math:`g = 1`
-/// for DPSK, :math:`1/2` for noncoherent orthogonal BFSK.
+/// :math:`g = 1` for DPSK, :math:`1/2` for noncoherent orthogonal BFSK.
 ///
 /// Args:
 ///     ebn0_db (float | array_like): the mean :math:`E_b/N_0` (dB).
@@ -442,6 +497,18 @@ fn theory_ber_noncoherent_binary_fading(
 /// Density of the phase error of a carrier in circular Gaussian noise (S. O. Rice 1948;
 /// eq. (8) of Ahmed, Thompson and Zeidler, MILCOM 2007).
 ///
+/// The phase error :math:`\theta = \arg r - \varphi` of :math:`r = A e^{j\varphi} + w`
+/// at the SNR :math:`\rho = A^2/\mathbb{E}|w|^2` has the density
+///
+/// .. math::
+///
+///     p(\theta) = \frac{e^{-\rho}}{2\pi}\left[1 + \sqrt{4\pi\rho}\,\cos\theta\,
+///     e^{\rho\cos^2\theta}\,\Phi\!\left(\sqrt{2\rho}\cos\theta\right)\right],
+///     \qquad \theta \in (-\pi, \pi],
+///
+/// :math:`\Phi` the standard normal distribution function. It is uniform at
+/// :math:`\rho = 0` and tends to :math:`\mathcal{N}(0, 1/(2\rho))` at high SNR.
+///
 /// Args:
 ///     theta (float | array_like): phase error (rad), in :math:`(-\pi, \pi]`.
 ///     snr_lin (float): :math:`A^2/\mathbb{E}|w|^2` (linear).
@@ -462,6 +529,20 @@ fn theory_phase_pdf(theta: &Bound<'_, PyAny>, snr_lin: f64) -> PyResult<Py<PyAny
 }
 
 /// Theoretical SER over AWGN (exact for square QAM and PAM, a tight bound for PSK).
+///
+/// With :math:`L = \sqrt{M}` and :math:`E_s/N_0 = \log_2 M \cdot E_b/N_0`:
+///
+/// .. math::
+///
+///     \begin{aligned}
+///     P_s^{\mathrm{QAM}} &= 1 - (1 - p)^2, \qquad
+///     p = 2(1 - 1/L)\, Q\!\left(\sqrt{\frac{3 E_s/N_0}{M - 1}}\right), \\
+///     P_s^{\mathrm{PAM}} &= \frac{2(M - 1)}{M}\, Q\!\left(\sqrt{\frac{6 E_s/N_0}{M^2 - 1}}\right), \\
+///     P_s^{\mathrm{PSK}} &\approx 2\, Q\!\left(\sqrt{2 E_s/N_0}\, \sin(\pi/M)\right),
+///     \end{aligned}
+///
+/// the last one the nearest-neighbour bound (exact for :math:`M = 2` when halved, tight
+/// for :math:`M \ge 4`).
 ///
 /// Args:
 ///     m (int): order.
@@ -521,6 +602,15 @@ fn theory_ser_esn0(m: usize, esn0_db: &Bound<'_, PyAny>, kind: &str) -> PyResult
 /// Mutual information of a constellation over AWGN (OptiCommPy `theoryMI`) or Rayleigh
 /// fading known at the receiver, by Gauss–Hermite quadrature.
 ///
+/// With the probabilities :math:`p_i` of the points :math:`x_i` and
+/// :math:`D_{ij}(w) = (|x_i - x_j + w|^2 - |w|^2)/N_0`:
+///
+/// .. math::
+///
+///     \mathrm{MI} = -\sum_i p_i\, \mathbb{E}_w \log_2 \sum_j p_j\, e^{-D_{ij}(w)},
+///
+/// averaged over the gain under Rayleigh fading.
+///
 /// Args:
 ///     m (int): order.
 ///     snr_db (float | array_like): :math:`E_s/\sigma^2` (dB); PAM and OOK see a real channel, the
@@ -559,6 +649,15 @@ fn theory_mi(
 /// (OptiCommPy `theoryGMI`) or Rayleigh fading known at the receiver, by Gauss–Hermite
 /// quadrature.
 ///
+/// With the bits :math:`B_k` of the label of the transmitted point :math:`X`:
+///
+/// .. math::
+///
+///     \mathrm{GMI} = H(X) - \sum_k H(B_k \mid Y),
+///
+/// the rate of bit-metric decoding; for uniform symbols it is
+/// :math:`\sum_k I(B_k; Y)`, OptiCommPy's formula.
+///
 /// Args:
 ///     m (int): order.
 ///     snr_db (float | array_like): :math:`E_s/\sigma^2` (dB), as `theory_mi`.
@@ -590,6 +689,12 @@ fn theory_gmi(
 /// The CM capacity (bits per channel use) of a constellation with uniform inputs over
 /// AWGN or Rayleigh fading known at the receiver (Caire, Taricco & Biglieri 1998, eq.
 /// (10)): :func:`theory_mi` of any constellation, uniform inputs.
+///
+/// For :math:`M = 2^m` points :math:`\mathcal{X}` and the channel :math:`y = g x + n`:
+///
+/// .. math::
+///
+///     \tilde{C} = m - \mathbb{E}\left[\log_2 \frac{\sum_{z \in \mathcal{X}} p(y|z)}{p(y|x)}\right].
 ///
 /// Args:
 ///     constellation (Constellation): the points (normalised inside).
@@ -624,6 +729,16 @@ fn theory_cm_capacity(
 /// labels as `constellation` gives them (Gray, or `Constellation.set_partitioning`):
 /// :func:`theory_gmi` of any labelled constellation, uniform inputs.
 ///
+/// With :math:`\mathcal{X}_b^i` the points whose bit :math:`i` is :math:`b`:
+///
+/// .. math::
+///
+///     \hat{C} = m - \sum_{i=1}^{m} \mathbb{E}_{b,y}\left[\log_2
+///     \frac{\sum_{z \in \mathcal{X}} p(y|z)}{\sum_{z \in \mathcal{X}_b^i} p(y|z)}\right]
+///     \le \tilde{C}
+///
+/// (eq. (16)), below the CM capacity of :func:`theory_cm_capacity`.
+///
 /// Args:
 ///     constellation (Constellation): the labelled points.
 ///     snr_db (float | array_like): :math:`E_s/\sigma^2` (dB).
@@ -649,6 +764,16 @@ fn theory_bicm_capacity(
 
 /// The CM cutoff rate (bits per channel use) with uniform inputs, in closed form
 /// (Caire, Taricco & Biglieri 1998, eq. (17)).
+///
+/// For :math:`M = 2^m` points :math:`\mathcal{X}` of unit mean energy, the noise
+/// variance :math:`\sigma^2` and the gain :math:`g`:
+///
+/// .. math::
+///
+///     \tilde{R}_0 = m - \log_2 \frac{1}{M} \sum_{x, z \in \mathcal{X}}
+///     \mathbb{E}_g\, e^{-|g|^2 |x - z|^2 / (4\sigma^2)},
+///
+/// where the mean over Rayleigh fading is :math:`1 / (1 + |x - z|^2 / (4\sigma^2))`.
 ///
 /// Args:
 ///     constellation (Constellation): the points.
@@ -677,9 +802,17 @@ fn theory_cm_cutoff_rate(
     map_real(snr_db, |s| Ok(bicm::cm_cutoff_rate(&constellation.inner, s, f)))
 }
 
-/// The BICM cutoff rate (bits per channel use) of a labelled constellation,
-/// :math:`m(1 - \log_2(1 + B))` with the Bhattacharyya factor :math:`B` (Caire, Taricco &
-/// Biglieri 1998, eqs. (19), (21)).
+/// The BICM cutoff rate (bits per channel use) of a labelled constellation (Caire,
+/// Taricco & Biglieri 1998, eqs. (19), (21)).
+///
+/// With the Bhattacharyya factor :math:`B` and :math:`\mathcal{X}_b^i` the points whose
+/// bit :math:`i` is :math:`b`:
+///
+/// .. math::
+///
+///     \hat{R}_0 = m\left(1 - \log_2(1 + B)\right), \qquad
+///     B = \frac{1}{m} \sum_i \mathbb{E}_{b,y} \sqrt{\frac{\sum_{z \in \mathcal{X}_{\bar{b}}^i}
+///     p(y|z)}{\sum_{z \in \mathcal{X}_b^i} p(y|z)}}.
 ///
 /// Args:
 ///     constellation (Constellation): the labelled points.

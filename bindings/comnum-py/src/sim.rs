@@ -228,6 +228,16 @@ impl PyStop {
 /// An error rate: errors out of trials, with a Wilson score interval
 /// (``comnum_sim::stats::ErrorRate``).
 ///
+/// With :math:`k` errors among :math:`n` trials, the estimate is :math:`\hat{p} = k/n`
+/// and the Wilson score interval at the confidence :math:`1 - \alpha` is
+///
+/// .. math::
+///
+///     \frac{\hat{p} + \frac{z^2}{2n} \pm z \sqrt{\frac{\hat{p}(1 - \hat{p})}{n}
+///     + \frac{z^2}{4n^2}}}{1 + \frac{z^2}{n}}, \qquad z = \Phi^{-1}(1 - \alpha/2),
+///
+/// which stays inside :math:`[0, 1]` and is informative with few or no errors.
+///
 /// Args:
 ///     errors (int): errors counted.
 ///     total (int): trials counted.
@@ -411,8 +421,13 @@ impl PyMean {
         self.inner.merge(&other.inner);
     }
 
-    /// The normal interval of the mean, :math:`\mathrm{mean} \pm z \cdot \mathrm{std}/\sqrt{n}`
-    /// (unbounded with fewer than two values).
+    /// The normal interval of the mean (unbounded with fewer than two values).
+    ///
+    /// With the two-sided normal quantile :math:`z` of the level (:func:`z_score`):
+    ///
+    /// .. math::
+    ///
+    ///     \mathrm{mean} \pm z \cdot \mathrm{std}/\sqrt{n}.
     ///
     /// Args:
     ///     confidence (float): the level of the interval.
@@ -1001,10 +1016,16 @@ fn binomial_interval(method: &str, confidence: f64) -> PyResult<BinomialInterval
     method.parse().py()
 }
 
-/// The exact coverage probability of a binomial interval, :math:`P(L(X) \le p \le U(X))`
-/// for :math:`X \sim \mathrm{Bin}(n, p)`: the sum of the binomial probabilities of the
-/// counts whose interval contains :math:`p` (Brown, Cai & DasGupta 2001, Sec. 2), no
-/// simulation.
+/// The exact coverage probability of a binomial interval (Brown, Cai & DasGupta 2001,
+/// Sec. 2), no simulation.
+///
+/// With the ends :math:`L` and :math:`U` of the interval and :math:`X \sim \mathrm{Bin}(n, p)`:
+///
+/// .. math::
+///
+///     C(p, n) = P\left(L(X) \le p \le U(X)\right),
+///
+/// the sum of the binomial probabilities of the counts whose interval contains :math:`p`.
 ///
 /// Args:
 ///     method (str): ``"wald"``, ``"wilson"``, ``"agresti_coull"``, ``"jeffreys"`` or
@@ -1032,9 +1053,14 @@ fn interval_coverage(method: &str, n: u64, p: f64, confidence: f64) -> PyResult<
     Ok(comnum::sim::stats::coverage(method, n, p, confidence))
 }
 
-/// The expected length of a binomial interval, :math:`\sum_k (U(k) - L(k))\, P(X = k)` for
-/// :math:`X \sim \mathrm{Bin}(n, p)` (Brown, Cai & DasGupta 2001, Sec. 3.3), with the ends
-/// of :meth:`ErrorRate.interval`.
+/// The expected length of a binomial interval (Brown, Cai & DasGupta 2001, Sec. 3.3).
+///
+/// With the ends :math:`L` and :math:`U` of :meth:`ErrorRate.interval` and
+/// :math:`X \sim \mathrm{Bin}(n, p)`:
+///
+/// .. math::
+///
+///     \mathbb{E}\left[U(X) - L(X)\right] = \sum_k \left(U(k) - L(k)\right) P(X = k).
 ///
 /// Args:
 ///     method (str): the interval (see :func:`interval_coverage`).
@@ -1066,6 +1092,13 @@ fn check_probability(p: f64) -> PyResult<()> {
 }
 
 /// The two-sided normal quantile of a confidence level (1.96 for 0.95).
+///
+/// For the level :math:`1 - \alpha` and the standard normal distribution function
+/// :math:`\Phi`:
+///
+/// .. math::
+///
+///     z = \Phi^{-1}(1 - \alpha/2) = Q^{-1}(\alpha/2).
 ///
 /// Args:
 ///     confidence (float): the level, in :math:`(0, 1)`.

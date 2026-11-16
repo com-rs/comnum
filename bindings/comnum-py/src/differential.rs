@@ -110,8 +110,14 @@ impl PyDpsk {
         Ok(self.inner.bits(&uvec(indices)?).py()?.into_pyarray(py))
     }
 
-    /// Differential encoding of phase indices: the :math:`n + 1` absolute indices
-    /// :math:`c_{-1} = 0, c_0, \dots, c_{n-1}` with :math:`c_k = (a_k + c_{k-1}) \bmod M`.
+    /// Differential encoding of phase indices.
+    ///
+    /// The :math:`n + 1` absolute indices :math:`c_{-1} = 0, c_0, \dots, c_{n-1}` of the
+    /// differential indices :math:`a_k` are
+    ///
+    /// .. math::
+    ///
+    ///     c_k = (a_k + c_{k-1}) \bmod M.
     ///
     /// Args:
     ///     indices (array_like): the :math:`n` differential phase indices, below :math:`M`.
@@ -130,8 +136,13 @@ impl PyDpsk {
         Ok(iarr(py, differential::encode(&uvec(indices)?, self.inner.order()).py()?))
     }
 
-    /// Differential decoding: the :math:`n` differences :math:`a_k = (c_k - c_{k-1}) \bmod M`
-    /// of :math:`n + 1` absolute phase indices (the inverse of `encode`).
+    /// Differential decoding (the inverse of `encode`).
+    ///
+    /// The :math:`n` differences of :math:`n + 1` absolute phase indices :math:`c_k` are
+    ///
+    /// .. math::
+    ///
+    ///     a_k = (c_k - c_{k-1}) \bmod M.
     ///
     /// Args:
     ///     coded (array_like): the :math:`n + 1` absolute phase indices, below :math:`M`.
@@ -260,8 +271,14 @@ impl PyDpsk {
 
 /// Bit error rate of Gray-labelled M-DPSK over AWGN.
 ///
-/// With noncoherent detection (the default): :math:`\tfrac{1}{2} \exp(-E_b/N_0)` for DBPSK
-/// (Proakis & Salehi, *Digital Communications*, 5th ed., 2008, Sec. 4.5); for
+/// With noncoherent detection (the default), for DBPSK (Proakis & Salehi, *Digital
+/// Communications*, 5th ed., 2008, Sec. 4.5):
+///
+/// .. math::
+///
+///     P_b = \tfrac{1}{2} \exp(-E_b/N_0);
+///
+/// for
 /// :math:`M \ge 4` the average number of wrong bits over the decision sectors of the
 /// differential phase, whose probabilities come from the distribution of the phase angle
 /// between two vectors of the same SNR :math:`E_s/N_0 = (E_b/N_0) \log_2 M` perturbed by
@@ -270,11 +287,14 @@ impl PyDpsk {
 ///
 /// .. math::
 ///
-///     P_b = \tfrac{1}{2} \left[ P(|\Delta\theta| > \pi/4) + P(|\Delta\theta| > 3\pi/4) \right]
+///     P_b = \tfrac{1}{2} \left[ P(|\Delta\theta| > \pi/4) + P(|\Delta\theta| > 3\pi/4) \right].
 ///
-/// With coherent detection and differential decoding (DBPSK only): an isolated symbol
-/// error spoils two differences, so :math:`P_b = 2p(1 - p)` with
-/// :math:`p = Q(\sqrt{2 E_b/N_0})` (Proakis & Salehi, 5th ed., Sec. 3.2-2).
+/// With coherent detection and differential decoding (DBPSK only), an isolated symbol
+/// error spoils two differences (Proakis & Salehi, 5th ed., Sec. 3.2-2):
+///
+/// .. math::
+///
+///     P_b = 2p(1 - p), \qquad p = Q\!\left(\sqrt{2 E_b/N_0}\right).
 ///
 /// Args:
 ///     m (int): the order, a power of two.
@@ -309,9 +329,15 @@ fn theory_ber_dpsk(m: usize, ebn0_db: &Bound<'_, PyAny>, detection: &str) -> PyR
 /// :math:`0 \le \psi \le \pi`.
 ///
 /// The integral form of Pawula, Rice & Roberts (*IEEE Trans. Commun.* 30(8), 1982,
-/// Sec. IV) for equal SNRs, by Simpson's rule. It is the symbol error rate of M-DPSK
-/// for :math:`\psi = \pi / M`, and :math:`\tfrac{1}{2} \exp(-E_s/N_0)` for
-/// :math:`\psi = \pi / 2`.
+/// Sec. IV) for equal SNRs :math:`\gamma_s = E_s/N_0`, by Simpson's rule:
+///
+/// .. math::
+///
+///     P(|\Delta\theta| > \psi) = \frac{\sin \psi}{2 \pi} \int_{-\pi/2}^{\pi/2}
+///     \frac{\exp\left[-\gamma_s (1 - \cos \psi \cos t)\right]}{1 - \cos \psi \cos t}\, dt.
+///
+/// It is the symbol error rate of M-DPSK for :math:`\psi = \pi / M`, and
+/// :math:`\tfrac{1}{2} \exp(-E_s/N_0)` for :math:`\psi = \pi / 2`.
 ///
 /// Args:
 ///     psi (float): the threshold angle :math:`\psi` (rad).

@@ -3,8 +3,16 @@
 
 use super::*;
 
-/// Capacity of the binary-input AWGN channel for a code rate (the noise variance is
-/// :math:`1/(2 R E_b/N_0)`).
+/// Capacity of the binary-input AWGN channel for a code rate.
+///
+/// With BPSK on real AWGN of variance :math:`\sigma^2 = 1/(2 R E_b/N_0)` per dimension,
+/// the LLR of a transmitted 0 is :math:`L \sim \mathcal{N}(2/\sigma^2, 4/\sigma^2)` and
+///
+/// .. math::
+///
+///     C = 1 - \mathbb{E}\left[\log_2(1 + e^{-L})\right],
+///
+/// by Gauss–Hermite quadrature.
 ///
 /// Args:
 ///     ebn0_db (float | array_like): :math:`E_b/N_0` (dB).
@@ -28,6 +36,14 @@ fn theory_biawgn_capacity(ebn0_db: &Bound<'_, PyAny>, rate: f64) -> PyResult<Py<
 /// The normal approximation of the smallest block error probability of an :math:`(n, k)`
 /// binary code over BPSK and AWGN (Polyanskiy, Poor & Verdú 2010).
 ///
+/// With the capacity :math:`C` (:func:`theory_biawgn_capacity`) and the dispersion
+/// :math:`V = \operatorname{Var}\left[1 - \log_2(1 + e^{-L})\right]` of the binary-input
+/// AWGN channel at the rate :math:`R = k/n`:
+///
+/// .. math::
+///
+///     \varepsilon \approx Q\left(\frac{n C - k + \tfrac{1}{2}\log_2 n}{\sqrt{n V}}\right).
+///
 /// Args:
 ///     n (int): block length.
 ///     k (int): information bits.
@@ -50,6 +66,15 @@ fn theory_normal_approximation(n: usize, k: usize, ebn0_db: &Bound<'_, PyAny>) -
 }
 
 /// The smallest :math:`E_b/N_0` at which BPSK supports a code rate.
+///
+/// The limit (:math:`n \to \infty`) is the solution of
+///
+/// .. math::
+///
+///     C = R,
+///
+/// with :math:`C` the capacity of the binary-input AWGN channel at
+/// :math:`\sigma^2 = 1/(2 R E_b/N_0)` (:func:`theory_biawgn_capacity`).
 ///
 /// Args:
 ///     rate (float | array_like): the code rate :math:`R`.
@@ -96,8 +121,15 @@ fn bpsk_noise_variance(ebn0_db: &Bound<'_, PyAny>, rate: f64) -> PyResult<Py<PyA
 }
 
 /// The LLRs of BPSK (:math:`0 \mapsto +1`, :math:`1 \mapsto -1`) received in real Gaussian
-/// noise of variance `noise_var` per dimension: :math:`2y/\sigma^2` (positive for a 0, as
-/// every decoder of the package expects).
+/// noise of variance `noise_var` per dimension.
+///
+/// For the sample :math:`y` and the variance :math:`\sigma^2`:
+///
+/// .. math::
+///
+///     L = \frac{2y}{\sigma^2},
+///
+/// positive for a 0, as every decoder of the package expects.
 ///
 /// Args:
 ///     y (array_like): the received real samples.

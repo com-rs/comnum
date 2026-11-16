@@ -51,7 +51,13 @@ fn periodogram<'py>(py: Python<'py>, x: &Bound<'py, PyAny>, fs: f64, nfft: usize
 
 /// The adjacent channel leakage ratio (dB) of a density (`psd` or `periodogram`): power
 /// in `[-B/2, B/2)` over the larger power of the channels of width `B` centred at
-/// `±offset`.
+/// `±offset`,
+///
+/// .. math::
+///
+///     \mathrm{ACLR} = 10 \log_{10} \frac{P[-B/2, B/2)}{\max\left(P_{-\mathrm{offset}}, P_{+\mathrm{offset}}\right)},
+///
+/// with :math:`P` the power of the density in a band.
 ///
 /// Args:
 ///     freqs (array_like): the frequencies of the density (Hz).
