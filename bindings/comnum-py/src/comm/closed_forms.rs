@@ -6,11 +6,11 @@ use super::*;
 ///
 /// Args:
 ///     m (int): order.
-///     ebn0_db (float | array_like): `E_b/N_0` (dB).
+///     ebn0_db (float | array_like): :math:`E_b/N_0` (dB).
 ///     kind (str): `"qam"`, `"psk"` or `"pam"`.
 ///
 /// Returns:
-///     float | numpy.ndarray: the bit error probability at every `E_b/N_0`.
+///     float | numpy.ndarray: the bit error probability at every :math:`E_b/N_0`.
 ///
 /// Raises:
 ///     ValueError: for an invalid parameter or input (the message names it).
@@ -34,12 +34,13 @@ fn theory_ber(m: usize, ebn0_db: &Bound<'_, PyAny>, kind: &str) -> PyResult<Py<P
 /// Args:
 ///     m (int): order of the PAM (`kind="pam"`), of the square QAM (`kind="qam"`), or the
 ///         number of in-phase levels of a rectangular QAM (`kind="qam"` with `mq`).
-///     ebn0_db (float | array_like): `E_b/N_0` (dB).
+///     ebn0_db (float | array_like): :math:`E_b/N_0` (dB).
 ///     kind (str): `"pam"` or `"qam"`.
-///     mq (int | None): the number of quadrature levels of a rectangular `m × mq` QAM.
+///     mq (int | None): the number of quadrature levels of a rectangular
+///         :math:`m \times \mathit{mq}` QAM.
 ///
 /// Returns:
-///     float | numpy.ndarray: the bit error probability at every `E_b/N_0`.
+///     float | numpy.ndarray: the bit error probability at every :math:`E_b/N_0`.
 ///
 /// Raises:
 ///     ValueError: for an invalid parameter or input (the message names it).
@@ -68,16 +69,21 @@ fn theory_ber_gray(m: usize, ebn0_db: &Bound<'_, PyAny>, kind: &str, mq: Option<
 /// BER of BPSK (or Gray QPSK, per bit) with maximal-ratio combining of ``branches``
 /// independent Rayleigh-faded branches (J. G. Proakis and M. Salehi, *Digital
 /// Communications*, 5th ed., eq. (13.4-15)):
-/// `P_b = ((1 - μ)/2)^L Σ_{k<L} C(L-1+k, k) ((1 + μ)/2)^k`, `μ = √(γ/(1 + γ))`, with
-/// `γ` the mean `E_b/N_0` of one branch; one branch is the flat Rayleigh channel,
-/// `P_b = (1 - μ)/2`.
+///
+/// .. math::
+///
+///     P_b = \left(\frac{1 - \mu}{2}\right)^L \sum_{k<L} \binom{L-1+k}{k}
+///     \left(\frac{1 + \mu}{2}\right)^k, \qquad \mu = \sqrt{\gamma/(1 + \gamma)},
+///
+/// with :math:`\gamma` the mean :math:`E_b/N_0` of one branch; one branch is the flat
+/// Rayleigh channel, :math:`P_b = (1 - \mu)/2`.
 ///
 /// Args:
-///     ebn0_db (float | array_like): the mean `E_b/N_0` of one branch (dB).
-///     branches (int): the number of branches `L` (at least 1).
+///     ebn0_db (float | array_like): the mean :math:`E_b/N_0` of one branch (dB).
+///     branches (int): the number of branches :math:`L` (at least 1).
 ///
 /// Returns:
-///     float | numpy.ndarray: the bit error probability at every `E_b/N_0`.
+///     float | numpy.ndarray: the bit error probability at every :math:`E_b/N_0`.
 ///
 /// Raises:
 ///     ValueError: for no branch.
@@ -100,14 +106,14 @@ fn theory_ber_rayleigh_mrc(ebn0_db: &Bound<'_, PyAny>, branches: usize) -> PyRes
 /// :meth:`ser`, :meth:`ber_noncoherent`, :meth:`mgf`), so that a simulated curve and
 /// its closed form are those of the same channel.
 ///
-/// - ``"rayleigh"``: scattered paths only, ``h ~ CN(0, 1)``;
-/// - ``"rice"`` with the Rician factor `K` (linear): a line of sight of power
-///   `K/(1 + K)` plus a scattered term;
-/// - ``"nakagami"`` with `m >= 1/2`: `|h|²` a gamma variable of shape `m` and unit
-///   mean, a uniform phase;
-/// - ``"hoyt"`` with `0 <= q <= 1`: a Gaussian of variance `1/(1 + q²)` on the real
-///   axis and `q²/(1 + q²)` on the imaginary one;
-/// - ``"awgn"``: no fading, `h = 1`.
+/// - ``"rayleigh"``: scattered paths only, :math:`h \sim \mathcal{CN}(0, 1)`;
+/// - ``"rice"`` with the Rician factor :math:`K` (linear): a line of sight of power
+///   :math:`K/(1 + K)` plus a scattered term;
+/// - ``"nakagami"`` with :math:`m \ge 1/2`: :math:`|h|^2` a gamma variable of shape
+///   :math:`m` and unit mean, a uniform phase;
+/// - ``"hoyt"`` with :math:`0 \le q \le 1`: a Gaussian of variance :math:`1/(1 + q^2)` on
+///   the real axis and :math:`q^2/(1 + q^2)` on the imaginary one;
+/// - ``"awgn"``: no fading, :math:`h = 1`.
 ///
 /// The densities are those of Table 2 of M. K. Simon and M.-S. Alouini, "A unified
 /// approach to the performance analysis of digital communication over generalized
@@ -118,8 +124,8 @@ fn theory_ber_rayleigh_mrc(ebn0_db: &Bound<'_, PyAny>, branches: usize) -> PyRes
 /// Args:
 ///     kind (str): ``"rayleigh"`` (the default), ``"rice"``, ``"nakagami"``, ``"hoyt"``
 ///         or ``"awgn"``.
-///     parameter (float, optional): `K` (linear) for Rice, `m` for Nakagami, `q` for
-///         Hoyt; none for Rayleigh and AWGN.
+///     parameter (float, optional): :math:`K` (linear) for Rice, :math:`m` for Nakagami,
+///         :math:`q` for Hoyt; none for Rayleigh and AWGN.
 ///
 /// Raises:
 ///     ValueError: for an unknown channel, a missing or an invalid parameter.
@@ -164,7 +170,7 @@ impl PyFading {
         &self.kind
     }
 
-    /// float | None: its parameter (`K`, `m` or `q`).
+    /// float | None: its parameter (:math:`K`, :math:`m` or :math:`q`).
     #[getter]
     fn parameter(&self) -> Option<f64> {
         self.parameter
@@ -202,7 +208,11 @@ impl PyFading {
         ))
     }
 
-    /// Moment generating function `M(s) = E exp(s γ)` of the SNR `γ`, at `s <= 0`.
+    /// Moment generating function of the SNR :math:`\gamma` at :math:`s \le 0`.
+    ///
+    /// .. math::
+    ///
+    ///     M(s) = \mathbb{E} \exp(s \gamma).
     ///
     /// Args:
     ///     s (float | array_like): the argument, not positive.
@@ -218,17 +228,17 @@ impl PyFading {
         map_real(s, |v| self.snr.mgf(v, mean).py())
     }
 
-    /// Average BER of a coherent binary signal of conditional BER `Q(√(2 g γ))`
+    /// Average BER of a coherent binary signal of conditional BER :math:`Q(\sqrt{2 g \gamma})`
     /// (:func:`theory_ber_binary_fading`).
     ///
     /// Args:
-    ///     ebn0_db (float | array_like): the mean `E_b/N_0` of one branch (dB).
+    ///     ebn0_db (float | array_like): the mean :math:`E_b/N_0` of one branch (dB).
     ///     g (float): the constant of the signal: 1 for BPSK and Gray QPSK per bit, 1/2
     ///         for orthogonal BFSK.
     ///     branches (int): branches combined by maximal ratio.
     ///
     /// Returns:
-    ///     float | numpy.ndarray: the bit error probability at every `E_b/N_0`.
+    ///     float | numpy.ndarray: the bit error probability at every :math:`E_b/N_0`.
     ///
     /// Raises:
     ///     ValueError: for an invalid parameter or input (the message names it).
@@ -238,14 +248,14 @@ impl PyFading {
     }
 
     /// Average BER of a binary signal detected noncoherently or differentially, of
-    /// conditional BER `0.5 exp(-g γ)` (:func:`theory_ber_noncoherent_binary_fading`).
+    /// conditional BER :math:`0.5 \exp(-g \gamma)` (:func:`theory_ber_noncoherent_binary_fading`).
     ///
     /// Args:
-    ///     ebn0_db (float | array_like): the mean `E_b/N_0` (dB).
+    ///     ebn0_db (float | array_like): the mean :math:`E_b/N_0` (dB).
     ///     g (float): 1 for DPSK, 1/2 for noncoherent orthogonal BFSK.
     ///
     /// Returns:
-    ///     float | numpy.ndarray: the bit error probability at every `E_b/N_0`.
+    ///     float | numpy.ndarray: the bit error probability at every :math:`E_b/N_0`.
     ///
     /// Raises:
     ///     ValueError: for an invalid parameter or input (the message names it).
@@ -258,11 +268,11 @@ impl PyFading {
     ///
     /// Args:
     ///     m (int): the order of the constellation.
-    ///     esn0_db (float | array_like): the mean `E_s/N_0` (dB).
+    ///     esn0_db (float | array_like): the mean :math:`E_s/N_0` (dB).
     ///     kind (str): ``"psk"``, ``"qam"`` or ``"pam"``.
     ///
     /// Returns:
-    ///     float | numpy.ndarray: the symbol error probability at every `E_s/N_0`.
+    ///     float | numpy.ndarray: the symbol error probability at every :math:`E_s/N_0`.
     ///
     /// Raises:
     ///     ValueError: for an invalid parameter or input (the message names it).
@@ -291,21 +301,26 @@ fn snr_fading(fading: Option<&Bound<'_, PyAny>>, parameter: Option<f64>) -> PyRe
 /// channel, by the moment generating function (MGF) of the SNR with Craig's form of the
 /// Q function (M.-S. Alouini and A. J. Goldsmith, "A unified approach for calculating
 /// error rates of linearly modulated signals over generalized fading channels," IEEE
-/// Trans. Commun. 47(9), 1999, eqs. (41), (45), (48)): `P_s = (1/π) ∫ M_γ(-g/sin²φ) dφ`
+/// Trans. Commun. 47(9), 1999, eqs. (41), (45), (48)):
+///
+/// .. math::
+///
+///     P_s = \frac{1}{\pi} \int M_\gamma\!\left(-\frac{g}{\sin^2 \varphi}\right) d\varphi
+///
 /// over the intervals of the family, with the MGF of Rayleigh, Rice (Rician factor
-/// `K`), Nakagami-m (`m`) or Hoyt (`q`) fading (eqs. (23), (28), (30), (26)).
+/// :math:`K`), Nakagami-m (:math:`m`) or Hoyt (:math:`q`) fading (eqs. (23), (28), (30), (26)).
 ///
 /// Args:
 ///     m (int): the order of the constellation.
-///     esn0_db (float | array_like): the mean `E_s/N_0` (dB).
+///     esn0_db (float | array_like): the mean :math:`E_s/N_0` (dB).
 ///     kind (str): ``"psk"``, ``"qam"`` or ``"pam"``.
 ///     fading (str | Fading, optional): a :class:`Fading`, or ``"rayleigh"`` (the
 ///         default), ``"rice"``, ``"nakagami"``, ``"hoyt"`` or ``"awgn"``.
-///     parameter (float, optional): `K` (linear) for Rice, `m` for Nakagami, `q` for
-///         Hoyt; none for Rayleigh and AWGN.
+///     parameter (float, optional): :math:`K` (linear) for Rice, :math:`m` for Nakagami,
+///         :math:`q` for Hoyt; none for Rayleigh and AWGN.
 ///
 /// Returns:
-///     float | numpy.ndarray: the symbol error probability at every `E_s/N_0`.
+///     float | numpy.ndarray: the symbol error probability at every :math:`E_s/N_0`.
 ///
 /// Raises:
 ///     ValueError: for an invalid parameter or input (the message names it).
@@ -334,25 +349,31 @@ fn theory_ser_fading(
     map_real(esn0_db, |e| theory::ser_fading(k, m, f, e).py())
 }
 
-/// Average bit error rate of a coherent binary signal of conditional BER `Q(√(2 g γ))`
-/// over a flat fading channel, with maximal-ratio combining of independent branches
-/// of the same mean (M. K. Simon and M.-S. Alouini, "A unified approach to the
-/// performance analysis of digital communication over generalized fading channels,"
-/// Proc. IEEE 86(9), 1998, eqs. (17), (23) and Table 3): `P_b = (1/π) ∫_0^{π/2}
-/// [M_γ(-g/sin²φ)]^L dφ`, `g` = 1 for BPSK and Gray QPSK per bit, 1/2 for orthogonal
-/// BFSK. Over Rayleigh fading it is :func:`theory_ber_rayleigh_mrc`.
+/// Average bit error rate of a coherent binary signal of conditional BER
+/// :math:`Q(\sqrt{2 g \gamma})` over a flat fading channel, with maximal-ratio combining of
+/// independent branches of the same mean (M. K. Simon and M.-S. Alouini, "A unified
+/// approach to the performance analysis of digital communication over generalized
+/// fading channels," Proc. IEEE 86(9), 1998, eqs. (17), (23) and Table 3):
+///
+/// .. math::
+///
+///     P_b = \frac{1}{\pi} \int_0^{\pi/2}
+///     \left[M_\gamma\!\left(-\frac{g}{\sin^2 \varphi}\right)\right]^L d\varphi,
+///
+/// :math:`g = 1` for BPSK and Gray QPSK per bit, :math:`1/2` for orthogonal BFSK. Over
+/// Rayleigh fading it is :func:`theory_ber_rayleigh_mrc`.
 ///
 /// Args:
-///     ebn0_db (float | array_like): the mean `E_b/N_0` of one branch (dB).
+///     ebn0_db (float | array_like): the mean :math:`E_b/N_0` of one branch (dB).
 ///     g (float): the constant of the binary signal (1 for BPSK).
 ///     fading (str | Fading, optional): a :class:`Fading`, or ``"rayleigh"`` (the
 ///         default), ``"rice"``, ``"nakagami"``, ``"hoyt"`` or ``"awgn"``.
-///     parameter (float, optional): `K` (linear) for Rice, `m` for Nakagami, `q` for
-///         Hoyt.
-///     branches (int): the number of branches `L` (at least 1).
+///     parameter (float, optional): :math:`K` (linear) for Rice, :math:`m` for Nakagami,
+///         :math:`q` for Hoyt.
+///     branches (int): the number of branches :math:`L` (at least 1).
 ///
 /// Returns:
-///     float | numpy.ndarray: the bit error probability at every `E_b/N_0`.
+///     float | numpy.ndarray: the bit error probability at every :math:`E_b/N_0`.
 ///
 /// Raises:
 ///     ValueError: for an invalid parameter or input (the message names it).
@@ -378,20 +399,25 @@ fn theory_ber_binary_fading(
 }
 
 /// Average bit error rate of a binary signal detected noncoherently or differentially,
-/// of conditional BER `0.5 exp(-g γ)`, over a flat fading channel: `P_b = 0.5 M_γ(-g)`
-/// (Simon & Alouini 1998, eq. (53) averaged; eq. (64) over Rayleigh fading), `g` = 1
-/// for DPSK, 1/2 for noncoherent orthogonal BFSK.
+/// of conditional BER :math:`0.5 \exp(-g \gamma)`, over a flat fading channel:
+///
+/// .. math::
+///
+///     P_b = 0.5\, M_\gamma(-g)
+///
+/// (Simon & Alouini 1998, eq. (53) averaged; eq. (64) over Rayleigh fading), :math:`g = 1`
+/// for DPSK, :math:`1/2` for noncoherent orthogonal BFSK.
 ///
 /// Args:
-///     ebn0_db (float | array_like): the mean `E_b/N_0` (dB).
+///     ebn0_db (float | array_like): the mean :math:`E_b/N_0` (dB).
 ///     g (float): the constant of the binary signal (1 for DPSK).
 ///     fading (str | Fading, optional): a :class:`Fading`, or ``"rayleigh"`` (the
 ///         default), ``"rice"``, ``"nakagami"``, ``"hoyt"`` or ``"awgn"``.
-///     parameter (float, optional): `K` (linear) for Rice, `m` for Nakagami, `q` for
-///         Hoyt.
+///     parameter (float, optional): :math:`K` (linear) for Rice, :math:`m` for Nakagami,
+///         :math:`q` for Hoyt.
 ///
 /// Returns:
-///     float | numpy.ndarray: the bit error probability at every `E_b/N_0`.
+///     float | numpy.ndarray: the bit error probability at every :math:`E_b/N_0`.
 ///
 /// Raises:
 ///     ValueError: for an invalid parameter or input (the message names it).
@@ -417,8 +443,8 @@ fn theory_ber_noncoherent_binary_fading(
 /// eq. (8) of Ahmed, Thompson and Zeidler, MILCOM 2007).
 ///
 /// Args:
-///     theta (float | array_like): phase error (rad), in `(-π, π]`.
-///     snr_lin (float): `A²/E|w|²` (linear).
+///     theta (float | array_like): phase error (rad), in :math:`(-\pi, \pi]`.
+///     snr_lin (float): :math:`A^2/\mathbb{E}|w|^2` (linear).
 ///
 /// Returns:
 ///     float | numpy.ndarray: the density at every `theta`.
@@ -439,11 +465,11 @@ fn theory_phase_pdf(theta: &Bound<'_, PyAny>, snr_lin: f64) -> PyResult<Py<PyAny
 ///
 /// Args:
 ///     m (int): order.
-///     ebn0_db (float | array_like): `E_b/N_0` (dB).
+///     ebn0_db (float | array_like): :math:`E_b/N_0` (dB).
 ///     kind (str): `"qam"`, `"psk"` or `"pam"`.
 ///
 /// Returns:
-///     float | numpy.ndarray: the symbol error probability at every `E_b/N_0`.
+///     float | numpy.ndarray: the symbol error probability at every :math:`E_b/N_0`.
 ///
 /// Raises:
 ///     ValueError: for an invalid parameter or input (the message names it).
@@ -461,16 +487,21 @@ fn theory_ser(m: usize, ebn0_db: &Bound<'_, PyAny>, kind: &str) -> PyResult<Py<P
     map_real(ebn0_db, |e| metrics::theory_ser(k, m, e).py())
 }
 
-/// Theoretical SER over AWGN as a function of `E_s/N_0`: :func:`theory_ser` with
-/// `E_b/N_0 = E_s/N_0 - 10 log10(log2 M)`, for the links whose SNR is per symbol.
+/// Theoretical SER over AWGN as a function of :math:`E_s/N_0`: :func:`theory_ser` with
+///
+/// .. math::
+///
+///     E_b/N_0 = E_s/N_0 - 10 \log_{10}(\log_2 M),
+///
+/// for the links whose SNR is per symbol.
 ///
 /// Args:
 ///     m (int): order.
-///     esn0_db (float | array_like): `E_s/N_0` (dB).
+///     esn0_db (float | array_like): :math:`E_s/N_0` (dB).
 ///     kind (str): `"qam"`, `"psk"` or `"pam"`.
 ///
 /// Returns:
-///     float | numpy.ndarray: the symbol error probability at every `E_s/N_0`.
+///     float | numpy.ndarray: the symbol error probability at every :math:`E_s/N_0`.
 ///
 /// Raises:
 ///     ValueError: for an invalid parameter or input (the message names it).
@@ -492,7 +523,7 @@ fn theory_ser_esn0(m: usize, esn0_db: &Bound<'_, PyAny>, kind: &str) -> PyResult
 ///
 /// Args:
 ///     m (int): order.
-///     snr_db (float | array_like): `E_s/σ²` (dB); PAM and OOK see a real channel, the
+///     snr_db (float | array_like): :math:`E_s/\sigma^2` (dB); PAM and OOK see a real channel, the
 ///         others a circular complex one, as in OptiCommPy.
 ///     kind (str): `"qam"`, `"psk"`, `"pam"` or `"ook"`.
 ///     px (array_like, optional): probabilities of the points.
@@ -530,7 +561,7 @@ fn theory_mi(
 ///
 /// Args:
 ///     m (int): order.
-///     snr_db (float | array_like): `E_s/σ²` (dB), as `theory_mi`.
+///     snr_db (float | array_like): :math:`E_s/\sigma^2` (dB), as `theory_mi`.
 ///     kind (str): `"qam"`, `"psk"`, `"pam"` or `"ook"`.
 ///     px (array_like, optional): probabilities of the points.
 ///     fading (str): `"awgn"` or `"rayleigh"`.
@@ -562,7 +593,7 @@ fn theory_gmi(
 ///
 /// Args:
 ///     constellation (Constellation): the points (normalised inside).
-///     snr_db (float | array_like): `E_s/σ²` (dB).
+///     snr_db (float | array_like): :math:`E_s/\sigma^2` (dB).
 ///     fading (str): `"awgn"` or `"rayleigh"`.
 ///     points (int): quadrature nodes per dimension.
 ///
@@ -595,7 +626,7 @@ fn theory_cm_capacity(
 ///
 /// Args:
 ///     constellation (Constellation): the labelled points.
-///     snr_db (float | array_like): `E_s/σ²` (dB).
+///     snr_db (float | array_like): :math:`E_s/\sigma^2` (dB).
 ///     fading (str): `"awgn"` or `"rayleigh"`.
 ///     points (int): quadrature nodes per dimension.
 ///
@@ -621,7 +652,7 @@ fn theory_bicm_capacity(
 ///
 /// Args:
 ///     constellation (Constellation): the points.
-///     snr_db (float | array_like): `E_s/σ²` (dB).
+///     snr_db (float | array_like): :math:`E_s/\sigma^2` (dB).
 ///     fading (str): `"awgn"` or `"rayleigh"`.
 ///
 /// Returns:
@@ -646,13 +677,13 @@ fn theory_cm_cutoff_rate(
     map_real(snr_db, |s| Ok(bicm::cm_cutoff_rate(&constellation.inner, s, f)))
 }
 
-/// The BICM cutoff rate (bits per channel use) of a labelled constellation, `m(1 -
-/// log2(1 + B))` with the Bhattacharyya factor `B` (Caire, Taricco & Biglieri 1998,
-/// eqs. (19), (21)).
+/// The BICM cutoff rate (bits per channel use) of a labelled constellation,
+/// :math:`m(1 - \log_2(1 + B))` with the Bhattacharyya factor :math:`B` (Caire, Taricco &
+/// Biglieri 1998, eqs. (19), (21)).
 ///
 /// Args:
 ///     constellation (Constellation): the labelled points.
-///     snr_db (float | array_like): `E_s/σ²` (dB).
+///     snr_db (float | array_like): :math:`E_s/\sigma^2` (dB).
 ///     fading (str): `"awgn"` or `"rayleigh"`.
 ///     points (int): quadrature nodes per dimension.
 ///

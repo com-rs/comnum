@@ -8,32 +8,47 @@ use super::*;
 /// After Thompson, Ahmed, Proakis, Zeidler & Geile, "Constant envelope OFDM," *IEEE
 /// Trans. Commun.* 56(8), 2008.
 ///
-/// A block carries `K` data symbols `d` (unit mean energy) on the subcarriers
-/// `1..K` of a DFT of size `N = 2J(K+1)`, `J` the oversampling factor; the real OFDM
-/// signal `x = (F d + F* d*)/√(2K)` has a unit variance and the samples are
-/// `s_n = exp(j2πh x_n)`, so that the phase has the standard deviation `2πh`, `h`
-/// being the modulation index (Sec. II). An optional cyclic prefix of `N_cp` samples
-/// is prepended. The receiver (Sec. III, Fig. 1) takes the phase of the samples,
-/// unwrapped along the stream or not, removes the prefix and projects it on the data
-/// bins: `d̂ = G ψ/(2πh)`.
+/// A block carries :math:`K` data symbols :math:`d` (unit mean energy) on the subcarriers
+/// :math:`1, \dots, K` of a DFT of size :math:`N = 2J(K+1)`, :math:`J` the oversampling
+/// factor; the real OFDM signal :math:`x = (F d + F^* d^*)/\sqrt{2K}` has a unit variance
+/// and the samples are
 ///
-/// **SNR convention.** `E_s/N_0` is per data symbol: a block of energy `N + N_cp`
-/// carries `K` symbols, so the noise variance per sample is
-/// `σ² = (N + N_cp)/(K E_s/N_0)` (:meth:`noise_variance`; `sps = (N + N_cp)/K` samples
-/// per data symbol). Above the threshold of the
-/// phase demodulator (a carrier-to-noise ratio near 10 dB, Sec. III-B), every data
-/// subcarrier sees the SNR `(2πh)² E_s/N_0 N/(N + N_cp)` (:meth:`snr`), and the error
-/// rates are those of the constellation over AWGN at that SNR (:meth:`ser_esn0`,
-/// :meth:`ber_esn0`). For `M`-PAM on every real subcarrier this is eq. (15) of the paper,
-/// `BER = 2(M-1)/(M log₂M) Q(2πh √(6 log₂M E_b/N_0 / (M²-1)))`, the
-/// nearest-neighbour term of the Gray BER; :meth:`ber_esn0` uses the exact Gray BER of the
-/// square QAM of order `M²` whose real and imaginary parts are the two PAM symbols
-/// (within 1 % of eq. (15) once the BER is under 1e-2).
+/// .. math::
+///
+///     s_n = \exp(j 2\pi h x_n),
+///
+/// so that the phase has the standard deviation :math:`2\pi h`, :math:`h` being the
+/// modulation index (Sec. II). An optional cyclic prefix of :math:`N_{cp}` samples is
+/// prepended. The receiver (Sec. III, Fig. 1) takes the phase of the samples, unwrapped
+/// along the stream or not, removes the prefix and projects it on the data bins:
+///
+/// .. math::
+///
+///     \hat{d} = G \psi/(2\pi h).
+///
+/// **SNR convention.** :math:`E_s/N_0` is per data symbol: a block of energy
+/// :math:`N + N_{cp}` carries :math:`K` symbols, so the noise variance per sample is
+/// :math:`\sigma^2 = (N + N_{cp})/(K E_s/N_0)` (:meth:`noise_variance`;
+/// :math:`\mathrm{sps} = (N + N_{cp})/K` samples per data symbol). Above the threshold of
+/// the phase demodulator (a carrier-to-noise ratio near 10 dB, Sec. III-B), every data
+/// subcarrier sees the SNR :math:`(2\pi h)^2 (E_s/N_0) N/(N + N_{cp})` (:meth:`snr`), and
+/// the error rates are those of the constellation over AWGN at that SNR (:meth:`ser_esn0`,
+/// :meth:`ber_esn0`). For :math:`M`-PAM on every real subcarrier this is eq. (15) of the
+/// paper, the nearest-neighbour term of the Gray BER:
+///
+/// .. math::
+///
+///     \mathrm{BER} = \frac{2(M-1)}{M \log_2 M}\,
+///     Q\!\left(2\pi h \sqrt{\frac{6 \log_2 M}{M^2 - 1} \frac{E_b}{N_0}}\right);
+///
+/// :meth:`ber_esn0` uses the exact Gray BER of the square QAM of order :math:`M^2` whose
+/// real and imaginary parts are the two PAM symbols (within 1 % of eq. (15) once the BER
+/// is under 1e-2).
 ///
 /// Args:
-///     n_subcarriers (int): data subcarriers `K` per block.
-///     h (float): modulation index (phase standard deviation `2πh`).
-///     oversampling (int): `J`, the DFT has `N = 2J(K+1)` points.
+///     n_subcarriers (int): data subcarriers :math:`K` per block.
+///     h (float): modulation index (phase standard deviation :math:`2\pi h`).
+///     oversampling (int): :math:`J`, the DFT has :math:`N = 2J(K+1)` points.
 ///     n_cp (int): cyclic prefix (samples).
 ///
 /// Raises:
@@ -77,56 +92,60 @@ impl PyCeOfdm {
         Ok(PyCeOfdm { inner })
     }
 
-    /// int: Data subcarriers `K` per block.
+    /// int: Data subcarriers :math:`K` per block.
     #[getter]
     fn n_subcarriers(&self) -> usize {
         self.inner.n_subcarriers
     }
 
-    /// float: The modulation index `h`.
+    /// float: The modulation index :math:`h`.
     #[getter]
     fn h(&self) -> f64 {
         self.inner.h
     }
 
-    /// int: The oversampling factor `J`.
+    /// int: The oversampling factor :math:`J`.
     #[getter]
     fn oversampling(&self) -> usize {
         self.inner.oversampling
     }
 
-    /// int: The cyclic prefix `N_cp` (samples).
+    /// int: The cyclic prefix :math:`N_{cp}` (samples).
     #[getter]
     fn n_cp(&self) -> usize {
         self.inner.n_cp
     }
 
-    /// int: The DFT size `N = 2J(K+1)`.
+    /// int: The DFT size :math:`N = 2J(K+1)`.
     #[getter]
     fn n_fft(&self) -> usize {
         self.inner.n_fft()
     }
 
-    /// int: Samples per block, `N + N_cp`.
+    /// int: Samples per block, :math:`N + N_{cp}`.
     #[getter]
     fn block_len(&self) -> usize {
         self.inner.block_len()
     }
 
-    /// float: Samples per data symbol, `(N + N_cp)/K`.
+    /// float: Samples per data symbol, :math:`(N + N_{cp})/K`.
     #[getter]
     fn sps(&self) -> f64 {
         self.inner.sps()
     }
 
-    /// The noise variance per sample for an `E_s/N_0` per data symbol and a unit
-    /// envelope, `σ² = (N + N_cp)/(K E_s/N_0)`.
+    /// The noise variance per sample for an :math:`E_s/N_0` per data symbol and a unit
+    /// envelope:
+    ///
+    /// .. math::
+    ///
+    ///     \sigma^2 = (N + N_{cp})/(K E_s/N_0).
     ///
     /// Args:
-    ///     esn0_db (float | array_like): `E_s/N_0` (dB) per data symbol.
+    ///     esn0_db (float | array_like): :math:`E_s/N_0` (dB) per data symbol.
     ///
     /// Returns:
-    ///     float | numpy.ndarray: `σ²` (for `Rng.complex_noise`).
+    ///     float | numpy.ndarray: :math:`\sigma^2` (for `Rng.complex_noise`).
     ///
     /// Raises:
     ///     ValueError: for values that are not real numbers.
@@ -134,13 +153,13 @@ impl PyCeOfdm {
         map_real(esn0_db, |e| Ok(self.inner.noise_variance(e)))
     }
 
-    /// The real OFDM signal `x = (F d + F* d*)/√(2K)` of every block (no prefix).
+    /// The real OFDM signal :math:`x = (F d + F^* d^*)/\sqrt{2K}` of every block (no prefix).
     ///
     /// Args:
-    ///     symbols (array_like): a multiple of `K` data symbols.
+    ///     symbols (array_like): a multiple of :math:`K` data symbols.
     ///
     /// Returns:
-    ///     numpy.ndarray: `N` real samples per block.
+    ///     numpy.ndarray: :math:`N` real samples per block.
     ///
     /// Raises:
     ///     ValueError: for an invalid parameter or input (the message names it).
@@ -148,13 +167,13 @@ impl PyCeOfdm {
         Ok(farr(py, self.inner.ofdm_signal(&cvec(symbols)?).py()?))
     }
 
-    /// The transmitted samples `exp(j2πh x)` with the cyclic prefix of every block.
+    /// The transmitted samples :math:`\exp(j 2\pi h x)` with the cyclic prefix of every block.
     ///
     /// Args:
-    ///     symbols (array_like): a multiple of `K` data symbols.
+    ///     symbols (array_like): a multiple of :math:`K` data symbols.
     ///
     /// Returns:
-    ///     numpy.ndarray: `N + N_cp` unit-envelope samples per block.
+    ///     numpy.ndarray: :math:`N + N_{cp}` unit-envelope samples per block.
     ///
     /// Raises:
     ///     ValueError: for an invalid parameter or input (the message names it).
@@ -165,16 +184,17 @@ impl PyCeOfdm {
     /// The symbol estimates of every block.
     ///
     /// Args:
-    ///     samples (array_like): a multiple of `N + N_cp` received samples.
+    ///     samples (array_like): a multiple of :math:`N + N_{cp}` received samples.
     ///     unwrap (str): for the arctangent receiver, `"none"` (the principal phase, wraps
     ///         are errors) or `"stream"` (the phase unwrapped along the stream, the phase
     ///         unwrapper of the paper).
-    ///     receiver (str): `"arctangent"` (`d̂ = G ψ/(2πh)`, Thompson et al. 2008),
-    ///         `"linear"` (`Im r`) or `"enhanced"` (`Im r (2 - Re r)`), the low-complexity
+    ///     receiver (str): `"arctangent"` (:math:`\hat{d} = G \psi/(2\pi h)`, Thompson et al.
+    ///         2008), `"linear"` (:math:`\operatorname{Im} r`) or `"enhanced"`
+    ///         (:math:`\operatorname{Im} r\,(2 - \operatorname{Re} r)`), the low-complexity
     ///         receivers of Ahmed and Zeidler (2015), divided by their Bussgang gain.
     ///
     /// Returns:
-    ///     numpy.ndarray: `K` complex estimates per block.
+    ///     numpy.ndarray: :math:`K` complex estimates per block.
     ///
     /// Raises:
     ///     ValueError: for an invalid parameter or input (the message names it).
@@ -192,19 +212,19 @@ impl PyCeOfdm {
 
     /// The posterior means of the symbols of every block by the GAMP receiver of López
     /// Morales, Dinis and García Armada (2022), near the optimum where the phase leaves
-    /// `(-π, π]`.
+    /// :math:`(-\pi, \pi]`.
     ///
     /// Args:
-    ///     samples (array_like): a multiple of `N + N_cp` received samples.
-    ///     noise_var (float): `σ²` per sample (:meth:`noise_variance`).
+    ///     samples (array_like): a multiple of :math:`N + N_{cp}` received samples.
+    ///     noise_var (float): :math:`\sigma^2` per sample (:meth:`noise_variance`).
     ///     constellation (Constellation): the symbols as transmitted (square QAM, PAM or
     ///         BPSK).
     ///     iterations (int): iterations per block.
-    ///     damping (float): damping factor in `(0, 1]`.
+    ///     damping (float): damping factor in :math:`(0, 1]`.
     ///     points (int): points of the quadrature of the output step.
     ///
     /// Returns:
-    ///     numpy.ndarray: `K` complex estimates per block.
+    ///     numpy.ndarray: :math:`K` complex estimates per block.
     ///
     /// Raises:
     ///     ValueError: for an invalid parameter or input (the message names it).
@@ -242,10 +262,10 @@ impl PyCeOfdm {
     }
 
     /// The SNR of every data subcarrier in the linear regime (linear scale),
-    /// `(2πh)² E_s/N_0 N/(N + N_cp)`.
+    /// :math:`(2\pi h)^2 (E_s/N_0) N/(N + N_{cp})`.
     ///
     /// Args:
-    ///     esn0_db (float | array_like): `E_s/N_0` (dB) per data symbol.
+    ///     esn0_db (float | array_like): :math:`E_s/N_0` (dB) per data symbol.
     ///
     /// Returns:
     ///     float | numpy.ndarray: the SNR (linear).
@@ -261,7 +281,7 @@ impl PyCeOfdm {
     ///
     /// Args:
     ///     m (int): constellation order.
-    ///     esn0_db (float | array_like): `E_s/N_0` (dB) per data symbol.
+    ///     esn0_db (float | array_like): :math:`E_s/N_0` (dB) per data symbol.
     ///     kind (str): `"qam"`, `"psk"` or `"pam"`.
     ///
     /// Returns:
@@ -281,7 +301,7 @@ impl PyCeOfdm {
     ///
     /// Args:
     ///     m (int): constellation order.
-    ///     esn0_db (float | array_like): `E_s/N_0` (dB) per data symbol.
+    ///     esn0_db (float | array_like): :math:`E_s/N_0` (dB) per data symbol.
     ///     kind (str): `"qam"`, `"psk"` or `"pam"`.
     ///
     /// Returns:
@@ -295,11 +315,12 @@ impl PyCeOfdm {
         map_real(esn0_db, |e| theory::ber_esn0(&self.inner, k, m, e).py())
     }
 
-    /// The expected periodogram `E|S_k|²/N` of a transmitted block under the Gaussian
-    /// model (Guerreiro et al. 2015): the bins average to 1, bin 0 holds the carrier line.
+    /// The expected periodogram :math:`\mathbb{E}|S_k|^2/N` of a transmitted block under the
+    /// Gaussian model (Guerreiro et al. 2015): the bins average to 1, bin 0 holds the carrier
+    /// line.
     ///
     /// Returns:
-    ///     numpy.ndarray: `N` values, in the order of the DFT.
+    ///     numpy.ndarray: :math:`N` values, in the order of the DFT.
     ///
     /// Raises:
     ///     ValueError: for an invalid parameter (the message names it).
@@ -311,11 +332,11 @@ impl PyCeOfdm {
     /// above its threshold, Bussgang's analysis for the linear receivers.
     ///
     /// Args:
-    ///     esn0_db (float): `E_s/N_0` (dB) per data symbol.
+    ///     esn0_db (float): :math:`E_s/N_0` (dB) per data symbol.
     ///     receiver (str): `"arctangent"`, `"linear"` or `"enhanced"`.
     ///
     /// Returns:
-    ///     numpy.ndarray: `K` SNRs (linear).
+    ///     numpy.ndarray: :math:`K` SNRs (linear).
     ///
     /// Raises:
     ///     ValueError: for an invalid parameter (the message names it).
@@ -330,7 +351,7 @@ impl PyCeOfdm {
     ///
     /// Args:
     ///     m (int): constellation order.
-    ///     esn0_db (float | array_like): `E_s/N_0` (dB) per data symbol.
+    ///     esn0_db (float | array_like): :math:`E_s/N_0` (dB) per data symbol.
     ///     kind (str): `"qam"`, `"psk"` or `"pam"`.
     ///     receiver (str): `"arctangent"`, `"linear"` or `"enhanced"`.
     ///
@@ -347,14 +368,14 @@ impl PyCeOfdm {
     }
 
     /// The change of the estimates of the arctangent receiver caused by a cycle slip of
-    /// `+2π` from sample `start` (after the prefix) to the end of the block (Ahmed et al.
+    /// :math:`+2\pi` from sample `start` (after the prefix) to the end of the block (Ahmed et al.
     /// 2012, eqs. (11)–(14)).
     ///
     /// Args:
-    ///     start (int): first sample of the slip, `0 ≤ start < N`.
+    ///     start (int): first sample of the slip, :math:`0 \le \mathrm{start} < N`.
     ///
     /// Returns:
-    ///     numpy.ndarray: `K` complex changes.
+    ///     numpy.ndarray: :math:`K` complex changes.
     ///
     /// Raises:
     ///     ValueError: for an invalid parameter (the message names it).
@@ -371,17 +392,17 @@ impl PyCeOfdm {
     }
 }
 
-/// The powers `e^{-φ²} φ^{2i}/i!` of the intermodulation products of a phase modulator
-/// driven by a Gaussian signal of standard deviation `φ = 2πh` (Guerreiro et al. 2015,
-/// eqs. (12)–(14); Pacheco and Hatzinakos 2006, eq. (2)): the carrier line, the useful
-/// term, then the products of order `i`.
+/// The powers :math:`e^{-\phi^2} \phi^{2i}/i!` of the intermodulation products of a phase
+/// modulator driven by a Gaussian signal of standard deviation :math:`\phi = 2\pi h`
+/// (Guerreiro et al. 2015, eqs. (12)–(14); Pacheco and Hatzinakos 2006, eq. (2)): the
+/// carrier line, the useful term, then the products of order :math:`i`.
 ///
 /// Args:
-///     two_pi_h (float): `2πh`.
+///     two_pi_h (float): :math:`2\pi h`.
 ///     n (int): number of powers.
 ///
 /// Returns:
-///     numpy.ndarray: `P_0 … P_{n-1}`.
+///     numpy.ndarray: :math:`P_0 \dots P_{n-1}`.
 ///
 /// Raises:
 ///     ValueError: for a negative count.
@@ -395,16 +416,20 @@ fn ce_ofdm_imp_powers<'py>(py: Python<'py>, two_pi_h: f64, n: i64) -> PyResult<F
     Ok(farr(py, theory::imp_powers(two_pi_h, count(n, "n")?)))
 }
 
-/// The optimum asymptotic gain `G` of CE-OFDM over linear OFDM in AWGN, `(2πh)²`, or
-/// `(2πh)² erf(θ_max/(√2 · 2πh))` with the phase clipped to `±θ_max` (Guerreiro et al.
-/// 2015, eq. (20); 2016, eq. (7)).
+/// The optimum asymptotic gain :math:`G` of CE-OFDM over linear OFDM in AWGN,
+/// :math:`(2\pi h)^2`, or with the phase clipped to :math:`\pm\theta_{\max}` (Guerreiro et al.
+/// 2015, eq. (20); 2016, eq. (7)):
+///
+/// .. math::
+///
+///     G = (2\pi h)^2 \operatorname{erf}\!\left(\frac{\theta_{\max}}{\sqrt{2} \cdot 2\pi h}\right).
 ///
 /// Args:
-///     two_pi_h (float): `2πh`.
+///     two_pi_h (float): :math:`2\pi h`.
 ///     theta_max (float | None): phase clipping (rad).
 ///
 /// Returns:
-///     float: `G` (linear).
+///     float: :math:`G` (linear).
 ///
 /// Examples:
 ///     >>> import comnum, math
@@ -416,12 +441,15 @@ fn ce_ofdm_optimum_gain(two_pi_h: f64, theta_max: Option<f64>) -> f64 {
     theory::optimum_gain(two_pi_h, theta_max)
 }
 
-/// The optimum asymptotic BER of QPSK CE-OFDM in AWGN, `Q(√(G 2E_b/N_0))` (Guerreiro et
-/// al. 2016, eq. (8)).
+/// The optimum asymptotic BER of QPSK CE-OFDM in AWGN (Guerreiro et al. 2016, eq. (8)):
+///
+/// .. math::
+///
+///     P_b = Q\left(\sqrt{2 G E_b/N_0}\right).
 ///
 /// Args:
-///     two_pi_h (float): `2πh`.
-///     ebn0_db (float | array_like): `E_b/N_0` (dB).
+///     two_pi_h (float): :math:`2\pi h`.
+///     ebn0_db (float | array_like): :math:`E_b/N_0` (dB).
 ///
 /// Returns:
 ///     float | numpy.ndarray: the BER.
@@ -433,7 +461,7 @@ fn theory_ce_ofdm_ber_optimum(two_pi_h: f64, ebn0_db: &Bound<'_, PyAny>) -> PyRe
     map_real(ebn0_db, |e| Ok(theory::ber_optimum(two_pi_h, e)))
 }
 
-/// The occupied bandwidth `B_y/(2B_m)` of a carrier phase-modulated by a Gaussian message
+/// The occupied bandwidth :math:`B_y/(2B_m)` of a carrier phase-modulated by a Gaussian message
 /// of standard deviation `sigma` with a flat spectrum (Pacheco and Hatzinakos 2006,
 /// eqs. (2)–(5), Fig. 1), the carrier line removed.
 ///
@@ -442,7 +470,7 @@ fn theory_ce_ofdm_ber_optimum(two_pi_h: f64, ebn0_db: &Bound<'_, PyAny>) -> PyRe
 ///     fraction (float): fraction of the power in the band.
 ///
 /// Returns:
-///     float: `B_y/(2B_m)`.
+///     float: :math:`B_y/(2B_m)`.
 ///
 /// Raises:
 ///     ValueError: for an invalid parameter (the message names it).

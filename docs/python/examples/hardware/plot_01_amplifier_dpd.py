@@ -94,7 +94,7 @@ scales = np.array([0.06, 0.08, 0.1, 0.12, 0.15, 0.18, 0.2])
 def evm_db(y, scale):
     rx = ofdm.demodulate(y / (scale * g))
     a = np.vdot(d, rx) / np.vdot(d, d)
-    return comnum.lin2db(np.mean(np.abs(rx / a - d) ** 2))
+    return comnum.lin2db(comnum.power(rx / a - d))
 
 
 res = {"amplifier": ([], []), "DPD + amplifier": ([], [])}
@@ -109,7 +109,7 @@ for s in scales:
         f, sd = comnum.periodogram(y, fs=fs, nfft=ofdm.fft_len)
         res[name][0].append(min(comnum.aclr_db(f, sd, bw, bw), 120.0))
         res[name][1].append(evm_db(y, s))
-drive = 20 * np.log10(scales)
+drive = comnum.amp2db(scales)
 fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(9.5, 3.8))
 for (name, (aclr, evm)), color, marker in zip(res.items(), [ORANGE, BLUE], ["o", "s"], strict=True):
     ax1.plot(drive, aclr, marker=marker, color=color, markeredgecolor=BACKGROUND, label=name)

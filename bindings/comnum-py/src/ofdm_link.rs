@@ -98,7 +98,7 @@ fn py_rms_delay_spread(taps: &Bound<'_, PyAny>) -> PyResult<f64> {
 /// A tapped-delay-line multipath channel with Clarke/Jakes Doppler (sum of sinusoids of
 /// Zheng & Xiao 2003), SISO or MIMO: every tap is Rayleigh with its power, the delays
 /// are rounded to the sampling grid and the powers normalised. The first tap of TDL-D,
-/// TDL-E and TDLD30 is Ricean: a specular component of Doppler shift ``0.7 doppler_hz``
+/// TDL-E and TDLD30 is Ricean: a specular component of Doppler shift :math:`0.7 f_D`
 /// is added (TR 38.901 §7.7.2).
 ///
 /// Args:
@@ -241,8 +241,8 @@ impl PyTaps {
     ///
     /// Returns:
     ///     numpy.ndarray: `(n_taps, n_samples, n_rx, n_tx)` (complex128):
-    ///     `coefficients[l, n, r, t]` is tap `l` at sample `n` between transmit antenna
-    ///     `t` and receive antenna `r`.
+    ///     `coefficients[l, n, r, t]` is tap :math:`l` at sample :math:`n` between transmit
+    ///     antenna :math:`t` and receive antenna :math:`r`.
     ///
     /// Raises:
     ///     ValueError: for an input that is not an array of numbers of the expected shape.
@@ -388,7 +388,8 @@ impl PyGrid {
     /// The pilot resource elements.
     ///
     /// Returns:
-    ///     numpy.ndarray: `(n_pilots, 2)` (int64), the subcarrier `k` and the symbol `l`
+    ///     numpy.ndarray: `(n_pilots, 2)` (int64), the subcarrier :math:`k` and the symbol
+    ///     :math:`l`
     ///     of every pilot.
     ///
     /// Raises:
@@ -404,7 +405,7 @@ impl PyGrid {
     ///     l (int): the OFDM symbol.
     ///
     /// Returns:
-    ///     bool: whether `(k, l)` is a pilot.
+    ///     bool: whether :math:`(k, l)` is a pilot.
     fn is_pilot(&self, k: usize, l: usize) -> bool {
         self.inner.is_pilot(k, l)
     }
@@ -461,7 +462,7 @@ impl PyGrid {
 ///     noise_var (float): noise variance per resource element.
 ///     method (str): `"linear"`, `"lmmse"`, or the interpolations compared by Coleri et
 ///         al. (2002): `"second_order"`, `"spline"`, `"lowpass"` (MATLAB `interp`) and
-///         `"time_domain"` (zero padding of the IDFT, pilots on 0, L, 2L, …).
+///         `"time_domain"` (zero padding of the IDFT, pilots on :math:`0, L, 2L, \dots`).
 ///     delays (array_like, optional): delays of the profile (samples of the IFFT of
 ///         `n_fft`).
 ///     powers (array_like, optional): powers of the profile (linear).
@@ -526,7 +527,7 @@ fn ofdm_preamble<'py>(py: Python<'py>, ofdm: &PyOfdm, seed: u64) -> PyResult<CAr
     Ok(carr(py, sync::preamble(&ofdm.inner, seed).py()?))
 }
 
-/// The timing metric of Schmidl & Cox, `|P(d)|²/R(d)²`.
+/// The timing metric of Schmidl & Cox, :math:`|P(d)|^2 / R(d)^2`.
 ///
 /// Args:
 ///     r (array_like): the received samples.
@@ -575,7 +576,7 @@ fn ofdm_synchronize<'py>(py: Python<'py>, r: &Bound<'py, PyAny>, ofdm: &PyOfdm) 
 /// Returns:
 ///     dict: ``noise`` (the largest total power of the residual noises, relative to a
 ///     subcarrier, eq. (51)), ``cfo`` (the largest carrier frequency offset in
-///     subcarrier spacings, eq. (43)), ``doppler`` (the largest ``f_D T_u``, Fig. 7) and
+///     subcarrier spacings, eq. (43)), ``doppler`` (the largest :math:`f_D T_u`, Fig. 7) and
 ///     ``estimator_gain`` (the gain a channel estimator needs, eq. (20)).
 ///
 /// Raises:
@@ -640,14 +641,15 @@ fn ofdm_timing_noise(
 /// The two-dimensional Wiener interpolator of pilots in time and frequency (Hoeher,
 /// Kaiser & Robertson 1997), for a WSSUS channel of uniform delay spectrum: every
 /// position is estimated from the ``n_taps`` nearest pilots (the weighted distance
-/// ``|dl| fd_ts + |dk| tau_df``) by the linear MMSE filter of their eq. (9).
+/// :math:`|\Delta l| \, f_D T_s + |\Delta k| \, \tau_{\max} \Delta F`) by the linear MMSE
+/// filter of their eq. (9).
 ///
 /// Args:
 ///     pilots (list[tuple[int, int]]): the ``(symbol, subcarrier)`` positions of the pilots.
-///     fd_ts (float): the maximum Doppler over the symbol rate, ``f_D T_s``.
+///     fd_ts (float): the maximum Doppler over the symbol rate, :math:`f_D T_s`.
 ///     tau_df (float): the one-sided maximum delay over the useful duration,
-///         ``tau_max Delta F`` (delays uniform on ``[-tau_max, tau_max]``).
-///     noise_to_pilot (float): the noise of the LS estimates, ``sigma^2 / E_p``.
+///         :math:`\tau_{\max} \Delta F` (delays uniform on :math:`[-\tau_{\max}, \tau_{\max}]`).
+///     noise_to_pilot (float): the noise of the LS estimates, :math:`\sigma^2 / E_p`.
 ///     n_taps (int): the pilots per position.
 ///     doppler (str): ``"uniform"`` (their eq. (15)) or ``"jakes"``.
 ///
@@ -744,15 +746,17 @@ impl PyWiener2d {
 /// The robust channel estimator of Li, Cimini & Sollenberger (1998): designed for the
 /// worst channel of delay spread ``tmax_ts`` (over the useful duration) and maximum
 /// Doppler ``fmax_tf`` (over the block rate), a uniform delay profile on the taps
-/// ``0`` to ``floor(K tmax_ts)`` of the DFT grid and a flat band-limited Doppler spectrum.
+/// :math:`0` to :math:`\lfloor K \, t_{\max}/T_s \rfloor` of the DFT grid and a flat
+/// band-limited Doppler spectrum.
 ///
 /// Args:
 ///     k (int): the tones.
 ///     tmax_ts (float): the design delay spread over the useful duration.
-///     fmax_tf (float): the design Doppler over the block rate, in ``[0, 1/2]``.
+///     fmax_tf (float): the design Doppler over the block rate, in :math:`[0, 1/2]`.
 ///
 /// Raises:
-///     ValueError: without tones, for a negative spread or a Doppler outside ``[0, 1/2]``.
+///     ValueError: without tones, for a negative spread or a Doppler outside
+///         :math:`[0, 1/2]`.
 ///
 /// Example:
 ///     >>> import comnum
@@ -772,7 +776,7 @@ impl PyRobustDesign {
         Ok(PyRobustDesign { inner: RobustDesign::new(k, tmax_ts, fmax_tf).py()? })
     }
 
-    /// int: The taps of the design delay spread on the DFT grid, ``K_o``.
+    /// int: The taps of the design delay spread on the DFT grid, :math:`K_o`.
     #[getter]
     fn k_o(&self) -> usize {
         self.inner.k_o
@@ -811,14 +815,15 @@ impl PyRobustDesign {
     }
 }
 
-/// The noise enhancement of LS estimates over a constellation, ``beta = E|x|^2 E|1/x|^2``
-/// (Edfors et al. 1998): 1 for a constant modulus, 17/9 for 16-QAM.
+/// The noise enhancement of LS estimates over a constellation,
+/// :math:`\beta = \mathbb{E}|x|^2 \, \mathbb{E}|1/x|^2` (Edfors et al. 1998): 1 for a constant
+/// modulus, 17/9 for 16-QAM.
 ///
 /// Args:
 ///     points (array_like): the points of the constellation (complex), equiprobable.
 ///
 /// Returns:
-///     float: ``beta``.
+///     float: :math:`\beta`.
 ///
 /// Raises:
 ///     ValueError: for no point or a point at the origin.
@@ -833,9 +838,10 @@ fn ls_noise_factor(points: &Bound<'_, PyAny>) -> PyResult<f64> {
 }
 
 /// The correlation matrix of ``n`` adjacent subcarriers of a channel of ``paths``
-/// impulses with delays uniform over ``[0, max_delay]`` samples (Edfors et al. 1998,
-/// Sec. II): equal powers (``tau_rms=None``, their uniform channel) or ``exp(-tau /
-/// tau_rms)``, the first impulse at 0 with ``first_at_zero`` (their synchronized channel).
+/// impulses with delays uniform over :math:`[0, \mathrm{max\_delay}]` samples (Edfors et al.
+/// 1998, Sec. II): equal powers (``tau_rms=None``, their uniform channel) or
+/// :math:`\exp(-\tau / \tau_{\mathrm{rms}})`, the first impulse at 0 with ``first_at_zero``
+/// (their synchronized channel).
 ///
 /// Args:
 ///     n (int): the subcarriers.
@@ -846,7 +852,7 @@ fn ls_noise_factor(points: &Bound<'_, PyAny>) -> PyResult<f64> {
 ///     n_fft (int, optional): the IFFT size, ``n`` by default.
 ///
 /// Returns:
-///     numpy.ndarray: the ``n x n`` correlation (complex128), of unit diagonal.
+///     numpy.ndarray: the :math:`n \times n` correlation (complex128), of unit diagonal.
 ///
 /// Raises:
 ///     ValueError: for no subcarrier or impulse, a negative delay or a non-positive decay.
@@ -871,17 +877,25 @@ fn random_delay_correlation<'py>(
     mat(py, r.outer_iter().map(|row| row.to_vec()).collect())
 }
 
-/// The rank-p LMMSE estimator of Edfors et al. (1998) for the correlation ``r_hh`` of
-/// ``N`` values: ``h_p = U D_p U^H h_ls``, ``D_p`` diagonal of ``delta_k = lambda_k /
-/// (lambda_k + noise)`` for ``k < p`` and of 0 beyond.
+/// The rank-:math:`p` LMMSE estimator of Edfors et al. (1998) for the correlation ``r_hh``
+/// of :math:`N` values:
+///
+/// .. math::
+///
+///     \hat{\mathbf{h}}_p = \mathbf{U} \mathbf{D}_p \mathbf{U}^{\mathsf{H}}
+///     \hat{\mathbf{h}}_{\mathrm{ls}}
+///
+/// with :math:`\mathbf{D}_p` diagonal of
+/// :math:`\delta_k = \lambda_k / (\lambda_k + \mathrm{noise})` for :math:`k < p` and of 0
+/// beyond.
 ///
 /// Args:
-///     r_hh (array_like): the ``N x N`` correlation (complex, Hermitian).
-///     noise (float): the noise of the LS estimates, ``beta / SNR``.
-///     rank (int): the rank ``p``.
+///     r_hh (array_like): the :math:`N \times N` correlation (complex, Hermitian).
+///     noise (float): the noise of the LS estimates, :math:`\beta / \mathrm{SNR}`.
+///     rank (int): the rank :math:`p`.
 ///
 /// Raises:
-///     ValueError: unless ``r_hh`` is square, for a rank of 0 or above ``N``, or a
+///     ValueError: unless ``r_hh`` is square, for a rank of 0 or above :math:`N`, or a
 ///         negative noise.
 ///
 /// Example:
@@ -921,26 +935,27 @@ impl PyLowRank {
     /// The estimate from the LS estimates (their eq. (9)).
     ///
     /// Args:
-    ///     h_ls (array_like): the ``N`` LS estimates (complex).
+    ///     h_ls (array_like): the :math:`N` LS estimates (complex).
     ///
     /// Returns:
     ///     numpy.ndarray: the estimate (complex128).
     ///
     /// Raises:
-    ///     ValueError: unless ``h_ls`` has ``N`` values.
+    ///     ValueError: unless ``h_ls`` has :math:`N` values.
     fn estimate<'py>(&self, py: Python<'py>, h_ls: &Bound<'py, PyAny>) -> PyResult<CArr<'py>> {
         Ok(carr(py, self.inner.estimate(&cvec(h_ls)?).py()?))
     }
 
-    /// The mean square error ``E||h - h_p||^2`` on a channel of correlation ``r_true``
-    /// with LS estimates of noise ``noise_true`` (their eq. (10)).
+    /// The mean square error :math:`\mathbb{E}\lVert \mathbf{h} - \hat{\mathbf{h}}_p \rVert^2`
+    /// on a channel of correlation ``r_true`` with LS estimates of noise ``noise_true``
+    /// (their eq. (10)).
     ///
     /// Args:
     ///     r_true (array_like): the correlation of the channel.
-    ///     noise_true (float): ``beta / SNR`` of the channel.
+    ///     noise_true (float): :math:`\beta / \mathrm{SNR}` of the channel.
     ///
     /// Returns:
-    ///     float: the error, summed over the ``N`` values.
+    ///     float: the error, summed over the :math:`N` values.
     ///
     /// Raises:
     ///     ValueError: unless ``r_true`` has the size of the design.
@@ -954,7 +969,7 @@ impl PyLowRank {
     ///     r_true (array_like): the correlation of the channel.
     ///
     /// Returns:
-    ///     float: the floor, summed over the ``N`` values.
+    ///     float: the floor, summed over the :math:`N` values.
     ///
     /// Raises:
     ///     ValueError: for an input that is not a matrix of numbers, or a matrix of

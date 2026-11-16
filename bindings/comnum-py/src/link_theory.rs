@@ -13,21 +13,22 @@ use pyo3::prelude::*;
 
 /// The bit error rate over flat Rayleigh fading of a receiver that equalises with a
 /// channel estimate jointly Gaussian with the channel, of correlations `rho1` (real) and
-/// `rho2` (imaginary) and of standard deviation ratio `sigma_ratio` = σ2/σ1 (M.-X. Chang
-/// and Y. T. Su, *IEEE Trans. Wireless Commun.* 1(4), 2002, eqs. 31, 32, 53; every linear
-/// pilot-assisted estimate has this form). `rho1 = 1`, `rho2 = 0`, `sigma_ratio = 1`:
-/// the perfect channel.
+/// `rho2` (imaginary) and of standard deviation ratio `sigma_ratio` :math:`= \sigma_2/\sigma_1`
+/// (M.-X. Chang and Y. T. Su, *IEEE Trans. Wireless Commun.* 1(4), 2002, eqs. 31, 32, 53;
+/// every linear pilot-assisted estimate has this form). `rho1 = 1`, `rho2 = 0`,
+/// `sigma_ratio = 1`: the perfect channel.
 ///
 /// Args:
 ///     modulation (str): ``"bpsk"``, ``"qpsk"`` (Gray) or ``"16qam"`` (Gray), any name of
 ///         a constellation (``"16-QAM"``, ``"QPSK"``).
-///     ebn0_db (float | array_like): the mean `Eb/N0` (dB).
+///     ebn0_db (float | array_like): the mean :math:`E_b/N_0` (dB).
 ///     rho1 (float): the real correlation coefficient.
 ///     rho2 (float): the imaginary correlation coefficient.
-///     sigma_ratio (float): σ2/σ1 (16-QAM only: PSK does not depend on `|Ĥ|`).
+///     sigma_ratio (float): :math:`\sigma_2/\sigma_1` (16-QAM only: PSK does not depend on
+///         :math:`|\hat{H}|`).
 ///
 /// Returns:
-///     float | numpy.ndarray: the bit error probability at every `Eb/N0`.
+///     float | numpy.ndarray: the bit error probability at every :math:`E_b/N_0`.
 ///
 /// Raises:
 ///     ValueError: for an invalid parameter or input (the message names it).
@@ -52,15 +53,15 @@ fn theory_ber_imperfect_csi(
 
 /// The bit error rate of DBPSK (`m = 2`) or Gray DQPSK (`m = 4`) over Jakes' Rayleigh
 /// fading of normalised Doppler `fd_ts` (Chang & Su 2002, eqs. 40, 41): an error floor
-/// of `(1 - J0(2π fd Ts))/2` for DBPSK.
+/// of :math:`(1 - J_0(2\pi f_d T_s))/2` for DBPSK.
 ///
 /// Args:
 ///     m (int): 2 or 4.
-///     ebn0_db (float | array_like): the mean `Eb/N0` (dB).
+///     ebn0_db (float | array_like): the mean :math:`E_b/N_0` (dB).
 ///     fd_ts (float): the maximum Doppler frequency times the symbol duration.
 ///
 /// Returns:
-///     float | numpy.ndarray: the bit error probability at every `Eb/N0`.
+///     float | numpy.ndarray: the bit error probability at every :math:`E_b/N_0`.
 ///
 /// Raises:
 ///     ValueError: for an invalid parameter or input (the message names it).
@@ -74,19 +75,19 @@ fn theory_ber_dpsk_jakes(m: usize, ebn0_db: &Bound<'_, PyAny>, fd_ts: f64) -> Py
     }
 }
 
-/// The coefficients `c_n` of the output autocorrelation of a memoryless envelope
-/// nonlinearity `f` driven by a circular complex Gaussian signal of unit power
-/// (P. Banelli and S. Cacopardi, *IEEE Trans. Commun.* 48(3), 2000, eq. 7): `c_0` is
-/// the useful power `|α|²` (Bussgang), the term `n` has the input spectrum convolved
-/// `2n + 1` times with itself, and the coefficients sum to the output power.
+/// The coefficients :math:`c_n` of the output autocorrelation of a memoryless envelope
+/// nonlinearity :math:`f` driven by a circular complex Gaussian signal of unit power
+/// (P. Banelli and S. Cacopardi, *IEEE Trans. Commun.* 48(3), 2000, eq. 7): :math:`c_0` is
+/// the useful power :math:`|\alpha|^2` (Bussgang), the term :math:`n` has the input spectrum
+/// convolved :math:`2n + 1` times with itself, and the coefficients sum to the output power.
 ///
 /// Args:
-///     f (callable): the complex output envelope `A(r) exp(jΦ(r))` of an input envelope
-///         `r` (vectorised over a NumPy array).
+///     f (callable): the complex output envelope :math:`A(r) \exp(j\Phi(r))` of an input
+///         envelope :math:`r` (vectorised over a NumPy array).
 ///     n_terms (int): the number of coefficients.
 ///
 /// Returns:
-///     numpy.ndarray: `c_0, …, c_{n_terms - 1}`.
+///     numpy.ndarray: :math:`c_0, \dots, c_{n_{\mathrm{terms}} - 1}`.
 ///
 /// Raises:
 ///     ValueError: for an input that is not an array of numbers of the expected shape.
@@ -111,7 +112,7 @@ fn envelope_series<'py>(py: Python<'py>, f: &Bound<'py, PyAny>, n_terms: i64) ->
 /// `bins`; Banelli & Cacopardi, eq. 9).
 ///
 /// Args:
-///     c (array_like): the coefficients `c_n`.
+///     c (array_like): the coefficients :math:`c_n`.
 ///     occupied (int): the occupied bins.
 ///     bins (int): the bins of the circular grid (FFT order: bin 0 first).
 ///

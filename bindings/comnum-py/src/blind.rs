@@ -22,7 +22,7 @@ fn cumulant_dict<'py>(py: Python<'py>, c: &Cumulants) -> PyResult<Bound<'py, PyD
 }
 
 /// The sample cumulants of order two and four of a zero-mean signal, and the normalised
-/// `C40/C21²`, `C42/C21²` (Swami & Sadler 2000).
+/// :math:`C_{40}/C_{21}^2`, :math:`C_{42}/C_{21}^2` (Swami & Sadler 2000).
 ///
 /// Args:
 ///     x (array_like): the samples (complex).
@@ -78,8 +78,8 @@ fn theory_cumulants<'py>(
 /// Methods: `"ml"` (the likelihood, the scale and the noise estimated by M2M4 under
 /// every candidate), `"ml_known"` (the likelihood with the noise variance ``noise_var``
 /// known and the symbols of unit energy, Wei & Mendel 2000), `"cumulants"` (the nearest
-/// fourth-order features `|C40|/C21²`, `C42/C21²`, Swami & Sadler 2000; with
-/// ``noise_var``, normalised by `C21 - noise_var`).
+/// fourth-order features :math:`|C_{40}|/C_{21}^2`, :math:`C_{42}/C_{21}^2`, Swami & Sadler
+/// 2000; with ``noise_var``, normalised by :math:`C_{21} - \mathrm{noise\_var}`).
 ///
 /// Args:
 ///     x (array_like): the samples (complex).
@@ -158,7 +158,7 @@ fn snr_m2m4_db(x: &Bound<'_, PyAny>, constellation: &PyConstellation) -> PyResul
 ///     real (bool): real AWGN instead of complex.
 ///
 /// Returns:
-///     float | numpy.ndarray: the bound on ``E[(ρ̂ - ρ)²] / ρ²``.
+///     float | numpy.ndarray: the bound on :math:`\mathbb{E}[(\hat{\rho} - \rho)^2] / \rho^2`.
 ///
 /// Raises:
 ///     ValueError: for an invalid parameter or input (the message names it).
@@ -181,7 +181,7 @@ fn snr_crb_nmse(snr_db: &Bound<'_, PyAny>, n_symbols: usize, sps: usize, real: b
 ///     x (array_like): the samples (complex).
 ///     fs (float): the sampling rate (Hz).
 ///     f_min_hz (float): the lowest symbol rate searched (Hz).
-///     f_max_hz (float): the highest symbol rate searched (Hz, at most `fs/2`).
+///     f_max_hz (float): the highest symbol rate searched (Hz, at most :math:`f_s/2`).
 ///
 /// Returns:
 ///     float: the symbol rate (Hz).
@@ -200,12 +200,16 @@ fn estimate_symbol_rate(x: &Bound<'_, PyAny>, fs: f64, f_min_hz: f64, f_max_hz: 
     cyclo::estimate_symbol_rate(&cvec(x)?, fs, f_min_hz, f_max_hz).py()
 }
 
-/// The cyclic autocorrelation `R^α(τ) = mean x[n+τ] x*[n] e^{-j2π α n/f_s}`.
+/// The cyclic autocorrelation
+///
+/// .. math::
+///
+///     R^\alpha(\tau) = \operatorname{mean}_n\, x[n+\tau]\, x^*[n]\, e^{-j2\pi \alpha n/f_s}.
 ///
 /// Args:
 ///     x (array_like): the samples (complex).
 ///     alpha (float): the cycle frequency (Hz).
-///     lag (int): the lag `τ` (samples).
+///     lag (int): the lag :math:`\tau` (samples).
 ///     fs (float): the sampling rate (Hz).
 ///
 /// Returns:

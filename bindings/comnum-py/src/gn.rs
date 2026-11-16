@@ -19,7 +19,7 @@ use pyo3::types::PyDict;
 ///
 /// The NLI power spectral density at the receiver is the double integral of the GN
 /// reference formula, computed on a grid, with the coherent accumulation of the spans
-/// (``coherent=True``, the phased-array factor) or the incoherent one (``N_s`` times a
+/// (``coherent=True``, the phased-array factor) or the incoherent one (:math:`N_s` times a
 /// span). Channels have raised-cosine spectra of roll-off ``rolloff`` at the symbol rate
 /// ``symbol_rate``, centred on ``freqs`` (Hz, relative to the carrier), with the launch
 /// powers ``power_dbm`` (one per channel or one for all, both polarisations).
@@ -123,9 +123,15 @@ fn format_moments_of(py: Python<'_>, f: &Bound<'_, PyAny>, px: Option<&[f64]>) -
     FormatMoments::of(c.points(), px).py()
 }
 
-/// The moments of a modulation format that the EGN model needs: ``Φ = E|a|⁴/E²|a|² − 2``
-/// and ``Ψ = E|a|⁶/E³|a|² − 9 E|a|⁴/E²|a|² + 12`` (Carena et al. 2014), both zero for
-/// Gaussian symbols.
+/// The moments of a modulation format that the EGN model needs (Carena et al. 2014):
+///
+/// .. math::
+///
+///     \Phi = \frac{\mathbb{E}|a|^4}{\mathbb{E}^2|a|^2} - 2, \qquad
+///     \Psi = \frac{\mathbb{E}|a|^6}{\mathbb{E}^3|a|^2}
+///          - 9\, \frac{\mathbb{E}|a|^4}{\mathbb{E}^2|a|^2} + 12,
+///
+/// both zero for Gaussian symbols.
 ///
 /// Args:
 ///     modulation (Constellation | str): a constellation, a name such as ``"16-QAM"``,
@@ -133,7 +139,7 @@ fn format_moments_of(py: Python<'_>, f: &Bound<'_, PyAny>, px: Option<&[f64]>) -
 ///     px (array_like, optional): the probabilities of the points (a shaped source).
 ///
 /// Returns:
-///     tuple[float, float]: ``(Φ, Ψ)``.
+///     tuple[float, float]: :math:`(\Phi, \Psi)`.
 ///
 /// Raises:
 ///     ValueError: for an input that is not an array of numbers of the expected shape.
@@ -175,10 +181,11 @@ fn format_moments(
 ///         ``isrs`` (True:
 ///         the channels also exchange power), ``step_km`` (0.1), ``slice_hz`` (25e9, for
 ///         the split-step solvers), ``gain`` (``{offsets_thz, gain_m_w,
-///         reference_thz, pump_scaling}``, the gain spectrum ``g_R A_eff``, scaled with
-///         the frequency of the pump unless ``pump_scaling`` is False; standard
-///         single-mode fibre by default) and ``rayleigh_db_km`` (the Rayleigh backscatter coupling of the
-///         signals, 10 log10 of its value in 1/km, about -40 for transmission fibre;
+///         reference_thz, pump_scaling}``, the gain spectrum :math:`g_R A_{\mathrm{eff}}`,
+///         scaled with the frequency of the pump unless ``pump_scaling`` is False;
+///         standard single-mode fibre by default) and ``rayleigh_db_km`` (the Rayleigh
+///         backscatter coupling of the signals, :math:`10 \log_{10}` of its value in 1/km,
+///         about -40 for transmission fibre;
 ///         absent: no double Rayleigh backscattering).
 ///
 /// Returns:
@@ -338,13 +345,13 @@ fn gn_closed_form(fiber: &PyFiber, n_channels: usize, symbol_rate: f64, spacing_
 /// scattering, in microseconds instead of the minutes of the integral of
 /// :func:`gn_model`. The SPM of
 /// the channel (eq. (10)) and the XPM of every other channel (eq. (11)) are summed over
-/// the spans by eq. (5), the SPM coherently as ``n ** (1 + epsilon)``, the XPM
+/// the spans by eq. (5), the SPM coherently as :math:`n^{1 + \epsilon}`, the XPM
 /// incoherently; the ISRS enters to first order in the total launch power times the
 /// slope ``raman_slope_w_km_thz`` of the Raman gain spectrum (0.028 /W/km/THz for
 /// standard single-mode fibre; 0 for no ISRS). Channels have rectangular spectra of
 /// bandwidth ``symbol_rate * (1 + rolloff)``; ``fiber`` gives the loss, the dispersion
 /// and its slope, the nonlinear coefficient and the number of spans (the span length
-/// does not enter: ``exp(-alpha L) << 1``).
+/// does not enter: :math:`\exp(-\alpha L) \ll 1`).
 ///
 /// The paper's eq. (10) ends with a term that is not dimensionless; it is left out
 /// (see ``comnum_channel::optical::gn::isrs_closed_form_terms``): the closed form
@@ -361,13 +368,13 @@ fn gn_closed_form(fiber: &PyFiber, n_channels: usize, symbol_rate: f64, spacing_
 ///     rolloff (float): roll-off of the channels (the bandwidth is
 ///         ``symbol_rate * (1 + rolloff)``).
 ///     channel (int, optional): the channel of interest (the middle one by default).
-///     raman_slope_w_km_thz (float): the slope ``C_r`` of the linear regression of the
+///     raman_slope_w_km_thz (float): the slope :math:`C_r` of the linear regression of the
 ///         normalised Raman gain spectrum (1/W/km/THz).
 ///     epsilon (float, optional): the coherence factor of the SPM; by default Poggiolini's
 ///         eq. (22) (*J. Lightw. Technol.* 30(24), 2012) over the bandwidth of the channel.
 ///
 /// Returns:
-///     dict: ``eta`` (1/W²: the NLI power of the channel is ``eta * P**3``; divide by
+///     dict: ``eta`` (1/W²: the NLI power of the channel is :math:`\eta P^3`; divide by
 ///     the bandwidth for the PSD per W³ of :func:`gn_model`), ``eta_spm`` and
 ///     ``eta_xpm`` (the two terms, one span), ``epsilon`` and ``snr_db`` (with the ASE of
 ///     the EDFAs of ``fiber`` in the bandwidth of the channel).

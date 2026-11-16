@@ -37,10 +37,10 @@ fn phich_resource(ng: f64) -> PyResult<PhichResource> {
 ///     sfn (int): the system frame number.
 ///     n_rb (int): the bandwidth in resource blocks, 6, 15, 25, 50, 75 or 100.
 ///     ports (int): 1, 2 or 4 antenna ports.
-///     n_fft (int | None): the FFT size (the sampling rate `n_fft · 15` kHz); the usual one
-///         of the bandwidth (128 to 2048) if None.
+///     n_fft (int | None): the FFT size (the sampling rate :math:`n_{\mathrm{fft}} \times 15`
+///         kHz); the usual one of the bandwidth (128 to 2048) if None.
 ///     phich_extended (bool): the PHICH duration of the MIB.
-///     phich_ng (float): the PHICH resource `N_g` of the MIB, 1/6, 1/2, 1 or 2.
+///     phich_ng (float): the PHICH resource :math:`N_g` of the MIB, 1/6, 1/2, 1 or 2.
 ///     rng (Rng | None): the generator of the data symbols (none if None).
 ///
 /// Returns:
@@ -86,10 +86,11 @@ fn lte_frame<'py>(
 
 /// The cell search of LTE in samples at 1.92 MS/s (the six central resource blocks:
 /// :func:`select_channel` brings a capture there): the PSS of each of the three
-/// identities `N_ID^(2)` is searched over a grid of frequency offsets in the first 10 ms,
+/// identities :math:`N_{\mathrm{ID}}^{(2)}` is searched over a grid of frequency offsets in
+/// the first 10 ms,
 /// the offset refined on the cyclic prefixes of the whole capture, then the SSS of every
-/// half frame, equalised by the channel of the PSS, gives the group `N_ID^(1)` and the
-/// start of the frames.
+/// half frame, equalised by the channel of the PSS, gives the group
+/// :math:`N_{\mathrm{ID}}^{(1)}` and the start of the frames.
 ///
 /// Args:
 ///     x (array_like): at least 10.5 ms of complex samples at 1.92 MS/s.
@@ -98,8 +99,9 @@ fn lte_frame<'py>(
 ///     min_metric (float): the smallest normalised PSS correlation of a cell, in (0, 1].
 ///
 /// Returns:
-///     list[dict]: the strongest cell of each `N_ID^(2)` found, the strongest first, with
-///     the keys ``n_cell_id``, ``cfo_hz`` (the offset of the cell with respect to the
+///     list[dict]: the strongest cell of each :math:`N_{\mathrm{ID}}^{(2)}` found, the strongest
+///     first, with the keys ``n_cell_id``, ``cfo_hz`` (the offset of the cell with respect to
+///     the
 ///     receiver), ``frame_start`` (the first sample of the first whole frame),
 ///     ``pss_metric`` and ``sss_metric`` (normalised correlations, at most 1).
 ///
@@ -198,8 +200,8 @@ fn lte_decode_mib<'py>(
     Ok(out)
 }
 
-/// The PSS of LTE of the identity `N_ID^(2)` (the 62 values of the punctured Zadoff–Chu
-/// sequence of length 63, roots 25, 29, 34; TS 36.211 Sec. 6.11.1.1).
+/// The PSS of LTE of the identity :math:`N_{\mathrm{ID}}^{(2)}` (the 62 values of the punctured
+/// Zadoff–Chu sequence of length 63, roots 25, 29, 34; TS 36.211 Sec. 6.11.1.1).
 ///
 /// Args:
 ///     n_id2 (int): 0, 1 or 2.

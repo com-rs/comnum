@@ -3,13 +3,14 @@
 use super::*;
 use comnum::math::Jacobian;
 
-/// A constellation with Gray labels: point `i` carries the bits of `i`, MSB first.
+/// A constellation with Gray labels: point :math:`i` carries the bits of :math:`i`, MSB first.
 ///
 /// The points and their labels are those of OptiCommPy (`GrayMapping`): square QAM
 /// as the product of two PAM listed row by row from the top in a "snake" order, PSK
-/// on `e^{j2πk/M}`, PAM on `-(M-1), …, -1, 1, …, M-1`, OOK on `{0, 1}`; the `i`-th
-/// point of the construction order gets the Gray label `i ^ (i >> 1)`. The grids keep
-/// their integer spacing; call `normalized()` for unit mean energy.
+/// on :math:`e^{j2\pi k/M}`, PAM on :math:`-(M-1), \dots, -1, 1, \dots, M-1`, OOK on
+/// :math:`\{0, 1\}`; the :math:`i`-th point of the construction order gets the Gray label
+/// `i ^ (i >> 1)`. The grids keep their integer spacing; call `normalized()` for unit
+/// mean energy.
 ///
 /// Args:
 ///     kind (str): `"qam"`, `"psk"`, `"pam"` or `"ook"`.
@@ -43,7 +44,7 @@ impl PyConstellation {
     /// A custom constellation from its points, labelled by their index.
     ///
     /// Args:
-    ///     points (array_like): the `M` points (complex), `M` a power of two.
+    ///     points (array_like): the :math:`M` points (complex), :math:`M` a power of two.
     ///
     /// Returns:
     ///     Constellation: the constellation (kind `"custom"`).
@@ -112,13 +113,13 @@ impl PyConstellation {
         self.inner.kind().name()
     }
 
-    /// int: The number of points `M`.
+    /// int: The number of points :math:`M`.
     #[getter]
     fn order(&self) -> usize {
         self.inner.order()
     }
 
-    /// int: Bits per symbol, `log2 M`.
+    /// int: Bits per symbol, :math:`\log_2 M`.
     #[getter]
     fn bits_per_symbol(&self) -> usize {
         self.inner.bits_per_symbol()
@@ -136,9 +137,9 @@ impl PyConstellation {
         self.inner.energy()
     }
 
-    /// float: The minimum distance between two points, `min |s_i - s_j|`: at high SNR
-    /// the error rate falls as `Q(d_min / √(2 N0))`. `d_min² / Eb` compares the
-    /// constellations (4 for BPSK and QPSK, 1.6 for 16-QAM).
+    /// float: The minimum distance between two points, :math:`\min |s_i - s_j|`: at high
+    /// SNR the error rate falls as :math:`Q(d_{\min} / \sqrt{2 N_0})`. :math:`d_{\min}^2 / E_b`
+    /// compares the constellations (4 for BPSK and QPSK, 1.6 for 16-QAM).
     #[getter]
     fn min_distance(&self) -> f64 {
         self.inner.min_distance()
@@ -150,7 +151,7 @@ impl PyConstellation {
     ///     px (array_like): the probabilities of the points.
     ///
     /// Returns:
-    ///     float: `Σ p_i |s_i|²`.
+    ///     float: :math:`\sum_i p_i |s_i|^2`.
     ///
     /// Raises:
     ///     ValueError: for an input that is not an array of numbers of the expected shape.
@@ -177,16 +178,16 @@ impl PyConstellation {
         PyConstellation { inner: self.inner.scaled(s) }
     }
 
-    /// Symbol indices of a bit sequence (`log2 M` bits per symbol, MSB first).
+    /// Symbol indices of a bit sequence (:math:`\log_2 M` bits per symbol, MSB first).
     ///
     /// Args:
-    ///     bits (array_like): the bits, a multiple of `log2 M`.
+    ///     bits (array_like): the bits, a multiple of :math:`\log_2 M`.
     ///
     /// Returns:
     ///     numpy.ndarray: the indices (int64).
     ///
     /// Raises:
-    ///     ValueError: if the length is not a multiple of `log2 M`.
+    ///     ValueError: if the length is not a multiple of :math:`\log_2 M`.
     fn indices<'py>(&self, py: Python<'py>, bits: &Bound<'py, PyAny>) -> PyResult<IArr<'py>> {
         let idx = self.inner.indices(&bvec(bits)?).py()?;
         Ok(iarr(py, idx))
@@ -195,10 +196,10 @@ impl PyConstellation {
     /// Symbols of a bit sequence (OptiCommPy `modulateGray`).
     ///
     /// Args:
-    ///     bits (array_like): the bits, a multiple of `log2 M`.
+    ///     bits (array_like): the bits, a multiple of :math:`\log_2 M`.
     ///
     /// Returns:
-    ///     numpy.ndarray: one symbol per `log2 M` bits (complex128).
+    ///     numpy.ndarray: one symbol per :math:`\log_2 M` bits (complex128).
     ///
     /// Raises:
     ///     ValueError: for an invalid parameter or input (the message names it).
@@ -209,7 +210,7 @@ impl PyConstellation {
     /// Symbols of an index sequence.
     ///
     /// Args:
-    ///     indices (array_like): the indices, below `M`.
+    ///     indices (array_like): the indices, below :math:`M`.
     ///
     /// Returns:
     ///     numpy.ndarray: the points (complex128).
@@ -259,7 +260,7 @@ impl PyConstellation {
     ///     z (array_like): received samples.
     ///
     /// Returns:
-    ///     numpy.ndarray: `log2 M` bits per sample (uint8).
+    ///     numpy.ndarray: :math:`\log_2 M` bits per sample (uint8).
     ///
     /// Raises:
     ///     ValueError: for an input that is not an array of numbers of the expected shape.
@@ -267,19 +268,20 @@ impl PyConstellation {
         Ok(self.inner.demap_bits(&cvec(z)?).into_pyarray(py))
     }
 
-    /// Bit log-likelihood ratios `ln p(b=0|y) - ln p(b=1|y)`, `log2 M` per sample.
+    /// Bit log-likelihood ratios :math:`\ln p(b=0|y) - \ln p(b=1|y)` of every sample.
     ///
-    /// The likelihood of point `s` is `exp(-|y - s|²/σ²)` (OptiCommPy `calcLLR`).
+    /// The likelihood of point :math:`s` is :math:`\exp(-|y - s|^2/\sigma^2)` (OptiCommPy
+    /// `calcLLR`).
     ///
     /// Args:
     ///     z (array_like): received samples.
-    ///     noise_var (float): complex noise variance `E|w|²` (for a real constellation
-    ///         over a real channel, twice the variance of the real noise).
+    ///     noise_var (float): complex noise variance :math:`\mathbb{E}|w|^2` (for a real
+    ///         constellation over a real channel, twice the variance of the real noise).
     ///     px (array_like, optional): prior probabilities of the points.
     ///     max_log (bool): max-log approximation instead of log-sum-exp.
     ///
     /// Returns:
-    ///     numpy.ndarray: `log2 M` LLRs per sample, MSB first (float64).
+    ///     numpy.ndarray: :math:`\log_2 M` LLRs per sample, MSB first (float64).
     ///
     /// Raises:
     ///     ValueError: for an invalid parameter or input (the message names it).
@@ -321,7 +323,7 @@ impl PyConstellation {
 ///     n_bits (int): the number of bits.
 ///
 /// Returns:
-///     numpy.ndarray: the `2^n_bits` code words (int64).
+///     numpy.ndarray: the :math:`2^{\text{n\_bits}}` code words (int64).
 ///
 /// Raises:
 ///     ValueError: for more than 24 bits (more than 16 777 216 code words).

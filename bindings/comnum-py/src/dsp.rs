@@ -29,7 +29,8 @@ use pyo3::types::PyString;
 ///         cosine) or `"rz"` (50 % return to zero, a sinusoidal pulse carver).
 ///     sps (int): samples per symbol.
 ///     n_taps (int): length of the raised-cosine pulses, on a symmetric grid of
-///         `n_taps` points over `±⌊n_taps/2⌋` samples (ignored by `rect` and `nrz`).
+///         `n_taps` points over :math:`\pm\lfloor n_{\mathrm{taps}}/2 \rfloor` samples (ignored
+///         by `rect` and `nrz`).
 ///         An even length gives OptiCommPy's taps, which fall between the sampling
 ///         instants; an odd length puts them on the sampling instants (OptiCommPy's
 ///         odd grid is shifted by about half a sample).
@@ -53,8 +54,9 @@ fn pulse_shape<'py>(py: Python<'py>, kind: &str, sps: usize, n_taps: usize, roll
     Ok(farr(py, filter::pulse_shape(shape, sps, n_taps).py()?))
 }
 
-/// Root of the raised-cosine spectrum on the `n_symbols·sps` bins of a periodic block
-/// (1 in the passband): shaping and matched filtering with it are exactly Nyquist.
+/// Root of the raised-cosine spectrum on the :math:`n_{\mathrm{symbols}} \cdot \mathrm{sps}` bins
+/// of a periodic block (1 in the passband): shaping and matched filtering with it are
+/// exactly Nyquist.
 ///
 /// Args:
 ///     n_symbols (int): symbols of the block.
@@ -62,7 +64,7 @@ fn pulse_shape<'py>(py: Python<'py>, kind: &str, sps: usize, n_taps: usize, roll
 ///     rolloff (float): roll-off factor.
 ///
 /// Returns:
-///     numpy.ndarray: `n_symbols·sps` gains in FFT order (float64).
+///     numpy.ndarray: :math:`n_{\mathrm{symbols}} \cdot \mathrm{sps}` gains in FFT order (float64).
 ///
 /// Raises:
 ///     ValueError: for a negative count.
@@ -72,17 +74,23 @@ fn rrc_spectrum(py: Python<'_>, n_symbols: i64, sps: usize, rolloff: f64) -> PyR
 }
 
 /// The root-raised-cosine pulse at the times `t` (continuous time, symbol period `ts`):
-/// `(sin(πt'(1-β)) + 4βt' cos(πt'(1+β))) / (πt'(1 - (4βt')²))` with `t' = t/ts`,
-/// divided by `ts`, and its limits at `t = 0` and `|t| = ts/(4β)` (Proakis & Salehi,
-/// *Digital Communications*, 5th ed., Sec. 9.2-1).
+///
+/// .. math::
+///
+///     \frac{\sin(\pi t'(1-\beta)) + 4\beta t' \cos(\pi t'(1+\beta))}{\pi t'(1 - (4\beta t')^2)}
+///
+/// with :math:`t' = t/T_s`, divided by :math:`T_s`, and its limits at :math:`t = 0` and
+/// :math:`|t| = T_s/(4\beta)` (Proakis & Salehi, *Digital Communications*, 5th ed.,
+/// Sec. 9.2-1).
 ///
 /// Args:
 ///     t (array_like): the times (in units of `ts`'s time base).
-///     rolloff (float): the roll-off `β`.
-///     ts (float): the symbol period.
+///     rolloff (float): the roll-off :math:`\beta`.
+///     ts (float): the symbol period :math:`T_s`.
 ///
 /// Returns:
-///     numpy.ndarray: the pulse at every time (float64); `∫ h² dt = 1` for `ts = 1`.
+///     numpy.ndarray: the pulse at every time (float64); :math:`\int h^2 \, dt = 1` for
+///     `ts = 1`.
 ///
 /// Raises:
 ///     ValueError: for an input that is not an array of numbers of the expected shape.
@@ -99,13 +107,17 @@ fn rrc_taps<'py>(py: Python<'py>, t: &Bound<'py, PyAny>, rolloff: f64, ts: f64) 
 }
 
 /// The raised-cosine pulse at the times `t` (continuous time, symbol period `ts`):
-/// `sinc(t/ts) cos(πβt/ts) / (1 - (2βt/ts)²)` divided by `ts`, Nyquist (zero at the
-/// other symbol instants).
+///
+/// .. math::
+///
+///     \frac{\operatorname{sinc}(t/T_s) \cos(\pi \beta t/T_s)}{1 - (2\beta t/T_s)^2}
+///
+/// divided by :math:`T_s`, Nyquist (zero at the other symbol instants).
 ///
 /// Args:
 ///     t (array_like): the times.
-///     rolloff (float): the roll-off `β`.
-///     ts (float): the symbol period.
+///     rolloff (float): the roll-off :math:`\beta`.
+///     ts (float): the symbol period :math:`T_s`.
 ///
 /// Returns:
 ///     numpy.ndarray: the pulse at every time (float64).
@@ -148,7 +160,7 @@ fn fir_filter<'py>(py: Python<'py>, h: &Bound<'py, PyAny>, x: &Bound<'py, PyAny>
 ///     x (array_like): the signal.
 ///
 /// Returns:
-///     numpy.ndarray: `len(h) + len(x) - 1` samples (complex128).
+///     numpy.ndarray: :math:`\mathrm{len}(h) + \mathrm{len}(x) - 1` samples (complex128).
 ///
 /// Raises:
 ///     ValueError: for an input that is not an array of numbers of the expected shape.
@@ -158,14 +170,14 @@ fn convolve<'py>(py: Python<'py>, h: &Bound<'py, PyAny>, x: &Bound<'py, PyAny>) 
     Ok(carr(py, py.detach(|| filter::convolve_full(&h, &x))))
 }
 
-/// Insert `factor - 1` zeros after every sample.
+/// Insert :math:`\mathrm{factor} - 1` zeros after every sample.
 ///
 /// Args:
 ///     x (array_like): the signal.
 ///     factor (int): the upsampling factor.
 ///
 /// Returns:
-///     numpy.ndarray: `factor·len(x)` samples (complex128).
+///     numpy.ndarray: :math:`\mathrm{factor} \cdot \mathrm{len}(x)` samples (complex128).
 ///
 /// Raises:
 ///     ValueError: for an input that is not an array of numbers of the expected shape.
@@ -174,7 +186,7 @@ fn upsample<'py>(py: Python<'py>, x: &Bound<'py, PyAny>, factor: usize) -> PyRes
     Ok(carr(py, resample::upsample(&cvec(x)?, factor)))
 }
 
-/// Keep the samples `offset, offset + factor, …`.
+/// Keep the samples :math:`\mathrm{offset}, \mathrm{offset} + \mathrm{factor}, \dots`.
 ///
 /// Args:
 ///     x (array_like): the signal.
@@ -229,26 +241,28 @@ fn resample_fft<'py>(py: Python<'py>, x: &Bound<'py, PyAny>, n_out: i64) -> PyRe
 
 /// One channel of a capture brought to baseband at the rate of its receiver: the mean of
 /// the capture removed (the DC offset of the converter), the channel `offset_hz` above
-/// the tuning frequency shifted to 0 Hz, then resampled by the exact ratio `fs_out/fs_in`
-/// (integers in hertz) with a low-pass filter of cut-off `cutoff_hz` (half amplitude):
-/// a sinc under a Dolph–Chebyshev window of 80 dB, about `n_taps` taps at the input rate
-/// (a transition band about `4 fs_in / n_taps` wide), without delay.
+/// the tuning frequency shifted to 0 Hz, then resampled by the exact ratio
+/// :math:`f_{s,\mathrm{out}}/f_{s,\mathrm{in}}` (integers in hertz) with a low-pass filter of
+/// cut-off `cutoff_hz` (half amplitude): a sinc under a Dolph–Chebyshev window of 80 dB,
+/// about `n_taps` taps at the input rate (a transition band about
+/// :math:`4 f_{s,\mathrm{in}} / n_{\mathrm{taps}}` wide), without delay.
 ///
 /// Args:
 ///     x (array_like): the complex samples of the capture.
 ///     fs_in (float): the sampling rate of the capture (Hz).
 ///     offset_hz (float): the centre of the channel minus the tuning frequency (Hz).
 ///     fs_out (float): the sampling rate of the output (Hz).
-///     cutoff_hz (float): the cut-off of the filter (Hz), at most `fs_out / 2`.
+///     cutoff_hz (float): the cut-off of the filter (Hz), at most :math:`f_{s,\mathrm{out}} / 2`.
 ///     n_taps (int): the length of the filter at the input rate.
 ///
 /// Returns:
-///     numpy.ndarray: `ceil(len(x) fs_out / fs_in)` samples (complex128).
+///     numpy.ndarray: :math:`\lceil \mathrm{len}(x) f_{s,\mathrm{out}} / f_{s,\mathrm{in}} \rceil`
+///     samples (complex128).
 ///
 /// Raises:
 ///     ValueError: for rates that are not whole numbers of hertz, a ratio that reduces to
 ///         an interpolation by more than 1024, an offset outside the band, a cut-off
-///         above `fs_out / 2`, or no tap.
+///         above :math:`f_{s,\mathrm{out}} / 2`, or no tap.
 ///
 /// Examples:
 ///     >>> import comnum, numpy as np
@@ -282,14 +296,14 @@ fn select_channel<'py>(
 /// Args:
 ///     x (array_like): the samples (real or complex).
 ///     fs_hz (float): the sampling rate (Hz).
-///     fc_hz (float): the 3-dB cut-off (Hz), in `(0, fs_hz / 2)`.
+///     fc_hz (float): the 3-dB cut-off (Hz), in :math:`(0, f_s / 2)`.
 ///     order (int): the order, 1 to 32.
 ///
 /// Returns:
 ///     numpy.ndarray: the filtered samples (complex128), as many as `x`.
 ///
 /// Raises:
-///     ValueError: for an order outside 1 to 32 or a cut-off outside `(0, fs/2)`.
+///     ValueError: for an order outside 1 to 32 or a cut-off outside :math:`(0, f_s/2)`.
 ///
 /// Examples:
 ///     >>> import comnum, numpy as np
@@ -360,11 +374,11 @@ fn anorm<'py>(py: Python<'py>, x: &Bound<'py, PyAny>) -> PyResult<CArr<'py>> {
     Ok(carr(py, signal::anorm(&cvec(x)?)))
 }
 
-/// Frequency shift `x[n] e^{j2πΔf n/fs}`.
+/// Frequency shift :math:`x[n] e^{j 2\pi \Delta f\, n/f_s}`.
 ///
 /// Args:
 ///     x (array_like): the signal.
-///     offset_hz (float): the shift `Δf` (Hz).
+///     offset_hz (float): the shift :math:`\Delta f` (Hz).
 ///     fs (float): sampling rate (Hz).
 ///
 /// Returns:
@@ -432,7 +446,7 @@ fn cdc<'py>(py: Python<'py>, x: &Bound<'py, PyAny>, fiber: &PyFiber, length_km: 
 }
 
 /// Taps of the dispersion-compensating FIR (OptiCommPy `edc` rule,
-/// `2⌈6.67 |β₂| L R_s² (f_s/R_s)⌉`).
+/// :math:`2 \lceil 6.67\, |\beta_2| L R_s^2 (f_s/R_s) \rceil`).
 ///
 /// Args:
 ///     fiber (FiberParams): the fibre.
@@ -465,8 +479,9 @@ fn cd_fir_taps<'py>(py: Python<'py>, fiber: &PyFiber, length_km: f64, fs: f64, n
     Ok(carr(py, cd::cd_fir_taps(fiber.inner.beta2_s2_km(), length_km, fs, count(n_taps, "n_taps")?)))
 }
 
-/// The dispersion factor `K = -β₂ L fs²/2` of the digital compensation `e^{jKω²}`
-/// (`ω` in radians per sample; Savory 2008, Eghbali et al. 2014).
+/// The dispersion factor :math:`K = -\beta_2 L f_s^2/2` of the digital compensation
+/// :math:`e^{jK\omega^2}` (:math:`\omega` in radians per sample; Savory 2008, Eghbali et
+/// al. 2014).
 ///
 /// Args:
 ///     fiber (FiberParams): the fibre.
@@ -474,13 +489,13 @@ fn cd_fir_taps<'py>(py: Python<'py>, fiber: &PyFiber, length_km: f64, fs: f64, n
 ///     fs (float): sampling rate (Hz).
 ///
 /// Returns:
-///     float: K.
+///     float: :math:`K`.
 #[pyfunction]
 fn cd_dispersion_factor(fiber: &PyFiber, length_km: f64, fs: f64) -> f64 {
     cd::cd_dispersion_factor(fiber.inner.beta2_s2_km(), length_km, fs)
 }
 
-/// Centred taps of Savory's dispersion-compensating FIR, `√(j/(4Kπ)) e^{-jn²/(4K)}`.
+/// Centred taps of Savory's dispersion-compensating FIR, :math:`\sqrt{j/(4K\pi)}\, e^{-jn^2/(4K)}`.
 ///
 /// After S. J. Savory, *Opt. Express* 16(2), 2008.
 ///
@@ -488,7 +503,8 @@ fn cd_dispersion_factor(fiber: &PyFiber, length_km: f64, fs: f64) -> f64 {
 ///     fiber (FiberParams): the fibre.
 ///     length_km (float): the length to compensate (km).
 ///     fs (float): sampling rate (Hz).
-///     n_taps (int | None): odd number of taps; None: Savory's rule `2⌊2π|K|⌋ + 1`.
+///     n_taps (int | None): odd number of taps; None: Savory's rule
+///         :math:`2 \lfloor 2\pi|K| \rfloor + 1`.
 ///
 /// Returns:
 ///     numpy.ndarray: the taps (complex128).
@@ -510,20 +526,21 @@ fn cd_savory_taps<'py>(
 }
 
 /// Centred taps of the least-squares dispersion-compensating FIR over the band
-/// `|f| <= band_hz`.
+/// :math:`|f| \le f_{\mathrm{band}}` (`band_hz`).
 ///
 /// After Eghbali, Johansson, Gustafsson & Savory, *J. Lightw. Technol.* 32(8), 2014.
 ///
 /// Over the whole band the taps are closed-form; over the band of the signal
-/// (`fs (1 + rolloff) / (2 sps)`) fewer taps reach the same error, at the price of a
-/// large response outside the band, which the receive filter must reject.
+/// (:math:`f_s (1 + \beta) / (2\, \mathrm{sps})`, :math:`\beta` the roll-off) fewer taps
+/// reach the same error, at the price of a large response outside the band, which the
+/// receive filter must reject.
 ///
 /// Args:
 ///     fiber (FiberParams): the fibre.
 ///     length_km (float): the length to compensate (km).
 ///     fs (float): sampling rate (Hz).
 ///     n_taps (int): odd number of taps.
-///     band_hz (float | None): half the band of the fit (Hz); None: `fs / 2`.
+///     band_hz (float | None): half the band of the fit (Hz); None: :math:`f_s / 2`.
 ///     epsilon (float): the penalty on the energy of the taps (the paper uses 1e-14
 ///         for a band-limited fit).
 ///
@@ -547,19 +564,22 @@ fn cd_ls_taps<'py>(
     Ok(carr(py, cd::cd_ls_taps(b2, length_km, fs, n_taps, band_hz.unwrap_or(fs / 2.0), epsilon).py()?))
 }
 
-/// The energy of the error `E = (1/2π) ∫ |H(e^{jω}) - e^{jKω²}|² dω` of centred
-/// dispersion-compensating taps over the band `|f| <= band_hz` (Eghbali et al. 2014,
-/// eq. 6).
+/// The energy of the error of centred dispersion-compensating taps over the band
+/// :math:`|f| \le f_{\mathrm{band}}` (`band_hz`; Eghbali et al. 2014, eq. 6):
+///
+/// .. math::
+///
+///     E = \frac{1}{2\pi} \int \left| H(e^{j\omega}) - e^{jK\omega^2} \right|^2 d\omega
 ///
 /// Args:
 ///     taps (array_like): the centred taps (odd in number).
 ///     fiber (FiberParams): the fibre.
 ///     length_km (float): the length to compensate (km).
 ///     fs (float): sampling rate (Hz).
-///     band_hz (float | None): half the band (Hz); None: `fs / 2`.
+///     band_hz (float | None): half the band (Hz); None: :math:`f_s / 2`.
 ///
 /// Returns:
-///     float: E.
+///     float: :math:`E`.
 ///
 /// Raises:
 ///     ValueError: for an invalid parameter or input (the message names it).
@@ -576,13 +596,19 @@ fn cd_ls_error(
     cd::cd_ls_error(&cvec(taps)?, b2, length_km, fs, band_hz.unwrap_or(fs / 2.0)).py()
 }
 
-/// The `n×n` butterfly adaptive equaliser (OptiCommPy `mimoAdaptEqualizer`).
+/// The :math:`n \times n` butterfly adaptive equaliser (OptiCommPy `mimoAdaptEqualizer`).
 ///
-/// Output symbol `k` of mode `m` is `Σ_N Σ_t h_{m,N}[t] x_N[k·sps + t]` (input padded
-/// with `⌊n_taps/2⌋` zeros at both ends, diagonal centre taps initialised at 1); the
-/// taps follow `h ← h + μ e x*` with the error of the current algorithm: CMA
-/// `(R - |y|²) y`, RDE `(R̂² - |y|²) y`, NLMS `(s - y)/‖x‖²` (needs `reference`), DD-LMS
-/// `ŝ - y`.
+/// Output symbol :math:`k` of mode :math:`m` is
+///
+/// .. math::
+///
+///     \sum_N \sum_t h_{m,N}[t]\, x_N[k \cdot \mathrm{sps} + t]
+///
+/// (input padded with :math:`\lfloor n_{\mathrm{taps}}/2 \rfloor` zeros at both ends,
+/// diagonal centre taps initialised at 1); the taps follow
+/// :math:`h \leftarrow h + \mu e x^*` with the error :math:`e` of the current algorithm:
+/// CMA :math:`(R - |y|^2) y`, RDE :math:`(\hat{R}^2 - |y|^2) y`, NLMS
+/// :math:`(s - y)/\lVert x \rVert^2` (needs `reference`), DD-LMS :math:`\hat{s} - y`.
 ///
 /// Args:
 ///     x (array_like): input of shape `(modes, samples)` (a 1-D array is one mode).
@@ -596,7 +622,7 @@ fn cd_ls_error(
 ///         (the last one holds for the following stages); 1e-3 by default.
 ///     passes (int): passes over the block (the taps carry over).
 ///     reference (array_like, optional): transmitted symbols `(modes, symbols)`.
-///     kikuchi (int, optional): Kikuchi's two-stage initialisation of a 2 × 2
+///     kikuchi (int, optional): Kikuchi's two-stage initialisation of a :math:`2 \times 2`
 ///         equaliser against the singularity: output 0 adapts alone during this number
 ///         of symbols, then output 1 starts as its unitary complement.
 ///     update_rule (str, optional): the update rule of every stage instead of that of its
@@ -604,8 +630,9 @@ fn cd_ls_error(
 ///
 /// Returns:
 ///     tuple[numpy.ndarray, numpy.ndarray, numpy.ndarray]: the symbols `(modes,
-///     symbols)`, the final taps `(modes², n_taps)` with row `m + N·modes` the filter
-///     from input `N` to output `m`, and the squared errors `(modes, symbols)`.
+///     symbols)`, the final taps `(modes², n_taps)` with row :math:`m + N \cdot \mathrm{modes}`
+///     the filter from input :math:`N` to output :math:`m`, and the squared errors
+///     `(modes, symbols)`.
 ///
 /// Raises:
 ///     ValueError: for an invalid parameter or input (the message names it).
@@ -662,13 +689,13 @@ fn adaptive_equalizer<'py>(
     Ok((mat(py, out.symbols)?, mat(py, out.taps)?, mat(py, out.error)?))
 }
 
-/// Multiply every sample by `e^{j·sign·θ[n]}`.
+/// Multiply every sample by :math:`e^{j \cdot \mathrm{sign} \cdot \theta[n]}`.
 ///
 /// Args:
 ///     x (array_like): the signal.
 ///     theta (array_like): one phase per sample (rad).
-///     sign (float): `+1` to apply the corrections of the carrier recoveries, `-1` to
-///         undo them.
+///     sign (float): :math:`+1` to apply the corrections of the carrier recoveries,
+///         :math:`-1` to undo them.
 ///
 /// Returns:
 ///     numpy.ndarray: the rotated signal (complex128).
@@ -699,7 +726,7 @@ fn unwrap<'py>(py: Python<'py>, phi: &Bound<'py, PyAny>, period: f64) -> PyResul
     Ok(farr(py, carrier::unwrap(&fvec(phi)?, period)))
 }
 
-/// Frequency offset of an `m`-fold symmetric signal by its `m`-th power spectrum
+/// Frequency offset of an :math:`m`-fold symmetric signal by its :math:`m`-th power spectrum
 /// (OptiCommPy `fourthPowerFOE` with `refined=False`).
 ///
 /// Args:
@@ -758,23 +785,23 @@ fn viterbi_viterbi<'py>(py: Python<'py>, x: &Bound<'py, PyAny>, n: i64, m: u32) 
 }
 
 /// Frame synchronisation on known symbols: the delay and the rotation of a received
-/// stream against a reference, by the correlation `c(d) = Σ_n z[n + d] x*[n]` over the
-/// known symbols `x = reference[start:stop]`. The delay is the largest `|c(d)|`; the
-/// rotation is the phase of `c` there, rounded to a multiple of `2π/symmetry` (the
-/// ambiguity a blind carrier recovery leaves) or exact.
+/// stream against a reference, by the correlation :math:`c(d) = \sum_n z[n + d] x^*[n]` over
+/// the known symbols `x = reference[start:stop]`. The delay is the largest :math:`|c(d)|`;
+/// the rotation is the phase of :math:`c` there, rounded to a multiple of
+/// :math:`2\pi/\mathrm{symmetry}` (the ambiguity a blind carrier recovery leaves) or exact.
 ///
 /// Args:
 ///     z (array_like): the received symbols, one sample per symbol.
 ///     reference (array_like): the transmitted symbols.
-///     max_delay (int): the largest `|d|` searched.
+///     max_delay (int): the largest :math:`|d|` searched.
 ///     symmetry (int | None): the rotational symmetry of the constellation (4 for
 ///         square QAM, 2 for BPSK); `None` removes the exact phase.
 ///     start (int): the first known symbol of `reference`.
 ///     stop (int | None): one past the last known symbol (the end by default).
 ///
 /// Returns:
-///     tuple[int, complex, float]: the delay `d` (`z[n + d]` carries `reference[n]`),
-///     the rotation to multiply `z` with, and the normalised correlation in `[0, 1]`
+///     tuple[int, complex, float]: the delay :math:`d` (`z[n + d]` carries `reference[n]`),
+///     the rotation to multiply `z` with, and the normalised correlation in :math:`[0, 1]`
 ///     (close to 1 when the synchronisation is reliable).
 ///
 /// Raises:
@@ -807,20 +834,20 @@ fn frame_sync(
 
 /// Blind phase search (Pfau, Hoffmann and Noé 2009; OptiCommPy `bps`).
 ///
-/// Every test phase `b (π/2)/B` rotates the samples; the squared distances to the
-/// nearest points are summed over `2n + 1` samples and the phase of the smallest sum is
-/// kept. The constellation is normalised inside, so the signal should have unit mean
-/// power. Unwrap the result with a period of `π/2`, then apply it with
+/// Every test phase :math:`b (\pi/2)/B` rotates the samples; the squared distances to the
+/// nearest points are summed over :math:`2n + 1` samples and the phase of the smallest sum
+/// is kept. The constellation is normalised inside, so the signal should have unit mean
+/// power. Unwrap the result with a period of :math:`\pi/2`, then apply it with
 /// `derotate(x, θ)`.
 ///
 /// Args:
 ///     x (array_like): signal at one sample per symbol, unit mean power.
 ///     constellation (Constellation): the alphabet.
 ///     n (int): half-length of the window (symbols).
-///     b (int): number of test phases `B`.
+///     b (int): number of test phases :math:`B`.
 ///
 /// Returns:
-///     numpy.ndarray: one phase per symbol (rad, in `[0, π/2)`).
+///     numpy.ndarray: one phase per symbol (rad, in :math:`[0, \pi/2)`).
 ///
 /// Raises:
 ///     ValueError: for an invalid parameter or input (the message names it).
@@ -853,7 +880,7 @@ const OPTICOMMPY_DDPLL_TAU: f64 = 1.0 / (2.0 * std::f64::consts::PI * 10e6);
 /// Args:
 ///     x (array_like): signal at one sample per symbol.
 ///     constellation (Constellation): the alphabet (normalised inside).
-///     fs (float): sampling rate, the symbol rate (Hz); OptiCommPy's `Ts` is `1/fs`.
+///     fs (float): sampling rate, the symbol rate (Hz); OptiCommPy's `Ts` is :math:`1/f_s`.
 ///     kv (float): VCO gain.
 ///     tau1 (float): first time constant of the loop filter (s).
 ///     tau2 (float): second time constant of the loop filter (s).
@@ -910,7 +937,7 @@ fn array<const N: usize>(x: &Bound<'_, PyAny>) -> PyResult<[C64; N]> {
     cvec(x)?.try_into().map_err(|v: Vec<C64>| PyValueError::new_err(format!("expected {N} samples, got {}", v.len())))
 }
 
-/// Gardner timing error `Re{x[1]* (x[2] - x[0])}` of three samples at 2 sps.
+/// Gardner timing error :math:`\operatorname{Re}\{x[1]^* (x[2] - x[0])\}` of three samples at 2 sps.
 ///
 /// Args:
 ///     x (array_like): three consecutive samples.
@@ -925,7 +952,7 @@ fn gardner_ted(x: &Bound<'_, PyAny>) -> PyResult<f64> {
     Ok(clock::gardner_ted(&array::<3>(x)?))
 }
 
-/// Gardner timing error for Nyquist pulses, `|x[1]|² (|x[0]|² - |x[2]|²)`.
+/// Gardner timing error for Nyquist pulses, :math:`|x[1]|^2 (|x[0]|^2 - |x[2]|^2)`.
 ///
 /// Args:
 ///     x (array_like): three consecutive samples.
@@ -940,8 +967,8 @@ fn gardner_ted_nyquist(x: &Bound<'_, PyAny>) -> PyResult<f64> {
     Ok(clock::gardner_ted_nyquist(&array::<3>(x)?))
 }
 
-/// Cubic Lagrange (Farrow) interpolation of four samples at `μ ∈ [-1, 1]`
-/// (`μ = 0` returns `x[2]`; OptiCommPy `interpolator`).
+/// Cubic Lagrange (Farrow) interpolation of four samples at :math:`\mu \in [-1, 1]`
+/// (:math:`\mu = 0` returns `x[2]`; OptiCommPy `interpolator`).
 ///
 /// Args:
 ///     x (array_like): four consecutive samples.

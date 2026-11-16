@@ -58,7 +58,7 @@ ax2.semilogy(
 )
 ax2.semilogy(
     snrs,
-    cfo_rmse(10.0) * 10 ** (-(snrs - 10) / 20),
+    cfo_rmse(10.0) * comnum.db2amp(-(snrs - 10)),
     color=GREY,
     linestyle=":",
     linewidth=1.2,

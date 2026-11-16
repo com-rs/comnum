@@ -15,8 +15,12 @@ and follow [Semantic Versioning](https://semver.org/).
   comparison with the theory. `comnum.frame_sync` (the delay and the rotation of a
   received stream against known symbols, `comnum_dsp::sync::frame::frame_sync`) is
   now in the Python package, and `Constellation::min_distance` (`Constellation.min_distance`
-  in Python) gives the minimum distance between two points. The chapters and the
-  tutorials add their noise with `comnum.awgn_ebn0` and count errors with `comnum.ber`.
+  in Python) gives the minimum distance between two points. `comnum.power` (the mean power of a signal), `comnum.amp2db` and `comnum.db2amp` are new in Python. The chapters, the
+  tutorials and the gallery use the functions of the package where one exists
+  (`awgn`, `awgn_ebn0`, `ber`, `evm`, `power`, `pnorm`, `psd`, `freq_shift`, `convolve`,
+  `lin2db`, `amp2db`, `Fading.gains`, `Rng` in place of NumPy's generator).
+  The formulas of the docstrings of the Python package are LaTeX (`:math:` roles and
+  `.. math::` blocks), rendered by MathJax in the Sphinx documentation.
 - A sound card as a channel, to send a signal through a loudspeaker and a microphone:
   - `comnum_dsp::audio`: `upconvert` (a complex baseband signal resampled to the audio
     rate on a carrier, a real signal) and `downconvert` (a recording back to baseband),

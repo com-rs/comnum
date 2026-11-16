@@ -100,12 +100,10 @@ def ber_curve(reduction, ebn0s, blocks=400, seed=2, expand=True):
     bits = comnum.bits(4 * k * blocks, comnum.Rng(seed))
     s = c.map_bits(bits)
     x, side = ofdm.modulate_with(s, reduction)
-    p = np.mean(np.abs(x) ** 2)
     out = []
     for i, eb in enumerate(ebn0s):
-        # Eb/N0 = (block energy / bits) / σ²: the block energy p·L·N carries 4 k bits
-        s2 = p * ofdm.fft_len / (4 * k * comnum.db2lin(eb))
-        y = x + comnum.Rng.stream(seed, "awgn", i, 0).complex_noise(x.size, s2)
+        # a block of ofdm.fft_len samples carries 4 k bits
+        y = comnum.awgn_ebn0(x, eb, 4 * k, comnum.Rng.stream(seed, "awgn", i, 0), sps=ofdm.fft_len)
         if expand:
             z = ofdm.demodulate_with(y, reduction, side=side)
         else:  # no expansion: one-tap equalisation by the Bussgang gain

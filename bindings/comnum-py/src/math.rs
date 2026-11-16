@@ -4,7 +4,7 @@
 use crate::{CArr, IntoPy, carr, map_real};
 use pyo3::prelude::*;
 
-/// Convert decibels to a linear ratio, `10^{x/10}`.
+/// Convert decibels to a linear ratio, :math:`10^{x/10}`.
 ///
 /// Args:
 ///     x_db (float | array_like): the ratio (dB).
@@ -24,7 +24,67 @@ fn db2lin(x_db: &Bound<'_, PyAny>) -> PyResult<Py<PyAny>> {
     map_real(x_db, |v| Ok(comnum::math::db2lin(v)))
 }
 
-/// Convert a linear ratio to decibels, `10 log10 x`.
+/// Convert decibels to an amplitude ratio, :math:`10^{x/20}`.
+///
+/// Args:
+///     x_db (float | array_like): the ratio (dB).
+///
+/// Returns:
+///     float | numpy.ndarray: the amplitude ratio.
+///
+/// Raises:
+///     ValueError: for values that are not real numbers.
+///
+/// Examples:
+///     >>> import comnum
+///     >>> comnum.db2amp(20.0), round(comnum.db2amp(-6.0), 4)
+///     (10.0, 0.5012)
+#[pyfunction]
+fn db2amp(x_db: &Bound<'_, PyAny>) -> PyResult<Py<PyAny>> {
+    map_real(x_db, |v| Ok(comnum::math::db2amp(v)))
+}
+
+/// Convert an amplitude ratio to decibels, :math:`20 \log_{10} x`.
+///
+/// Args:
+///     x (float | array_like): the amplitude ratio.
+///
+/// Returns:
+///     float | numpy.ndarray: the ratio (dB).
+///
+/// Raises:
+///     ValueError: for values that are not real numbers.
+///
+/// Examples:
+///     >>> import comnum
+///     >>> comnum.amp2db(10.0), comnum.amp2db([1.0, 100.0]).tolist()
+///     (20.0, [0.0, 40.0])
+#[pyfunction]
+fn amp2db(x: &Bound<'_, PyAny>) -> PyResult<Py<PyAny>> {
+    map_real(x, |v| Ok(comnum::math::amp2db(v)))
+}
+
+/// The mean power of a signal, :math:`\operatorname{mean}(|x|^2)`.
+///
+/// Args:
+///     x (array_like): the samples, real or complex (1-D).
+///
+/// Returns:
+///     float: the mean of the squared magnitudes (0 for an empty signal).
+///
+/// Raises:
+///     ValueError: for an input that is not a 1-D array of numbers.
+///
+/// Examples:
+///     >>> import comnum
+///     >>> comnum.power([1.0, 1j, -1.0, 2.0])
+///     1.75
+#[pyfunction]
+fn power(x: &Bound<'_, PyAny>) -> PyResult<f64> {
+    Ok(comnum::math::power(&crate::cvec(x)?))
+}
+
+/// Convert a linear ratio to decibels, :math:`10 \log_{10} x`.
 ///
 /// Args:
 ///     x (float | array_like): the linear ratio.
@@ -44,7 +104,7 @@ fn lin2db(x: &Bound<'_, PyAny>) -> PyResult<Py<PyAny>> {
     map_real(x, |v| Ok(comnum::math::lin2db(v)))
 }
 
-/// Convert a power in dBm to watts, `10^{(P - 30)/10}`.
+/// Convert a power in dBm to watts, :math:`10^{(P - 30)/10}`.
 ///
 /// Args:
 ///     p_dbm (float | array_like): the power (dBm).
@@ -64,7 +124,7 @@ fn dbm2w(p_dbm: &Bound<'_, PyAny>) -> PyResult<Py<PyAny>> {
     map_real(p_dbm, |v| Ok(comnum::math::dbm2w(v)))
 }
 
-/// Convert a power in watts to dBm, `10 log10 P + 30`.
+/// Convert a power in watts to dBm, :math:`10 \log_{10} P + 30`.
 ///
 /// Args:
 ///     p_w (float | array_like): the power (W).
@@ -84,13 +144,13 @@ fn w2dbm(p_w: &Bound<'_, PyAny>) -> PyResult<Py<PyAny>> {
     map_real(p_w, |v| Ok(comnum::math::w2dbm(v)))
 }
 
-/// The Gaussian tail function `Q(x) = erfc(x/√2)/2`.
+/// The Gaussian tail function :math:`Q(x) = \operatorname{erfc}(x/\sqrt{2})/2`.
 ///
 /// Args:
 ///     x (float | array_like): the argument.
 ///
 /// Returns:
-///     float | numpy.ndarray: `Q(x)`.
+///     float | numpy.ndarray: :math:`Q(x)`.
 ///
 /// Raises:
 ///     ValueError: for values that are not real numbers.
@@ -104,10 +164,10 @@ fn qfunc(x: &Bound<'_, PyAny>) -> PyResult<Py<PyAny>> {
     map_real(x, |v| Ok(comnum::math::qfunc(v)))
 }
 
-/// The Q factor (dB) of a bit error rate, `20 log10(√2 erfc⁻¹(2 BER))`.
+/// The Q factor (dB) of a bit error rate, :math:`20 \log_{10}(\sqrt{2}\, \operatorname{erfc}^{-1}(2\, \mathrm{BER}))`.
 ///
 /// Args:
-///     ber (float | array_like): the bit error rate, in `(0, 0.5)`.
+///     ber (float | array_like): the bit error rate, in :math:`(0, 0.5)`.
 ///
 /// Returns:
 ///     float | numpy.ndarray: the Q factor (dB).
@@ -124,13 +184,13 @@ fn ber_to_q_db(ber: &Bound<'_, PyAny>) -> PyResult<Py<PyAny>> {
     map_real(ber, |v| Ok(comnum::metrics::ber_to_q_db(v)))
 }
 
-/// The Bessel function `J0(x)` of the first kind and order zero.
+/// The Bessel function :math:`J_0(x)` of the first kind and order zero.
 ///
 /// Args:
 ///     x (float | array_like): the argument.
 ///
 /// Returns:
-///     float | numpy.ndarray: `J0(x)`.
+///     float | numpy.ndarray: :math:`J_0(x)`.
 ///
 /// Raises:
 ///     ValueError: for values that are not real numbers.
@@ -140,16 +200,16 @@ fn bessel_j0(x: &Bound<'_, PyAny>) -> PyResult<Py<PyAny>> {
 }
 
 /// Register the bindings of this module.
-/// The Zadoff–Chu sequence `x_u(n) = exp(-jπ u n (n + 1) / N)` of root `u` and odd
-/// length `N` (constant amplitude, zero periodic autocorrelation at every nonzero lag;
-/// the PSS of LTE is the one of length 63, its middle element punctured).
+/// The Zadoff–Chu sequence :math:`x_u(n) = \exp(-j\pi u n (n + 1) / N)` of root :math:`u`
+/// and odd length :math:`N` (constant amplitude, zero periodic autocorrelation at every
+/// nonzero lag; the PSS of LTE is the one of length 63, its middle element punctured).
 ///
 /// Args:
 ///     u (int): the root, nonzero modulo `n_zc` and prime to it.
-///     n_zc (int): the odd length `N`.
+///     n_zc (int): the odd length :math:`N`.
 ///
 /// Returns:
-///     numpy.ndarray: the `N` values (complex128).
+///     numpy.ndarray: the :math:`N` values (complex128).
 ///
 /// Raises:
 ///     ValueError: for an even length or a root that is not prime to it.
@@ -168,6 +228,9 @@ pub(crate) fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(zadoff_chu, m)?)?;
     m.add_function(wrap_pyfunction!(db2lin, m)?)?;
     m.add_function(wrap_pyfunction!(lin2db, m)?)?;
+    m.add_function(wrap_pyfunction!(db2amp, m)?)?;
+    m.add_function(wrap_pyfunction!(amp2db, m)?)?;
+    m.add_function(wrap_pyfunction!(power, m)?)?;
     m.add_function(wrap_pyfunction!(dbm2w, m)?)?;
     m.add_function(wrap_pyfunction!(w2dbm, m)?)?;
     m.add_function(wrap_pyfunction!(qfunc, m)?)?;

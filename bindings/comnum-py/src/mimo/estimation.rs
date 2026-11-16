@@ -9,7 +9,7 @@ use super::*;
 ///     h (array_like): the channel, `(n_rx, n_tx)` for every vector or `(n, n_rx, n_tx)`.
 ///     y (array_like): the received streams, `(n_rx, n)` (or one vector `(n_rx,)`).
 ///     constellation (Constellation): the alphabet of every stream.
-///     noise_var (float): noise variance per receive antenna `E|w_i|²`.
+///     noise_var (float): noise variance per receive antenna :math:`\mathbb{E}|w_i|^2`.
 ///     method (str): `"mr"`, `"zf"` or `"mmse"`.
 ///
 /// Returns:
@@ -72,17 +72,21 @@ fn channel_estimator(name: &str, r_h: Option<Array2<C64>>, trace: Option<f64>) -
     })
 }
 
-/// A training matrix ``P`` (``t x N``) for the estimation of a flat MIMO channel from
-/// ``S = H P + V`` (Biguesh & Gershman 2006).
+/// A training matrix :math:`\mathbf{P}` (:math:`t \times N`) for the estimation of a flat
+/// MIMO channel from :math:`\mathbf{S} = \mathbf{H}\mathbf{P} + \mathbf{V}` (Biguesh &
+/// Gershman 2006).
 ///
-/// The estimators are linear, ``H_hat = S A``: ``"ls"`` (no prior), ``"sls"`` (scaled LS,
-/// the trace of ``R_H = E[H^H H]`` and the noise), ``"mmse"`` (the LMMSE of ``R_H``),
-/// ``"rmmse"`` (the LMMSE of ``R_H`` replaced by ``tr(R_H)/t I``), and ``"ls-sls"`` and
+/// The estimators are linear, :math:`\hat{\mathbf{H}} = \mathbf{S}\mathbf{A}`: ``"ls"`` (no
+/// prior), ``"sls"`` (scaled LS, the trace of
+/// :math:`\mathbf{R}_H = \mathbb{E}[\mathbf{H}^{\mathsf{H}}\mathbf{H}]` and the noise), ``"mmse"``
+/// (the LMMSE of :math:`\mathbf{R}_H`), ``"rmmse"`` (the LMMSE of :math:`\mathbf{R}_H`
+/// replaced by :math:`\operatorname{tr}(\mathbf{R}_H)/t \, \mathbf{I}`), and ``"ls-sls"`` and
 /// ``"ls-rmmse"``, whose trace is estimated from the LS estimate. ``mse`` is the
-/// closed-form mean square error ``E||H - H_hat||_F^2``.
+/// closed-form mean square error
+/// :math:`\mathbb{E}\lVert \mathbf{H} - \hat{\mathbf{H}} \rVert_F^2`.
 ///
 /// Args:
-///     p (array_like): the ``(t, N)`` training, ``N >= t``.
+///     p (array_like): the ``(t, N)`` training, :math:`N \ge t`.
 ///
 /// Raises:
 ///     ValueError: for an empty matrix, fewer columns than rows or a non-finite entry.
@@ -108,18 +112,20 @@ impl PyMimoTraining {
         Ok(PyMimoTraining { inner: Training::new(matrix_in(p, "the training")?).py()? })
     }
 
-    /// The DFT training of orthogonal rows, ``P P^H = (total_power / t) I`` (eq. (10)).
+    /// The DFT training of orthogonal rows,
+    /// :math:`\mathbf{P}\mathbf{P}^{\mathsf{H}} = (\lVert \mathbf{P} \rVert_F^2 / t) \mathbf{I}`
+    /// (eq. (10)).
     ///
     /// Args:
-    ///     n_tx (int): the transmit antennas ``t``.
-    ///     n (int | None): the training symbols ``N >= t`` (``t`` by default).
-    ///     total_power (float): ``||P||_F^2``.
+    ///     n_tx (int): the transmit antennas :math:`t`.
+    ///     n (int | None): the training symbols :math:`N \ge t` (:math:`t` by default).
+    ///     total_power (float): :math:`\lVert \mathbf{P} \rVert_F^2`.
     ///
     /// Returns:
     ///     MimoTraining: the training.
     ///
     /// Raises:
-    ///     ValueError: for ``n < n_tx``, no antenna or a power that is not positive.
+    ///     ValueError: for :math:`N < t`, no antenna or a power that is not positive.
     #[staticmethod]
     #[pyo3(signature = (n_tx, n=None, total_power=1.0))]
     fn orthogonal(n_tx: usize, n: Option<usize>, total_power: f64) -> PyResult<Self> {
@@ -130,17 +136,18 @@ impl PyMimoTraining {
     /// water-filled on the eigenvectors of ``r_h`` (eqs. (41)-(44)).
     ///
     /// Args:
-    ///     r_h (array_like): the ``(t, t)`` correlation ``E[H^H H]``.
+    ///     r_h (array_like): the ``(t, t)`` correlation
+    ///         :math:`\mathbb{E}[\mathbf{H}^{\mathsf{H}}\mathbf{H}]`.
     ///     noise_var (float): the noise variance per entry.
-    ///     n_rx (int): the receive antennas ``r``.
-    ///     total_power (float): ``||P||_F^2``.
-    ///     n (int | None): the training symbols ``N >= t`` (``t`` by default).
+    ///     n_rx (int): the receive antennas :math:`r`.
+    ///     total_power (float): :math:`\lVert \mathbf{P} \rVert_F^2`.
+    ///     n (int | None): the training symbols :math:`N \ge t` (:math:`t` by default).
     ///
     /// Returns:
     ///     MimoTraining: the training.
     ///
     /// Raises:
-    ///     ValueError: for a correlation that is not square, ``n < t``, or a noise or a
+    ///     ValueError: for a correlation that is not square, :math:`N < t`, or a noise or a
     ///         power that is not positive.
     #[staticmethod]
     #[pyo3(signature = (r_h, noise_var, n_rx, total_power, n=None))]
@@ -156,34 +163,37 @@ impl PyMimoTraining {
         Ok(PyMimoTraining { inner: Training::mmse_optimal(&r.view(), noise_var, n_rx, total_power, n).py()? })
     }
 
-    /// The ``(t, N)`` training symbols ``P``.
+    /// The ``(t, N)`` training symbols :math:`\mathbf{P}`.
     #[getter]
     fn symbols<'py>(&self, py: Python<'py>) -> Bound<'py, PyArray2<C64>> {
         self.inner.symbols().clone().into_pyarray(py)
     }
 
-    /// The power ``||P||_F^2``.
+    /// The power :math:`\lVert \mathbf{P} \rVert_F^2`.
     #[getter]
     fn total_power(&self) -> f64 {
         self.inner.total_power()
     }
 
-    /// The estimate ``H_hat = S A`` of the channel from the received training.
+    /// The estimate :math:`\hat{\mathbf{H}} = \mathbf{S}\mathbf{A}` of the channel from the
+    /// received training.
     ///
     /// Args:
     ///     s (array_like): the ``(r, N)`` received training.
     ///     estimator (str): ``"ls"``, ``"sls"``, ``"ls-sls"``, ``"mmse"``, ``"rmmse"`` or
     ///         ``"ls-rmmse"``.
     ///     noise_var (float): the noise variance per entry (unused by LS).
-    ///     r_h (array_like | None): the correlation ``E[H^H H]`` of ``"mmse"``.
-    ///     trace (float | None): ``tr(R_H)`` of ``"sls"`` and ``"rmmse"``.
+    ///     r_h (array_like | None): the correlation
+    ///         :math:`\mathbb{E}[\mathbf{H}^{\mathsf{H}}\mathbf{H}]` of ``"mmse"``.
+    ///     trace (float | None): :math:`\operatorname{tr}(\mathbf{R}_H)` of ``"sls"`` and
+    ///         ``"rmmse"``.
     ///
     /// Returns:
     ///     numpy.ndarray: the ``(r, t)`` estimate.
     ///
     /// Raises:
     ///     ValueError: for an unknown estimator, a missing prior, inconsistent shapes or
-    ///         LS on a training of rank below ``t``.
+    ///         LS on a training of rank below :math:`t`.
     #[pyo3(signature = (s, estimator="ls", noise_var=0.0, *, r_h=None, trace=None))]
     fn estimate<'py>(
         &self,
@@ -199,21 +209,23 @@ impl PyMimoTraining {
         Ok(self.inner.estimate(&matrix_in(s, "s")?.view(), &e, noise_var).py()?.into_pyarray(py))
     }
 
-    /// The closed-form MSE ``E||H - H_hat||_F^2`` of ``estimator`` on a channel of
-    /// correlation ``r_h`` (eqs. (7), (13), (28), (46) of Biguesh & Gershman).
+    /// The closed-form MSE :math:`\mathbb{E}\lVert \mathbf{H} - \hat{\mathbf{H}} \rVert_F^2` of
+    /// ``estimator`` on a channel of correlation ``r_h`` (eqs. (7), (13), (28), (46) of
+    /// Biguesh & Gershman).
     ///
     /// Args:
     ///     estimator (str): ``"ls"``, ``"sls"``, ``"mmse"`` or ``"rmmse"`` (``"ls-sls"`` and
     ///         ``"ls-rmmse"`` have no closed form).
-    ///     r_h (array_like): the true ``(t, t)`` correlation ``E[H^H H]``.
+    ///     r_h (array_like): the true ``(t, t)`` correlation
+    ///         :math:`\mathbb{E}[\mathbf{H}^{\mathsf{H}}\mathbf{H}]`.
     ///     noise_var (float): the noise variance per entry.
-    ///     n_rx (int): the receive antennas ``r``.
+    ///     n_rx (int): the receive antennas :math:`r`.
     ///     prior (array_like | float | None): the prior the estimator assumes, a
     ///         correlation for ``"mmse"``, a trace for ``"sls"`` and ``"rmmse"``; the true
     ///         one by default.
     ///
     /// Returns:
-    ///     float: the error, summed over the ``r t`` entries.
+    ///     float: the error, summed over the :math:`rt` entries.
     ///
     /// Raises:
     ///     ValueError: for an estimator without a closed form, or inconsistent shapes.
@@ -246,7 +258,7 @@ fn trainings(list: &[PyRef<'_, PyMimoTraining>]) -> Vec<Training> {
 }
 
 /// The weights of the best linear unbiased combination of the LS estimates of several
-/// training periods (Biguesh & Gershman, Lemma 4); ``P_k / P_tot`` for orthogonal
+/// training periods (Biguesh & Gershman, Lemma 4); :math:`P_k / P_{\mathrm{tot}}` for orthogonal
 /// trainings.
 ///
 /// Args:
@@ -256,14 +268,14 @@ fn trainings(list: &[PyRef<'_, PyMimoTraining>]) -> Vec<Training> {
 ///     numpy.ndarray: the weights, summing to 1.
 ///
 /// Raises:
-///     ValueError: for no period, a training of rank below ``t`` or periods of
-///         different ``t``.
+///     ValueError: for no period, a training of rank below :math:`t` or periods of
+///         different :math:`t`.
 #[pyfunction]
 pub(super) fn blue_weights<'py>(py: Python<'py>, trainings: Vec<PyRef<'py, PyMimoTraining>>) -> PyResult<FArr<'py>> {
     Ok(farr(py, est::blue_weights(&self::trainings(&trainings)).py()?))
 }
 
-/// The combination ``sum_k w_k H_k`` of channel estimates (eq. (52)).
+/// The combination :math:`\sum_k w_k \mathbf{H}_k` of channel estimates (eq. (52)).
 ///
 /// Args:
 ///     estimates (list[array_like]): the ``(r, t)`` estimates.
@@ -285,19 +297,24 @@ pub(super) fn blue_combine<'py>(
     Ok(est::blue_combine(&hs, &crate::fvec(weights)?).py()?.into_pyarray(py))
 }
 
-/// The MSE ``sigma^2 r / sum_k 1/tr((P_k P_k^H)^-1)`` of the BLUE combination of the LS
-/// estimates of several periods (eqs. (59), (61)).
+/// The MSE of the BLUE combination of the LS estimates of several periods (eqs. (59),
+/// (61)):
+///
+/// .. math::
+///
+///     \frac{\sigma^2 r}
+///     {\sum_k 1 / \operatorname{tr}\big((\mathbf{P}_k \mathbf{P}_k^{\mathsf{H}})^{-1}\big)}
 ///
 /// Args:
 ///     trainings (list[MimoTraining]): the training of every period.
 ///     noise_var (float): the noise variance per entry.
-///     n_rx (int): the receive antennas ``r``.
+///     n_rx (int): the receive antennas :math:`r`.
 ///
 /// Returns:
-///     float: the error, summed over the ``r t`` entries.
+///     float: the error, summed over the :math:`rt` entries.
 ///
 /// Raises:
-///     ValueError: for no period, a training of rank below ``t``, a negative noise or no
+///     ValueError: for no period, a training of rank below :math:`t`, a negative noise or no
 ///         receive antenna.
 #[pyfunction]
 pub(super) fn blue_mse(trainings: Vec<PyRef<'_, PyMimoTraining>>, noise_var: f64, n_rx: usize) -> PyResult<f64> {

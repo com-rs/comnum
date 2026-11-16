@@ -5,15 +5,15 @@ use super::*;
 use crate::rng::PyRng;
 use comnum::waveform::fhss::{Fhss, theory as fhss_theory};
 
-/// Frequency-hopping spread spectrum with noncoherent `M`-FSK: a band of `Q` channels
-/// of `M` orthogonal tones, `N = Q M` samples per symbol, the channel changed every
-/// `symbols_per_hop` symbols along a pattern known to both ends; the receiver keeps
-/// the `M` bins of the current channel of a DFT.
+/// Frequency-hopping spread spectrum with noncoherent :math:`M`-FSK: a band of :math:`Q`
+/// channels of :math:`M` orthogonal tones, :math:`N = Q M` samples per symbol, the channel
+/// changed every `symbols_per_hop` symbols along a pattern known to both ends; the receiver
+/// keeps the :math:`M` bins of the current channel of a DFT.
 ///
 /// Args:
-///     n_channels (int): the channels `Q` of the band.
-///     m (int): the tones `M` of a channel, the size of the alphabet.
-///     pattern (array_like): the hopping pattern, channels in `[0, Q)`, repeated.
+///     n_channels (int): the channels :math:`Q` of the band.
+///     m (int): the tones :math:`M` of a channel, the size of the alphabet.
+///     pattern (array_like): the hopping pattern, channels in :math:`[0, Q)`, repeated.
 ///     symbols_per_hop (int): symbols sent on a channel before the next hop.
 ///
 /// Raises:
@@ -63,13 +63,13 @@ impl PyFhss {
         Ok(iarr(py, Fhss::random_pattern(n_channels, n, &mut rng.inner)))
     }
 
-    /// int: The channels `Q` of the band.
+    /// int: The channels :math:`Q` of the band.
     #[getter]
     fn n_channels(&self) -> usize {
         self.inner.n_channels
     }
 
-    /// int: The tones `M` of a channel.
+    /// int: The tones :math:`M` of a channel.
     #[getter]
     fn m(&self) -> usize {
         self.inner.m
@@ -81,7 +81,7 @@ impl PyFhss {
         self.inner.symbols_per_hop
     }
 
-    /// int: Samples per symbol, `N = Q M`.
+    /// int: Samples per symbol, :math:`N = Q M`.
     #[getter]
     fn symbol_len(&self) -> usize {
         self.inner.symbol_len()
@@ -97,10 +97,10 @@ impl PyFhss {
     /// the pattern.
     ///
     /// Args:
-    ///     symbols (array_like): integers in `[0, M)`.
+    ///     symbols (array_like): integers in :math:`[0, M)`.
     ///
     /// Returns:
-    ///     numpy.ndarray: `N` samples per symbol.
+    ///     numpy.ndarray: :math:`N` samples per symbol.
     ///
     /// Raises:
     ///     ValueError: for a symbol outside the alphabet.
@@ -108,14 +108,14 @@ impl PyFhss {
         Ok(carr(py, self.inner.modulate(&uvec(symbols)?).py()?))
     }
 
-    /// The energy of the `M` candidates of every received symbol, in the channel of
+    /// The energy of the :math:`M` candidates of every received symbol, in the channel of
     /// the pattern.
     ///
     /// Args:
-    ///     samples (array_like): a multiple of `N` samples.
+    ///     samples (array_like): a multiple of :math:`N` samples.
     ///
     /// Returns:
-    ///     numpy.ndarray: `M` energies per symbol.
+    ///     numpy.ndarray: :math:`M` energies per symbol.
     ///
     /// Raises:
     ///     ValueError: unless `samples` holds whole symbols.
@@ -126,10 +126,10 @@ impl PyFhss {
     /// The noncoherent decisions: the tone of largest energy.
     ///
     /// Args:
-    ///     samples (array_like): a multiple of `N` samples.
+    ///     samples (array_like): a multiple of :math:`N` samples.
     ///
     /// Returns:
-    ///     numpy.ndarray: one symbol per `N` samples.
+    ///     numpy.ndarray: one symbol per :math:`N` samples.
     ///
     /// Raises:
     ///     ValueError: unless `samples` holds whole symbols.
@@ -145,7 +145,8 @@ impl PyFhss {
 
 /// A partial-band noise jammer: Gaussian noise of mean power `power` per sample in
 /// `n_bins` consecutive bins of DFT blocks of `n_fft` samples, nothing elsewhere. In
-/// its bins it is white noise of variance `power · n_fft / n_bins` per sample.
+/// its bins it is white noise of variance
+/// :math:`\mathrm{power} \cdot n_{\mathrm{fft}} / n_{\mathrm{bins}}` per sample.
 ///
 /// Args:
 ///     n (int): the number of samples.
@@ -180,16 +181,21 @@ fn partial_band_noise<'py>(
     Ok(carr(py, comnum::channel::jamming::partial_band_noise(n, n_fft, first_bin, n_bins, power, &mut rng.inner).py()?))
 }
 
-/// The bit error rate of slow frequency hopping with noncoherent `M`-FSK under a noise
-/// jammer on the fraction `rho` of the band: `(1 - ρ) Pb(Eb/N0) + ρ Pb(Eb/(N0 + NJ/ρ))`,
-/// `ρ/2 · exp(-ρ Eb/(2 NJ))` for binary FSK without thermal noise.
+/// The bit error rate of slow frequency hopping with noncoherent :math:`M`-FSK under a noise
+/// jammer on the fraction `rho` of the band:
+///
+/// .. math::
+///
+///     \bar{P}_b = (1 - \rho)\, P_b(E_b/N_0) + \rho\, P_b\bigl(E_b/(N_0 + N_J/\rho)\bigr),
+///
+/// :math:`\tfrac{\rho}{2} \exp(-\rho E_b/(2 N_J))` for binary FSK without thermal noise.
 ///
 /// Args:
-///     ebnj_db (float | array_like): `Eb/NJ` (dB), `NJ` the density of the jammer
+///     ebnj_db (float | array_like): :math:`E_b/N_J` (dB), :math:`N_J` the density of the jammer
 ///         spread over the whole band.
-///     rho (float): the jammed fraction of the band, in `(0, 1]`.
+///     rho (float): the jammed fraction of the band, in :math:`(0, 1]`.
 ///     m (int): the size of the alphabet.
-///     ebn0_db (float | None): the thermal `Eb/N0` (dB); none without thermal noise.
+///     ebn0_db (float | None): the thermal :math:`E_b/N_0` (dB); none without thermal noise.
 ///
 /// Returns:
 ///     float | numpy.ndarray: the bit error rate.
@@ -213,14 +219,14 @@ fn theory_ber_fh_partial_band(
 }
 
 /// The worst partial-band noise jammer of slow frequency hopping with noncoherent
-/// `M`-FSK: the fraction of the band that maximises the bit error rate, and that error
-/// rate (`2 NJ/Eb` and `e⁻¹ NJ/Eb` for binary FSK without thermal noise, Viterbi and
-/// Jacobs 1975).
+/// :math:`M`-FSK: the fraction of the band that maximises the bit error rate, and that
+/// error rate (:math:`2 N_J/E_b` and :math:`e^{-1} N_J/E_b` for binary FSK without thermal
+/// noise, Viterbi and Jacobs 1975).
 ///
 /// Args:
-///     ebnj_db (float): `Eb/NJ` (dB).
+///     ebnj_db (float): :math:`E_b/N_J` (dB).
 ///     m (int): the size of the alphabet.
-///     ebn0_db (float | None): the thermal `Eb/N0` (dB); none without thermal noise.
+///     ebn0_db (float | None): the thermal :math:`E_b/N_0` (dB); none without thermal noise.
 ///
 /// Returns:
 ///     tuple[float, float]: the worst fraction and the bit error rate there.

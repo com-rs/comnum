@@ -88,7 +88,7 @@ fig.tight_layout()
 # ``SPS`` possible phases has a maximum at the right one, and it can be found without
 # knowing the data or the carrier (a rotation does not change a modulus).
 # :func:`comnum.decimate` keeps the phase of largest power.
-power = [np.mean(np.abs(filtered[phase::SPS]) ** 2) for phase in range(SPS)]
+power = [comnum.power(filtered[phase::SPS]) for phase in range(SPS)]
 timed = comnum.decimate(filtered, SPS, 1)
 
 fig, ax = plt.subplots(figsize=(6, 3.2))

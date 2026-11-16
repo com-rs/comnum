@@ -114,7 +114,7 @@ impl PyScrambler {
     ///     n (int): number of bits.
     ///
     /// Returns:
-    ///     numpy.ndarray: `n` bits (uint8).
+    ///     numpy.ndarray: :math:`n` bits (uint8).
     ///
     /// Raises:
     ///     ValueError: for a negative count.
@@ -199,13 +199,13 @@ impl PyInterleaver {
     ///     cols (int): columns of the array.
     ///
     /// Returns:
-    ///     Interleaver: the interleaver of `rows · cols` positions.
+    ///     Interleaver: the interleaver of :math:`\mathrm{rows} \cdot \mathrm{cols}` positions.
     #[staticmethod]
     fn block(rows: usize, cols: usize) -> Self {
         PyInterleaver { inner: Interleaver::block(rows, cols) }
     }
 
-    /// The quadratic permutation polynomial `(f1 i + f2 i²) mod k`.
+    /// The quadratic permutation polynomial :math:`(f_1 i + f_2 i^2) \bmod k`.
     ///
     /// Args:
     ///     k (int): the block length.
@@ -222,7 +222,7 @@ impl PyInterleaver {
         Ok(PyInterleaver { inner: Interleaver::qpp(k, f1, f2).py()? })
     }
 
-    /// numpy.ndarray: The permutation (int64): output `i` is input `perm[i]`.
+    /// numpy.ndarray: The permutation (int64): output :math:`i` is input `perm[i]`.
     #[getter]
     fn perm<'py>(&self, py: Python<'py>) -> IArr<'py> {
         iarr(py, self.inner.perm().to_vec())

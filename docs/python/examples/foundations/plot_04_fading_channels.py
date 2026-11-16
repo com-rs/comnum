@@ -89,7 +89,7 @@ def simulate(c: comnum.Constellation, ebn0_db: float, channel: comnum.Fading, ta
         tx = comnum.bits(BLOCK * c.bits_per_symbol, rng)
         h = channel.gains(BLOCK, rng)
         y = h * c.map_bits(tx) + rng.complex_noise(BLOCK, n0)
-        return int(np.count_nonzero(c.demap_bits(y / h) != tx)), tx.size
+        return round(comnum.ber(c.demap_bits(y / h), tx) * tx.size), tx.size
 
     return error_rate(trial, f"ber-{channel.kind}", tag)
 
@@ -267,7 +267,7 @@ def simulate_dpsk(ebn0_db: float, channel: comnum.Fading, tag: int) -> float:
         h = channel.gains(blocks, rng)[:, None]
         y = h * x + rng.complex_noise(x.size, n0).reshape(x.shape)
         rx = (np.real(y[:, 1:] * np.conj(y[:, :-1])) < 0).astype(np.uint8)
-        return int(np.count_nonzero(rx != tx)), tx.size
+        return round(comnum.ber(rx.ravel(), tx.ravel()) * tx.size), tx.size
 
     return error_rate(trial, f"dpsk-{channel.kind}", tag)
 
@@ -327,9 +327,9 @@ def simulate_mrc(ebn0_db: float, branches: int, tag: int) -> float:
         x = 1.0 - 2.0 * tx
         z = np.zeros(BLOCK, dtype=complex)
         for _ in range(branches):
-            h = rng.complex_noise(BLOCK, 1.0)
+            h = rayleigh.gains(BLOCK, rng)
             z += np.conj(h) * (h * x + rng.complex_noise(BLOCK, n0))
-        return int(np.count_nonzero((z.real < 0) != (tx == 1))), BLOCK
+        return round(comnum.ber(bpsk.demap_bits(z), tx) * BLOCK), BLOCK
 
     return error_rate(trial, "mrc", tag)
 
@@ -348,7 +348,7 @@ for i, (branches, marker) in enumerate([(1, "o"), (2, "s"), (4, "D")]):
         markeredgecolor=BACKGROUND,
         label=f"$L$ = {branches}",
     )
-nakagami = comnum.Fading("nakagami", 4.0).ber(eb + 10 * np.log10(4))
+nakagami = comnum.Fading("nakagami", 4.0).ber(eb + comnum.lin2db(4))
 ax.semilogy(
     eb,
     nakagami,

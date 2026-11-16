@@ -3,8 +3,8 @@
 use super::*;
 
 /// Chirp spread spectrum, the frequency-shift chirp modulation of LoRa (Chiani and
-/// Elzanaty 2019; Afisiadis et al. 2020): `M = 2^SF` chirps of `M` chips, a
-/// noncoherent DFT receiver. LoRa is a trademark of Semtech; this models the published
+/// Elzanaty 2019; Afisiadis et al. 2020): :math:`M = 2^{\mathrm{SF}}` chirps of :math:`M`
+/// chips, a noncoherent DFT receiver. LoRa is a trademark of Semtech; this models the published
 /// descriptions for research.
 ///
 /// Args:
@@ -48,13 +48,13 @@ impl PyCss {
         self.inner.sf
     }
 
-    /// int: The number of symbols and of chips per symbol, `M = 2^SF`.
+    /// int: The number of symbols and of chips per symbol, :math:`M = 2^{\mathrm{SF}}`.
     #[getter]
     fn m(&self) -> usize {
         self.inner.m()
     }
 
-    /// int: Samples per symbol, `J M`.
+    /// int: Samples per symbol, :math:`J M`.
     #[getter]
     fn symbol_len(&self) -> usize {
         self.inner.symbol_len()
@@ -63,10 +63,10 @@ impl PyCss {
     /// The samples of one symbol.
     ///
     /// Args:
-    ///     a (int): the symbol, `0 ≤ a < M`.
+    ///     a (int): the symbol, :math:`0 \le a < M`.
     ///
     /// Returns:
-    ///     numpy.ndarray: `J M` unit-envelope samples.
+    ///     numpy.ndarray: :math:`J M` unit-envelope samples.
     ///
     /// Raises:
     ///     ValueError: for an invalid parameter (the message names it).
@@ -77,10 +77,10 @@ impl PyCss {
     /// The samples of a sequence of symbols.
     ///
     /// Args:
-    ///     symbols (array_like): integers in `[0, M)`.
+    ///     symbols (array_like): integers in :math:`[0, M)`.
     ///
     /// Returns:
-    ///     numpy.ndarray: `J M` samples per symbol.
+    ///     numpy.ndarray: :math:`J M` samples per symbol.
     ///
     /// Raises:
     ///     ValueError: for an invalid parameter or input (the message names it).
@@ -88,14 +88,14 @@ impl PyCss {
         Ok(carr(py, self.inner.modulate(&uvec(symbols)?).py()?))
     }
 
-    /// The energy of the `M` candidates of every received symbol (squared magnitudes of
+    /// The energy of the :math:`M` candidates of every received symbol (squared magnitudes of
     /// the DFT of the dechirped samples).
     ///
     /// Args:
-    ///     samples (array_like): a multiple of `J M` samples.
+    ///     samples (array_like): a multiple of :math:`J M` samples.
     ///
     /// Returns:
-    ///     numpy.ndarray: `M` energies per symbol.
+    ///     numpy.ndarray: :math:`M` energies per symbol.
     ///
     /// Raises:
     ///     ValueError: for an invalid parameter or input (the message names it).
@@ -106,10 +106,10 @@ impl PyCss {
     /// The noncoherent decisions.
     ///
     /// Args:
-    ///     samples (array_like): a multiple of `J M` samples.
+    ///     samples (array_like): a multiple of :math:`J M` samples.
     ///
     /// Returns:
-    ///     numpy.ndarray: one symbol per `J M` samples.
+    ///     numpy.ndarray: one symbol per :math:`J M` samples.
     ///
     /// Raises:
     ///     ValueError: for an invalid parameter or input (the message names it).
@@ -123,10 +123,10 @@ impl PyCss {
     /// Args:
     ///     s1 (int): the symbol that ends in the window.
     ///     s2 (int): the symbol that starts `tau` chips in.
-    ///     tau (float): offset in chips, `0 ≤ tau < M`.
+    ///     tau (float): offset in chips, :math:`0 \le \tau < M`.
     ///
     /// Returns:
-    ///     numpy.ndarray: `M` samples.
+    ///     numpy.ndarray: :math:`M` samples.
     ///
     /// Raises:
     ///     ValueError: for an invalid parameter (the message names it).
@@ -173,7 +173,7 @@ fn theory_css_ser(sf: u32, snr_db: &Bound<'_, PyAny>, approximation: Option<&str
     map_real(snr_db, |s| f(sf, s).py())
 }
 
-/// The BER of the noncoherent CSS receiver over AWGN, `SER M/(2(M - 1))`.
+/// The BER of the noncoherent CSS receiver over AWGN, :math:`\mathrm{SER} \cdot M/(2(M - 1))`.
 ///
 /// Args:
 ///     sf (int): spreading factor.
@@ -198,7 +198,7 @@ fn theory_css_ber(sf: u32, snr_db: &Bound<'_, PyAny>) -> PyResult<Py<PyAny>> {
 ///     m (int): second symbol.
 ///
 /// Returns:
-///     complex: `C(l, m)`.
+///     complex: :math:`C(l, m)`.
 ///
 /// Raises:
 ///     ValueError: for an invalid parameter (the message names it).
@@ -214,7 +214,7 @@ fn css_cross_correlation(sf: u32, l: usize, m: usize) -> PyResult<C64> {
 ///     sf (int): spreading factor.
 ///
 /// Returns:
-///     float: `max Re C(l, m)` over `l ≠ m`.
+///     float: :math:`\max \operatorname{Re} C(l, m)` over :math:`l \ne m`.
 ///
 /// Raises:
 ///     ValueError: for an invalid parameter (the message names it).
@@ -228,12 +228,12 @@ fn css_max_cross_correlation(sf: u32) -> PyResult<f64> {
     css_theory::max_cross_correlation(sf).py()
 }
 
-/// The continuous part of the power spectrum of LoRa, `G^c(f) B`, at `f` in units of `B`
-/// (Chiani and Elzanaty 2019, eqs. (20)–(25)).
+/// The continuous part of the power spectrum of LoRa, :math:`G^c(f) B`, at :math:`f` in units
+/// of :math:`B` (Chiani and Elzanaty 2019, eqs. (20)–(25)).
 ///
 /// Args:
 ///     sf (int): spreading factor.
-///     f (array_like): frequencies in units of `B`.
+///     f (array_like): frequencies in units of :math:`B`.
 ///
 /// Returns:
 ///     numpy.ndarray: one value per frequency.
@@ -245,15 +245,15 @@ fn css_continuous_spectrum<'py>(py: Python<'py>, sf: u32, f: &Bound<'py, PyAny>)
     Ok(farr(py, css_theory::continuous_spectrum(sf, &fvec(f)?).py()?))
 }
 
-/// The lines of the spectrum of LoRa at `n B/M`, `|n| ≤ n_max` (Chiani and Elzanaty 2019,
-/// eq. (21)); they hold `1/M` of the power.
+/// The lines of the spectrum of LoRa at :math:`n B/M`, :math:`|n| \le n_{\max}` (Chiani and
+/// Elzanaty 2019, eq. (21)); they hold :math:`1/M` of the power.
 ///
 /// Args:
 ///     sf (int): spreading factor.
-///     n_max (int): largest index `|n|` of a line.
+///     n_max (int): largest index :math:`|n|` of a line.
 ///
 /// Returns:
-///     tuple[numpy.ndarray, numpy.ndarray]: the frequencies (units of `B`) and powers.
+///     tuple[numpy.ndarray, numpy.ndarray]: the frequencies (units of :math:`B`) and powers.
 ///
 /// Raises:
 ///     ValueError: for an invalid parameter (the message names it).
@@ -264,16 +264,16 @@ fn css_spectral_lines<'py>(py: Python<'py>, sf: u32, n_max: i64) -> PyResult<(FA
     Ok((farr(py, f), farr(py, p)))
 }
 
-/// The band (units of `B`) that holds `fraction` of the power of LoRa (Chiani and
-/// Elzanaty 2019, Table I, `B99`).
+/// The band (units of :math:`B`) that holds `fraction` of the power of LoRa (Chiani and
+/// Elzanaty 2019, Table I, :math:`B_{99}`).
 ///
 /// Args:
 ///     sf (int): spreading factor.
 ///     fraction (float): fraction of the power.
-///     span (float): half-width (units of `B`) of the computed spectrum.
+///     span (float): half-width (units of :math:`B`) of the computed spectrum.
 ///
 /// Returns:
-///     float: the band in units of `B`.
+///     float: the band in units of :math:`B`.
 ///
 /// Raises:
 ///     ValueError: for an invalid parameter (the message names it).
@@ -288,17 +288,17 @@ fn css_occupied_bandwidth(sf: u32, fraction: f64, span: f64) -> PyResult<f64> {
     css_theory::occupied_bandwidth(sf, fraction, span).py()
 }
 
-/// The pattern `R_k` that a same-SF interferer leaves after the dechirping (Afisiadis et
+/// The pattern :math:`R_k` that a same-SF interferer leaves after the dechirping (Afisiadis et
 /// al. 2020, eq. (25)).
 ///
 /// Args:
 ///     sf (int): spreading factor.
 ///     s1 (int): the interfering symbol that ends in the window.
 ///     s2 (int): the interfering symbol that starts `tau` chips in.
-///     tau (float): offset in chips, `0 ≤ tau < M`.
+///     tau (float): offset in chips, :math:`0 \le \tau < M`.
 ///
 /// Returns:
-///     numpy.ndarray: `M` complex values.
+///     numpy.ndarray: :math:`M` complex values.
 ///
 /// Raises:
 ///     ValueError: for an invalid parameter (the message names it).
@@ -309,7 +309,7 @@ fn css_interference_pattern<'py>(py: Python<'py>, sf: u32, s1: usize, s2: usize,
 
 /// The approximate SER (or, with `frame`, the frame error rate) under AWGN and a same-SF
 /// interferer of power `pi_db` relative to the signal (Afisiadis et al. 2020, eqs.
-/// (61)–(67), with the strongest bin at `-round(τ)`).
+/// (61)–(67), with the strongest bin at :math:`-\operatorname{round}(\tau)`).
 ///
 /// Args:
 ///     sf (int): spreading factor.

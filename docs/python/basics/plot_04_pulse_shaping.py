@@ -64,7 +64,7 @@ for pulse, name, color in [
 ]:
     f, p = comnum.psd(shape(symbols, pulse), fs=SPS, nfft=1024)
     order = np.argsort(f)
-    ax.plot(f[order], 10 * np.log10(p[order] / p.max()), color=color, label=name)
+    ax.plot(f[order], comnum.lin2db(p[order] / p.max()), color=color, label=name)
 for edge in (-(1 + ROLLOFF) / 2, (1 + ROLLOFF) / 2):
     ax.axvline(edge, color=GREY, linewidth=0.8, linestyle=":")
 ax.set(
@@ -194,7 +194,7 @@ without = np.array([ber_with_pulses(rect, e, matched=False) for e in late_points
 fig, ax = plt.subplots()
 ax.semilogy(fine, comnum.theory_ber(4, fine, "qam"), color=GREY, label="theory")
 ax.semilogy(
-    fine, comnum.theory_ber(4, fine - 10 * np.log10(SPS), "qam"), color=MUTED, linestyle=":",
+    fine, comnum.theory_ber(4, fine - comnum.lin2db(SPS), "qam"), color=MUTED, linestyle=":",
     label="theory, 9 dB to the right",
 )  # fmt: skip
 ax.plot(
@@ -219,7 +219,7 @@ fig.tight_layout()
 
 gap = np.max(np.abs(with_filter / comnum.theory_ber(4, points, "qam") - 1))
 print(f"with the matched filter: within {100 * gap:.0f} % of the closed form")
-shifted = comnum.theory_ber(4, late_points - 10 * np.log10(SPS), "qam")
+shifted = comnum.theory_ber(4, late_points - comnum.lin2db(SPS), "qam")
 print(
     f"without it: within {100 * np.max(np.abs(without / shifted - 1)):.0f} % of the curve 9 dB away"
 )

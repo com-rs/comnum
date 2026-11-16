@@ -11,15 +11,18 @@ use pyo3::types::PyDict;
 
 /// Add circular complex Gaussian noise for an SNR of `snr_db` within the bandwidth
 /// `bandwidth` of a signal sampled at `fs` (OptiCommPy `awgn`):
-/// `σ² = (fs/bandwidth) P_x / SNR`.
+///
+/// .. math::
+///
+///     \sigma^2 = \frac{f_s}{B} \, \frac{P_x}{\mathrm{SNR}}
 ///
 /// Args:
 ///     x (array_like): the signal.
 ///     snr_db (float): the SNR (dB).
 ///     rng (Rng): the generator.
 ///     fs (float): sampling rate (Hz).
-///     bandwidth_hz (float): the bandwidth of the SNR (Hz); with the default `fs = 1`,
-///         `bandwidth_hz = 1`, the SNR is per sample.
+///     bandwidth_hz (float): the bandwidth :math:`B` of the SNR (Hz); with the default
+///         `fs = 1`, `bandwidth_hz = 1`, the SNR is per sample.
 ///
 /// Returns:
 ///     numpy.ndarray: the noisy signal (complex128).
@@ -46,13 +49,17 @@ fn awgn<'py>(
     Ok(carr(py, awgn_ch::awgn(&cvec(x)?, snr_db, fs, bandwidth_hz, &mut rng.inner)))
 }
 
-/// Add noise for an `E_b/N_0` of `ebn0_db`: `σ² = P_x · sps / (b · E_b/N_0)` for `b`
-/// bits per symbol at `sps` samples per symbol.
+/// Add noise for an :math:`E_b/N_0` of `ebn0_db`, for :math:`b` bits per symbol at
+/// :math:`\mathrm{sps}` samples per symbol:
+///
+/// .. math::
+///
+///     \sigma^2 = \frac{P_x \cdot \mathrm{sps}}{b \cdot E_b/N_0}
 ///
 /// Args:
 ///     x (array_like): the signal.
-///     ebn0_db (float): `E_b/N_0` (dB).
-///     bits_per_symbol (float): information bits per symbol `b` (fractional for a
+///     ebn0_db (float): :math:`E_b/N_0` (dB).
+///     bits_per_symbol (float): information bits per symbol :math:`b` (fractional for a
 ///         coded or shaped signal).
 ///     rng (Rng): the generator.
 ///     sps (float): samples per symbol.
@@ -84,7 +91,8 @@ fn awgn_ebn0<'py>(
 }
 
 /// The samples of a receiver whose sampling clock is off by ``ppm`` parts per million:
-/// sample ``m`` at the instant ``m (1 + 1e-6 ppm)`` of ``x``, interpolated by the cubic
+/// sample :math:`m` at the instant :math:`m (1 + 10^{-6}\, \mathrm{ppm})` of ``x``,
+/// interpolated by the cubic
 /// Lagrange kernel, zero beyond the end (Speth et al. 1999, eqs. (12)-(13)).
 ///
 /// Args:
@@ -102,10 +110,10 @@ fn clock_offset<'py>(py: Python<'py>, x: &Bound<'py, PyAny>, ppm: f64) -> PyResu
 }
 
 /// Wiener phase noise of a laser: a random walk starting at 0 whose increments have
-/// the variance `2π Δν / fs`.
+/// the variance :math:`2\pi \Delta\nu / f_s`.
 ///
 /// Args:
-///     linewidth_hz (float): the linewidth `Δν` (Hz).
+///     linewidth_hz (float): the linewidth :math:`\Delta\nu` (Hz).
 ///     n (int): number of samples.
 ///     fs (float): sampling rate (Hz).
 ///     rng (Rng): the generator.
@@ -170,12 +178,12 @@ fn laser<'py>(
     Ok(carr(py, Laser { power_dbm, linewidth_hz, rin_var, freq_shift_hz }.field(n, fs, &mut rng.inner).py()?))
 }
 
-/// Phase modulator `E e^{jπu/V_π}` (OptiCommPy `pm`).
+/// Phase modulator :math:`E e^{j\pi u/V_\pi}` (OptiCommPy `pm`).
 ///
 /// Args:
 ///     e (array_like): the optical field (√W).
 ///     u (array_like): the driving voltage (V), one value per sample.
-///     vpi (float): the half-wave voltage `V_π` (V).
+///     vpi (float): the half-wave voltage :math:`V_\pi` (V).
 ///
 /// Returns:
 ///     numpy.ndarray: the modulated field (complex128).
@@ -194,15 +202,21 @@ fn phase_modulator<'py>(
 }
 
 /// Push-pull Mach–Zehnder modulator (OptiCommPy `mzm`):
-/// `E [c_I cos θ + j c_Q sin θ]` with `θ = π(u + V_b)/(2V_π)` and the arm coefficients
-/// of the extinction ratio (`cos θ` for an infinite one); the bias `-V_π` is the null
-/// (carrier suppression), `-V_π/2` the quadrature point.
+///
+/// .. math::
+///
+///     E \left[ c_I \cos\theta + j c_Q \sin\theta \right], \qquad
+///     \theta = \frac{\pi (u + V_b)}{2 V_\pi},
+///
+/// with the arm coefficients of the extinction ratio (:math:`\cos\theta` for an infinite
+/// one); the bias :math:`-V_\pi` is the null (carrier suppression), :math:`-V_\pi/2` the
+/// quadrature point.
 ///
 /// Args:
 ///     e (array_like): the optical field (√W).
 ///     u (array_like): the driving voltage (V), one value per sample.
-///     vpi (float): the half-wave voltage `V_π` (V).
-///     vb (float): the bias voltage `V_b` (V).
+///     vpi (float): the half-wave voltage :math:`V_\pi` (V).
+///     vb (float): the bias voltage :math:`V_b` (V).
 ///     er_db (float): the extinction ratio (dB).
 ///
 /// Returns:
@@ -223,16 +237,17 @@ fn mzm<'py>(
     Ok(carr(py, Mzm { vpi, vb, er_db }.modulate(&cvec(e)?, &fvec(u)?).py()?))
 }
 
-/// IQ modulator (OptiCommPy `iqm`): two MZMs driven by `Re u` and `Im u` on the halves
-/// of the field and recombined with the phase `π V_φ/V_π`.
+/// IQ modulator (OptiCommPy `iqm`): two MZMs driven by :math:`\operatorname{Re} u` and
+/// :math:`\operatorname{Im} u` on the halves of the field and recombined with the phase
+/// :math:`\pi V_\varphi/V_\pi`.
 ///
 /// Args:
 ///     e (array_like): the optical field (√W).
 ///     u (array_like): the complex driving signal (V), one value per sample.
-///     vpi (float): the half-wave voltage `V_π` of both MZMs (V).
+///     vpi (float): the half-wave voltage :math:`V_\pi` of both MZMs (V).
 ///     vb_i (float): the bias of the in-phase MZM (V).
 ///     vb_q (float): the bias of the quadrature MZM (V).
-///     vphi (float): the voltage of the phase shifter `V_φ` (V).
+///     vphi (float): the voltage of the phase shifter :math:`V_\varphi` (V).
 ///     er_i_db (float): the extinction ratio of the in-phase MZM (dB).
 ///     er_q_db (float): the extinction ratio of the quadrature MZM (dB).
 ///
@@ -270,17 +285,18 @@ fn iqm<'py>(
 }
 
 /// A PIN photodiode (OptiCommPy `photodiode`): responsivity, shot noise
-/// `2q(I + I_d)B`, thermal noise `4k_BTB/R_L`, and a low-pass FIR of bandwidth `B`.
+/// :math:`2q(I + I_d)B`, thermal noise :math:`4 k_B T B/R_L`, and a low-pass FIR of
+/// bandwidth :math:`B`.
 ///
-/// Every attribute is readable and writable; `ideal=True` gives `R|E|²` without noise
-/// nor filter.
+/// Every attribute is readable and writable; `ideal=True` gives :math:`R|E|^2` without
+/// noise nor filter.
 ///
 /// Args:
 ///     responsivity (float): responsivity (A/W).
 ///     temperature_k (float): temperature (K).
 ///     dark_current_a (float): dark current (A).
 ///     load_ohm (float): load resistance (Ω).
-///     bandwidth_hz (float): electrical bandwidth `B` (Hz).
+///     bandwidth_hz (float): electrical bandwidth :math:`B` (Hz).
 ///     n_taps (int): taps of the bandwidth-limiting filter (made odd).
 ///     filter_kind (str): the filter, `"rect"` or `"gauss"` (see `low_pass_fir`).
 ///     shot_noise (bool): add shot noise.
@@ -306,7 +322,7 @@ wrapper_methods! {
         dark_current_a / set_dark_current_a: f64,
         /// float: Load resistance (Ω) (read and write).
         load_ohm / set_load_ohm: f64,
-        /// float: Electrical bandwidth `B` (Hz) (read and write).
+        /// float: Electrical bandwidth :math:`B` (Hz) (read and write).
         bandwidth_hz / set_bandwidth_hz: f64,
         /// int: Taps of the bandwidth-limiting filter (made odd) (read and write).
         n_taps / set_n_taps: usize,
@@ -390,7 +406,7 @@ wrapper_methods! {
     ///     numpy.ndarray: the photocurrent (A, float64).
     ///
     /// Raises:
-    ///     ValueError: if the detector is not ideal and `fs < 2B`.
+    ///     ValueError: if the detector is not ideal and :math:`f_s < 2B`.
     fn detect<'py>(
         &self,
         py: Python<'py>,
@@ -464,7 +480,7 @@ fn photodiode_or_ideal(pd: Option<&PyPhotodiode>) -> Photodiode {
     pd.map_or_else(Photodiode::ideal, |p| p.inner.clone())
 }
 
-/// Balanced detection `i(E₁) - i(E₂)`.
+/// Balanced detection :math:`i(E_1) - i(E_2)`.
 ///
 /// Args:
 ///     e1 (array_like): the field on the first photodiode (√W).
@@ -493,7 +509,8 @@ fn balanced_photodiode<'py>(
 }
 
 /// The 90° optical hybrid (OptiCommPy `hybrid_2x4_90deg`): the four outputs
-/// `(E_s - E_lo)/2`, `j(E_s + E_lo)/2`, `(jE_s - E_lo)/2` and `(-E_s + jE_lo)/2`.
+/// :math:`(E_s - E_{lo})/2`, :math:`j(E_s + E_{lo})/2`, :math:`(jE_s - E_{lo})/2` and
+/// :math:`(-E_s + jE_{lo})/2`.
 ///
 /// Args:
 ///     es (array_like): the signal field (√W).
@@ -517,7 +534,7 @@ fn hybrid_2x4<'py>(
 }
 
 /// Single-polarisation coherent receiver (OptiCommPy `coherentReceiver`): the hybrid
-/// and two balanced photodiodes; equals `R E_s E_lo*` with ideal photodiodes.
+/// and two balanced photodiodes; equals :math:`R E_s E_{lo}^*` with ideal photodiodes.
 ///
 /// Args:
 ///     es (array_like): the signal field (√W).

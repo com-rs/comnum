@@ -51,7 +51,7 @@ def correlation(t, r):
 
 
 def monte_carlo(t, r, estimator, snr_db, rng):
-    p = comnum.MimoTraining.orthogonal(t, total_power=10 ** (snr_db / 10))
+    p = comnum.MimoTraining.orthogonal(t, total_power=comnum.db2lin(snr_db))
     r_h, err = correlation(t, r), 0.0
     for _ in range(RUNS):
         h = comnum.mimo_channel(r, t, rng, tx_correlation=EPS)
@@ -67,7 +67,7 @@ for ax, t in zip(axes, [2, 8], strict=True):
     r = t
     for est, marker in zip(["ls", "sls", "rmmse", "mmse"], ["o", "s", "", "D"], strict=True):
         cf = [
-            comnum.MimoTraining.orthogonal(t, total_power=10 ** (x / 10)).mse(
+            comnum.MimoTraining.orthogonal(t, total_power=comnum.db2lin(x)).mse(
                 est, correlation(t, r), 1.0, r
             )
             / (r * t)

@@ -56,11 +56,11 @@ fn emitters(
     Ok((0..pos.len()).map(|i| Emitter::new(pos[i], dir[i], modes[i], powers[i])).collect())
 }
 
-/// The Lambertian mode `n = -ln 2 / ln cos Φ½` of a source of semi-angle at half power
-/// `Φ½` (rad): 1 for 60°, 0.65 for 70°.
+/// The Lambertian mode :math:`n = -\ln 2 / \ln\cos\Phi_{1/2}` of a source of semi-angle at
+/// half power :math:`\Phi_{1/2}` (rad): 1 for 60°, 0.65 for 70°.
 ///
 /// Args:
-///     semi_angle_rad (float): the semi-angle at half power, in `(0, π/2)`.
+///     semi_angle_rad (float): the semi-angle at half power, in :math:`(0, \pi/2)`.
 ///
 /// Returns:
 ///     float: the mode.
@@ -73,10 +73,10 @@ fn lambertian_mode(semi_angle_rad: f64) -> PyResult<f64> {
 }
 
 /// The unit vector of elevation `elevation_rad` (positive up) and azimuth `azimuth_rad`
-/// (from the x axis, towards y).
+/// (from the :math:`x` axis, towards :math:`y`).
 ///
 /// Args:
-///     elevation_rad (float): the elevation (rad), `-π/2` pointing down.
+///     elevation_rad (float): the elevation (rad), :math:`-\pi/2` pointing down.
 ///     azimuth_rad (float): the azimuth (rad).
 ///
 /// Returns:
@@ -159,14 +159,14 @@ impl PyImpulseResponse {
         self.inner.first_arrival_s()
     }
 
-    /// The frequency response `H(f) = Σ P_i exp(-j2πf(i + ½)Δt)` (Barry et al. 1993,
-    /// eq. (15)).
+    /// The frequency response :math:`H(f) = \sum_i P_i \exp(-j2\pi f(i + \tfrac{1}{2})\Delta t)`
+    /// (Barry et al. 1993, eq. (15)).
     ///
     /// Args:
     ///     f_hz (array_like): the frequencies (Hz).
     ///
     /// Returns:
-    ///     numpy.ndarray: `H(f)` (complex128).
+    ///     numpy.ndarray: :math:`H(f)` (complex128).
     ///
     /// Raises:
     ///     ValueError: for an input that is not an array of numbers of the expected shape.
@@ -179,15 +179,16 @@ impl PyImpulseResponse {
         Ok(f.iter().map(|&x| self.inner.frequency_response(x)).collect::<Vec<_>>().into_pyarray(py))
     }
 
-    /// The −3 dB bandwidth (Hz): the first frequency at which `|H(f)|/H(0)` falls to
-    /// `10^(-3/20)`.
+    /// The −3 dB bandwidth (Hz): the first frequency at which :math:`|H(f)|/H(0)` falls to
+    /// :math:`10^{-3/20}`.
     ///
     /// Args:
     ///     step_hz (float): the step of the search (Hz), refined by bisection.
     ///     max_hz (float): the largest frequency searched (Hz).
     ///
     /// Returns:
-    ///     float | None: the bandwidth, or None if `|H|` does not fall within `max_hz`.
+    ///     float | None: the bandwidth, or None if :math:`|H|` does not fall within
+    ///     `max_hz`.
     #[pyo3(signature = (step_hz=1e5, max_hz=1e9))]
     fn bandwidth_3db_hz(&self, step_hz: f64, max_hz: f64) -> Option<f64> {
         self.inner.bandwidth_3db_hz(step_hz, max_hz)
@@ -220,12 +221,12 @@ impl PyImpulseResponse {
     }
 }
 
-/// An empty rectangular room `[0, L] × [0, W] × [0, H]` with Lambertian walls (Barry et
-/// al. 1993): north and south are the walls `x = L` and `x = 0`, west and east `y = W`
-/// and `y = 0`.
+/// An empty rectangular room :math:`[0, L] \times [0, W] \times [0, H]` with Lambertian walls
+/// (Barry et al. 1993): north and south are the walls :math:`x = L` and :math:`x = 0`,
+/// west and east :math:`y = W` and :math:`y = 0`.
 ///
 /// Args:
-///     size_m (array_like): `(L, W, H)` (m).
+///     size_m (array_like): :math:`(L, W, H)` (m).
 ///     reflectance (float | dict): one reflectivity for every surface, or a dict of
 ///         `north`, `south`, `east`, `west`, `ceiling`, `floor` (missing ones: 0).
 ///
@@ -283,7 +284,7 @@ impl PyRoom {
     ///     mode (float | array_like): the Lambertian mode (see `lambertian_mode`).
     ///     power_w (float | array_like): the optical power (W).
     ///     bin_s (float): the width of the time bins (s).
-    ///     partitions (list[tuple[int, int, int]]): the elements `(N_x, N_y, N_z)` per
+    ///     partitions (list[tuple[int, int, int]]): the elements :math:`(N_x, N_y, N_z)` per
     ///         dimension, one partition per order of reflection.
     ///
     /// Returns:
@@ -341,7 +342,7 @@ impl PyIllumination {
     ///     fov_rad (float): its field of view (rad).
     ///     filter_gain (float): the gain of the optical filter.
     ///     concentrator_index (float | None): the refractive index of a concentrator of
-    ///         gain `n²/sin²Ψ`.
+    ///         gain :math:`n^2/\sin^2\Psi`.
     ///
     /// Returns:
     ///     list[OwcImpulseResponse]: one response per order, from the line of sight.
@@ -367,7 +368,7 @@ impl PyIllumination {
     }
 }
 
-/// The Rytov variance `σ₁² = 1.23 C_n² k^{7/6} L^{11/6}` of a plane wave.
+/// The Rytov variance :math:`\sigma_1^2 = 1.23\, C_n^2 k^{7/6} L^{11/6}` of a plane wave.
 ///
 /// Args:
 ///     cn2 (float): the refractive-index structure parameter (m^-2/3).
@@ -375,7 +376,7 @@ impl PyIllumination {
 ///     length_m (float): the length of the link (m).
 ///
 /// Returns:
-///     float: `σ₁²`.
+///     float: :math:`\sigma_1^2`.
 #[pyfunction]
 fn rytov_variance(cn2: f64, wavelength_m: f64, length_m: f64) -> f64 {
     fso::rytov_variance(cn2, wavelength_m, length_m)
@@ -433,7 +434,7 @@ impl PyGammaGamma {
     /// The parameters predicted by the Rytov variance for a negligible inner scale.
     ///
     /// Args:
-    ///     rytov (float): `σ₁²`.
+    ///     rytov (float): :math:`\sigma_1^2`.
     ///     wave (str): `"plane"` or `"spherical"`.
     ///
     /// Returns:
@@ -447,19 +448,19 @@ impl PyGammaGamma {
         Ok(PyGammaGamma { inner: GammaGamma::from_rytov(rytov, wave.parse::<Wave>().py()?).py()? })
     }
 
-    /// float: `α`.
+    /// float: :math:`\alpha`.
     #[getter]
     fn alpha(&self) -> f64 {
         self.inner.alpha
     }
 
-    /// float: `β`.
+    /// float: :math:`\beta`.
     #[getter]
     fn beta(&self) -> f64 {
         self.inner.beta
     }
 
-    /// The scintillation index `1/α + 1/β + 1/(αβ)`.
+    /// The scintillation index :math:`1/\alpha + 1/\beta + 1/(\alpha\beta)`.
     ///
     /// Returns:
     ///     float: the scintillation index.
@@ -536,10 +537,10 @@ impl PyPointingError {
         Ok(PyPointingError { inner: PointingError::new(beam_radius_m, aperture_radius_m, jitter_m).py()? })
     }
 
-    /// The fraction `A₀ = erf²(v)` collected without displacement.
+    /// The fraction :math:`A_0 = \operatorname{erf}^2(v)` collected without displacement.
     ///
     /// Returns:
-    ///     float: `A₀`.
+    ///     float: :math:`A_0`.
     fn a0(&self) -> f64 {
         self.inner.a0()
     }
@@ -569,7 +570,7 @@ impl PyPointingError {
     /// The density of the collected fraction.
     ///
     /// Args:
-    ///     h (float | array_like): the fractions, in `(0, A₀]`.
+    ///     h (float | array_like): the fractions, in :math:`(0, A_0]`.
     ///
     /// Returns:
     ///     float | numpy.ndarray: the density, of the shape of `h`.
@@ -597,7 +598,7 @@ impl PyPointingError {
 }
 
 /// A free-space optical link: a deterministic loss, turbulence and pointing errors, the
-/// gain of the intensity `h = h_l h_a h_p`.
+/// gain of the intensity :math:`h = h_l h_a h_p`.
 ///
 /// Args:
 ///     loss_db (float): the loss of the weather and of the geometry (dB).
@@ -689,8 +690,8 @@ impl PyFso {
 ///     channel_noise_factor (float): the FET channel noise factor.
 ///     transconductance_s (float): the FET transconductance (S).
 ///     temperature_k (float): the absolute temperature (K).
-///     i2 (float): the noise bandwidth factor `I₂`.
-///     i3 (float): the noise bandwidth factor `I₃`.
+///     i2 (float): the noise bandwidth factor :math:`I_2`.
+///     i3 (float): the noise bandwidth factor :math:`I_3`.
 ///
 /// Examples:
 ///     >>> import comnum
@@ -719,9 +720,9 @@ wrapper_methods! {
         transconductance_s / set_transconductance_s: f64,
         /// float: Absolute temperature (K) (read and write).
         temperature_k / set_temperature_k: f64,
-        /// float: Noise bandwidth factor `I₂` (read and write).
+        /// float: Noise bandwidth factor :math:`I_2` (read and write).
         i2 / set_i2: f64,
-        /// float: Noise bandwidth factor `I₃` (read and write).
+        /// float: Noise bandwidth factor :math:`I_3` (read and write).
         i3 / set_i3: f64,
     }
 

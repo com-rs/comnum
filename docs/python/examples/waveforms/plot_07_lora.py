@@ -39,8 +39,7 @@ def ser_sim(css, snr_db, n, seed, taps=(1.0,)):
     rng = comnum.Rng(seed)
     sym = rng.integers(css.m, n)
     x = css.modulate(sym)
-    y = np.convolve(x, np.asarray(taps))[: x.size]
-    y = y + rng.complex_noise(y.size, 1 / comnum.db2lin(snr_db))
+    y = comnum.awgn(comnum.convolve(taps, x)[: x.size], snr_db, rng)
     return float(np.mean(css.demodulate(y) != sym))
 
 
@@ -120,7 +119,7 @@ for s in snr[:7:2]:
         a, s1, s2 = (int(v) for v in rng.integers(512, 3))
         tau = float(rng.uniform(1)[0] * 512)
         phase = np.exp(2j * np.pi * rng.uniform(2))
-        y = phase[0] * css.symbol(a) + phase[1] * 10 ** (-3 / 20) * css.interferer(s1, s2, tau)
+        y = phase[0] * css.symbol(a) + phase[1] * comnum.db2amp(-3) * css.interferer(s1, s2, tau)
         y = y + rng.complex_noise(512, 1 / comnum.db2lin(s))
         errors += int(css.demodulate(y)[0] != a)
     sim.append(errors / n)

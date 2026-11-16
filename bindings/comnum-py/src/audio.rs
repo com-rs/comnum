@@ -99,8 +99,9 @@ fn hdlc_frames<'py>(
 }
 
 /// The real signal of a sound card that carries a complex baseband signal on an audio
-/// carrier: `Re(x̃[n] exp(j2π f_c n / f_a))`, `x̃` the signal resampled to the audio
-/// rate. The band `carrier_hz ± fs/2` must lie between 0 and half the audio rate.
+/// carrier: :math:`\operatorname{Re}(\tilde{x}[n] \exp(j 2\pi f_c n / f_a))`, :math:`\tilde{x}`
+/// the signal resampled to the audio rate. The band :math:`f_c \pm f_s/2` must lie between
+/// 0 and half the audio rate.
 ///
 /// Args:
 ///     x (array_like): the complex baseband samples.
@@ -159,7 +160,7 @@ fn audio_downconvert<'py>(
 }
 
 /// Write real samples to a mono WAV file of 16-bit PCM. The samples are clipped to
-/// `[-1, 1]`: scale the signal first (a peak of 0.5 leaves headroom).
+/// :math:`[-1, 1]`: scale the signal first (a peak of 0.5 leaves headroom).
 ///
 /// Args:
 ///     path (str | os.PathLike): the file.
@@ -182,7 +183,7 @@ fn write_wav(path: PathBuf, samples: &Bound<'_, PyAny>, sample_rate: u32) -> PyR
 ///     path (str | os.PathLike): the file.
 ///
 /// Returns:
-///     tuple[numpy.ndarray, int]: the samples in `[-1, 1]`, `(n,)` for a mono file and
+///     tuple[numpy.ndarray, int]: the samples in :math:`[-1, 1]`, `(n,)` for a mono file and
 ///     `(channels, n)` otherwise, and the sample rate.
 ///
 /// Raises:

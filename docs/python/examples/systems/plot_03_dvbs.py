@@ -31,7 +31,7 @@ from comnum.plot import BACKGROUND, BLUE, GREY, INK, PURPLE, RULE, RUST, TEAL
 # %%
 # The BER after the Viterbi decoder: twelve bursts of 100 packets per point through the
 # whole chain, the errors counted on the bytes entering the inner coder.
-rng, noise = comnum.Rng(421), np.random.default_rng(421)
+rng = comnum.Rng(421)
 table3 = {"1/2": 4.5, "2/3": 5.0, "3/4": 5.5, "5/6": 6.0, "7/8": 6.4}
 colors = [BLUE, RUST, TEAL, PURPLE, GREY]
 fig, ax = plt.subplots()
@@ -45,10 +45,7 @@ for (rate, required), color in zip(table3.items(), colors, strict=True):
         for _ in range(12):  # about 2.2e6 bits per point
             tx = link.outer(comnum.dvb_packets(100, rng))
             x = link.inner(tx)
-            w = (noise.normal(size=len(x)) + 1j * noise.normal(size=len(x))) * np.sqrt(
-                noise_var / 2
-            )
-            rx = link.inner_decode(x + w, noise_var)
+            rx = link.inner_decode(x + rng.complex_noise(len(x), noise_var), noise_var)
             errors += int(np.unpackbits(tx ^ rx).sum())
             bits += 8 * len(tx)
         ber.append(errors / bits if errors else np.nan)

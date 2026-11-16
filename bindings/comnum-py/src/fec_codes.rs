@@ -54,42 +54,45 @@ fn symbols_out(py: Python<'_>, v: Vec<u16>) -> IArr<'_> {
     iarr(py, v.into_iter().map(usize::from).collect())
 }
 
-/// A Reed–Solomon code over GF(2^m) (symbols of ``m`` bits) correcting ``t`` symbols
-/// per word, with systematic encoding, errors-and-erasures decoding (Berlekamp–Massey,
-/// Chien search, Forney 1965) and shortening (Lin & Costello 2004, ch. 7).
+/// A Reed–Solomon code over :math:`\mathrm{GF}(2^m)` (symbols of :math:`m` bits) correcting
+/// :math:`t` symbols per word, with systematic encoding, errors-and-erasures decoding
+/// (Berlekamp–Massey, Chien search, Forney 1965) and shortening (Lin & Costello 2004,
+/// ch. 7).
 ///
-/// The generator polynomial has the roots ``β^b, …, β^(b+2t-1)`` with ``β = α^c`` for
-/// the primitive element ``α`` of the field of the primitive polynomial ``poly``:
-/// ``first_root`` is ``b`` (1 in the textbooks, 0 in DVB, 112 in CCSDS) and
-/// ``root_step`` is ``c`` (11 in CCSDS). The code of length ``2^m - 1`` symbols is
-/// shortened to ``n_symbols``; a word carries ``k_symbols = n_symbols - 2t``
-/// information symbols.
+/// The generator polynomial has the roots :math:`\beta^b, \dots, \beta^{b+2t-1}` with
+/// :math:`\beta = \alpha^c` for the primitive element :math:`\alpha` of the field of the
+/// primitive polynomial ``poly``: ``first_root`` is :math:`b` (1 in the textbooks, 0 in
+/// DVB, 112 in CCSDS) and ``root_step`` is :math:`c` (11 in CCSDS). The code of length
+/// :math:`2^m - 1` symbols is shortened to ``n_symbols``; a word carries
+/// :math:`k_\mathrm{symbols} = n_\mathrm{symbols} - 2t` information symbols.
 ///
 /// The code works on symbols (``encode_symbols``, ``decode_symbols``) and on bits,
-/// ``m`` per symbol, the most significant first. As for every code of the package,
-/// ``n`` and ``k`` count bits (``n = m n_symbols``, ``k = m k_symbols``):
-/// ``encode`` and ``decode`` take whole blocks of ``k`` bits and ``n`` LLRs (hard
-/// decisions), ``decode_bits`` one block of ``n`` hard bits with the number of
-/// corrections.
+/// :math:`m` per symbol, the most significant first. As for every code of the package,
+/// :math:`n` and :math:`k` count bits (:math:`n = m\, n_\mathrm{symbols}`,
+/// :math:`k = m\, k_\mathrm{symbols}`): ``encode`` and ``decode`` take whole blocks of
+/// :math:`k` bits and :math:`n` LLRs (hard decisions), ``decode_bits`` one block of
+/// :math:`n` hard bits with the number of corrections.
 ///
 /// Args:
 ///     m (int): bits per symbol, 2 to 16.
 ///     t (int): symbol errors corrected per word.
-///     n (int | None): word length in symbols, ``n_symbols`` (``2^m - 1`` by default,
+///     n (int | None): word length in symbols, ``n_symbols`` (:math:`2^m - 1` by default,
 ///         less for a shortened code).
-///     first_root (int): exponent ``b`` of the first root of the generator.
-///     root_step (int): exponent ``c`` of ``β = α^c``, coprime with ``2^m - 1``.
-///     poly (int | None): the primitive polynomial of the field, bit ``i`` the
-///         coefficient of ``x^i`` (the conventional one of Lin & Costello, Table 2.7,
-///         by default: ``0x11D`` for ``m = 8``).
+///     first_root (int): exponent :math:`b` of the first root of the generator.
+///     root_step (int): exponent :math:`c` of :math:`\beta = \alpha^c`, coprime with
+///         :math:`2^m - 1`.
+///     poly (int | None): the primitive polynomial of the field, bit :math:`i` the
+///         coefficient of :math:`x^i` (the conventional one of Lin & Costello, Table 2.7,
+///         by default: ``0x11D`` for :math:`m = 8`).
 ///
 /// Raises:
 ///     ValueError: for an invalid parameter (the message names it).
 ///
 /// Examples:
 ///     The RS(204, 188) outer code of DVB-T and DVB-S (ETSI EN 300 744 V1.6.1,
-///     Sec. 4.3.2; EN 300 421, Sec. 4.4): ``t = 8``, roots ``λ^0, …, λ^15`` over the
-///     field of ``x^8 + x^4 + x^3 + x^2 + 1``, shortened from (255, 239):
+///     Sec. 4.3.2; EN 300 421, Sec. 4.4): :math:`t = 8`, roots
+///     :math:`\lambda^0, \dots, \lambda^{15}` over the field of
+///     :math:`x^8 + x^4 + x^3 + x^2 + 1`, shortened from (255, 239):
 ///
 ///     >>> import comnum, numpy as np
 ///     >>> dvb = comnum.ReedSolomonCode(8, 8, n=204, first_root=0)
@@ -102,8 +105,9 @@ fn symbols_out(py: Python<'_>, v: Vec<u16>) -> IArr<'_> {
 ///     >>> bool(np.array_equal(decoded, msg)), corrected
 ///     (True, 3)
 ///
-///     The RS(255, 223) code of CCSDS 131.0-B-5, Sec. 4.2: ``t = 16`` over the field of
-///     ``x^8 + x^7 + x^2 + x + 1`` with the roots ``α^(11 j)``, ``j = 112, …, 143``:
+///     The RS(255, 223) code of CCSDS 131.0-B-5, Sec. 4.2: :math:`t = 16` over the field
+///     of :math:`x^8 + x^7 + x^2 + x + 1` with the roots :math:`\alpha^{11 j}`,
+///     :math:`j = 112, \dots, 143`:
 ///
 ///     >>> ccsds = comnum.ReedSolomonCode(8, 16, poly=0x187, first_root=112, root_step=11)
 ///     >>> (ccsds.n_symbols, ccsds.k_symbols, round(ccsds.rate, 4))
@@ -134,13 +138,14 @@ impl PyReedSolomon {
         Ok(PyReedSolomon { inner: ReedSolomon::with_field(m, poly, first_root, root_step, t, n).py()?, poly })
     }
 
-    /// int: Coded bits per word, ``m`` per symbol (``m n_symbols``), as for every code.
+    /// int: Coded bits per word, :math:`m` per symbol (:math:`m\, n_\mathrm{symbols}`), as
+    /// for every code.
     #[getter]
     fn n(&self) -> usize {
         self.inner.n()
     }
 
-    /// int: Information bits per word, ``m k_symbols``, as for every code.
+    /// int: Information bits per word, :math:`m\, k_\mathrm{symbols}`, as for every code.
     #[getter]
     fn k(&self) -> usize {
         self.inner.k()
@@ -152,7 +157,7 @@ impl PyReedSolomon {
         self.inner.n_symbols()
     }
 
-    /// int: Information symbols per word, ``n_symbols - 2t``.
+    /// int: Information symbols per word, :math:`n_\mathrm{symbols} - 2t`.
     #[getter]
     fn k_symbols(&self) -> usize {
         self.inner.k_symbols()
@@ -170,7 +175,7 @@ impl PyReedSolomon {
         self.inner.m()
     }
 
-    /// float: Code rate ``k / n``.
+    /// float: Code rate :math:`k / n`.
     #[getter]
     fn rate(&self) -> f64 {
         self.inner.code_rate()
@@ -182,29 +187,30 @@ impl PyReedSolomon {
         self.inner.first_root()
     }
 
-    /// int: Exponent ``c`` of ``β = α^c``.
+    /// int: Exponent :math:`c` of :math:`\beta = \alpha^c`.
     #[getter]
     fn root_step(&self) -> usize {
         self.inner.root_step()
     }
 
-    /// int: The primitive polynomial of the field, bit ``i`` the coefficient of ``x^i``.
+    /// int: The primitive polynomial of the field, bit :math:`i` the coefficient of
+    /// :math:`x^i`.
     #[getter]
     fn poly(&self) -> u32 {
         self.poly
     }
 
-    /// numpy.ndarray: The generator polynomial ``g(x)``, lowest degree first (``2t + 1``
-    /// symbols, int64).
+    /// numpy.ndarray: The generator polynomial :math:`g(x)`, lowest degree first
+    /// (:math:`2t + 1` symbols, int64).
     #[getter]
     fn generator<'py>(&self, py: Python<'py>) -> IArr<'py> {
         symbols_out(py, self.inner.generator().to_vec())
     }
 
-    /// The word of a message of symbols: the message, then the ``2t`` parity symbols.
+    /// The word of a message of symbols: the message, then the :math:`2t` parity symbols.
     ///
     /// Args:
-    ///     msg (array_like): ``k_symbols`` message symbols, below ``2^m``.
+    ///     msg (array_like): ``k_symbols`` message symbols, below :math:`2^m`.
     ///
     /// Returns:
     ///     numpy.ndarray: the ``n_symbols`` symbols of the word (int64).
@@ -216,7 +222,8 @@ impl PyReedSolomon {
     }
 
     /// Decode a word of received symbols, some positions known to be unreliable. The
-    /// decoder corrects ``e`` errors and ``s`` erasures whenever ``2e + s <= 2t``.
+    /// decoder corrects :math:`e` errors and :math:`s` erasures whenever
+    /// :math:`2e + s \le 2t`.
     ///
     /// Args:
     ///     received (array_like): the ``n_symbols`` received symbols.
@@ -248,10 +255,10 @@ impl PyReedSolomon {
     /// Decode one block of hard bits.
     ///
     /// Args:
-    ///     bits (array_like): ``n`` received bits.
+    ///     bits (array_like): :math:`n` received bits.
     ///
     /// Returns:
-    ///     tuple[numpy.ndarray, int | None]: the ``k`` message bits and the number of
+    ///     tuple[numpy.ndarray, int | None]: the :math:`k` message bits and the number of
     ///     corrected symbols (``None`` for a detected decoding failure).
     ///
     /// Raises:
@@ -261,13 +268,13 @@ impl PyReedSolomon {
         Ok((msg.into_pyarray(py), corrected))
     }
 
-    /// Encode whole blocks of bits (``m`` per symbol, most significant first).
+    /// Encode whole blocks of bits (:math:`m` per symbol, most significant first).
     ///
     /// Args:
-    ///     bits (array_like): a multiple of ``k`` bits.
+    ///     bits (array_like): a multiple of :math:`k` bits.
     ///
     /// Returns:
-    ///     numpy.ndarray: ``n`` coded bits per block (uint8).
+    ///     numpy.ndarray: :math:`n` coded bits per block (uint8).
     ///
     /// Raises:
     ///     ValueError: for an invalid parameter or input (the message names it).
@@ -286,10 +293,10 @@ impl PyReedSolomon {
     /// decoding fails keeps its message bits as received.
     ///
     /// Args:
-    ///     llr (array_like): a multiple of ``n`` LLRs (positive for a 0).
+    ///     llr (array_like): a multiple of :math:`n` LLRs (positive for a 0).
     ///
     /// Returns:
-    ///     numpy.ndarray: ``k`` bits per block (uint8).
+    ///     numpy.ndarray: :math:`k` bits per block (uint8).
     ///
     /// Raises:
     ///     ValueError: for an invalid parameter or input (the message names it).
@@ -318,10 +325,10 @@ impl PyReedSolomon {
     }
 }
 
-/// Pack bits into symbols of ``m`` bits, the most significant first.
+/// Pack bits into symbols of :math:`m` bits, the most significant first.
 ///
 /// Args:
-///     bits (array_like): a multiple of ``m`` bits.
+///     bits (array_like): a multiple of :math:`m` bits.
 ///     m (int): bits per symbol, 1 to 16.
 ///
 /// Returns:
@@ -339,14 +346,14 @@ fn pack_symbols<'py>(py: Python<'py>, bits: &Bound<'py, PyAny>, m: u32) -> PyRes
     Ok(symbols_out(py, rs::pack_symbols(&bvec(bits)?, m).py()?))
 }
 
-/// Unpack symbols of ``m`` bits into bits, the most significant first.
+/// Unpack symbols of :math:`m` bits into bits, the most significant first.
 ///
 /// Args:
-///     symbols (array_like): the symbols, below ``2^m``.
+///     symbols (array_like): the symbols, below :math:`2^m`.
 ///     m (int): bits per symbol, 1 to 16.
 ///
 /// Returns:
-///     numpy.ndarray: ``m`` bits per symbol (uint8).
+///     numpy.ndarray: :math:`m` bits per symbol (uint8).
 ///
 /// Raises:
 ///     ValueError: for an input that is not an array of numbers of the expected shape.
@@ -360,10 +367,10 @@ fn unpack_symbols<'py>(py: Python<'py>, symbols: &Bound<'py, PyAny>, m: u32) -> 
     Ok(rs::unpack_symbols(&self::symbols(symbols)?, m).into_pyarray(py))
 }
 
-/// The word error rate of a bounded-distance decoder of a ``t``-error-correcting code
-/// of ``n`` symbols over a memoryless channel of symbol error probability ``p_s``
+/// The word error rate of a bounded-distance decoder of a :math:`t`-error-correcting code
+/// of :math:`n` symbols over a memoryless channel of symbol error probability :math:`p_s`
 /// (Proakis & Salehi, *Digital Communications*, 5th ed., Sec. 7.5.2): the probability
-/// of more than ``t`` wrong symbols.
+/// of more than :math:`t` wrong symbols.
 ///
 /// Args:
 ///     n (int): word length (symbols).
@@ -371,7 +378,7 @@ fn unpack_symbols<'py>(py: Python<'py>, symbols: &Bound<'py, PyAny>, m: u32) -> 
 ///     p_s (float | array_like): symbol error probability of the channel.
 ///
 /// Returns:
-///     float | numpy.ndarray: the word error probability at every ``p_s``.
+///     float | numpy.ndarray: the word error probability at every :math:`p_s`.
 ///
 /// Raises:
 ///     ValueError: for values that are not real numbers.
@@ -386,9 +393,9 @@ fn theory_rs_wer(n: usize, t: usize, p_s: &Bound<'_, PyAny>) -> PyResult<Py<PyAn
     map_real(p_s, |p| rs::word_error_probability(n, t, p).py())
 }
 
-/// The symbol error rate after decoding, approximating that a word of ``i > t``
-/// errors keeps its ``i`` wrong symbols (Proakis & Salehi, Sec. 7.5.2; Sklar, *Digital
-/// Communications*, 2nd ed., Sec. 8.1.2).
+/// The symbol error rate after decoding, approximating that a word of :math:`i > t`
+/// errors keeps its :math:`i` wrong symbols (Proakis & Salehi, Sec. 7.5.2; Sklar,
+/// *Digital Communications*, 2nd ed., Sec. 8.1.2).
 ///
 /// Args:
 ///     n (int): word length (symbols).
@@ -396,7 +403,7 @@ fn theory_rs_wer(n: usize, t: usize, p_s: &Bound<'_, PyAny>) -> PyResult<Py<PyAn
 ///     p_s (float | array_like): symbol error probability of the channel.
 ///
 /// Returns:
-///     float | numpy.ndarray: the decoded symbol error probability at every ``p_s``.
+///     float | numpy.ndarray: the decoded symbol error probability at every :math:`p_s`.
 ///
 /// Raises:
 ///     ValueError: for values that are not real numbers.
@@ -410,8 +417,8 @@ fn theory_rs_ser(n: usize, t: usize, p_s: &Bound<'_, PyAny>) -> PyResult<Py<PyAn
     map_real(p_s, |p| rs::symbol_error_probability(n, t, p).py())
 }
 
-/// The bit error rate after decoding of a code over GF(2^m): a wrong symbol carries on
-/// average ``2^(m-1) / (2^m - 1)`` wrong bits per bit (Sklar, Sec. 8.1.2).
+/// The bit error rate after decoding of a code over :math:`\mathrm{GF}(2^m)`: a wrong symbol
+/// carries on average :math:`2^{m-1} / (2^m - 1)` wrong bits per bit (Sklar, Sec. 8.1.2).
 ///
 /// Args:
 ///     n (int): word length (symbols).
@@ -420,7 +427,7 @@ fn theory_rs_ser(n: usize, t: usize, p_s: &Bound<'_, PyAny>) -> PyResult<Py<PyAn
 ///     p_s (float | array_like): symbol error probability of the channel.
 ///
 /// Returns:
-///     float | numpy.ndarray: the decoded bit error probability at every ``p_s``.
+///     float | numpy.ndarray: the decoded bit error probability at every :math:`p_s`.
 ///
 /// Raises:
 ///     ValueError: for values that are not real numbers.
@@ -429,30 +436,30 @@ fn theory_rs_ber(n: usize, t: usize, m: u32, p_s: &Bound<'_, PyAny>) -> PyResult
     map_real(p_s, |p| rs::bit_error_probability(n, t, m, p).py())
 }
 
-/// A binary BCH code of GF(2^m), narrow sense, of designed distance ``2t + 1`` (Lin &
-/// Costello, *Error Control Coding*, 2nd ed., 2004, ch. 6), shortened to ``n`` bits:
-/// the outer code of DVB-S2 (ETSI EN 302 307-1 V1.4.1, Sec. 5.3.1). Systematic
+/// A binary BCH code of :math:`\mathrm{GF}(2^m)`, narrow sense, of designed distance :math:`2t + 1`
+/// (Lin & Costello, *Error Control Coding*, 2nd ed., 2004, ch. 6), shortened to :math:`n`
+/// bits: the outer code of DVB-S2 (ETSI EN 302 307-1 V1.4.1, Sec. 5.3.1). Systematic
 /// encoding; decoding of hard decisions by Berlekamp–Massey and a Chien search.
 ///
 /// The code follows the contract of every code of the package: ``encode`` maps whole
-/// blocks of ``k`` bits to ``n`` coded bits, ``decode`` whole blocks of ``n`` LLRs to
-/// ``k`` bits (by their signs, a block whose decoding fails keeping its message bits as
-/// received); ``decode_bits`` decodes one word of hard bits with the number of
-/// corrections.
+/// blocks of :math:`k` bits to :math:`n` coded bits, ``decode`` whole blocks of :math:`n`
+/// LLRs to :math:`k` bits (by their signs, a block whose decoding fails keeping its
+/// message bits as received); ``decode_bits`` decodes one word of hard bits with the
+/// number of corrections.
 ///
 /// Args:
-///     m (int): degree of the field, the code length being ``2^m - 1`` before
+///     m (int): degree of the field, the code length being :math:`2^m - 1` before
 ///         shortening.
 ///     t (int): bit errors corrected per word.
-///     n (int | None): word length in bits (``2^m - 1`` by default).
-///     poly (int | None): the primitive polynomial of the field, bit ``i`` the
-///         coefficient of ``x^i`` (the conventional one by default).
+///     n (int | None): word length in bits (:math:`2^m - 1` by default).
+///     poly (int | None): the primitive polynomial of the field, bit :math:`i` the
+///         coefficient of :math:`x^i` (the conventional one by default).
 ///
 /// Raises:
 ///     ValueError: for an invalid parameter (the message names it).
 ///
 /// Examples:
-///     The (15, 7) code correcting two errors, ``g(x) = 1 + x^4 + x^6 + x^7 + x^8``
+///     The (15, 7) code correcting two errors, :math:`g(x) = 1 + x^4 + x^6 + x^7 + x^8`
 ///     (Lin & Costello, ch. 6):
 ///
 ///     >>> import comnum, numpy as np
@@ -486,7 +493,7 @@ impl PyBch {
         self.inner.n()
     }
 
-    /// int: Message bits per word, ``n - deg g``.
+    /// int: Message bits per word, :math:`n - \deg g`.
     #[getter]
     fn k(&self) -> usize {
         self.inner.k()
@@ -498,13 +505,13 @@ impl PyBch {
         self.inner.t()
     }
 
-    /// float: Code rate ``k / n``.
+    /// float: Code rate :math:`k / n`.
     #[getter]
     fn rate(&self) -> f64 {
         self.inner.code_rate()
     }
 
-    /// numpy.ndarray: The generator polynomial ``g(x)``, lowest degree first (uint8).
+    /// numpy.ndarray: The generator polynomial :math:`g(x)`, lowest degree first (uint8).
     #[getter]
     fn generator<'py>(&self, py: Python<'py>) -> BArr<'py> {
         self.inner.generator().to_vec().into_pyarray(py)
@@ -513,10 +520,10 @@ impl PyBch {
     /// Encode whole blocks: every word is its message, then its parity bits.
     ///
     /// Args:
-    ///     bits (array_like): a multiple of ``k`` bits.
+    ///     bits (array_like): a multiple of :math:`k` bits.
     ///
     /// Returns:
-    ///     numpy.ndarray: ``n`` coded bits per block (uint8).
+    ///     numpy.ndarray: :math:`n` coded bits per block (uint8).
     ///
     /// Raises:
     ///     ValueError: for an invalid parameter or input (the message names it).
@@ -534,10 +541,10 @@ impl PyBch {
     /// decoding fails keeps its message bits as received.
     ///
     /// Args:
-    ///     llr (array_like): a multiple of ``n`` LLRs (positive for a 0).
+    ///     llr (array_like): a multiple of :math:`n` LLRs (positive for a 0).
     ///
     /// Returns:
-    ///     numpy.ndarray: ``k`` bits per block (uint8).
+    ///     numpy.ndarray: :math:`k` bits per block (uint8).
     ///
     /// Raises:
     ///     ValueError: for an invalid parameter or input (the message names it).
@@ -558,10 +565,10 @@ impl PyBch {
     /// Decode one word of hard bits.
     ///
     /// Args:
-    ///     bits (array_like): ``n`` received bits.
+    ///     bits (array_like): :math:`n` received bits.
     ///
     /// Returns:
-    ///     tuple[numpy.ndarray, int | None]: the ``k`` message bits and the number of
+    ///     tuple[numpy.ndarray, int | None]: the :math:`k` message bits and the number of
     ///     corrected errors (``None`` for a detected decoding failure, the message bits
     ///     then returned as received).
     ///
@@ -583,7 +590,7 @@ impl PyBch {
 ///
 /// Args:
 ///     generators (list[int]): octal generators.
-///     constraint (int): constraint length `K`.
+///     constraint (int): constraint length :math:`K`.
 ///     puncture (str | list[list[int]] | None): a pattern name or its rows, as for
 ///         :class:`ConvolutionalCode` (none for the mother code).
 ///

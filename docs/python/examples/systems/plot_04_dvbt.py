@@ -66,7 +66,7 @@ print(
 
 # %%
 # The BER after the Viterbi decoder against C/N, rate 2/3, Gaussian and P1 channels.
-rng, noise = comnum.Rng(744), np.random.default_rng(744)
+rng = comnum.Rng(744)
 table_a1 = {"QPSK": (5.3, 9.6), "16-QAM": (11.4, 15.3), "64-QAM": (16.7, 20.3)}  # Gaussian, P1
 fig, ax = plt.subplots()
 for (constellation, (gauss, p1)), color in zip(table_a1.items(), [BLUE, RUST, TEAL], strict=True):
@@ -83,9 +83,7 @@ for (constellation, (gauss, p1)), color in zip(table_a1.items(), [BLUE, RUST, TE
             for _ in range(3):
                 tx = comnum.Dvbs().outer(comnum.dvb_packets(150, rng))
                 x = link.cells(tx) * h[:, None]
-                w = np.sqrt(noise_var / 2) * (
-                    noise.normal(size=x.shape) + 1j * noise.normal(size=x.shape)
-                )
+                w = rng.complex_noise(x.size, noise_var).reshape(x.shape)
                 rx = link.inner_decode(x + w, 150, noise_var, channel=h)
                 errors += int(np.unpackbits(tx ^ rx).sum())
                 bits += 8 * len(tx)
@@ -108,7 +106,7 @@ f = link.carrier_frequencies()
 fig, ax = plt.subplots(figsize=(8, 3))
 for profile, color in [("F1", PURPLE), ("P1", GREY)]:
     g = comnum.dvbt_channel_gains(profile, f)
-    ax.plot(f / 1e6, 20 * np.log10(np.abs(g)), color=color, label=profile)
+    ax.plot(f / 1e6, comnum.amp2db(np.abs(g)), color=color, label=profile)
 ax.set(xlabel="frequency (MHz)", ylabel="|H| (dB)", title="Annex B channels, 8 MHz")
 ax.legend()
 fig.tight_layout()

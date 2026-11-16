@@ -2,7 +2,7 @@
 
 use super::*;
 
-/// The modulation index `p/q` of a string `"p/q"` or a pair `(p, q)`.
+/// The modulation index :math:`p/q` of a string `"p/q"` or a pair :math:`(p, q)`.
 fn modulation_index(h: &Bound<'_, PyAny>) -> PyResult<(u32, u32)> {
     if let Ok(s) = h.extract::<String>() {
         let h: ModulationIndex = s.parse().py()?;
@@ -15,29 +15,35 @@ fn modulation_index(h: &Bound<'_, PyAny>) -> PyResult<(u32, u32)> {
 /// A continuous-phase modulator (CPFSK, MSK, GMSK, raised-cosine CPM) and its
 /// detectors.
 ///
-/// An `M`-ary symbol sequence `a_k ∈ {±1, ±3, …, ±(M-1)}` is carried by the phase of a
-/// unit-envelope signal `s(t) = exp(jφ(t))`, `φ(t) = 2πh Σ_k a_k q(t - kT)`, where
-/// `h = p/q` is the modulation index and `q(t)` the integral of a frequency pulse of
-/// `L` symbols and area 1/2 (Proakis & Salehi, *Digital Communications*, 5th ed.,
-/// Sec. 3.3-2). The pulses: `"rec"` (rectangular; 1REC is CPFSK and MSK is 1REC with
-/// `h = 1/2`), `"rc"` (raised cosine) and `"gmsk"` (the Gaussian pulse of Murota &
-/// Hirade, *IEEE Trans. Commun.* 29(7), 1981, of normalised bandwidth `bt`, truncated
-/// to `L` symbols). The trellis has `2q M^(L-1)` states.
+/// An :math:`M`-ary symbol sequence :math:`a_k \in \{\pm 1, \pm 3, \dots, \pm(M-1)\}` is
+/// carried by the phase of a unit-envelope signal:
 ///
-/// Symbols are **indices** `i ∈ {0, …, M-1}`, the level being `a = 2i - (M-1)` (see
-/// :meth:`levels`): for binary CPM the bits themselves are the indices, the bit 1
-/// sending the level +1. With MSK, :func:`msk_precode` turns information bits into the
-/// indices whose signal is OQPSK with half-sinusoid pulses, and :func:`msk_bits` reads
-/// them back from the phase states of :meth:`ml_detect_path`, with the BER of BPSK.
+/// .. math::
+///
+///     s(t) = \exp(j\phi(t)), \qquad \phi(t) = 2\pi h \sum_k a_k q(t - kT),
+///
+/// where :math:`h = p/q` is the modulation index and :math:`q(t)` the integral of a
+/// frequency pulse of :math:`L` symbols and area :math:`1/2` (Proakis & Salehi, *Digital
+/// Communications*, 5th ed., Sec. 3.3-2). The pulses: `"rec"` (rectangular; 1REC is CPFSK
+/// and MSK is 1REC with :math:`h = 1/2`), `"rc"` (raised cosine) and `"gmsk"` (the Gaussian
+/// pulse of Murota & Hirade, *IEEE Trans. Commun.* 29(7), 1981, of normalised bandwidth
+/// `bt`, truncated to :math:`L` symbols). The trellis has :math:`2q M^{L-1}` states.
+///
+/// Symbols are **indices** :math:`i \in \{0, \dots, M-1\}`, the level being
+/// :math:`a = 2i - (M-1)` (see :meth:`levels`): for binary CPM the bits themselves are the
+/// indices, the bit 1 sending the level :math:`+1`. With MSK, :func:`msk_precode` turns
+/// information bits into the indices whose signal is OQPSK with half-sinusoid pulses, and
+/// :func:`msk_bits` reads them back from the phase states of :meth:`ml_detect_path`, with
+/// the BER of BPSK.
 ///
 /// Args:
-///     h (str | tuple[int, int]): modulation index, `"p/q"` or `(p, q)` with
-///         `0 < p < q ≤ 64` (`"1/2"` by default).
+///     h (str | tuple[int, int]): modulation index, `"p/q"` or :math:`(p, q)` with
+///         :math:`0 < p < q \le 64` (`"1/2"` by default).
 ///     pulse (str): `"rec"`, `"rc"` or `"gmsk"`.
-///     length (int): pulse length `L` in symbols (1 to 8).
+///     length (int): pulse length :math:`L` in symbols (1 to 8).
 ///     bt (float): bandwidth–time product of the Gaussian pulse.
 ///     sps (int): samples per symbol (at least 2).
-///     order (int): alphabet size `M`, 2 or 4.
+///     order (int): alphabet size :math:`M`, 2 or 4.
 ///
 /// Raises:
 ///     ValueError: for an invalid parameter or input (the message names it).
@@ -81,7 +87,7 @@ impl PyCpm {
         PyCpm::build(CpmConfig { order, h_num, h_den, pulse, length, sps })
     }
 
-    /// MSK: binary 1REC with `h = 1/2`.
+    /// MSK: binary 1REC with :math:`h = 1/2`.
     ///
     /// Args:
     ///     sps (int): samples per symbol.
@@ -97,11 +103,11 @@ impl PyCpm {
         PyCpm::build(CpmConfig::msk(sps))
     }
 
-    /// GMSK: binary Gaussian pulse of bandwidth `bt` over `length` symbols, `h = 1/2`.
+    /// GMSK: binary Gaussian pulse of bandwidth `bt` over `length` symbols, :math:`h = 1/2`.
     ///
     /// Args:
-    ///     bt (float): bandwidth–time product `BT` of the Gaussian filter.
-    ///     length (int): pulse length `L` in symbols.
+    ///     bt (float): bandwidth–time product :math:`BT` of the Gaussian filter.
+    ///     length (int): pulse length :math:`L` in symbols.
     ///     sps (int): samples per symbol.
     ///
     /// Returns:
@@ -115,13 +121,13 @@ impl PyCpm {
         PyCpm::build(CpmConfig::gmsk(bt, length, sps))
     }
 
-    /// float: The modulation index `h = p/q` (in lowest terms).
+    /// float: The modulation index :math:`h = p/q` (in lowest terms).
     #[getter]
     fn h(&self) -> f64 {
         self.inner.h()
     }
 
-    /// tuple[int, int]: The numerator and the denominator `(p, q)` of the modulation
+    /// tuple[int, int]: The numerator and the denominator :math:`(p, q)` of the modulation
     /// index.
     #[getter]
     fn h_fraction(&self) -> (u32, u32) {
@@ -129,7 +135,7 @@ impl PyCpm {
         (c.h_num, c.h_den)
     }
 
-    /// int: The alphabet size `M`.
+    /// int: The alphabet size :math:`M`.
     #[getter]
     fn order(&self) -> usize {
         self.inner.config().order
@@ -151,7 +157,7 @@ impl PyCpm {
         }
     }
 
-    /// int: The pulse length `L` in symbols.
+    /// int: The pulse length :math:`L` in symbols.
     #[getter]
     fn length(&self) -> usize {
         self.inner.config().length
@@ -163,40 +169,41 @@ impl PyCpm {
         self.inner.config().sps
     }
 
-    /// int: The number of terminal phases, `2q` (the trellis visits `q` of them when
-    /// `p` is even).
+    /// int: The number of terminal phases, :math:`2q` (the trellis visits :math:`q` of them
+    /// when :math:`p` is even).
     #[getter]
     fn n_phase_states(&self) -> usize {
         self.inner.n_phase_states()
     }
 
-    /// int: The number of trellis states, `2q M^(L-1)`.
+    /// int: The number of trellis states, :math:`2q M^{L-1}`.
     #[getter]
     fn n_states(&self) -> usize {
         self.inner.n_states()
     }
 
-    /// numpy.ndarray: The terminal phases of the trellis (rad), `kπ/q` for `k < 2q`.
+    /// numpy.ndarray: The terminal phases of the trellis (rad), :math:`k\pi/q` for :math:`k < 2q`.
     #[getter]
     fn phase_states<'py>(&self, py: Python<'py>) -> FArr<'py> {
         let q = f64::from(self.inner.config().h_den);
         farr(py, (0..self.inner.n_phase_states()).map(|k| std::f64::consts::PI * k as f64 / q).collect())
     }
 
-    /// numpy.ndarray: The tabulated phase response `q(kT/sps)` for `k < L·sps`.
+    /// numpy.ndarray: The tabulated phase response :math:`q(kT/\mathrm{sps})` for
+    /// :math:`k < L \cdot \mathrm{sps}`.
     #[getter]
     fn phase_response<'py>(&self, py: Python<'py>) -> FArr<'py> {
         farr(py, self.inner.phase_response().to_vec())
     }
 
-    /// The symbol levels `a = 2i - (M-1)` of symbol indices (for binary CPM, the bits
-    /// `b` give the levels `2b - 1`).
+    /// The symbol levels :math:`a = 2i - (M-1)` of symbol indices (for binary CPM, the bits
+    /// :math:`b` give the levels :math:`2b - 1`).
     ///
     /// Args:
-    ///     indices (array_like): symbol indices below `M`.
+    ///     indices (array_like): symbol indices below :math:`M`.
     ///
     /// Returns:
-    ///     numpy.ndarray: the levels `±1, ±3, …` (float64).
+    ///     numpy.ndarray: the levels :math:`\pm 1, \pm 3, \dots` (float64).
     ///
     /// Raises:
     ///     ValueError: for an invalid parameter or input (the message names it).
@@ -209,10 +216,10 @@ impl PyCpm {
         Ok(farr(py, idx.into_iter().map(|i| self.inner.symbol_value(i)).collect()))
     }
 
-    /// The phase `φ(t)` at every sample, the terminal phase reduced modulo `2π`.
+    /// The phase :math:`\phi(t)` at every sample, the terminal phase reduced modulo :math:`2\pi`.
     ///
     /// Args:
-    ///     symbols (array_like): symbol indices below `M`.
+    ///     symbols (array_like): symbol indices below :math:`M`.
     ///
     /// Returns:
     ///     numpy.ndarray: `sps` phase samples (rad) per symbol.
@@ -223,13 +230,13 @@ impl PyCpm {
         Ok(farr(py, self.inner.phase(&uvec(symbols)?).py()?))
     }
 
-    /// The unit-envelope signal `exp(jφ(t))` at `sps` samples per symbol.
+    /// The unit-envelope signal :math:`\exp(j\phi(t))` at `sps` samples per symbol.
     ///
     /// Args:
-    ///     symbols (array_like): symbol indices below `M` (for binary CPM, the bits).
+    ///     symbols (array_like): symbol indices below :math:`M` (for binary CPM, the bits).
     ///
     /// Returns:
-    ///     numpy.ndarray: `sps · len(symbols)` complex samples.
+    ///     numpy.ndarray: :math:`\mathrm{sps} \cdot \mathrm{len(symbols)}` complex samples.
     ///
     /// Raises:
     ///     ValueError: for an invalid parameter or input (the message names it).
@@ -260,7 +267,7 @@ impl PyCpm {
     ///
     /// Returns:
     ///     tuple[numpy.ndarray, numpy.ndarray]: the symbol indices, and the terminal phase states
-    ///     in units of `π/q` (modulo `2q`) at the start of every interval and after
+    ///     in units of :math:`\pi/q` (modulo :math:`2q`) at the start of every interval and after
     ///     the last one (one more value than symbols).
     ///
     /// Raises:
@@ -271,7 +278,7 @@ impl PyCpm {
         Ok((iarr(py, path.symbols), iarr(py, path.phase_states)))
     }
 
-    /// The quadrature detector of MSK: the boundary bits `d_n` of the equivalent OQPSK
+    /// The quadrature detector of MSK: the boundary bits :math:`d_n` of the equivalent OQPSK
     /// signal (the information bits of :func:`msk_precode`), each decided from the
     /// correlation with a half-sinusoid over two symbols, with the BER of antipodal
     /// signalling over AWGN (Proakis & Salehi, Sec. 3.3-2).
@@ -290,9 +297,9 @@ impl PyCpm {
 
     /// The one-symbol differential phase detector of binary CPM: after an optional
     /// Gaussian low-pass predetection filter of normalised 3 dB bandwidth `bt`, the
-    /// sign of `Im(r_n r_{n-1}*)` sampled once per symbol decides `a_n` (Simon & Wang,
-    /// *IEEE Trans. Veh. Technol.* 33(4), 1984). Exact for MSK without noise; the
-    /// partial response of GMSK closes the eye.
+    /// sign of :math:`\operatorname{Im}(r_n r_{n-1}^*)` sampled once per symbol decides
+    /// :math:`a_n` (Simon & Wang, *IEEE Trans. Veh. Technol.* 33(4), 1984). Exact for MSK
+    /// without noise; the partial response of GMSK closes the eye.
     ///
     /// Args:
     ///     samples (array_like): a whole number of symbols of received samples.
@@ -316,21 +323,22 @@ impl PyCpm {
     }
 
     /// The normalised minimum squared Euclidean distance over the pairs of sequences
-    /// that diverge at `t = 0` and merge within `max_len` symbols (the bound `d_B²` of
+    /// that diverge at :math:`t = 0` and merge within `max_len` symbols (the bound
+    /// :math:`d_B^2` of
     /// Anderson, Aulin & Sundberg, *Digital Phase Modulation*, 1986, ch. 3; Aulin &
     /// Sundberg, *IEEE Trans. Commun.* 29(3), 1981, for full response): antipodal
-    /// signalling and MSK have `d² = 2`, and the asymptotic gain over BPSK is
-    /// `10 log10(d²/2)` dB.
+    /// signalling and MSK have :math:`d^2 = 2`, and the asymptotic gain over BPSK is
+    /// :math:`10 \log_{10}(d^2/2)` dB.
     ///
     /// Args:
     ///     max_len (int): the longest merge considered (the search is exhaustive,
-    ///         `(2M-1)^max_len` sequences).
+    ///         :math:`(2M-1)^{\mathrm{max\_len}}` sequences).
     ///
     /// Returns:
-    ///     float: `d²` (infinite if no sequence merges within `max_len` symbols).
+    ///     float: :math:`d^2` (infinite if no sequence merges within `max_len` symbols).
     ///
     /// Raises:
-    ///     ValueError: if `(2M-1)^max_len` exceeds 2^20 sequences.
+    ///     ValueError: if :math:`(2M-1)^{\mathrm{max\_len}}` exceeds :math:`2^{20}` sequences.
     #[pyo3(signature = (*, max_len=3))]
     fn min_distance2(&self, py: Python<'_>, max_len: usize) -> PyResult<f64> {
         py.detach(|| self.inner.min_distance2(max_len)).py()
@@ -349,10 +357,11 @@ impl PyCpm {
     }
 }
 
-/// The differential precoder of MSK: the bits `b_1 … b_N` give the boundary signs
-/// `d_n = 2b_n - 1` (`d_0 = +1`) and the CPM symbols `a_n = d_n d_{n+1}`, as indices
-/// `(a_n + 1)/2`, so that the signal is OQPSK with half-sinusoid pulses carrying `d_n`
-/// (Proakis & Salehi, Sec. 3.3-2); the ML detector then has the BER of BPSK.
+/// The differential precoder of MSK: the bits :math:`b_1 \dots b_N` give the boundary signs
+/// :math:`d_n = 2b_n - 1` (:math:`d_0 = +1`) and the CPM symbols :math:`a_n = d_n d_{n+1}`,
+/// as indices :math:`(a_n + 1)/2`, so that the signal is OQPSK with half-sinusoid pulses
+/// carrying :math:`d_n` (Proakis & Salehi, Sec. 3.3-2); the ML detector then has the BER of
+/// BPSK.
 ///
 /// Args:
 ///     bits (array_like): the information bits.
@@ -373,14 +382,14 @@ fn msk_precode<'py>(py: Python<'py>, bits: &Bound<'py, PyAny>) -> PyResult<IArr<
 }
 
 /// The information bits of MSK from the terminal phase states of a survivor path
-/// (the second array of :meth:`Cpm.ml_detect_path`, in units of `π/2`): the inverse of
+/// (the second array of :meth:`Cpm.ml_detect_path`, in units of :math:`\pi/2`): the inverse of
 /// :func:`msk_precode`.
 ///
 /// Args:
-///     phase_states (array_like): `N + 1` phase states.
+///     phase_states (array_like): :math:`N + 1` phase states.
 ///
 /// Returns:
-///     numpy.ndarray: the `N` bits (uint8).
+///     numpy.ndarray: the :math:`N` bits (uint8).
 ///
 /// Raises:
 ///     ValueError: for an input that is not an array of numbers of the expected shape.
@@ -397,13 +406,18 @@ fn msk_bits<'py>(py: Python<'py>, phase_states: &Bound<'py, PyAny>) -> PyResult<
     Ok(cpm::msk_bits(&uvec(phase_states)?).into_pyarray(py))
 }
 
-/// The power spectral density of MSK at the normalised frequency `fT`, unit power and
-/// `T = 1` (Proakis & Salehi, Sec. 3.4-3):
-/// `S(f) = (16/π²) [cos(2πfT) / (1 - 16 f²T²)]²`, finite at `fT = ±1/4`, with nulls at
-/// `fT = ±3/4, ±5/4, …` and a 3 dB bandwidth of about `0.59/T`.
+/// The power spectral density of MSK at the normalised frequency :math:`fT`, unit power and
+/// :math:`T = 1` (Proakis & Salehi, Sec. 3.4-3):
+///
+/// .. math::
+///
+///     S(f) = \frac{16}{\pi^2} \left[ \frac{\cos(2\pi fT)}{1 - 16 f^2 T^2} \right]^2,
+///
+/// finite at :math:`fT = \pm 1/4`, with nulls at :math:`fT = \pm 3/4, \pm 5/4, \dots` and a
+/// 3 dB bandwidth of about :math:`0.59/T`.
 ///
 /// Args:
-///     ft (float | array_like): normalised frequencies `fT`.
+///     ft (float | array_like): normalised frequencies :math:`fT`.
 ///
 /// Returns:
 ///     float | numpy.ndarray: the density, which integrates to one over all frequencies.

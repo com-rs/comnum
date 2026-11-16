@@ -24,7 +24,7 @@ fn ber(rx_bits: &Bound<'_, PyAny>, tx_bits: &Bound<'_, PyAny>) -> PyResult<f64> 
 }
 
 /// SNR (dB) of a received sequence against the transmitted one,
-/// `10 log10(P_tx/P_{rx-tx})`.
+/// :math:`10 \log_{10}(P_{tx}/P_{rx-tx})`.
 ///
 /// Args:
 ///     rx (array_like): the received samples.
@@ -42,9 +42,9 @@ fn snr_db(rx: &Bound<'_, PyAny>, tx: &Bound<'_, PyAny>) -> PyResult<f64> {
 
 /// The standard deviation (rad) of the phase error of received symbols against the
 /// transmitted ones, once the constant gain and phase of the least-squares fit are
-/// removed: `sqrt(mean(arg(g z x*)^2))`, the metric of Ip & Kahn (J. Lightw. Technol.
-/// 26(20), 2008) for a phase-modulated signal; over AWGN at high SNR it tends to
-/// `1 / sqrt(2 SNR)`. Transmitted symbols at zero are skipped.
+/// removed: :math:`\sqrt{\operatorname{mean}(\arg(g z x^*)^2)}`, the metric of Ip & Kahn
+/// (J. Lightw. Technol. 26(20), 2008) for a phase-modulated signal; over AWGN at high SNR
+/// it tends to :math:`1/\sqrt{2\,\mathrm{SNR}}`. Transmitted symbols at zero are skipped.
 ///
 /// Args:
 ///     rx (array_like): the received symbols.
@@ -69,8 +69,8 @@ fn phase_error_std(rx: &Bound<'_, PyAny>, tx: &Bound<'_, PyAny>) -> PyResult<f64
 
 /// BER, SER and SNR of a received symbol sequence (OptiCommPy `fastBERcalc`).
 ///
-/// The received sequence is rotated by `mean(tx/rx)` for QAM and PSK and normalised to
-/// unit power, then decided on the normalised constellation.
+/// The received sequence is rotated by :math:`\operatorname{mean}(tx/rx)` for QAM and PSK
+/// and normalised to unit power, then decided on the normalised constellation.
 ///
 /// Args:
 ///     rx (array_like): the received symbols.
@@ -92,10 +92,10 @@ fn fast_ber_calc(
     Ok((r.ber, r.ser, r.snr_db))
 }
 
-/// Error vector magnitude as a power ratio `E|y - x̂|² / E|x̂|²` (OptiCommPy `calcEVM`);
-/// the EVM in percent is `100·√evm`.
+/// Error vector magnitude as a power ratio :math:`\mathbb{E}|y - \hat x|^2 / \mathbb{E}|\hat x|^2`
+/// (OptiCommPy `calcEVM`); the EVM in percent is :math:`100 \sqrt{\mathrm{evm}}`.
 ///
-/// With `tx`, `x̂` is the transmitted sequence (after the same preprocessing as
+/// With `tx`, :math:`\hat x` is the transmitted sequence (after the same preprocessing as
 /// `fast_ber_calc`); without, the nearest points of the normalised constellation.
 ///
 /// Args:
@@ -127,7 +127,7 @@ fn evm(symbols: &Bound<'_, PyAny>, constellation: &PyConstellation, tx: Option<&
 ///
 /// Returns:
 ///     tuple[float, float]: GMI (bits/symbol) and normalised GMI (per bit of
-///     information, ``GMI / H(X)``).
+///     information, :math:`\mathrm{GMI} / H(X)`).
 ///
 /// Raises:
 ///     ValueError: for an invalid parameter or input (the message names it).
@@ -147,7 +147,7 @@ fn monte_carlo_gmi(
 
 /// Symbol-wise mutual information for a Gaussian channel of the measured noise
 /// variance (OptiCommPy `monteCarloMI`; the transmitted symbols are snapped to the
-/// constellation, so that the estimate never exceeds `H(X)`).
+/// constellation, so that the estimate never exceeds :math:`H(X)`).
 ///
 /// Args:
 ///     rx (array_like): the received symbols.
@@ -173,19 +173,34 @@ fn monte_carlo_mi(
     metrics::monte_carlo_mi(&cvec(rx)?, &cvec(tx)?, &constellation.inner, px.as_deref()).py()
 }
 
-/// Achievable rates of a receiver with its own posterior `q(x|z) ∝ e^{-|z - x|²/σ̂²}`.
+/// Achievable rates of a receiver with its own posterior
+///
+/// .. math::
+///
+///     q(x|z) \propto e^{-|z - x|^2/\hat{\sigma}^2}.
 ///
 /// The rate of a decoder that uses the receiver's beliefs (mismatched decoding), not a
-/// genie's: `air = H(X) - E[-log2 q(x|z)]` on the unit-energy constellation, without
-/// any gain correction, and its bit-wise version with the LLRs of `q`. Scaling the
-/// exponent by `s` and maximising gives `air_opt` (per block); `calibration =
-/// σ̂²/mean|z - x|²` is 1 for a calibrated receiver, below 1 for an over-confident one.
+/// genie's:
+///
+/// .. math::
+///
+///     \mathrm{air} = H(X) - \mathbb{E}[-\log_2 q(x|z)]
+///
+/// on the unit-energy constellation, without any gain correction, and its bit-wise
+/// version with the LLRs of :math:`q`. Scaling the exponent by :math:`s` and maximising
+/// gives `air_opt` (per block);
+///
+/// .. math::
+///
+///     \mathrm{calibration} = \hat{\sigma}^2 / \operatorname{mean}|z - x|^2
+///
+/// is 1 for a calibrated receiver, below 1 for an over-confident one.
 ///
 /// Args:
 ///     z (array_like): the receiver's output, one sample per symbol.
 ///     indices (array_like): the transmitted indices.
 ///     constellation (Constellation): the alphabet (normalised inside).
-///     noise_var (float): the noise variance `σ̂²` the receiver believes in.
+///     noise_var (float): the noise variance :math:`\hat{\sigma}^2` the receiver believes in.
 ///     px (array_like, optional): prior probabilities of the points; uniform by default.
 ///
 /// Returns:
@@ -226,9 +241,20 @@ fn posterior_rates<'py>(
 /// Mutual information and GMI with the least-squares channel gain: consistent at every
 /// SNR, unlike the power normalisation of `monte_carlo_mi` and `monte_carlo_gmi`.
 ///
-/// The model is `y = a x + w` with `x` the points at `indices` of the constellation
-/// normalised to unit energy under the priors ``px`` (uniform by default),
-/// `a = Σ y x*/Σ|x|²` and `σ² = mean|y - a x|²`; the rates use the priors.
+/// The model is
+///
+/// .. math::
+///
+///     y = a x + w,
+///
+/// with :math:`x` the points at `indices` of the constellation normalised to unit energy
+/// under the priors ``px`` (uniform by default),
+///
+/// .. math::
+///
+///     a = \frac{\sum y x^*}{\sum |x|^2}, \qquad \sigma^2 = \operatorname{mean}|y - a x|^2;
+///
+/// the rates use the priors.
 ///
 /// Args:
 ///     rx (array_like): the received symbols.
@@ -238,7 +264,7 @@ fn posterior_rates<'py>(
 ///
 /// Returns:
 ///     dict: ``mi``, ``gmi`` (bits/symbol), ``ngmi`` (per bit of information),
-///     ``snr_db`` (the effective SNR, dB) and ``entropy`` (``H(X)``, bits).
+///     ``snr_db`` (the effective SNR, dB) and ``entropy`` (:math:`H(X)`, bits).
 ///
 /// Raises:
 ///     ValueError: for an invalid parameter or input (the message names it).

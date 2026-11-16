@@ -233,7 +233,7 @@ receivers = [("mr", "conventional", "o"), ("zf", "decorrelator", "s"), ("mmse", 
 
 def near_far_link(delta: float) -> comnum.Dsss:
     """The eight users, the seven interferers `delta` dB above the first."""
-    return comnum.Dsss(codes, amplitudes=[1.0] + [10 ** (delta / 20)] * 7)
+    return comnum.Dsss(codes, amplitudes=[1.0] + [comnum.db2amp(delta)] * 7)
 
 
 def cdma_theory(cdma: comnum.Dsss, receiver: str) -> float:
@@ -262,7 +262,7 @@ for color, (receiver, name, marker) in zip(SERIES, receivers, strict=False):
         # of the sum of the eight: its variance is given, not derived from the signal
         chips += rng.complex_noise(chips.size, noise_var)
         decided = cdma.detect(chips, bpsk, noise_var, receiver)
-        sim.append(np.mean(decided[0] != labels[0]))
+        sim.append(comnum.ber(decided[0], labels[0]))
     near_far[name] = (np.array([cdma_theory(near_far_link(d), receiver) for d in delta_db]), sim)
     ax.plot(delta_db, sim, marker, color=color, markeredgecolor=BACKGROUND, label=name)
 ax.set(
@@ -280,7 +280,7 @@ fig.tight_layout()
 # curve of the MMSE receiver is an approximation, and an optimistic one: what is left
 # of seven BPSK interferers is not Gaussian.
 resistance = comnum.cdma_near_far_resistance(near_far_link(0.0).signatures)
-print(f"near-far resistance of the user: {resistance:.3f} ({10 * np.log10(resistance):.2f} dB)")
+print(f"near-far resistance of the user: {resistance:.3f} ({comnum.lin2db(resistance):.2f} dB)")
 for name, (expected, sim) in near_far.items():
     gap = np.max(np.abs(np.array(sim) / expected - 1))
     kind = "the Gaussian approximation" if name == "MMSE" else "the exact error rate"
@@ -403,12 +403,12 @@ def rake_ber(ebn0: float, tag: int) -> np.ndarray:
             received[delay : delay + x.size] += gain * x
         for fingers in (1, 2, 3):
             z = link.rake(received, DELAYS[:fingers], gains[:fingers])
-            errors[fingers - 1] += np.count_nonzero(bpsk.decide(z) != labels)
+            errors[fingers - 1] += comnum.ber(bpsk.decide(z), labels) * labels.size
     return errors / (BURSTS * BURST_SYMBOLS)
 
 
 rake_sim = np.array([rake_ber(e, i) for i, e in enumerate(rake_db)])
-per_path = 10 * np.log10(1.0 / 3.0)
+per_path = comnum.lin2db(1.0 / 3.0)
 fig, ax = plt.subplots()
 ax.semilogy(rake_fine, comnum.theory_ber(2, rake_fine, "psk"), color=GREY, label="AWGN")
 for fingers, color in zip((1, 2, 3), SERIES, strict=False):

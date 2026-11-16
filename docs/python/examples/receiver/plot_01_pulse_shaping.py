@@ -39,7 +39,7 @@ fig, axes = plt.subplots(1, 2, figsize=(9.5, 3.6), sharey=True)
 for ax, beta in zip(axes, [0.1, 0.5], strict=True):
     h = comnum.pulse_shape("rrc", SPS, n_taps=32 * SPS + 1, rolloff=beta)
     y = comnum.fir_filter(h, comnum.fir_filter(h, comnum.upsample(x, SPS)))
-    y = y / np.sqrt(np.mean(np.abs(y[::SPS]) ** 2))
+    y = y / np.sqrt(comnum.power(y[::SPS]))
     # two-symbol windows centred on the sampling instants t = 0 and t = 1
     traces = y[40 * SPS - SPS // 2 : 560 * SPS - SPS // 2].real.reshape(-1, 2 * SPS)
     t = np.arange(2 * SPS) / SPS - 0.5

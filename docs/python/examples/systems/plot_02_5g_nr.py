@@ -91,7 +91,11 @@ for fading, color, label in [
         ok = 0
         for _ in range(trials):
             cid = int(rng.integers(1008, 1)[0])
-            h = rng.complex_noise(1, 1.0)[0] if fading else np.exp(2j * np.pi * rng.uniform(1)[0])
+            h = (
+                comnum.Fading("rayleigh").gains(1, rng)[0]
+                if fading
+                else np.exp(2j * np.pi * rng.uniform(1)[0])
+            )
             noise = rng.complex_noise(960, comnum.db2lin(-snr)).reshape(4, 240).T
             y = h * comnum.nr_ssb_grid(cid) + noise  # the (240, 4) grid
             ok += comnum.nr_detect_cell_id(y)[0] == cid

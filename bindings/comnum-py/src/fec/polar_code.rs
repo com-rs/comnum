@@ -2,17 +2,17 @@
 
 use super::*;
 
-/// A polar code of length `n` (a power of two) and `k` information bits, built by the
-/// Gaussian approximation at `design_ebn0_db` (Trifonov 2012); decoded by SC
+/// A polar code of length :math:`n` (a power of two) and :math:`k` information bits, built
+/// by the Gaussian approximation at `design_ebn0_db` (Trifonov 2012); decoded by SC
 /// (Arıkan 2009), or SC list of size `list_size` (Tal & Vardy 2015) with the CRC `crc`
 /// choosing the path (CA-SCL).
 ///
 /// Args:
 ///     n (int): coded bits per block, a power of two.
 ///     k (int): information bits per block.
-///     design_ebn0_db (float): the `Eb/N0` of the construction (dB).
+///     design_ebn0_db (float): the :math:`E_b/N_0` of the construction (dB).
 ///     crc (str, optional): the CRC of the list decoder (a name of `Crc`).
-///     list_size (int): the list size `L` (1 for SC).
+///     list_size (int): the list size :math:`L` (1 for SC).
 ///
 /// Raises:
 ///     ValueError: for an invalid parameter (the message names it).
@@ -72,10 +72,10 @@ impl PyPolar {
     /// Encode whole blocks.
     ///
     /// Args:
-    ///     bits (array_like): a multiple of `k` bits.
+    ///     bits (array_like): a multiple of :math:`k` bits.
     ///
     /// Returns:
-    ///     numpy.ndarray: `n` coded bits per block (uint8).
+    ///     numpy.ndarray: :math:`n` coded bits per block (uint8).
     ///
     /// Raises:
     ///     ValueError: for an input that is not an array of numbers of the expected shape.
@@ -91,10 +91,10 @@ impl PyPolar {
     /// Decode whole blocks of LLRs (SC or CA-SCL).
     ///
     /// Args:
-    ///     llr (array_like): a multiple of `n` LLRs (positive for a 0).
+    ///     llr (array_like): a multiple of :math:`n` LLRs (positive for a 0).
     ///
     /// Returns:
-    ///     numpy.ndarray: `k` bits per block (uint8).
+    ///     numpy.ndarray: :math:`k` bits per block (uint8).
     ///
     /// Raises:
     ///     ValueError: for an input that is not an array of numbers of the expected shape.

@@ -4,15 +4,15 @@
 use super::*;
 
 /// The LDPC code of the data channels of 5G NR (3GPP TS 38.212, Sec. 5.3.2, 5.4.2): one
-/// code block of `k` information bits rate-matched to `n` bits; base graph 1 or 2 chosen
-/// as the shared channels do (or forced), the smallest lifting size `Z` with
-/// `K_b Z ≥ k`, filler bits, the first `2Z` bits punctured, the circular buffer read
-/// from the start of redundancy version `rv`, the bit interleaver of `qm` bits per
-/// symbol; decoded by belief propagation.
+/// code block of :math:`k` information bits rate-matched to :math:`n` bits; base graph 1
+/// or 2 chosen as the shared channels do (or forced), the smallest lifting size :math:`Z`
+/// with :math:`K_b Z \ge k`, filler bits, the first :math:`2Z` bits punctured, the
+/// circular buffer read from the start of redundancy version `rv`, the bit interleaver of
+/// `qm` bits per symbol; decoded by belief propagation.
 ///
 /// Args:
 ///     k (int): information bits per block (at most 8448 for base graph 1, 3840 for 2).
-///     e (int): transmitted bits per block `E` (the rate-matched length).
+///     e (int): transmitted bits per block :math:`E` (the rate-matched length).
 ///     base_graph (int, optional): 1 or 2 (default: the rule of Sec. 7.2.2).
 ///     rv (int): the redundancy version, 0 to 3.
 ///     qm (int): bits per modulation symbol of the bit interleaver (1: none).
@@ -100,13 +100,13 @@ impl PyNrLdpc {
         self.inner.base_graph()
     }
 
-    /// float: Code rate `k / n`.
+    /// float: Code rate :math:`k / n`.
     #[getter]
     fn rate(&self) -> f64 {
         self.inner.code_rate()
     }
 
-    /// int: The lifting size `Z`.
+    /// int: The lifting size :math:`Z`.
     #[getter]
     fn lifting_size(&self) -> usize {
         self.inner.lifting_size()
@@ -115,10 +115,10 @@ impl PyNrLdpc {
     /// Encode whole blocks.
     ///
     /// Args:
-    ///     bits (array_like): a multiple of `k` bits.
+    ///     bits (array_like): a multiple of :math:`k` bits.
     ///
     /// Returns:
-    ///     numpy.ndarray: `n` bits per block (uint8).
+    ///     numpy.ndarray: :math:`n` bits per block (uint8).
     ///
     /// Raises:
     ///     ValueError: for an input that is not an array of numbers of the expected shape.
@@ -129,10 +129,10 @@ impl PyNrLdpc {
     /// Decode whole blocks of LLRs.
     ///
     /// Args:
-    ///     llr (array_like): a multiple of `n` LLRs (positive for a 0).
+    ///     llr (array_like): a multiple of :math:`n` LLRs (positive for a 0).
     ///
     /// Returns:
-    ///     numpy.ndarray: `k` bits per block (uint8).
+    ///     numpy.ndarray: :math:`k` bits per block (uint8).
     ///
     /// Raises:
     ///     ValueError: for an input that is not an array of numbers of the expected shape.
@@ -142,20 +142,20 @@ impl PyNrLdpc {
 }
 
 /// The polar code of the control channels of 5G NR (3GPP TS 38.212, Sec. 5.3.1, 5.4.1):
-/// `k` payload bits with their CRC rate-matched to `n` bits (puncturing, shortening or
-/// repetition by the sub-block interleaver), the frozen set of the polar sequence of
-/// Table 5.3.1.2-1; decoded by CRC-aided SC list.
+/// :math:`k` payload bits with their CRC rate-matched to :math:`n` bits (puncturing,
+/// shortening or repetition by the sub-block interleaver), the frozen set of the polar
+/// sequence of Table 5.3.1.2-1; decoded by CRC-aided SC list.
 ///
 /// ``"uplink"``: the uplink control information (CRC6 and 3 parity-check bits for
-/// 12 ≤ k ≤ 19, CRC11 above, the triangular interleaver of the coded bits).
+/// :math:`12 \le k \le 19`, CRC11 above, the triangular interleaver of the coded bits).
 /// ``"downlink"``: the downlink control information and the broadcast channel (CRC24C,
 /// the input interleaver; the RNTI masking of a DCI is left to the caller).
 ///
 /// Args:
 ///     k (int): payload bits per block.
-///     e (int): transmitted bits per block `E` (the rate-matched length).
+///     e (int): transmitted bits per block :math:`E` (the rate-matched length).
 ///     link (str): ``"uplink"`` or ``"downlink"``.
-///     list_size (int): the list size `L`.
+///     list_size (int): the list size :math:`L`.
 ///
 /// Raises:
 ///     ValueError: for an invalid parameter (the message names it).
@@ -198,13 +198,13 @@ impl PyNrPolar {
         self.inner.n()
     }
 
-    /// float: Code rate `k / n`.
+    /// float: Code rate :math:`k / n`.
     #[getter]
     fn rate(&self) -> f64 {
         self.inner.code_rate()
     }
 
-    /// int: The mother code length `N`.
+    /// int: The mother code length :math:`N`.
     #[getter]
     fn mother_length(&self) -> usize {
         self.inner.mother_length()
@@ -213,10 +213,10 @@ impl PyNrPolar {
     /// Encode whole blocks.
     ///
     /// Args:
-    ///     bits (array_like): a multiple of `k` bits.
+    ///     bits (array_like): a multiple of :math:`k` bits.
     ///
     /// Returns:
-    ///     numpy.ndarray: `n` bits per block (uint8).
+    ///     numpy.ndarray: :math:`n` bits per block (uint8).
     ///
     /// Raises:
     ///     ValueError: for an input that is not an array of numbers of the expected shape.
@@ -227,10 +227,10 @@ impl PyNrPolar {
     /// Decode whole blocks of LLRs (CRC-aided SC list).
     ///
     /// Args:
-    ///     llr (array_like): a multiple of `n` LLRs (positive for a 0).
+    ///     llr (array_like): a multiple of :math:`n` LLRs (positive for a 0).
     ///
     /// Returns:
-    ///     numpy.ndarray: `k` bits per block (uint8).
+    ///     numpy.ndarray: :math:`k` bits per block (uint8).
     ///
     /// Raises:
     ///     ValueError: for an input that is not an array of numbers of the expected shape.

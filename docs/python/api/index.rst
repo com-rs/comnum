@@ -8,7 +8,7 @@ The formulas, the conventions of OptiCommPy that a function follows and its
 deviations are in its page.
 
 One vocabulary runs through the package: ``fs`` is a sampling rate (Hz), ``fc_hz`` a
-carrier, ``noise_var`` a noise variance ``E|w|²``, ``ebn0_db`` and ``esn0_db`` the SNRs
+carrier, ``noise_var`` a noise variance :math:`\mathbb{E}|w|^2`, ``ebn0_db`` and ``esn0_db`` the SNRs
 per bit and per symbol, MIMO matrices are ``(n_rx, n_tx)``; the tuning parameters are
 keyword-only; the functions return NumPy arrays; the closed forms (``theory_*``,
 :func:`qfunc`, :func:`db2lin`…) take a scalar (and return a float) or an array-like
@@ -30,7 +30,7 @@ Random numbers and conversions
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Every function that draws takes a :class:`Rng`; the conversions use the power ratio
-convention (``10 log10``).
+convention (:math:`10 \log_{10}`).
 
 .. autosummary::
    :toctree: generated
@@ -38,6 +38,9 @@ convention (``10 log10``).
    Rng
    db2lin
    lin2db
+   db2amp
+   amp2db
+   power
    dbm2w
    w2dbm
    qfunc

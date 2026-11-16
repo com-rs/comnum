@@ -40,7 +40,7 @@ H = np.stack(
 )
 fig, ax = plt.subplots(figsize=(7.0, 3.6))
 im = ax.imshow(
-    20 * np.log10(H.T),
+    comnum.amp2db(H.T),
     aspect="auto",
     origin="lower",
     cmap="Blues",
@@ -88,7 +88,7 @@ def link(eb, estimator, frames=150, seed=1):
             hh = comnum.ofdm_estimate(grid, rx, nv, "lmmse", max_delay=CP, n_fft=N)
         else:
             hh = comnum.ofdm_estimate(grid, rx, nv, "linear")
-        mse += np.mean(np.abs(hh - h) ** 2) / frames
+        mse += comnum.power(hh - h) / frames
         err += int((c.demap_bits(grid.extract(rx / hh)) != bits).sum())
         tot += bits.size
     return err / tot, mse

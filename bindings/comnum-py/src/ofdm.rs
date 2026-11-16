@@ -15,23 +15,24 @@ use pyo3::types::PyDict;
 /// An OFDM (or DFT-spread OFDM) modulator and demodulator.
 ///
 /// `n_subcarriers` active subcarriers centred on the carrier, out of a grid of `n_fft`;
-/// the IFFT has `oversampling · n_fft` points (4 by default, as the PAPR measurements
+/// the IFFT has :math:`LN` points (4 by default, as the PAPR measurements
 /// need), and the samples have unit average power. With `dft_spread`, the data are
 /// first spread by a unitary DFT (localised SC-FDMA).
 ///
 /// Args:
-///     n_fft (int): grid size `N`.
-///     n_subcarriers (int): active subcarriers `K ≤ N` (the name of the ``ofdm_tx``
+///     n_fft (int): grid size :math:`N`.
+///     n_subcarriers (int): active subcarriers :math:`K \le N` (the name of the ``ofdm_tx``
 ///         block).
-///     oversampling (int): `L`.
+///     oversampling (int): :math:`L`.
 ///     n_cp (int): cyclic prefix, in Nyquist-rate samples.
 ///     dc_null (bool): leave the DC subcarrier empty.
 ///     dft_spread (bool): DFT-spread OFDM.
-///     weights (array_like, optional): one complex weight `w_k` per active subcarrier
-///         (power loading, a precoder per subcarrier): `modulate` sends `w_k X_k` and
-///         `demodulate` divides by `w_k` (0 where `w_k = 0`, a subcarrier switched
-///         off). The power of the samples becomes the mean of `|w_k|²`; weights of
-///         mean square 1 keep it at 1. None (the default) is `w_k = 1`.
+///     weights (array_like, optional): one complex weight :math:`w_k` per active
+///         subcarrier (power loading, a precoder per subcarrier): `modulate` sends
+///         :math:`w_k X_k` and `demodulate` divides by :math:`w_k` (0 where
+///         :math:`w_k = 0`, a subcarrier switched off). The power of the samples becomes
+///         the mean of :math:`|w_k|^2`; weights of mean square 1 keep it at 1. None (the
+///         default) is :math:`w_k = 1`.
 ///
 /// Raises:
 ///     ValueError: for an invalid parameter (the message names it).
@@ -130,19 +131,19 @@ impl PyOfdm {
         Ok(PyOfdm { inner })
     }
 
-    /// int: Grid size `N`.
+    /// int: Grid size :math:`N`.
     #[getter]
     fn n_fft(&self) -> usize {
         self.inner.n_fft
     }
 
-    /// int: Active subcarriers `K`.
+    /// int: Active subcarriers :math:`K`.
     #[getter]
     fn n_subcarriers(&self) -> usize {
         self.inner.n_active
     }
 
-    /// int: Oversampling factor `L`.
+    /// int: Oversampling factor :math:`L`.
     #[getter]
     fn oversampling(&self) -> usize {
         self.inner.oversampling
@@ -174,7 +175,7 @@ impl PyOfdm {
         self.inner.block_len()
     }
 
-    /// int: Samples of the useful part of a block, `L N`.
+    /// int: Samples of the useful part of a block, :math:`LN`.
     #[getter]
     fn fft_len(&self) -> usize {
         self.inner.fft_len()
@@ -186,7 +187,7 @@ impl PyOfdm {
     ///     reduction (PaprReduction, optional): the technique.
     ///
     /// Returns:
-    ///     int: `K` without a technique, fewer with tone reservation.
+    ///     int: :math:`K` without a technique, fewer with tone reservation.
     #[pyo3(signature = (reduction=None))]
     fn data_len(&self, reduction: Option<PyRef<'_, PyPaprReduction>>) -> usize {
         self::reduction(&reduction).data_len(&self.inner)
@@ -466,10 +467,10 @@ impl PyPaprReduction {
         boxed(ace, format!("ace({ratio_db} dB, {iterations})"))
     }
 
-    /// μ-law companding (Wang, Tjhung & Ng 1999).
+    /// :math:`\mu`-law companding (Wang, Tjhung & Ng 1999).
     ///
     /// Args:
-    ///     mu (float): the parameter `μ`.
+    ///     mu (float): the parameter :math:`\mu`.
     ///     peak_db (float): the peak of the compander (dB above the average power).
     ///
     /// Returns:
@@ -508,7 +509,7 @@ impl PyPaprReduction {
     }
 }
 
-/// The PAPR of a block of samples, `max |x|² / mean |x|²`.
+/// The PAPR of a block of samples, :math:`\max |x|^2 / \operatorname{mean} |x|^2`.
 ///
 /// Args:
 ///     x (array_like): the samples.
@@ -553,14 +554,14 @@ fn papr_db_blocks<'py>(py: Python<'py>, x: &Bound<'py, PyAny>, block_len: usize)
     Ok(farr(py, cvec(x)?.chunks_exact(block_len).map(comnum::math::papr_db).collect()))
 }
 
-/// The empirical complementary distribution `P(X > t)` of `values` at every threshold.
+/// The empirical complementary distribution :math:`P(X > t)` of `values` at every threshold.
 ///
 /// Args:
-///     values (array_like): the samples of `X`.
-///     thresholds (array_like): the thresholds `t`.
+///     values (array_like): the samples of :math:`X`.
+///     thresholds (array_like): the thresholds :math:`t`.
 ///
 /// Returns:
-///     numpy.ndarray: `P(X > t)` at every threshold (float64).
+///     numpy.ndarray: :math:`P(X > t)` at every threshold (float64).
 ///
 /// Raises:
 ///     ValueError: for an input that is not an array of numbers of the expected shape.
@@ -570,18 +571,28 @@ fn ccdf<'py>(py: Python<'py>, values: &Bound<'py, PyAny>, thresholds: &Bound<'py
 }
 
 /// The theoretical CCDF of the PAPR of OFDM with `n` subcarriers:
-/// `1 - exp(-n √(πγ/3) e^(-γ))` for the continuous signal (Ochiai & Imai 2001), or
-/// `1 - (1 - e^(-γ))^n` at the Nyquist rate (van Nee & Prasad 2000); with
-/// `candidates`, the CCDF after SLM (raised to that power).
+///
+/// .. math::
+///
+///     1 - \exp\left(-n \sqrt{\pi\gamma/3} \, e^{-\gamma}\right)
+///
+/// for the continuous signal (Ochiai & Imai 2001), or
+///
+/// .. math::
+///
+///     1 - (1 - e^{-\gamma})^n
+///
+/// at the Nyquist rate (van Nee & Prasad 2000); with `candidates`, the CCDF after SLM
+/// (raised to that power).
 ///
 /// Args:
 ///     n (int): number of subcarriers.
-///     papr_db (float | array_like): the thresholds `γ` (dB).
+///     papr_db (float | array_like): the thresholds :math:`\gamma` (dB).
 ///     oversampled (bool): the continuous signal (else the Nyquist-rate samples).
 ///     candidates (int): SLM candidates (1 without SLM).
 ///
 /// Returns:
-///     float | numpy.ndarray: `P(PAPR > γ)` at every threshold.
+///     float | numpy.ndarray: :math:`P(\mathrm{PAPR} > \gamma)` at every threshold.
 ///
 /// Raises:
 ///     ValueError: for values that are not real numbers.
@@ -600,14 +611,15 @@ fn theory_papr_ccdf(n: i64, papr_db: &Bound<'_, PyAny>, oversampled: bool, candi
     })
 }
 
-/// The Bussgang decomposition `y = α x + d` of clipping at `ratio_db` above the average
-/// power of a complex Gaussian signal (Ochiai & Imai 2002).
+/// The Bussgang decomposition :math:`y = \alpha x + d` of clipping at `ratio_db` above the
+/// average power of a complex Gaussian signal (Ochiai & Imai 2002).
 ///
 /// Args:
 ///     ratio_db (float): the clipping ratio (dB above the average power).
 ///
 /// Returns:
-///     dict: ``gain`` (α), ``output_power``, ``distortion`` (σ_d²), ``sdr_db``.
+///     dict: ``gain`` (:math:`\alpha`), ``output_power``, ``distortion`` (:math:`\sigma_d^2`),
+///     ``sdr_db``.
 ///
 /// Raises:
 ///     ValueError: for an invalid parameter (the message names it).
@@ -622,13 +634,14 @@ fn clipping_bussgang(py: Python<'_>, ratio_db: f64) -> PyResult<Bound<'_, PyDict
     Ok(d)
 }
 
-/// Pilot-based gain correction limited to `eps` (Cimini 1985, eq. (16)): `r / (max(|p|,
-/// ε) e^{j arg p})` for every sample.
+/// Pilot-based gain correction limited to `eps` (Cimini 1985, eq. (16)):
+/// :math:`r / (\max(|p|, \epsilon) \, e^{j \arg p})` for every sample.
 ///
 /// Args:
 ///     r (array_like): the received samples.
 ///     pilot (array_like): the complex envelope given by the pilot.
-///     eps_db (float): the limit, an amplitude relative to the RMS gain (dB, `20 log10`);
+///     eps_db (float): the limit, an amplitude relative to the RMS gain (dB,
+///         :math:`20 \log_{10}`);
 ///         `-inf` for unlimited correction.
 ///
 /// Returns:
@@ -651,8 +664,9 @@ fn gain_limited_correction<'py>(
 ///
 /// Args:
 ///     sir_db (float | array_like): the signal-to-interference ratio (dB).
-///     eps_db (float): the gain limit relative to the RMS gain (dB, `20 log10`).
-///     rho (complex): the correlation `E[Z_d Z_p*]` of the data and pilot envelopes.
+///     eps_db (float): the gain limit relative to the RMS gain (dB, :math:`20 \log_{10}`).
+///     rho (complex): the correlation :math:`\mathbb{E}[Z_d Z_p^*]` of the data and pilot
+///         envelopes.
 ///
 /// Returns:
 ///     float | numpy.ndarray: the SDR (dB) at every SIR.

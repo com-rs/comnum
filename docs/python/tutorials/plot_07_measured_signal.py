@@ -30,11 +30,8 @@ fs = 7.68e6
 frames = [comnum.lte_frame(287, sfn=s, n_rb=25, ports=2, rng=rng) for s in range(668, 688)]
 h = np.array([1.0, 0.6 * np.exp(0.7j)])
 x = np.concatenate([h @ f for f in frames])
-n = np.arange(len(x))
-x = x * np.exp(2j * np.pi * 13.4e3 * n / fs)
-gen = np.random.default_rng(1)
-sigma = np.sqrt(np.mean(np.abs(x) ** 2) / 10**0.5)
-x = x + sigma * (gen.standard_normal(len(x)) + 1j * gen.standard_normal(len(x))) / np.sqrt(2)
+x = comnum.freq_shift(x, 13.4e3, fs)
+x = comnum.awgn(x, 5.0, rng)
 
 # %%
 # The six central resource blocks of an LTE carrier carry the synchronisation signals
@@ -54,7 +51,7 @@ print(f"MIB decoded in {len(mib)} frames; the first: {mib[0]}")
 # %%
 # The correlation of the capture with the PSS, after the offset is removed: one peak
 # every 5 ms, the signature of the cell.
-yy = y * np.exp(-2j * np.pi * cell["cfo_hz"] * np.arange(len(y)) / 1.92e6)
+yy = comnum.freq_shift(y, -cell["cfo_hz"], 1.92e6)
 pss = comnum.lte_pss(cell["n_cell_id"] % 3)
 replica = np.fft.ifft(np.concatenate([[0], pss[31:], np.zeros(65), pss[:31]]))
 seg = yy[: int(0.0205 * 1.92e6)]
@@ -85,7 +82,7 @@ for s in range(4):
 d = comnum.rds_differential_encode(np.concatenate(groups))
 mpx = comnum.fm_multiplex(left, right, fs_mpx, rds_bits=d)
 capture = comnum.resample_rational(comnum.fm_modulate(mpx, fs_mpx, 1.0), fs_mpx, 2.4e6, 110e3)
-capture = capture * np.exp(2j * np.pi * 300e3 * np.arange(len(capture)) / 2.4e6)
+capture = comnum.freq_shift(capture, 300e3, 2.4e6)
 
 # %%
 # The receiver: the front end to 228 kHz, the polar discriminator
@@ -137,11 +134,10 @@ reports = [
     for k in range(3)
 ]
 packets = comnum.resample_rational(comnum.ais_transmit(reports, fs_ais), fs_ais, 2e6, 7e3)
-n = np.arange(len(packets))
-capture = packets * np.exp(2j * np.pi * 25e3 * n / 2e6)
-capture = capture + np.sqrt(2e6 / 25e3 / 10 / 2) * (
-    gen.standard_normal(len(n)) + 1j * gen.standard_normal(len(n))
-)
+capture = comnum.freq_shift(packets, 25e3, 2e6)
+# 10 dB in the 25 kHz of a channel for a packet of unit power: the noise is set against
+# the packets, not against the mean power of a capture that is mostly silence
+capture = capture + rng.complex_noise(len(capture), 2e6 / 25e3 / 10)
 y = comnum.select_channel(capture, 2e6, 25e3, fs_ais, 12.5e3)
 for p in comnum.ais_receive(y, fs_ais):
     m = p["message"]

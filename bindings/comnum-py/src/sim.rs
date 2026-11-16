@@ -389,7 +389,7 @@ impl PyMean {
         self.inner.std()
     }
 
-    /// float: Standard error of the mean, ``std/√n``.
+    /// float: Standard error of the mean, :math:`\mathrm{std}/\sqrt{n}`.
     #[getter]
     fn sem(&self) -> f64 {
         self.inner.sem()
@@ -411,8 +411,8 @@ impl PyMean {
         self.inner.merge(&other.inner);
     }
 
-    /// The normal interval of the mean, ``mean ± z·std/√n`` (unbounded with fewer than
-    /// two values).
+    /// The normal interval of the mean, :math:`\mathrm{mean} \pm z \cdot \mathrm{std}/\sqrt{n}`
+    /// (unbounded with fewer than two values).
     ///
     /// Args:
     ///     confidence (float): the level of the interval.
@@ -1001,23 +1001,24 @@ fn binomial_interval(method: &str, confidence: f64) -> PyResult<BinomialInterval
     method.parse().py()
 }
 
-/// The exact coverage probability of a binomial interval, ``P(L(X) <= p <= U(X))`` for
-/// ``X ~ Bin(n, p)``: the sum of the binomial probabilities of the counts whose interval
-/// contains ``p`` (Brown, Cai & DasGupta 2001, Sec. 2), no simulation.
+/// The exact coverage probability of a binomial interval, :math:`P(L(X) \le p \le U(X))`
+/// for :math:`X \sim \mathrm{Bin}(n, p)`: the sum of the binomial probabilities of the
+/// counts whose interval contains :math:`p` (Brown, Cai & DasGupta 2001, Sec. 2), no
+/// simulation.
 ///
 /// Args:
 ///     method (str): ``"wald"``, ``"wilson"``, ``"agresti_coull"``, ``"jeffreys"`` or
 ///         ``"clopper_pearson"`` (see :meth:`ErrorRate.interval`).
-///     n (int): the trials.
-///     p (float): the probability, in ``[0, 1]``.
+///     n (int): the trials :math:`n`.
+///     p (float): the probability :math:`p`, in :math:`[0, 1]`.
 ///     confidence (float): the nominal level of the interval.
 ///
 /// Returns:
 ///     float: the coverage.
 ///
 /// Raises:
-///     ValueError: for an unknown method, ``p`` outside ``[0, 1]`` or a level outside
-///         ``(0, 1)``.
+///     ValueError: for an unknown method, ``p`` outside :math:`[0, 1]` or a level outside
+///         :math:`(0, 1)`.
 ///
 /// Example:
 ///     >>> from comnum import sim
@@ -1031,22 +1032,22 @@ fn interval_coverage(method: &str, n: u64, p: f64, confidence: f64) -> PyResult<
     Ok(comnum::sim::stats::coverage(method, n, p, confidence))
 }
 
-/// The expected length of a binomial interval, ``sum_k (U(k) - L(k)) P(X = k)`` for
-/// ``X ~ Bin(n, p)`` (Brown, Cai & DasGupta 2001, Sec. 3.3), with the ends of
-/// :meth:`ErrorRate.interval`.
+/// The expected length of a binomial interval, :math:`\sum_k (U(k) - L(k))\, P(X = k)` for
+/// :math:`X \sim \mathrm{Bin}(n, p)` (Brown, Cai & DasGupta 2001, Sec. 3.3), with the ends
+/// of :meth:`ErrorRate.interval`.
 ///
 /// Args:
 ///     method (str): the interval (see :func:`interval_coverage`).
-///     n (int): the trials.
-///     p (float): the probability, in ``[0, 1]``.
+///     n (int): the trials :math:`n`.
+///     p (float): the probability :math:`p`, in :math:`[0, 1]`.
 ///     confidence (float): the nominal level of the interval.
 ///
 /// Returns:
 ///     float: the expected length.
 ///
 /// Raises:
-///     ValueError: for an unknown method, ``p`` outside ``[0, 1]`` or a level outside
-///         ``(0, 1)``.
+///     ValueError: for an unknown method, ``p`` outside :math:`[0, 1]` or a level outside
+///         :math:`(0, 1)`.
 #[pyfunction]
 #[pyo3(signature = (method, n, p, confidence = 0.95))]
 fn interval_length(method: &str, n: u64, p: f64, confidence: f64) -> PyResult<f64> {
@@ -1067,13 +1068,13 @@ fn check_probability(p: f64) -> PyResult<()> {
 /// The two-sided normal quantile of a confidence level (1.96 for 0.95).
 ///
 /// Args:
-///     confidence (float): the level, in `(0, 1)`.
+///     confidence (float): the level, in :math:`(0, 1)`.
 ///
 /// Returns:
-///     float: the quantile `z`.
+///     float: the quantile :math:`z`.
 ///
 /// Raises:
-///     ValueError: for a level outside `(0, 1)`.
+///     ValueError: for a level outside :math:`(0, 1)`.
 #[pyfunction]
 fn z_score(confidence: f64) -> PyResult<f64> {
     if !(0.0..1.0).contains(&confidence) {

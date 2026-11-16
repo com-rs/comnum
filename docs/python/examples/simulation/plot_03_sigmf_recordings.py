@@ -48,7 +48,7 @@ x8 = comnum.fir_filter(
 )
 x = comnum.resample_fft(x8, round(x8.size * FS / (8 * RS)))
 x = comnum.awgn(comnum.freq_shift(x, CFO, FS), 18.0, rng, fs=FS, bandwidth_hz=RS)
-x = x / np.sqrt(np.mean(np.abs(x) ** 2)) * 0.25 * 32767
+x = comnum.pnorm(x) * 0.25 * 32767
 
 base = os.path.join(tempfile.mkdtemp(), "capture")
 edges = {"freq_lower_edge": FC - 0.675 * RS, "freq_upper_edge": FC + 0.675 * RS}
@@ -76,10 +76,8 @@ fc = meta["captures"][0]["core:frequency"]
 ann = meta["annotations"][0]
 print(f"{y.size} samples at {fs / 1e6:g} MS/s, centre {fc / 1e6:g} MHz, label {ann['core:label']}")
 
-n = 1024
-seg = y[: y.size // n * n].reshape(-1, n) * np.hanning(n)
-psd = np.fft.fftshift(np.mean(np.abs(np.fft.fft(seg, axis=1)) ** 2, axis=0))
-f = (fc + np.fft.fftshift(np.fft.fftfreq(n, 1 / fs))) / 1e6
+f, psd = comnum.psd(y, fs=fs, nfft=1024)  # Welch, centred on 0 Hz
+f = (fc + f) / 1e6
 fig, ax = plt.subplots(figsize=(6.4, 3.2))
 ax.plot(f, comnum.lin2db(psd / psd.max()), color=BLUE, linewidth=1)
 ax.axvspan(
@@ -106,7 +104,7 @@ fig.tight_layout()
 #    (:func:`comnum.classify_modulation`), and the SNR by M2M4
 #    (:func:`comnum.snr_m2m4_db`).
 
-y = y / np.sqrt(np.mean(np.abs(y) ** 2))
+y = comnum.pnorm(y)
 rs = comnum.estimate_symbol_rate(y, fs, fs / 20, fs / 2)
 z = comnum.resample_fft(y, round(y.size * 2 * rs / fs))
 z = comnum.fir_filter(comnum.pulse_shape("rrc", 2, n_taps=2 * 32 + 1, rolloff=0.35), z)
@@ -114,13 +112,13 @@ z, _ = comnum.gardner_clock_recovery(z)
 
 
 def kurtosis(s):
-    return np.mean(np.abs(s) ** 4) / np.mean(np.abs(s) ** 2) ** 2
+    return np.mean(np.abs(s) ** 4) / comnum.power(s) ** 2
 
 
 s = min((z[o::2] for o in (0, 1)), key=kurtosis)[200:-200]
 s, cfo = comnum.fourth_power_foe(s, rs)
 s = comnum.derotate(s, comnum.unwrap(comnum.viterbi_viterbi(s, n=32, m=4), period=np.pi / 2))
-s = s / np.sqrt(np.mean(np.abs(s) ** 2))
+s = comnum.pnorm(s)
 
 names = ["BPSK", "QPSK", "8-PSK", "16-QAM", "64-QAM"]
 cands = [

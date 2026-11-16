@@ -9,31 +9,32 @@ use num_complex::Complex64 as C64;
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 
-/// Bussgang's decomposition `y = K x + d` of a memoryless amplifier driven by a circular
-/// complex Gaussian signal: the complex gain and the power of the distortion.
+/// Bussgang's decomposition :math:`y = Kx + d` of a memoryless amplifier driven by a
+/// circular complex Gaussian signal: the complex gain and the power of the distortion.
 ///
 /// The parameters of each model default to those of :func:`pa_rapp` and
-/// :func:`pa_saleh` (Rapp with `p = 2`, Saleh's fit of 1981).
+/// :func:`pa_saleh` (Rapp with :math:`p = 2`, Saleh's fit of 1981).
 ///
 /// Args:
 ///     model (str): `"rapp"` (gain 1, `saturation`, `smoothness`) or
 ///         `"saleh"` (`alpha_a`, `beta_a`, `alpha_p`, `beta_p`).
 ///     power (float): the input power.
 ///     saturation (float): Rapp's saturation amplitude.
-///     smoothness (float): Rapp's smoothness `p`.
+///     smoothness (float): Rapp's smoothness :math:`p`.
 ///     alpha_a (float): Saleh's AM/AM gain.
 ///     beta_a (float): Saleh's AM/AM compression.
 ///     alpha_p (float): Saleh's AM/PM gain (rad).
 ///     beta_p (float): Saleh's AM/PM compression.
 ///
 /// Returns:
-///     tuple[complex, float]: `K` and `σ_d²`.
+///     tuple[complex, float]: :math:`K` and :math:`\sigma_d^2`.
 ///
 /// Raises:
 ///     ValueError: for an unknown model.
 ///
 /// Examples:
-///     The TWTA of Bouhadda et al. (2014, Table 3) at 4 dB of input back-off, `φ₀ = π/6`:
+///     The TWTA of Bouhadda et al. (2014, Table 3) at 4 dB of input back-off,
+///     :math:`\phi_0 = \pi/6`:
 ///
 ///     >>> import comnum, math
 ///     >>> k, d = comnum.amplifier_bussgang("saleh", 10 ** -0.4, alpha_a=1.0, beta_a=1.0,
@@ -71,14 +72,17 @@ fn amplifier_bussgang(
     Ok((b.gain, b.distortion))
 }
 
-/// Rapp's solid-state amplifier: `A(r) = g r / (1 + (g r / A_sat)^(2p))^(1/(2p))`, no
-/// AM/PM (Rapp 1991).
+/// Rapp's solid-state amplifier, no AM/PM (Rapp 1991):
+///
+/// .. math::
+///
+///     A(r) = \frac{g r}{\bigl(1 + (g r / A_{\mathrm{sat}})^{2p}\bigr)^{1/(2p)}}.
 ///
 /// Args:
 ///     x (array_like): the input envelope.
-///     gain (float): the small-signal gain `g`.
-///     saturation (float): the saturation amplitude `A_sat`.
-///     smoothness (float): the smoothness `p`.
+///     gain (float): the small-signal gain :math:`g`.
+///     saturation (float): the saturation amplitude :math:`A_{\mathrm{sat}}`.
+///     smoothness (float): the smoothness :math:`p`.
 ///     obo_db (float | None): when given, the input is first scaled so that the mean
 ///         output power of the block sits `obo_db` dB below the saturation power
 ///         (the output back-off of Saul, VTC2004-Fall, eq. (3)); by bisection.
@@ -148,10 +152,10 @@ fn rapp_predistort<'py>(
 ///
 /// Args:
 ///     x (array_like): the input envelope.
-///     alpha_a (float): AM/AM coefficient `α_a`.
-///     beta_a (float): AM/AM coefficient `β_a`.
-///     alpha_p (float): AM/PM coefficient `α_φ`.
-///     beta_p (float): AM/PM coefficient `β_φ`.
+///     alpha_a (float): AM/AM coefficient :math:`\alpha_a`.
+///     beta_a (float): AM/AM coefficient :math:`\beta_a`.
+///     alpha_p (float): AM/PM coefficient :math:`\alpha_\phi`.
+///     beta_p (float): AM/PM coefficient :math:`\beta_\phi`.
 ///
 /// Returns:
 ///     numpy.ndarray: the output (complex128).
@@ -198,7 +202,7 @@ fn pa_memory_polynomial<'py>(py: Python<'py>, x: &Bound<'py, PyAny>) -> PyResult
 ///
 /// Args:
 ///     orders (list[int]): nonlinearity orders (odd: 1, 3, 5, …).
-///     memory (int): memory depth `M` (samples).
+///     memory (int): memory depth :math:`M` (samples).
 ///
 /// Examples:
 ///     >>> import comnum, numpy as np

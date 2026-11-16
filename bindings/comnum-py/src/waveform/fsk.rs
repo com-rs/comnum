@@ -3,16 +3,18 @@
 use super::*;
 use comnum::waveform::fsk::Fsk;
 
-/// Orthogonal `M`-FSK with a continuous phase and a noncoherent receiver: the symbol
-/// `a` is the tone of `a · spacing` cycles per symbol, held for `sps` samples. The
-/// receiver correlates every symbol with the `M` tones and needs neither the phase nor
+/// Orthogonal :math:`M`-FSK with a continuous phase and a noncoherent receiver: the symbol
+/// :math:`a` is the tone of :math:`a \cdot \mathrm{spacing}` cycles per symbol, held for
+/// `sps` samples. The receiver correlates every symbol with the :math:`M` tones and needs
+/// neither the phase nor
 /// the exact frequency of the carrier; its error rate over white noise is
 /// `theory_ber_fsk_noncoherent`.
 ///
 /// Args:
 ///     m (int): the number of tones.
 ///     sps (int): samples per symbol.
-///     spacing (int): cycles per symbol between two adjacent tones (`m · spacing ≤ sps`).
+///     spacing (int): cycles per symbol between two adjacent tones
+///         (:math:`m \cdot \mathrm{spacing} \le \mathrm{sps}`).
 ///
 /// Raises:
 ///     ValueError: for an invalid parameter (the message names it).
@@ -36,7 +38,7 @@ impl PyFsk {
         Ok(PyFsk { inner: Fsk::new(m, sps, spacing).py()? })
     }
 
-    /// int: The number of tones `M`.
+    /// int: The number of tones :math:`M`.
     #[getter]
     fn m(&self) -> usize {
         self.inner.m
@@ -57,7 +59,7 @@ impl PyFsk {
     /// The unit-envelope samples of a sequence of symbols.
     ///
     /// Args:
-    ///     symbols (array_like): integers in `[0, M)`.
+    ///     symbols (array_like): integers in :math:`[0, M)`.
     ///
     /// Returns:
     ///     numpy.ndarray: `sps` samples per symbol.
@@ -68,14 +70,14 @@ impl PyFsk {
         Ok(carr(py, self.inner.modulate(&uvec(symbols)?).py()?))
     }
 
-    /// The energy of the `M` tones in every whole symbol, the first symbol at the
+    /// The energy of the :math:`M` tones in every whole symbol, the first symbol at the
     /// first sample.
     ///
     /// Args:
     ///     samples (array_like): the received samples.
     ///
     /// Returns:
-    ///     numpy.ndarray: `M` energies per symbol.
+    ///     numpy.ndarray: :math:`M` energies per symbol.
     ///
     /// Raises:
     ///     ValueError: for an input that is not a 1-D complex array.
@@ -97,9 +99,9 @@ impl PyFsk {
         Ok(iarr(py, self.inner.demodulate(&cvec(samples)?).py()?))
     }
 
-    /// The offset in `[0, sps)` at which the symbols start: the one that maximises the
-    /// energy of the decisions, to within one sample. Give it the part of a recording
-    /// that holds the signal.
+    /// The offset in :math:`[0, \mathrm{sps})` at which the symbols start: the one that
+    /// maximises the energy of the decisions, to within one sample. Give it the part of a
+    /// recording that holds the signal.
     ///
     /// Args:
     ///     samples (array_like): the received samples.
@@ -118,13 +120,16 @@ impl PyFsk {
     }
 }
 
-/// The bit error rate of `M` orthogonal signals detected noncoherently over white
-/// noise (noncoherent `M`-FSK; Proakis & Salehi, Sec. 4.5): `exp(-Eb/(2 N0)) / 2` for
-/// `M = 2`.
+/// The bit error rate of :math:`M` orthogonal signals detected noncoherently over white
+/// noise (noncoherent :math:`M`-FSK; Proakis & Salehi, Sec. 4.5), for :math:`M = 2`:
+///
+/// .. math::
+///
+///     P_b = \tfrac{1}{2} \exp(-E_b/(2 N_0)).
 ///
 /// Args:
 ///     m (int): the number of tones.
-///     ebn0_db (float | array_like): `Eb/N0` (dB).
+///     ebn0_db (float | array_like): :math:`E_b/N_0` (dB).
 ///
 /// Returns:
 ///     float | numpy.ndarray: the bit error rate.

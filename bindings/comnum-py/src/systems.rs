@@ -25,9 +25,9 @@ use pyo3::types::PyDict;
 /// The transmitter takes a BBFRAME of ``k`` bits (see :func:`dvbs2_bbframe`), encodes it
 /// (BCH, then the LDPC code of the standard), interleaves the bits (8PSK, 16APSK,
 /// 32APSK), maps them on the constellation of the MODCOD and builds the PLFRAME: the
-/// PLHEADER in π/2-BPSK, the slots of 90 symbols, pilot blocks of 36 symbols every 16
-/// slots, and the Gold scrambling sequence number ``scrambling_code``. Every symbol has
-/// unit energy, so that a noise of variance ``1/(Es/N0)`` gives the abscissa of the
+/// PLHEADER in :math:`\pi/2`-BPSK, the slots of 90 symbols, pilot blocks of 36 symbols every
+/// 16 slots, and the Gold scrambling sequence number ``scrambling_code``. Every symbol has
+/// unit energy, so that a noise of variance :math:`1/(E_s/N_0)` gives the abscissa of the
 /// performance table of the standard (:attr:`threshold_db`). The receiver assumes the
 /// frame found and the carrier recovered.
 ///
@@ -77,7 +77,7 @@ impl PyDvbs2 {
         Ok(PyDvbs2 { inner: Dvbs2::new(modcod, frame, pilots, scrambling_code).py()? })
     }
 
-    /// int: Bits of a BBFRAME (``K_bch``, Tables 5a and 5b).
+    /// int: Bits of a BBFRAME (:math:`K_{\mathrm{bch}}`, Tables 5a and 5b).
     #[getter]
     fn k(&self) -> usize {
         self.inner.k()
@@ -95,7 +95,7 @@ impl PyDvbs2 {
         Ok(self.inner.modcod().number())
     }
 
-    /// float: The ideal Es/N0 (dB) at a PER of 1e-7 of the normal frame (Table 13).
+    /// float: The ideal :math:`E_s/N_0` (dB) at a PER of 1e-7 of the normal frame (Table 13).
     #[getter]
     fn threshold_db(&self) -> f64 {
         self.inner.modcod().threshold_db()
@@ -178,10 +178,11 @@ impl PyDvbs2 {
 ///
 /// The transmitter takes a burst of whole MPEG-2 transport packets (188 bytes, each
 /// starting with the sync byte ``0x47``; see :func:`dvb_packets`): the energy dispersal
-/// (the PRBS 1 + X^14 + X^15 reset every 8 packets, the first sync byte of a group
+/// (the PRBS :math:`1 + X^{14} + X^{15}` reset every 8 packets, the first sync byte of a group
 /// inverted to ``0xB8``), the outer code RS(204, 188), the convolutional interleaver
-/// I = 12, M = 17 (flushed with 11 packets of zeros, so that the whole burst decodes), the
-/// inner code of constraint length 7 (X from 171, Y from 133, octal) punctured by Table 2
+/// :math:`I = 12`, :math:`M = 17` (flushed with 11 packets of zeros, so that the whole burst
+/// decodes), the inner code of constraint length 7 (X from 171, Y from 133, octal) punctured
+/// by Table 2
 /// of the standard, and the Gray QPSK of its Figure 5 with unit energy, at one sample per
 /// symbol. The receiver computes the exact LLRs, decodes the inner code by soft Viterbi,
 /// deinterleaves, decodes RS(204, 188) and removes the energy dispersal; it assumes the
@@ -229,7 +230,7 @@ impl PyDvbs {
         self.inner.rate().name()
     }
 
-    /// Constellation: The Gray QPSK of Figure 5 (label ``2 b_I + b_Q``, unit energy).
+    /// Constellation: The Gray QPSK of Figure 5 (label :math:`2 b_I + b_Q`, unit energy).
     #[getter]
     fn constellation(&self) -> PyResult<PyConstellation> {
         Ok(PyConstellation { inner: Dvbs::constellation().py()? })
@@ -246,7 +247,7 @@ impl PyDvbs {
         self.inner.symbols_len(n_packets)
     }
 
-    /// The useful bit rate at a symbol rate, ``2 Rs r 188/204`` (Annexes C and D).
+    /// The useful bit rate at a symbol rate, :math:`2 R_s r \cdot 188/204` (Annexes C and D).
     ///
     /// Args:
     ///     symbol_rate (float): the symbol rate (baud).
@@ -257,13 +258,13 @@ impl PyDvbs {
         self.inner.useful_bit_rate(symbol_rate)
     }
 
-    /// The Es/N0 (dB) of an Eb/N0 per useful bit, the abscissa of Table 3.
+    /// The :math:`E_s/N_0` (dB) of an :math:`E_b/N_0` per useful bit, the abscissa of Table 3.
     ///
     /// Args:
-    ///     ebn0_db (float): Eb/N0 per useful bit (dB).
+    ///     ebn0_db (float): :math:`E_b/N_0` per useful bit (dB).
     ///
     /// Returns:
-    ///     float: Es/N0 (dB), ``ebn0_db + 10 log10(2 r 188/204)``.
+    ///     float: :math:`E_s/N_0` (dB), :math:`E_b/N_0 + 10 \log_{10}(2 r \cdot 188/204)`.
     fn esn0_db(&self, ebn0_db: f64) -> f64 {
         self.inner.esn0_db(ebn0_db)
     }
@@ -364,12 +365,14 @@ impl PyDvbs {
 /// frame with its scattered and continual pilots (boosted to 4/3) and its TPS (signalling
 /// the mode, the guard interval, the constellation and the rate, BCH-protected,
 /// differentially modulated), and the OFDM modulation with the guard interval, one sample
-/// per elementary period T (7/64 µs at 8 MHz). The burst starts with the first symbol of a
-/// super-frame. The receiver works on the cells of the symbols, given the noise variance of
+/// per elementary period :math:`T` (7/64 µs at 8 MHz). The burst starts with the first symbol
+/// of a super-frame. The receiver works on the cells of the symbols, given the noise
+/// variance of
 /// a carrier and, if any, the gain of every carrier (a static channel known to the
 /// receiver, as in Annex A).
 ///
-/// The cells are arrays of shape ``(K, n_symbols)``, K = 1705 (2K) or 6817 (8K) carriers.
+/// The cells are arrays of shape ``(K, n_symbols)``, :math:`K = 1705` (2K) or :math:`6817` (8K)
+/// carriers.
 ///
 /// Args:
 ///     mode (str): ``"2K"`` or ``"8K"``.
@@ -424,7 +427,7 @@ impl PyDvbt {
         Ok(PyDvbt { inner: Dvbt::new(mode, guard, modulation, rate).py()? })
     }
 
-    /// int: The carriers of a symbol, K.
+    /// int: The carriers of a symbol, :math:`K`.
     #[getter]
     fn carriers(&self) -> usize {
         self.inner.mode().carriers()
@@ -442,7 +445,8 @@ impl PyDvbt {
         self.inner.packets_per_superframe()
     }
 
-    /// Constellation: The points of the data cells (label ``y0 y1 ... y(v-1)``, Figure 9).
+    /// Constellation: The points of the data cells (label :math:`y_0 y_1 \dots y_{v-1}`,
+    /// Figure 9).
     #[getter]
     fn constellation(&self) -> PyConstellation {
         PyConstellation { inner: self.inner.constellation().clone() }
@@ -462,7 +466,7 @@ impl PyDvbt {
     /// The useful bit rate in a channel of a bandwidth (Table 17).
     ///
     /// Args:
-    ///     bandwidth_hz (float): 8e6, 7e6, 6e6 or 5e6 (any value: T = 7 / (8 B)).
+    ///     bandwidth_hz (float): 8e6, 7e6, 6e6 or 5e6 (any value: :math:`T = 7 / (8 B)`).
     ///
     /// Returns:
     ///     float: the useful bit rate (bit/s).
@@ -471,11 +475,11 @@ impl PyDvbt {
         self.inner.useful_bit_rate(bandwidth_hz)
     }
 
-    /// The noise variance of a carrier at a C/N calculated over the K carriers (Annex A):
-    /// the mean power of the carriers, pilots boosted, over the C/N.
+    /// The noise variance of a carrier at a :math:`C/N` calculated over the :math:`K` carriers
+    /// (Annex A): the mean power of the carriers, pilots boosted, over the :math:`C/N`.
     ///
     /// Args:
-    ///     cn_db (float): C/N (dB).
+    ///     cn_db (float): :math:`C/N` (dB).
     ///
     /// Returns:
     ///     float: the complex noise variance of a carrier.
@@ -490,18 +494,19 @@ impl PyDvbt {
     ///     carrier_noise_var (float): the noise variance of a carrier.
     ///
     /// Returns:
-    ///     float: the complex noise variance of a sample, ``carrier_noise_var N / K``.
+    ///     float: the complex noise variance of a sample,
+    ///         :math:`\mathrm{carrier\_noise\_var} \cdot N / K`.
     fn sample_noise_var(&self, carrier_noise_var: f64) -> f64 {
         self.inner.sample_noise_var(carrier_noise_var)
     }
 
-    /// The baseband frequency of every carrier, ``k' / TU`` with ``k' = k - (K - 1)/2``.
+    /// The baseband frequency of every carrier, :math:`k' / T_U` with :math:`k' = k - (K - 1)/2`.
     ///
     /// Args:
     ///     bandwidth_hz (float): the channel bandwidth (Hz).
     ///
     /// Returns:
-    ///     numpy.ndarray: K frequencies (Hz).
+    ///     numpy.ndarray: :math:`K` frequencies (Hz).
     #[pyo3(signature = (bandwidth_hz = 8e6))]
     fn carrier_frequencies<'py>(&self, py: Python<'py>, bandwidth_hz: f64) -> FArr<'py> {
         farr(py, self.inner.carrier_frequencies(bandwidth_hz))
@@ -561,7 +566,7 @@ impl PyDvbt {
     ///     cells (array_like): the received cells, shape ``(K, n_symbols)``.
     ///     n_packets (int): the packets of the burst.
     ///     noise_var (float): complex noise variance of a carrier.
-    ///     channel (array_like, optional): the gain of every carrier (K values).
+    ///     channel (array_like, optional): the gain of every carrier (:math:`K` values).
     ///
     /// Returns:
     ///     numpy.ndarray: the bytes (uint8).
@@ -589,7 +594,7 @@ impl PyDvbt {
     ///     cells (array_like): the received cells, shape ``(K, n_symbols)``.
     ///     n_packets (int): the packets of the burst.
     ///     noise_var (float): complex noise variance of a carrier.
-    ///     channel (array_like, optional): the gain of every carrier (K values).
+    ///     channel (array_like, optional): the gain of every carrier (:math:`K` values).
     ///
     /// Returns:
     ///     tuple[numpy.ndarray, int, int]: the packets (uint8), the bytes corrected by
@@ -616,10 +621,10 @@ impl PyDvbt {
     ///
     /// Args:
     ///     cells (array_like): the cells of the 68 symbols, shape ``(K, 68)``.
-    ///     channel (array_like, optional): the gain of every carrier (K values).
+    ///     channel (array_like, optional): the gain of every carrier (:math:`K` values).
     ///
     /// Returns:
-    ///     dict: ``frame``, ``mode``, ``guard``, ``constellation``, ``hierarchy`` (alpha,
+    ///     dict: ``frame``, ``mode``, ``guard``, ``constellation``, ``hierarchy`` (:math:`\alpha`,
     ///     0 for non-hierarchical), ``rate_hp``, ``rate_lp`` (``None`` when
     ///     non-hierarchical) and ``cell_id`` (``None`` if not transmitted).
     ///
@@ -680,7 +685,7 @@ impl PyDvbt {
 ///     frequencies (array_like): the frequencies (Hz), e.g. :meth:`Dvbt.carrier_frequencies`.
 ///
 /// Returns:
-///     numpy.ndarray: the gains H(f) (complex128).
+///     numpy.ndarray: the gains :math:`H(f)` (complex128).
 ///
 /// Raises:
 ///     ValueError: for another profile.
@@ -704,7 +709,7 @@ fn dvbt_channel_gains<'py>(py: Python<'py>, profile: &str, frequencies: &Bound<'
 ///     rng (Rng): the generator.
 ///
 /// Returns:
-///     numpy.ndarray: ``188 n`` bytes (uint8).
+///     numpy.ndarray: :math:`188 n` bytes (uint8).
 ///
 /// Raises:
 ///     TypeError: if ``rng`` is not an :class:`Rng`.
@@ -714,11 +719,11 @@ fn dvb_packets<'py>(py: Python<'py>, n: usize, mut rng: PyRefMut<'py, PyRng>) ->
 }
 
 /// The BBFRAME of ``k_bch`` bits of a generic continuous stream: a BBHEADER (CCM, single
-/// stream, DFL = ``k_bch - 80``, CRC-8) and the ``k_bch - 80`` data bits, randomised by the
-/// PRBS of the standard.
+/// stream, :math:`\mathrm{DFL} = K_{\mathrm{bch}} - 80`, CRC-8) and the
+/// :math:`K_{\mathrm{bch}} - 80` data bits, randomised by the PRBS of the standard.
 ///
 /// Args:
-///     data (array_like): the ``k_bch - 80`` data bits.
+///     data (array_like): the :math:`K_{\mathrm{bch}} - 80` data bits.
 ///     k_bch (int): the bits of the BBFRAME (``Dvbs2.k``).
 ///     rolloff (int): the roll-off field of the BBHEADER (0: 0.35, 1: 0.25, 2: 0.20).
 ///
@@ -766,10 +771,11 @@ fn dvbs2_decode_plheader(rx: &Bound<'_, PyAny>) -> PyResult<(u8, bool, bool)> {
     Ok((code.modcod, code.short, code.pilots))
 }
 
-/// The convolutional code of CCSDS 131.0-B-5, Sec. 3: constraint length 7, ``G1 = 171``
-/// then ``G2 = 133`` (octal), ``G2`` inverted at rate 1/2, punctured by Table 3-1 at
-/// rates 2/3, 3/4, 5/6 and 7/8 (``C1`` and ``C2`` sent in the order of the table); the
-/// encoder starts in state 0 and is not terminated, the decoder is the soft Viterbi
+/// The convolutional code of CCSDS 131.0-B-5, Sec. 3: constraint length 7, :math:`G_1 = 171`
+/// then :math:`G_2 = 133` (octal), :math:`G_2` inverted at rate 1/2, punctured by Table 3-1
+/// at rates 2/3, 3/4, 5/6 and 7/8 (:math:`C_1` and :math:`C_2` sent in the order of the
+/// table); the encoder starts in state 0 and is not terminated, the decoder is the soft
+/// Viterbi
 /// decoder of the whole stream.
 ///
 /// Args:
@@ -779,8 +785,8 @@ fn dvbs2_decode_plheader(rx: &Bound<'_, PyAny>) -> PyResult<(u8, bool, bool)> {
 ///     ValueError: for another rate.
 ///
 /// Examples:
-///     The first symbols of a one followed by zeros at rate 1/2: ``C1`` follows
-///     ``G1 = 1111001``, ``C2`` the inverse of ``G2 = 1011011``:
+///     The first symbols of a one followed by zeros at rate 1/2: :math:`C_1` follows
+///     :math:`G_1 = 1111001`, :math:`C_2` the inverse of :math:`G_2 = 1011011`:
 ///
 ///     >>> import comnum, numpy as np
 ///     >>> comnum.CcsdsConvolutional("1/2").encode([1, 0, 0])
@@ -857,8 +863,8 @@ fn randomizer(name: &str) -> PyResult<Randomizer> {
 }
 
 /// The first bits of a pseudo-randomizer of CCSDS 131.0-B-5, Sec. 10.4: ``"long"``,
-/// ``h(x) = x^17 + x^14 + 1`` started at ``00011100011100011`` (period 131 071, Sec.
-/// 10.4.2), or ``"short"``, ``h(x) = x^8 + x^7 + x^5 + x^3 + 1`` started at all ones
+/// :math:`h(x) = x^{17} + x^{14} + 1` started at ``00011100011100011`` (period 131 071, Sec.
+/// 10.4.2), or ``"short"``, :math:`h(x) = x^8 + x^7 + x^5 + x^3 + 1` started at all ones
 /// (period 255, Sec. 10.4.3).
 ///
 /// Args:

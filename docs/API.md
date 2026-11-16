@@ -3331,7 +3331,7 @@ one layer down, instead of written again (`docs/ARCHITECTURE.md`, placement).
 
 ### `src/comm/constellation.rs`
 
-- `struct PyConstellation` — A constellation with Gray labels: point `i` carries the bits of `i`, MSB first.
+- `struct PyConstellation` — A constellation with Gray labels: point :math:`i` carries the bits of :math:`i`, MSB first.
 
 ### `src/comm/shaping.rs`
 
@@ -3347,7 +3347,7 @@ one layer down, instead of written again (`docs/ARCHITECTURE.md`, placement).
 
 ### `src/fec/ccsds.rs`
 
-- `struct PyCcsdsRs` — The interleaved Reed–Solomon codeblock of CCSDS 131.0-B-5, Sec. 4: the RS(255, 255 − 2E)
+- `struct PyCcsdsRs` — The interleaved Reed–Solomon codeblock of CCSDS 131.0-B-5, Sec. 4: the
 - `struct PyCcsdsLdpc` — An LDPC code of CCSDS 131.0-B-5, Sec. 7: the (8160, 7136) code of rate 223/255 (Sec.
 - `struct PyCcsdsTurbo` — A turbo code of CCSDS 131.0-B-5, Sec. 6: two 16-state recursive encoders
 
@@ -3373,12 +3373,12 @@ one layer down, instead of written again (`docs/ARCHITECTURE.md`, placement).
 
 ### `src/fec/polar_code.rs`
 
-- `struct PyPolar` — A polar code of length `n` (a power of two) and `k` information bits, built by the
+- `struct PyPolar` — A polar code of length :math:`n` (a power of two) and :math:`k` information bits, built
 
 ### `src/fec_codes.rs`
 
-- `struct PyReedSolomon` — A Reed–Solomon code over GF(2^m) (symbols of ``m`` bits) correcting ``t`` symbols
-- `struct PyBch` — A binary BCH code of GF(2^m), narrow sense, of designed distance ``2t + 1`` (Lin &
+- `struct PyReedSolomon` — A Reed–Solomon code over :math:`\mathrm{GF}(2^m)` (symbols of :math:`m` bits) correcting
+- `struct PyBch` — A binary BCH code of :math:`\mathrm{GF}(2^m)`, narrow sense, of designed distance :math:`2t + 1`
 
 ### `src/fiber.rs`
 
@@ -3390,7 +3390,7 @@ one layer down, instead of written again (`docs/ARCHITECTURE.md`, placement).
 
 ### `src/mimo/estimation.rs`
 
-- `struct PyMimoTraining` — A training matrix ``P`` (``t x N``) for the estimation of a flat MIMO channel from
+- `struct PyMimoTraining` — A training matrix :math:`\mathbf{P}` (:math:`t \times N`) for the estimation of a flat
 
 ### `src/mimo/mod.rs`
 
@@ -3419,7 +3419,7 @@ one layer down, instead of written again (`docs/ARCHITECTURE.md`, placement).
 - `struct PyGrid` — An OFDM resource grid of `n_subcarriers` × `n_symbols` with pilots (Coleri et al.
 - `struct PyWiener2d` — The two-dimensional Wiener interpolator of pilots in time and frequency (Hoeher,
 - `struct PyRobustDesign` — The robust channel estimator of Li, Cimini & Sollenberger (1998): designed for the
-- `struct PyLowRank` — The rank-p LMMSE estimator of Edfors et al. (1998) for the correlation ``r_hh`` of
+- `struct PyLowRank` — The rank-:math:`p` LMMSE estimator of Edfors et al. (1998) for the correlation ``r_hh``
 
 ### `src/otfs.rs`
 
@@ -3428,7 +3428,7 @@ one layer down, instead of written again (`docs/ARCHITECTURE.md`, placement).
 ### `src/owc.rs`
 
 - `struct PyImpulseResponse` — The received optical power of an indoor channel, bin by bin (see
-- `struct PyRoom` — An empty rectangular room `[0, L] × [0, W] × [0, H]` with Lambertian walls (Barry et
+- `struct PyRoom` — An empty rectangular room :math:`[0, L] \times [0, W] \times [0, H]` with Lambertian walls
 - `struct PyIllumination` — The light of a set of emitters carried to the elements of a room
 - `struct PyGammaGamma` — The gamma–gamma distribution of the intensity, of unit mean (Al-Habash, Andrews &
 - `struct PyPointingError` — The misalignment of a Gaussian beam on a circular aperture, a Rayleigh radial
@@ -3452,7 +3452,7 @@ one layer down, instead of written again (`docs/ARCHITECTURE.md`, placement).
 - `struct PyDvbs2` — A DVB-S2 transmitter and receiver (ETSI EN 302 307-1) of one MODCOD, constant coding
 - `struct PyDvbs` — A DVB-S transmitter and frame-aligned receiver (ETSI EN 300 421 V1.1.2) of one inner
 - `struct PyDvbt` — A DVB-T transmitter and receiver (ETSI EN 300 744 V1.6.2) of one non-hierarchical
-- `struct PyCcsdsConvolutional` — The convolutional code of CCSDS 131.0-B-5, Sec. 3: constraint length 7, ``G1 = 171``
+- `struct PyCcsdsConvolutional` — The convolutional code of CCSDS 131.0-B-5, Sec. 3: constraint length 7, :math:`G_1 = 171`
 
 ### `src/verify.rs`
 
@@ -3472,15 +3472,15 @@ one layer down, instead of written again (`docs/ARCHITECTURE.md`, placement).
 
 ### `src/waveform/dsss.rs`
 
-- `struct PyDsss` — A direct-sequence spread-spectrum link of `K` synchronous users (DS-CDMA): every
+- `struct PyDsss` — A direct-sequence spread-spectrum link of :math:`K` synchronous users (DS-CDMA): every
 
 ### `src/waveform/fhss.rs`
 
-- `struct PyFhss` — Frequency-hopping spread spectrum with noncoherent `M`-FSK: a band of `Q` channels
+- `struct PyFhss` — Frequency-hopping spread spectrum with noncoherent :math:`M`-FSK: a band of :math:`Q`
 
 ### `src/waveform/fsk.rs`
 
-- `struct PyFsk` — Orthogonal `M`-FSK with a continuous phase and a noncoherent receiver: the symbol
+- `struct PyFsk` — Orthogonal :math:`M`-FSK with a continuous phase and a noncoherent receiver: the symbol
 
 ## comnum (Python) (178 items)
 

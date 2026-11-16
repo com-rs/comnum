@@ -3,11 +3,11 @@
 
 use super::*;
 
-/// Maxwell–Boltzmann probabilities `p(x) ∝ exp(-λ|x|²)` of the points.
+/// Maxwell–Boltzmann probabilities :math:`p(x) \propto \exp(-\lambda|x|^2)` of the points.
 ///
 /// Args:
 ///     constellation (Constellation): the alphabet.
-///     lam (float): the shaping parameter `λ` (0 for uniform).
+///     lam (float): the shaping parameter :math:`\lambda` (0 for uniform).
 ///
 /// Returns:
 ///     numpy.ndarray: one probability per point, summing to one (float64).
@@ -16,8 +16,8 @@ fn maxwell_boltzmann<'py>(py: Python<'py>, constellation: &PyConstellation, lam:
     farr(py, sources::maxwell_boltzmann(&constellation.inner, lam))
 }
 
-/// The entropy ``H = -Σ p log2 p`` of a distribution (bits): the information per symbol of
-/// a shaped source.
+/// The entropy :math:`H = -\sum p \log_2 p` of a distribution (bits): the information per
+/// symbol of a shaped source.
 ///
 /// Args:
 ///     px (array_like): the probabilities.
@@ -102,7 +102,7 @@ impl PyCcdm {
         self.inner.k()
     }
 
-    /// float: Bits per symbol, ``k / n``.
+    /// float: Bits per symbol, :math:`k / n`.
     #[getter]
     fn rate(&self) -> f64 {
         self.inner.rate()

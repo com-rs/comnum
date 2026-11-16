@@ -9,13 +9,13 @@ use pyo3::prelude::*;
 use pyo3::types::{PyDict, PyList};
 
 /// The complex envelope of the frequency modulation of the message `m` (sampled at
-/// `fs`) with the peak deviation `deviation_hz` for `|m| = 1`: the phase sums
-/// `2π Δf m[n] / fs`.
+/// `fs`) with the peak deviation `deviation_hz` for :math:`|m| = 1`: the phase sums
+/// :math:`2\pi \Delta f\, m[n] / f_s`.
 ///
 /// Args:
 ///     m (array_like): the real message.
 ///     fs (float): the sampling rate (Hz).
-///     deviation_hz (float): the deviation of `m = 1` (Hz); 1 for a message already in
+///     deviation_hz (float): the deviation of :math:`m = 1` (Hz); 1 for a message already in
 ///         hertz of deviation (the multiplex of :func:`fm_multiplex`).
 ///
 /// Returns:
@@ -29,8 +29,8 @@ fn fm_modulate<'py>(py: Python<'py>, m: &Bound<'py, PyAny>, fs: f64, deviation_h
 }
 
 /// The instantaneous frequency (Hz) of `x` by the polar discriminator,
-/// `fs/(2π) arg(x[n] x*[n-1])` (0 for the first sample): exact within `±fs/2`,
-/// insensitive to the amplitude.
+/// :math:`f_s/(2\pi) \arg(x[n]\, x^*[n-1])` (0 for the first sample): exact within
+/// :math:`\pm f_s/2`, insensitive to the amplitude.
 ///
 /// Args:
 ///     x (array_like): complex samples at baseband.
@@ -52,9 +52,13 @@ fn fm_discriminator<'py>(py: Python<'py>, x: &Bound<'py, PyAny>, fs: f64) -> PyR
     Ok(farr(py, fm::fm_discriminator(&cvec(x)?, fs)))
 }
 
-/// The de-emphasis `1/(1 + j2πfτ)` of the message `x` by the matched pole
-/// `y[n] = a y[n-1] + (1 - a) x[n]`, `a = exp(-1/(τ fs))` (ITU-R BS.450-4 Sec. 1.2:
-/// 50 µs in Europe, 75 µs in the United States).
+/// The de-emphasis :math:`1/(1 + j2\pi f\tau)` of the message `x` by the matched pole
+///
+/// .. math::
+///
+///     y[n] = a\, y[n-1] + (1 - a)\, x[n], \qquad a = \exp(-1/(\tau f_s))
+///
+/// (ITU-R BS.450-4 Sec. 1.2: 50 µs in Europe, 75 µs in the United States).
 ///
 /// Args:
 ///     x (array_like): the real message.
@@ -73,7 +77,7 @@ fn fm_deemphasis<'py>(py: Python<'py>, x: &Bound<'py, PyAny>, fs: f64, tau_s: f6
 }
 
 /// The pre-emphasis of the message `x`, the exact inverse of :func:`fm_deemphasis`
-/// (the FIR `(x[n] - a x[n-1]) / (1 - a)`).
+/// (the FIR :math:`(x[n] - a\, x[n-1]) / (1 - a)`).
 ///
 /// Args:
 ///     x (array_like): the real message.
@@ -92,13 +96,19 @@ fn fm_preemphasis<'py>(py: Python<'py>, x: &Bound<'py, PyAny>, fs: f64, tau_s: f
 }
 
 /// The stereophonic multiplex of FM broadcasting (ITU-R BS.450-4 Sec. 2.2, pilot-tone
-/// system), in hertz of deviation: `Δa [M + S sin 2θ] + Δp sin θ + Δr r(t) sin 3θ`,
-/// `θ = 2π 19 kHz t`, `M = (A + B)/2`, `S = (A - B)/2` after pre-emphasis, `r` the
-/// biphase RDS baseband of the transmitted bits (NRSC-4 Sec. 1).
+/// system), in hertz of deviation:
+///
+/// .. math::
+///
+///     \Delta_a [M + S \sin 2\theta] + \Delta_p \sin\theta + \Delta_r\, r(t) \sin 3\theta,
+///     \qquad \theta = 2\pi \cdot 19\,\mathrm{kHz} \cdot t,
+///
+/// :math:`M = (A + B)/2`, :math:`S = (A - B)/2` after pre-emphasis, :math:`r` the biphase
+/// RDS baseband of the transmitted bits (NRSC-4 Sec. 1).
 ///
 /// Args:
-///     left (array_like): the left audio `A` at `fs`, at most 1 in magnitude.
-///     right (array_like): the right audio `B`, as many samples.
+///     left (array_like): the left audio :math:`A` at `fs`, at most 1 in magnitude.
+///     right (array_like): the right audio :math:`B`, as many samples.
 ///     fs (float): the sampling rate (Hz), at least 120 kHz (a multiple of 2375 Hz with
 ///         RDS; 228 kHz is 12 times the pilot).
 ///     rds_bits (array_like | None): the transmitted RDS bits (differentially encoded:
@@ -134,9 +144,10 @@ fn fm_multiplex<'py>(
 }
 
 /// The left and right channels of a multiplex (ITU-R BS.450-4 Sec. 2.2): the pilot
-/// found by mixing it down (10 ms average), `S = LP{2 m sin 2θ}` and `M = LP{m}` at
-/// 15 kHz, `A = M + S`, `B = M - S`, de-emphasised and resampled to `fs_audio`; mono
-/// (`A = B = M`) when the pilot deviates by less than 2 kHz.
+/// found by mixing it down (10 ms average), :math:`S = \mathrm{LP}\{2 m \sin 2\theta\}` and
+/// :math:`M = \mathrm{LP}\{m\}` at 15 kHz, :math:`A = M + S`, :math:`B = M - S`,
+/// de-emphasised and resampled to `fs_audio`; mono (:math:`A = B = M`) when the pilot
+/// deviates by less than 2 kHz.
 ///
 /// Args:
 ///     mpx (array_like): the multiplex in hertz of deviation (:func:`fm_discriminator`).
@@ -188,7 +199,7 @@ fn rds_group_bits<'py>(py: Python<'py>, blocks: [u16; 4], version_b: bool) -> BA
     rds::group_bits(blocks, version_b).into_pyarray(py)
 }
 
-/// The differential encoding `d[k] = d[k-1] xor b[k]` of RDS (NRSC-4 Table 1).
+/// The differential encoding :math:`d[k] = d[k-1] \oplus b[k]` of RDS (NRSC-4 Table 1).
 ///
 /// Args:
 ///     bits (array_like): the source bits.
@@ -296,7 +307,8 @@ fn rds_receive<'py>(py: Python<'py>, mpx: &Bound<'py, PyAny>, fs: f64) -> PyResu
 ///     n_taps (int): the length of the filter at the input rate.
 ///
 /// Returns:
-///     numpy.ndarray: `ceil(len(x) fs_out / fs_in)` samples (complex128).
+///     numpy.ndarray: :math:`\lceil \mathrm{len}(x)\, f_{\mathrm{out}} / f_{\mathrm{in}} \rceil`
+///     samples (complex128).
 ///
 /// Raises:
 ///     ValueError: for rates that are not whole numbers of hertz, a ratio that reduces to

@@ -814,3 +814,14 @@ def test_frame_sync_finds_the_delay_and_the_rotation_on_a_preamble():
     assert np.angle(exact) == pytest.approx(-(np.pi / 2 + 0.1), abs=0.1)
     with pytest.raises(ValueError, match="reference"):
         comnum.frame_sync(z, x, max_delay=60, stop=500)
+
+
+def test_power_and_the_amplitude_decibels():
+    assert comnum.power([1.0, 1j, -1.0, 2.0]) == 1.75
+    assert comnum.power([]) == 0.0
+    assert comnum.amp2db(10.0) == 20.0 and comnum.db2amp(20.0) == 10.0
+    x = np.array([0.5, 1.0, 4.0])
+    np.testing.assert_allclose(comnum.db2amp(comnum.amp2db(x)), x)
+    np.testing.assert_allclose(comnum.amp2db(x), comnum.lin2db(x**2))
+    c = comnum.Constellation("qam", 16)
+    assert c.min_distance == 2.0 and c.normalized().min_distance ** 2 == pytest.approx(0.4)

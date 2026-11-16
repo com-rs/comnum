@@ -28,7 +28,7 @@ rng = comnum.Rng(2024)
 c = comnum.Constellation("qam", 16).normalized()
 k = c.bits_per_symbol
 labels = c.demap_bits(c.points).reshape(-1, k)
-print(c, "-", k, "bits per symbol, energy", np.mean(np.abs(c.points) ** 2))
+print(c, "-", k, "bits per symbol, energy", c.energy)
 
 fig, ax = plt.subplots(figsize=(4.4, 4.4))
 ax.plot(c.points.real, c.points.imag, "o", markersize=7)

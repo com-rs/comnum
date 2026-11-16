@@ -176,9 +176,9 @@ for swing in swings:
     evm_theory.append(100 * np.sqrt(np.mean((a - scaled) ** 2) / np.mean(a**2)))
 for swing in swings[::4]:
     e = comnum.iqm(np.ones(s.size), swing * VPI * s, **ideal)
-    loss_sim.append(comnum.lin2db(np.mean(np.abs(e) ** 2)))
-    ref = s * np.sqrt(np.mean(np.abs(e) ** 2) / np.mean(np.abs(s) ** 2))
-    evm_sim.append(100 * np.sqrt(np.mean(np.abs(e - ref) ** 2) / np.mean(np.abs(e) ** 2)))
+    loss_sim.append(comnum.lin2db(comnum.power(e)))
+    ref = s * np.sqrt(comnum.power(e) / comnum.power(s))
+    evm_sim.append(100 * np.sqrt(comnum.power(e - ref) / comnum.power(e)))
 
 fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(9.0, 3.6))
 ax1.plot(swings, loss_theory, label="closed form")

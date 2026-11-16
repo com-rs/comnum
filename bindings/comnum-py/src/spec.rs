@@ -449,7 +449,7 @@ fn search_result<'py>(py: Python<'py>, r: &search::SearchResult) -> PyResult<Bou
 /// ``target``, and optionally ``tolerance``, ``log``, ``max_evaluations``). The bracket
 /// is halved until it is narrower than the tolerance; every evaluation runs the stopping
 /// rule of the specification on the same random streams (common random numbers); the
-/// crossing is interpolated in ``log10`` of the metric, with a confidence interval from
+/// crossing is interpolated in :math:`\log_{10}` of the metric, with a confidence interval from
 /// those of the bracketing estimates.
 ///
 /// Args:
@@ -502,9 +502,9 @@ fn search_spec<'py>(
 ///         name, or a `.sigmf` archive.
 ///     channel (int | None): the channel to read (the first by default, a 1-D array);
 ///         None: every channel, an array `(num_channels, n)`.
-///     autoscale (bool): divide integer samples by their full scale `2^(b-1)` (the
+///     autoscale (bool): divide integer samples by their full scale :math:`2^{b-1}` (the
 ///         values of `sigmf-python`); otherwise integers are converted without scaling
-///         (unsigned types centred by `2^(b-1)`).
+///         (unsigned types centred by :math:`2^{b-1}`).
 ///
 /// Returns:
 ///     tuple[numpy.ndarray, float | None, dict]: the samples (complex128), the sampling

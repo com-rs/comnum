@@ -97,8 +97,7 @@ the sync byte ``0x47`` (:func:`comnum.dvb_packets` draws random ones):
 
    ebn0_db = 5.0                                   # per useful bit, as in Table 3
    noise_var = 1 / comnum.db2lin(link.esn0_db(ebn0_db))
-   rng = np.random.default_rng(1)
-   y = x + np.sqrt(noise_var / 2) * (rng.normal(size=len(x)) + 1j * rng.normal(size=len(x)))
+   y = x + comnum.Rng(1).complex_noise(len(x), noise_var)
 
    out, corrected, failed = link.decode(y, noise_var)   # soft Viterbi, RS(204, 188)
    assert np.array_equal(out, packets)
@@ -184,8 +183,7 @@ sample per elementary period :math:`T = 7/(8B)` (7/64 µs at 8 MHz):
    # the portable channel P1 of Annex B at a C/N of 21 dB over the 6817 carriers
    h = comnum.dvbt_channel_gains("P1", link.carrier_frequencies())
    noise_var = link.carrier_noise_var(21.0)
-   rng = np.random.default_rng(1)
-   w = np.sqrt(noise_var / 2) * (rng.normal(size=cells.shape) + 1j * rng.normal(size=cells.shape))
+   w = comnum.Rng(1).complex_noise(cells.size, noise_var).reshape(cells.shape)
    out, corrected, failed = link.decode(cells * h[:, None] + w, 1000, noise_var, channel=h)
 
 The C/N of Annex A is "calculated over the transmitted 6 817 OFDM carriers": the mean
@@ -275,7 +273,7 @@ decoders take LLRs, positive for a 0:
    assert code.ldpc.is_codeword(code.full_codeword(b))   # H of Sec. 7.4.2, (K + 3) M bits
 
    noise_var = comnum.bpsk_noise_variance(1.5, code.k / code.n)    # Eb/N0 = 1.5 dB
-   y = 1.0 - 2.0 * c + np.sqrt(noise_var) * np.random.default_rng(1).normal(size=code.n)
+   y = 1.0 - 2.0 * c + np.sqrt(noise_var) * comnum.Rng(1).gaussian(code.n)
    b_hat = code.decode(comnum.bpsk_llr(y, noise_var))
 
    turbo = comnum.CcsdsTurbo(8920, "1/6")         # n = (k + 4) 6 = 53 544 (Table 6-2)

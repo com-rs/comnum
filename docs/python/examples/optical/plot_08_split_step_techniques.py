@@ -72,11 +72,10 @@ manakov_fiber = comnum.FiberParams(**{**FIBER, "gamma_w_km": FIBER["gamma_w_km"]
 SPAN = FIBER["span_km"]
 
 # Gaussian symbols shaped by a root-raised cosine on the periodic block, unit power.
-rng = np.random.default_rng(8)
-symbols = (rng.standard_normal(SYMBOLS) + 1j * rng.standard_normal(SYMBOLS)) / np.sqrt(2)
+symbols = comnum.Rng(8).complex_noise(SYMBOLS, 1.0)
 shape = comnum.rrc_spectrum(SYMBOLS, SPS, 0.1)
 unit = np.fft.ifft(np.tile(np.fft.fft(symbols), SPS) * shape)
-unit /= np.sqrt(np.mean(np.abs(unit) ** 2))
+unit = comnum.pnorm(unit)
 
 # The noise of the 10 amplifiers in the band of the channel (W).
 edfa = comnum.Edfa(gain_db=FIBER["alpha_db_km"] * SPAN, nf_db=FIBER["nf_db"], fc_hz=FIBER["fc_hz"])
@@ -90,10 +89,8 @@ def effective_snr_db(y, power_w):
     z = receiver_link.backpropagate(y, FS, steps_per_span=500)
     s = np.fft.ifft(np.fft.fft(z) * shape)[::SPS]
     c = np.vdot(symbols, s) / np.vdot(symbols, symbols)
-    distortion = np.mean(np.abs(s - c * symbols) ** 2) / (
-        abs(c) ** 2 * np.mean(np.abs(symbols) ** 2)
-    )
-    return -10 * np.log10(distortion + ase_w / power_w)
+    distortion = comnum.power(s - c * symbols) / (abs(c) ** 2 * comnum.power(symbols))
+    return -comnum.lin2db(distortion + ase_w / power_w)
 
 
 def scalar(k, nonlinear_step="midpoint", precision="f64", logarithmic=False):
@@ -119,7 +116,7 @@ def manakov(**options):
 
 def measure(technique, power_dbm, repeats=3):
     """The effective SNR, the steps per span and the best computation time (s)."""
-    power_w = 1e-3 * 10 ** (power_dbm / 10)
+    power_w = comnum.dbm2w(power_dbm)
     x = unit * np.sqrt(power_w)
     best = np.inf
     for _ in range(repeats):

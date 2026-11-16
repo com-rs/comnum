@@ -14,14 +14,14 @@ use pyo3::prelude::*;
 ///
 /// Args:
 ///     x (array_like): the analogue signal (complex).
-///     bits (int): resolution `N`.
+///     bits (int): resolution :math:`N`.
 ///     fs (float): sampling rate (Hz).
-///     full_scale (float, optional): the full scale `A` of each dimension (the levels
-///         span `±(A - Δ/2)`, `Δ = 2A/2^N`).
-///     loading (float, optional): without ``full_scale``, `A` is ``loading`` times the
-///         RMS value of one dimension of ``x``; by default the loading that minimises the
-///         error of a Gaussian input (``optimal_loading``).
-///     enob (float, optional): effective number of bits (`≤ N`).
+///     full_scale (float, optional): the full scale :math:`A` of each dimension (the
+///         levels span :math:`\pm(A - \Delta/2)`, :math:`\Delta = 2A/2^N`).
+///     loading (float, optional): without ``full_scale``, :math:`A` is ``loading`` times
+///         the RMS value of one dimension of ``x``; by default the loading that minimises
+///         the error of a Gaussian input (``optimal_loading``).
+///     enob (float, optional): effective number of bits (:math:`\le N`).
 ///     jitter_s (float): RMS clock jitter (s).
 ///     bandwidth_hz (float, optional): 3 dB bandwidth of the front end (Hz).
 ///     rng (Rng, optional): the generator, needed with ``enob`` or ``jitter_s``.
@@ -73,7 +73,7 @@ fn adc<'py>(
 ///
 /// Args:
 ///     x (array_like): the digital samples (complex).
-///     bits (int): resolution `N`.
+///     bits (int): resolution :math:`N`.
 ///     fs (float): input sampling rate (Hz); the output is at ``hold`` × ``fs``.
 ///     full_scale (float, optional): the full scale of each dimension.
 ///     loading (float, optional): without ``full_scale``, the full scale in RMS values
@@ -109,11 +109,11 @@ fn dac<'py>(
     Ok(carr(py, py.detach(|| d.convert(&x, fs)).py()?))
 }
 
-/// The SQNR of a full-scale sine through an ideal quantiser: `6.02 N + 1.76` dB
+/// The SQNR of a full-scale sine through an ideal quantiser: :math:`6.02 N + 1.76` dB
 /// (Bennett 1948).
 ///
 /// Args:
-///     bits (int): resolution `N`.
+///     bits (int): resolution :math:`N`.
 ///
 /// Returns:
 ///     float: the SQNR (dB).
@@ -132,8 +132,8 @@ fn theory_sqnr_sine_db(bits: u32) -> f64 {
 /// dimension): granular and overload (clipping) noise together.
 ///
 /// Args:
-///     bits (int): resolution `N`.
-///     full_scale (float): the full scale `A`.
+///     bits (int): resolution :math:`N`.
+///     full_scale (float): the full scale :math:`A`.
 ///     sigma (float): standard deviation of the input.
 ///
 /// Returns:
@@ -152,11 +152,11 @@ fn theory_quantization_mse(bits: u32, full_scale: f64, sigma: f64) -> PyResult<f
     Ok(conv::gaussian_mse(&Quantizer::new(bits, full_scale).py()?, sigma))
 }
 
-/// The loading factor `A/σ` that minimises the error of a Gaussian input (the optimal
-/// uniform quantiser of Max 1960).
+/// The loading factor :math:`A/\sigma` that minimises the error of a Gaussian input (the
+/// optimal uniform quantiser of Max 1960).
 ///
 /// Args:
-///     bits (int): resolution `N`.
+///     bits (int): resolution :math:`N`.
 ///
 /// Returns:
 ///     float: the optimal loading factor.
@@ -171,7 +171,7 @@ fn optimal_loading(bits: u32) -> f64 {
 }
 
 /// The SNR of a sine of frequency ``f_hz`` sampled with an RMS clock jitter ``jitter_s``:
-/// `-20 log10(2π f σ_j)` dB (Walden 1999).
+/// :math:`-20 \log_{10}(2\pi f \sigma_j)` dB (Walden 1999).
 ///
 /// Args:
 ///     f_hz (float | array_like): frequency of the sine (Hz).
@@ -193,7 +193,7 @@ fn theory_jitter_snr_db(f_hz: &Bound<'_, PyAny>, jitter_s: f64) -> PyResult<Py<P
 }
 
 /// The effective number of bits of a SINAD measured on a full-scale sine:
-/// `(SINAD - 1.76) / 6.02` (IEEE Std 1241).
+/// :math:`(\mathrm{SINAD} - 1.76) / 6.02` (IEEE Std 1241).
 ///
 /// Args:
 ///     sinad_db (float | array_like): the SINAD (dB).
@@ -214,8 +214,8 @@ fn enob_from_sinad_db(sinad_db: &Bound<'_, PyAny>) -> PyResult<Py<PyAny>> {
 }
 
 /// The amplitude response of a zero-order hold of ``hold`` output samples per input
-/// sample at the input rate ``fs``: `|sin(π f/f_s) / (H sin(π f/(H f_s)))|`, which tends
-/// to `|sinc(f/f_s)|`.
+/// sample at the input rate ``fs``: :math:`|\sin(\pi f/f_s) / (H \sin(\pi f/(H f_s)))|`,
+/// which tends to :math:`|\operatorname{sinc}(f/f_s)|`.
 ///
 /// Args:
 ///     f_hz (float | array_like): frequency (Hz).

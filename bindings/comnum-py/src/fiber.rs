@@ -19,15 +19,16 @@ use pyo3::types::PyDict;
 
 /// The parameters of a fibre link of identical spans, each followed by an amplifier.
 ///
-/// Engineering units of OptiCommPy: attenuation in dB/km, dispersion parameter `D` in
-/// ps/(nm·km), nonlinear coefficient `γ` in 1/(W·km), lengths in km, carrier frequency
-/// in Hz, noise figure in dB. The defaults describe standard single-mode fibre at
-/// 193.1 THz with 80 km spans. Every attribute is readable and writable.
+/// Engineering units of OptiCommPy: attenuation in dB/km, dispersion parameter :math:`D`
+/// in ps/(nm·km), nonlinear coefficient :math:`\gamma` in 1/(W·km), lengths in km,
+/// carrier frequency in Hz, noise figure in dB. The defaults describe standard
+/// single-mode fibre at 193.1 THz with 80 km spans. Every attribute is readable and
+/// writable.
 ///
 /// Args:
 ///     alpha_db_km (float): attenuation (dB/km).
-///     d_ps_nm_km (float): dispersion parameter `D` (ps/(nm·km)).
-///     gamma_w_km (float): nonlinear coefficient `γ` (1/(W·km)).
+///     d_ps_nm_km (float): dispersion parameter :math:`D` (ps/(nm·km)).
+///     gamma_w_km (float): nonlinear coefficient :math:`\gamma` (1/(W·km)).
 ///     span_km (float): span length (km).
 ///     n_spans (int): number of spans.
 ///     fc_hz (float): carrier frequency (Hz).
@@ -50,9 +51,9 @@ wrapper_methods! {
     PyFiber {
         /// float: Attenuation (dB/km) (read and write).
         alpha_db_km / set_alpha_db_km: f64,
-        /// float: Dispersion parameter `D` (ps/(nm·km)) (read and write).
+        /// float: Dispersion parameter :math:`D` (ps/(nm·km)) (read and write).
         d_ps_nm_km / set_d_ps_nm_km: f64,
-        /// float: Nonlinear coefficient `γ` (1/(W·km)) (read and write).
+        /// float: Nonlinear coefficient :math:`\gamma` (1/(W·km)) (read and write).
         gamma_w_km / set_gamma_w_km: f64,
         /// float: Span length (km) (read and write).
         span_km / set_span_km: f64,
@@ -98,31 +99,31 @@ wrapper_methods! {
         self.inner.total_km()
     }
 
-    /// float: Power attenuation `α` (neper/km).
+    /// float: Power attenuation :math:`\alpha` (neper/km).
     #[getter]
     fn alpha_np_km(&self) -> f64 {
         self.inner.alpha_np_km()
     }
 
-    /// float: Wavelength `c/f_c` (m).
+    /// float: Wavelength :math:`c/f_c` (m).
     #[getter]
     fn wavelength_m(&self) -> f64 {
         self.inner.wavelength_m()
     }
 
-    /// float: Group-velocity dispersion `β₂ = -Dλ²/(2πc)` (s²/km).
+    /// float: Group-velocity dispersion :math:`\beta_2 = -D\lambda^2/(2\pi c)` (s²/km).
     #[getter]
     fn beta2_s2_km(&self) -> f64 {
         self.inner.beta2_s2_km()
     }
 
-    /// float: Group-velocity dispersion `β₂` (ps²/km).
+    /// float: Group-velocity dispersion :math:`\beta_2` (ps²/km).
     #[getter]
     fn beta2_ps2_km(&self) -> f64 {
         self.inner.beta2_ps2_km()
     }
 
-    /// float: Linear power gain `e^{αL}` that compensates the loss of one span.
+    /// float: Linear power gain :math:`e^{\alpha L}` that compensates the loss of one span.
     #[getter]
     fn span_gain(&self) -> f64 {
         self.inner.span_gain()
@@ -134,20 +135,20 @@ wrapper_methods! {
         self.inner.span_gain_db()
     }
 
-    /// float: Effective length of a span `(1 - e^{-αL})/α` (km).
+    /// float: Effective length of a span :math:`(1 - e^{-\alpha L})/\alpha` (km).
     #[getter]
     fn effective_length_km(&self) -> f64 {
         self.inner.effective_length_km()
     }
 
-    /// float: Accumulated dispersion `D·L_total` (ps/nm).
+    /// float: Accumulated dispersion :math:`D \cdot L_{\mathrm{total}}` (ps/nm).
     #[getter]
     fn accumulated_dispersion_ps_nm(&self) -> f64 {
         self.inner.accumulated_dispersion_ps_nm()
     }
 
     /// Dispersion memory of the link for a signal of bandwidth `bandwidth_hz`,
-    /// `2π |β₂| L B fs`.
+    /// :math:`2\pi |\beta_2| L B f_s`.
     ///
     /// Args:
     ///     bandwidth_hz (float): bandwidth of the signal (Hz).
@@ -183,9 +184,15 @@ wrapper_methods! {
 
 /// An ideal erbium-doped fibre amplifier: flat gain and white ASE.
 ///
-/// The spontaneous-emission factor is `n_sp = (G·NF - 1)/(2(G - 1))` and the ASE adds
-/// complex Gaussian noise of variance `(G - 1) n_sp h f_c f_s` per sample at the
-/// sampling rate `f_s` (OptiCommPy `edfa`). The defaults are those of OptiCommPy.
+/// The spontaneous-emission factor is
+///
+/// .. math::
+///
+///     n_{\mathrm{sp}} = \frac{G \cdot \mathrm{NF} - 1}{2(G - 1)}
+///
+/// and the ASE adds complex Gaussian noise of variance
+/// :math:`(G - 1)\, n_{\mathrm{sp}}\, h f_c f_s` per sample at the sampling rate
+/// :math:`f_s` (OptiCommPy `edfa`). The defaults are those of OptiCommPy.
 ///
 /// Args:
 ///     gain_db (float): gain (dB, positive).
@@ -213,13 +220,13 @@ wrapper_methods! {
         PyEdfa { inner: Edfa { gain_db, nf_db, fc_hz } }
     }
 
-    /// float: Spontaneous-emission factor `n_sp`.
+    /// float: Spontaneous-emission factor :math:`n_{\mathrm{sp}}`.
     #[getter]
     fn n_sp(&self) -> f64 {
         self.inner.n_sp()
     }
 
-    /// float: ASE power spectral density `(G - 1) n_sp h f_c` (W/Hz).
+    /// float: ASE power spectral density :math:`(G - 1)\, n_{\mathrm{sp}}\, h f_c` (W/Hz).
     #[getter]
     fn ase_psd(&self) -> f64 {
         self.inner.ase_psd()
@@ -231,7 +238,7 @@ wrapper_methods! {
     ///     fs (float): sampling rate (Hz).
     ///
     /// Returns:
-    ///     float: the variance `E|w|²` (W).
+    ///     float: the variance :math:`\mathbb{E}|w|^2` (W).
     fn noise_variance(&self, fs: f64) -> f64 {
         self.inner.noise_variance(fs)
     }
@@ -323,22 +330,23 @@ fn nonlinear_step_name(step: NonlinearStep) -> &'static str {
 
 /// The symmetric split-step Fourier method of OptiCommPy (`ssfm`), one polarisation.
 ///
-/// Every span is cut into `n = ⌈L_span/h⌉` equal steps of `δ = L_span/n` (`h` itself
-/// when it divides the span); a step applies half of the linear operator (loss and
-/// dispersion) in the frequency domain, the nonlinear phase `γ|A|²δ`, then the other
-/// half (``nonlinear_step="midpoint"``; ``"effective_length"`` is Optilux's scheme, the
-/// phase of the power at the start of the nonlinear block over the effective length
-/// ``(1 - e^{-αδ})/α`` of the step, the attenuation of the step after it). After every
-/// span:
+/// Every span is cut into :math:`n = \lceil L_{\mathrm{span}}/h \rceil` equal steps of
+/// :math:`\delta = L_{\mathrm{span}}/n` (:math:`h` itself when it divides the span); a
+/// step applies half of the linear operator (loss and dispersion) in the frequency
+/// domain, the nonlinear phase :math:`\gamma |A|^2 \delta`, then the other half
+/// (``nonlinear_step="midpoint"``; ``"effective_length"`` is Optilux's scheme, the phase
+/// of the power at the start of the nonlinear block over the effective length
+/// :math:`(1 - e^{-\alpha\delta})/\alpha` of the step, the attenuation of the step after
+/// it). After every span:
 ///
-/// - `"edfa"`: an EDFA of gain `α L` and the noise figure of the fibre (ASE drawn from
-///   `rng`, noiseless without one);
-/// - `"ideal"`: a noiseless gain `e^{αL/2}` on the field;
+/// - `"edfa"`: an EDFA of gain :math:`\alpha L` and the noise figure of the fibre (ASE
+///   drawn from `rng`, noiseless without one);
+/// - `"ideal"`: a noiseless gain :math:`e^{\alpha L/2}` on the field;
 /// - `"none"`: nothing.
 ///
 /// Args:
 ///     fiber (FiberParams): the link.
-///     step_km (float): step size `h` (km).
+///     step_km (float): step size :math:`h` (km).
 ///     steps_per_span (int, optional): this number of logarithmic steps per span
 ///         instead of `step_km` (Bosco et al., IEEE PTL 12(5), 2000, eq. (6)): every step
 ///         carries the same integrated power, short at the start of the span; double
@@ -431,7 +439,8 @@ impl PySsfm {
     ///     fs (float): sampling rate (Hz).
     ///     rng (Rng, optional): the generator of the ASE (noiseless without one).
     ///     precision (str): ``"f64"``, or ``"f32"`` (about twice as fast, relative error
-    ///         about ``1e-6 √steps``; the amplifiers stay in double precision).
+    ///         about :math:`10^{-6}\sqrt{\mathrm{steps}}`; the amplifiers stay in double
+    ///         precision).
     ///
     /// Returns:
     ///     numpy.ndarray: the field at the end of the link (complex128).
@@ -457,17 +466,17 @@ impl PySsfm {
     }
 
     /// Digital back-propagation with `steps_per_span` symmetric steps per span (the
-    /// split step with `-α`, `-β₂`, `-γ`, spans in reverse order, amplifier gain removed
-    /// first). With the forward step and no noise it inverts `propagate` exactly; with
-    /// coarser steps the nonlinear phase of a step uses its effective length
-    /// `2 sinh(αδ/2)/α`.
+    /// split step with :math:`-\alpha`, :math:`-\beta_2`, :math:`-\gamma`, spans in reverse
+    /// order, amplifier gain removed first). With the forward step and no noise it inverts
+    /// `propagate` exactly; with coarser steps the nonlinear phase of a step uses its
+    /// effective length :math:`2\sinh(\alpha\delta/2)/\alpha`.
     ///
     /// Args:
     ///     x (array_like): the received field (√W).
     ///     fs (float): sampling rate (Hz).
     ///     steps_per_span (int): steps per span (1 by default, as the ``dbp`` block).
-    ///     nonlinear_scale (float): ξ, multiplies the nonlinear phase (the optimised DBP
-    ///         with few steps per span, Ip & Kahn 2008; 0 gives the linear
+    ///     nonlinear_scale (float): :math:`\xi`, multiplies the nonlinear phase (the
+    ///         optimised DBP with few steps per span, Ip & Kahn 2008; 0 gives the linear
     ///         back-propagation).
     ///     step_distribution (str): ``"uniform"`` (equal steps), ``"logarithmic"`` (Bosco
     ///         et al. 2000: every step carries the same integrated power of the forward
@@ -527,8 +536,8 @@ impl PySsfm {
 ///
 /// Every span is cut into `sections_per_span` sections; a section applies the loss and
 /// the dispersion, a random rotation and a differential group delay (the PMD), then the
-/// averaged Kerr phase `(8/9) γ L_eff (|A_x|² + |A_y|²)`. The amplification after every
-/// span is an EDFA (ASE from `rng` if given).
+/// averaged Kerr phase :math:`(8/9)\, \gamma L_{\mathrm{eff}} (|A_x|^2 + |A_y|^2)`. The
+/// amplification after every span is an EDFA (ASE from `rng` if given).
 ///
 /// Args:
 ///     fiber (FiberParams): the link.
@@ -643,13 +652,15 @@ impl PyManakov {
 /// by the symmetric split-step method (``nonlinear_step="trapezoidal"`` is OptiCommPy's
 /// ``manakovSSF``, ``"effective_length"`` Optilux's ``fiber``).
 ///
-/// Each step is a half linear step, the nonlinear phase ``(8/9) γ h P`` (``P = |A_x|² +
-/// |A_y|²`` at the middle of the step; with ``nonlinear_step="trapezoidal"``, OptiCommPy's
-/// ``(P(z) + P(z+h))/2``, iterated until the relative change of the fields falls below
-/// ``tolerance``; with ``"effective_length"``, Optilux's ``P`` at the start of the
-/// nonlinear block over the effective length ``(1 - e^{-αh})/α`` of the step, the
-/// attenuation of the step after it) and a half linear step. The step is fixed (``step_km``) or adaptive
-/// (``step_rule``). An amplifier follows every span. Polarisation-mode dispersion is neglected (see :class:`ManakovPmd`).
+/// Each step is a half linear step, the nonlinear phase :math:`(8/9)\, \gamma h P`
+/// (:math:`P = |A_x|^2 + |A_y|^2` at the middle of the step; with
+/// ``nonlinear_step="trapezoidal"``, OptiCommPy's :math:`(P(z) + P(z+h))/2`, iterated
+/// until the relative change of the fields falls below ``tolerance``; with
+/// ``"effective_length"``, Optilux's :math:`P` at the start of the nonlinear block over
+/// the effective length :math:`(1 - e^{-\alpha h})/\alpha` of the step, the attenuation
+/// of the step after it) and a half linear step. The step is fixed (``step_km``) or
+/// adaptive (``step_rule``). An amplifier follows every span. Polarisation-mode
+/// dispersion is neglected (see :class:`ManakovPmd`).
 ///
 /// Args:
 ///     fiber (FiberParams): the link.
@@ -792,15 +803,16 @@ impl PyManakovSsfm {
     }
 
     /// Dual-polarisation digital back-propagation with `steps_per_span` symmetric steps
-    /// per span (the Manakov equation with `-α`, `-β₂`, `-γ`, the amplifier gain removed
-    /// before each span, the nonlinear phase of a step on its effective length).
+    /// per span (the Manakov equation with :math:`-\alpha`, :math:`-\beta_2`,
+    /// :math:`-\gamma`, the amplifier gain removed before each span, the nonlinear phase
+    /// of a step on its effective length).
     ///
     /// Args:
     ///     u (array_like): the received field, `(2, n)` (√W).
     ///     fs (float): sampling rate (Hz).
     ///     steps_per_span (int): steps per span.
-    ///     nonlinear_scale (float): ξ, multiplies the nonlinear phase (0: dispersion
-    ///         compensation only).
+    ///     nonlinear_scale (float): :math:`\xi`, multiplies the nonlinear phase (0:
+    ///         dispersion compensation only).
     ///     steps_per_link (int, optional): this number of equal steps for the whole link
     ///         instead of ``steps_per_span``, a step covering several spans (Rafique et
     ///         al. 2011); the amplifiers must restore the loss of their span.

@@ -54,7 +54,7 @@ def through_channel(symbols: np.ndarray, ebn0_db: float) -> np.ndarray:
 # **frequency-selective**. Here the gain varies by 17 dB across the band of the signal.
 frequencies = np.linspace(-0.5, 0.5, 401)
 response = np.array([np.sum(channel * np.exp(-2j * np.pi * f * np.arange(3))) for f in frequencies])
-gain_db = 20 * np.log10(np.abs(response))
+gain_db = comnum.amp2db(np.abs(response))
 
 fig, ax = plt.subplots(figsize=(7, 3.4))
 ax.plot(frequencies, gain_db, color=SERIES[0])
@@ -114,14 +114,14 @@ mmse = np.conj(response) / (np.abs(response) ** 2 + n0)
 
 fig, ax = plt.subplots(figsize=(7, 3.4))
 ax.plot(frequencies, -gain_db, color=SERIES[1], label="zero forcing, $1/|H|$")
-ax.plot(frequencies, 20 * np.log10(np.abs(mmse)), color=SERIES[0], label="MMSE at $E_b/N_0$ = 8 dB")
+ax.plot(frequencies, comnum.amp2db(np.abs(mmse)), color=SERIES[0], label="MMSE at $E_b/N_0$ = 8 dB")
 ax.axhline(0, color=GREY, linewidth=0.8)
 ax.set(xlabel="frequency (symbol rates)", ylabel="gain of the equaliser (dB)")
 ax.legend()
 fig.tight_layout()
-enhancement = np.mean(np.abs(zero_forcing) ** 2)
+enhancement = comnum.power(zero_forcing)
 print(
-    f"zero forcing multiplies the noise power by {enhancement:.2f} ({10 * np.log10(enhancement):.1f} dB)"
+    f"zero forcing multiplies the noise power by {enhancement:.2f} ({comnum.lin2db(enhancement):.1f} dB)"
 )
 
 # %%
@@ -154,7 +154,7 @@ equalised, taps, squared_error = comnum.adaptive_equalizer(
 output = equalised[0]
 
 fig, axes = plt.subplots(1, 2, figsize=(9.5, 3.8))
-smooth = np.convolve(squared_error[0], np.ones(50) / 50, mode="valid")
+smooth = comnum.moving_average(squared_error[0], 50).real
 axes[0].semilogy(smooth, color=SERIES[0])
 axes[0].axvline(TRAINING, color=GREY, linestyle=":", label="end of the training")
 axes[0].set(xlabel="symbol", ylabel="squared error (mean of 50)", title="Learning curve")
@@ -173,7 +173,7 @@ print(f"symbol errors after the equaliser at 14 dB: {errors} of {labels.size - T
 # channel: the cascade should be a single tap, the echoes cancelled. (The equaliser
 # output is :math:`\sum_t w_t\,y_{k+t}` with the centre tap at :math:`t = 0`, so the
 # cascade is the channel convolved with the taps reversed.)
-cascade = np.convolve(channel, taps[0][::-1])
+cascade = comnum.convolve(channel, taps[0][::-1])
 lag = np.arange(cascade.size) - (TAPS // 2)
 
 fig, ax = plt.subplots(figsize=(7, 3.2))

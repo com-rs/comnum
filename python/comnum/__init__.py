@@ -1,4 +1,4 @@
-"""Communication algorithms in Rust, with Python bindings.
+r"""Communication algorithms in Rust, with Python bindings.
 
 ``comnum`` implements the building blocks of digital and optical communication
 simulations in Rust and exposes them to Python with NumPy arrays in and out. The
@@ -15,7 +15,7 @@ Conventions:
   arrays, a time-frequency grid is ``(n_subcarriers, n_symbols)`` with its resource
   elements as ``(k, l)`` pairs;
 - names: ``fs`` is a sampling rate, ``fc_hz`` a carrier, ``noise_var`` a noise variance
-  ``E|w|²``, ``ebn0_db`` and ``esn0_db`` the SNRs per bit and per symbol, MIMO channels
+  :math:`\mathbb{E}|w|^2`, ``ebn0_db`` and ``esn0_db`` the SNRs per bit and per symbol, MIMO channels
   are ``(n_rx, n_tx)``; the tuning parameters are keyword-only, the generator is the
   last positional argument, ``rng``;
 - the closed forms (``theory_*``, ``qfunc``, ``db2lin``…) take a scalar (and return a
@@ -30,7 +30,8 @@ Contents:
 =====================  ===============================================================
 Theme                  Names
 =====================  ===============================================================
-random and math        :class:`Rng`, :func:`db2lin`, :func:`lin2db`, :func:`dbm2w`,
+random and math        :class:`Rng`, :func:`db2lin`, :func:`lin2db`, :func:`db2amp`,
+                       :func:`amp2db`, :func:`power`, :func:`dbm2w`,
                        :func:`w2dbm`, :func:`qfunc`, :func:`ber_to_q_db`
 sources                :func:`bits`, :func:`prbs`, :func:`o150_sequence`,
                        :func:`symbols`, :func:`maxwell_boltzmann`
@@ -287,6 +288,7 @@ from comnum._comnum import (
     ais_position_report,
     ais_receive,
     ais_transmit,
+    amp2db,
     amp_state_evolution,
     amp_thresholds,
     amplifier_bussgang,
@@ -345,6 +347,7 @@ from comnum._comnum import (
     cumulants,
     cyclic_autocorrelation,
     dac,
+    db2amp,
     db2lin,
     dbm2w,
     ddpll,
@@ -464,6 +467,7 @@ from comnum._comnum import (
     pm_occupied_bandwidth,
     pnorm,
     posterior_rates,
+    power,
     power_delay_profile,
     prbs,
     psd,
@@ -643,6 +647,7 @@ __all__ = [
     "ais_position_report",
     "ais_receive",
     "ais_transmit",
+    "amp2db",
     "amp_state_evolution",
     "amp_thresholds",
     "amplifier_bussgang",
@@ -703,6 +708,7 @@ __all__ = [
     "cumulants",
     "cyclic_autocorrelation",
     "dac",
+    "db2amp",
     "db2lin",
     "dbm2w",
     "ddpll",
@@ -823,6 +829,7 @@ __all__ = [
     "pm_occupied_bandwidth",
     "pnorm",
     "posterior_rates",
+    "power",
     "power_delay_profile",
     "prbs",
     "psd",

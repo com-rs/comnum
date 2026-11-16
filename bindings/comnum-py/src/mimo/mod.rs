@@ -157,17 +157,23 @@ fn llr_streams(py: Python<'_>, rows: Rows<f64>, bits: usize, single: bool) -> Py
 /// Flat MIMO channel matrices: Rayleigh or Rician fading, with exponential antenna
 /// correlation (Kronecker model).
 ///
-/// `H = √(K/(K+1)) H_LOS + √(1/(K+1)) L_r G L_tᵀ` with `G` of independent `CN(0, 1)`
-/// entries, `L Lᴴ` the exponential correlation `[R]_ij = ρ^(j-i)`, and `H_LOS` all
+/// .. math::
+///
+///     \mathbf{H} = \sqrt{\tfrac{K}{K+1}}\, \mathbf{H}_{\mathrm{LOS}}
+///     + \sqrt{\tfrac{1}{K+1}}\, \mathbf{L}_r \mathbf{G} \mathbf{L}_t^{\mathsf{T}}
+///
+/// with :math:`\mathbf{G}` of independent :math:`\mathcal{CN}(0, 1)` entries,
+/// :math:`\mathbf{L}\mathbf{L}^{\mathsf{H}}` the exponential correlation
+/// :math:`[\mathbf{R}]_{ij} = \rho^{j-i}`, and :math:`\mathbf{H}_{\mathrm{LOS}}` all
 /// ones; every entry has unit mean power.
 ///
 /// Args:
 ///     n_rx (int): receive antennas.
 ///     n_tx (int): transmit antennas.
 ///     rng (Rng): the generator.
-///     k_factor (float): Rician factor `K` (linear, 0 for Rayleigh).
-///     rx_correlation (complex): correlation `ρ` of adjacent receive antennas.
-///     tx_correlation (complex): correlation `ρ` of adjacent transmit antennas.
+///     k_factor (float): Rician factor :math:`K` (linear, 0 for Rayleigh).
+///     rx_correlation (complex): correlation :math:`\rho` of adjacent receive antennas.
+///     tx_correlation (complex): correlation :math:`\rho` of adjacent transmit antennas.
 ///
 /// Returns:
 ///     numpy.ndarray: one matrix `(n_rx, n_tx)` (complex128); :func:`mimo_channels`
@@ -202,9 +208,9 @@ fn mimo_channel<'py>(
 ///     n_rx (int): receive antennas.
 ///     n_tx (int): transmit antennas.
 ///     rng (Rng): the generator.
-///     k_factor (float): Rician factor `K` (linear, 0 for Rayleigh).
-///     rx_correlation (complex): correlation `ρ` of adjacent receive antennas.
-///     tx_correlation (complex): correlation `ρ` of adjacent transmit antennas.
+///     k_factor (float): Rician factor :math:`K` (linear, 0 for Rayleigh).
+///     rx_correlation (complex): correlation :math:`\rho` of adjacent receive antennas.
+///     tx_correlation (complex): correlation :math:`\rho` of adjacent transmit antennas.
 ///
 /// Returns:
 ///     numpy.ndarray: `(n, n_rx, n_tx)` (complex128).
@@ -248,11 +254,12 @@ fn flat_mimo(n_rx: usize, n_tx: usize, k_factor: f64, rx_correlation: C64, tx_co
     Ok(Mimo { k_factor, correlation, ..Mimo::rayleigh(n_rx, n_tx) })
 }
 
-/// The exponential correlation matrix `[R]_ij = ρ^(j-i)` (Hermitian) of `n` antennas.
+/// The exponential correlation matrix :math:`[\mathbf{R}]_{ij} = \rho^{j-i}` (Hermitian) of `n`
+/// antennas.
 ///
 /// Args:
 ///     n (int): number of antennas.
-///     rho (complex): correlation `ρ` of adjacent antennas, `|ρ| ≤ 1`.
+///     rho (complex): correlation :math:`\rho` of adjacent antennas, :math:`|\rho| \le 1`.
 ///
 /// Returns:
 ///     numpy.ndarray: the `(n, n)` matrix (complex128).
@@ -269,7 +276,8 @@ fn exponential_correlation<'py>(py: Python<'py>, n: i64, rho: C64) -> PyResult<B
     Ok(exp_corr(count(n, "n")?, rho).into_pyarray(py))
 }
 
-/// Detect the transmitted symbols of a MIMO link `y = H x + w`.
+/// Detect the transmitted symbols of a MIMO link
+/// :math:`\mathbf{y} = \mathbf{H}\mathbf{x} + \mathbf{w}`.
 ///
 /// Methods: `"mr"` (matched filter), `"zf"`, `"mmse"` (linear, unbiased), `"zf_sic"`, `"mmse_sic"` (ordered
 /// successive interference cancellation, V-BLAST), `"ml"` (exhaustive search),
@@ -281,7 +289,7 @@ fn exponential_correlation<'py>(py: Python<'py>, n: i64, rho: C64) -> PyResult<B
 ///     h (array_like): the channel, `(n_rx, n_tx)` for every vector or `(n, n_rx, n_tx)`.
 ///     y (array_like): the received streams, `(n_rx, n)` (or one vector `(n_rx,)`).
 ///     constellation (Constellation): the alphabet of every stream.
-///     noise_var (float): noise variance per receive antenna `E|w_i|²`.
+///     noise_var (float): noise variance per receive antenna :math:`\mathbb{E}|w_i|^2`.
 ///     method (str): the detector.
 ///     k (int): paths kept by `"kbest"` (8, as the ``mimo_rx`` block).
 ///     iterations (int): iterations of `"amp"` and `"oamp"`.
@@ -330,16 +338,16 @@ fn mimo_detect(
 ///     h (array_like): the channel, `(n_rx, n_tx)` for every vector or `(n, n_rx, n_tx)`.
 ///     y (array_like): the received streams, `(n_rx, n)` (or one vector `(n_rx,)`).
 ///     constellation (Constellation): the alphabet of every stream.
-///     noise_var (float): noise variance per receive antenna `E|w_i|²`.
+///     noise_var (float): noise variance per receive antenna :math:`\mathbb{E}|w_i|^2`.
 ///     method (str): `"mr"`, `"zf"`, `"mmse"`, `"ml"`, `"kbest"`, `"amp"` or `"oamp"` (the SIC
 ///         and sphere detectors have no soft output).
 ///     k (int): paths kept by `"kbest"`.
 ///     iterations (int): iterations of `"amp"` and `"oamp"`.
 ///
 /// Returns:
-///     numpy.ndarray: `(n_tx, n · log2 M)`, the LLRs of the symbols of every stream in
-///     order (for one vector `(n_rx,)`, the `n_tx · log2 M` LLRs stream after stream),
-///     float64.
+///     numpy.ndarray: :math:`(n_{\mathrm{tx}}, n \log_2 M)`, the LLRs of the symbols of every
+///     stream in order (for one vector `(n_rx,)`, the :math:`n_{\mathrm{tx}} \log_2 M` LLRs
+///     stream after stream), float64.
 ///
 /// Raises:
 ///     ValueError: for an invalid parameter or input (the message names it).
@@ -371,7 +379,8 @@ fn mimo_llr(
 /// A block sends `n_symbols` symbols over `n_slots` channel uses from `n_tx`
 /// antennas, with a unit average transmitted energy per channel use. Decoding turns
 /// the block into one scalar channel per symbol of noise variance
-/// `σ²/(c² ‖H‖_F²)`, a diversity of `n_tx · n_rx`. Build it with `Ostbc.alamouti()` or
+/// :math:`\sigma^2 / (c^2 \lVert \mathbf{H} \rVert_F^2)`, a diversity of
+/// :math:`n_{\mathrm{tx}} \cdot n_{\mathrm{rx}}`. Build it with `Ostbc.alamouti()` or
 /// `Ostbc.rate_3_4(n_tx)`.
 ///
 /// Examples:
@@ -496,11 +505,11 @@ impl PyOstbc {
     }
 }
 
-/// Water-filling powers of parallel channels: `p_i = (μ - 1/g_i)⁺` with `Σ p_i` the
-/// total power.
+/// Water-filling powers of parallel channels: :math:`p_i = (\mu - 1/g_i)^+` with
+/// :math:`\sum_i p_i` the total power.
 ///
 /// Args:
-///     gains (array_like): the gains `g_i` (SNR per unit power).
+///     gains (array_like): the gains :math:`g_i` (SNR per unit power).
 ///     total_power (float): the total power.
 ///
 /// Returns:
@@ -523,8 +532,14 @@ fn water_filling_powers<'py>(
 }
 
 /// Capacity of MIMO channel realisations (bits per channel use) at the SNR
-/// `ρ = P/σ²`: `log2 det(I + ρ/n_tx H Hᴴ)` with equal power, or water-filling on the
-/// eigenmodes.
+/// :math:`\rho = P/\sigma^2`:
+///
+/// .. math::
+///
+///     \log_2 \det\left(\mathbf{I} + \frac{\rho}{n_{\mathrm{tx}}}
+///     \mathbf{H}\mathbf{H}^{\mathsf{H}}\right)
+///
+/// with equal power, or water-filling on the eigenmodes.
 ///
 /// Args:
 ///     h (array_like): `(n, n_rx, n_tx)`, one matrix per realisation (one matrix
@@ -604,8 +619,9 @@ fn theory_outage_probability(n_rx: usize, n_tx: usize, snr_db: &Bound<'_, PyAny>
     crate::map_real(snr_db, |s| capacity::outage_rayleigh(n_rx, n_tx, comnum::math::db2lin(s), rate).py())
 }
 
-/// The ε-capacity (bits per channel use): the rate of outage probability `eps` over a
-/// Rayleigh channel drawn once, one antenna on one side (Telatar 1999, eqs. (17), (18)).
+/// The :math:`\epsilon`-capacity (bits per channel use): the rate of outage probability `eps`
+/// over a Rayleigh channel drawn once, one antenna on one side (Telatar 1999, eqs. (17),
+/// (18)).
 ///
 /// Args:
 ///     n_rx (int): receive antennas.
@@ -623,9 +639,9 @@ fn theory_outage_capacity(n_rx: usize, n_tx: usize, snr_db: &Bound<'_, PyAny>, e
     crate::map_real(snr_db, |s| capacity::outage_capacity_rayleigh(n_rx, n_tx, comnum::math::db2lin(s), eps).py())
 }
 
-/// Eigenmode (SVD) transmission over `h`: precoder `V P^(1/2)`, receive filter `Uᴴ`,
-/// gains and powers of the active modes (water-filling of `total_power` against
-/// `noise_var`, or equal power).
+/// Eigenmode (SVD) transmission over `h`: precoder :math:`\mathbf{V}\mathbf{P}^{1/2}`, receive
+/// filter :math:`\mathbf{U}^{\mathsf{H}}`, gains and powers of the active modes (water-filling
+/// of `total_power` against `noise_var`, or equal power).
 ///
 /// Args:
 ///     h (array_like): one channel `(n_rx, n_tx)`.
@@ -660,14 +676,20 @@ fn eigenmode<'py>(
     Ok(d)
 }
 
-/// The (regularised) zero-forcing precoder `Hᴴ(H Hᴴ + αI)⁻¹` of the users of the rows
-/// of `h`, scaled to `total_power` (`α = 0` for zero forcing, `K σ²/P` for the
-/// regularised version).
+/// The (regularised) zero-forcing precoder of the users of the rows of `h`, scaled to
+/// `total_power`:
+///
+/// .. math::
+///
+///     \mathbf{H}^{\mathsf{H}} (\mathbf{H}\mathbf{H}^{\mathsf{H}} + \alpha \mathbf{I})^{-1}
+///
+/// with :math:`\alpha = 0` for zero forcing, :math:`K \sigma^2 / P` for the regularised
+/// version.
 ///
 /// Args:
 ///     h (array_like): the channel `(n_users, n_tx)`.
 ///     total_power (float): the total transmit power.
-///     alpha (float): the regularisation `α`.
+///     alpha (float): the regularisation :math:`\alpha`.
 ///
 /// Returns:
 ///     numpy.ndarray: the precoder `(n_tx, n_users)` (complex128).

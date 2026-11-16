@@ -189,7 +189,7 @@ f = np.linspace(-0.5, 0.5, 2001)
 fig, ax = plt.subplots(figsize=(6.4, 3.4))
 for (name, taps), color in zip(list(filters.items())[1:], [CRIMSON, BLUE, TEAL], strict=True):
     resp = np.exp(-2j * np.pi * np.outer(f, np.arange(taps.size) - taps.size // 2)) @ taps
-    ax.plot(f, 20 * np.log10(np.abs(resp)), color=color, label=name)
+    ax.plot(f, comnum.amp2db(np.abs(resp)), color=color, label=name)
 for s in (-1, 1):
     ax.axvline(s * band / FS1, color=GREY, linewidth=0.8, linestyle=":")
 ax.set(xlabel="frequency / $f_s$", ylabel="$|H|$ (dB)")

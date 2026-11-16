@@ -38,7 +38,7 @@ from comnum.plot import BACKGROUND, GREY, SERIES
 rng = comnum.Rng(3)
 n0 = 0.5
 w = rng.complex_noise(200_000, n0)
-print(f"power           {np.mean(np.abs(w) ** 2):.4f}   (N0 = {n0})")
+print(f"power           {comnum.power(w):.4f}   (N0 = {n0})")
 print(f"real part       {np.var(w.real):.4f}   (N0/2 = {n0 / 2})")
 print(f"imaginary part  {np.var(w.imag):.4f}")
 print(f"correlation     {np.mean(w.real * w.imag):+.4f}")
@@ -99,7 +99,7 @@ fig.tight_layout()
 # a factor 2, 10 dB a factor 10.
 for kind, m in [("psk", 2), ("psk", 4), ("qam", 16), ("qam", 64)]:
     k = comnum.Constellation(kind, m).bits_per_symbol
-    print(f"{m:>3}-{kind.upper()}: Eb/N0 = 6 dB  ->  Es/N0 = {6 + 10 * np.log10(k):5.2f} dB")
+    print(f"{m:>3}-{kind.upper()}: Eb/N0 = 6 dB  ->  Es/N0 = {6 + comnum.lin2db(k):5.2f} dB")
 
 # %%
 # Setting the noise for an Eb/N0
@@ -125,8 +125,8 @@ by_call = comnum.awgn_ebn0(x, ebn0_db, k, rng)
 
 for name, y in [("by hand", by_hand), ("awgn_ebn0", by_call)]:
     measured = 1.0 / comnum.evm(y, qam16, tx=x)  # the EVM is noise power over signal power
-    print(f"{name:>10}: Es/N0 = {10 * np.log10(measured):.2f} dB")
-print(f"  expected: Es/N0 = {ebn0_db + 10 * np.log10(k):.2f} dB")
+    print(f"{name:>10}: Es/N0 = {comnum.lin2db(measured):.2f} dB")
+print(f"  expected: Es/N0 = {ebn0_db + comnum.lin2db(k):.2f} dB")
 
 # %%
 # What it looks like

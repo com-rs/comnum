@@ -4,14 +4,14 @@
 use super::*;
 
 /// Capacity of the binary-input AWGN channel for a code rate (the noise variance is
-/// `1/(2 R Eb/N0)`).
+/// :math:`1/(2 R E_b/N_0)`).
 ///
 /// Args:
-///     ebn0_db (float | array_like): `Eb/N0` (dB).
-///     rate (float): the code rate `R`.
+///     ebn0_db (float | array_like): :math:`E_b/N_0` (dB).
+///     rate (float): the code rate :math:`R`.
 ///
 /// Returns:
-///     float | numpy.ndarray: the capacity (bits per channel use) at every `Eb/N0`.
+///     float | numpy.ndarray: the capacity (bits per channel use) at every :math:`E_b/N_0`.
 ///
 /// Raises:
 ///     ValueError: for values that are not real numbers.
@@ -25,16 +25,16 @@ fn theory_biawgn_capacity(ebn0_db: &Bound<'_, PyAny>, rate: f64) -> PyResult<Py<
     map_real(ebn0_db, |e| Ok(bounds::biawgn_capacity(bounds::bpsk_noise_variance(e, rate))))
 }
 
-/// The normal approximation of the smallest block error probability of an `(n, k)`
+/// The normal approximation of the smallest block error probability of an :math:`(n, k)`
 /// binary code over BPSK and AWGN (Polyanskiy, Poor & Verdú 2010).
 ///
 /// Args:
 ///     n (int): block length.
 ///     k (int): information bits.
-///     ebn0_db (float | array_like): `Eb/N0` (dB).
+///     ebn0_db (float | array_like): :math:`E_b/N_0` (dB).
 ///
 /// Returns:
-///     float | numpy.ndarray: the block error probability at every `Eb/N0`.
+///     float | numpy.ndarray: the block error probability at every :math:`E_b/N_0`.
 ///
 /// Raises:
 ///     ValueError: for values that are not real numbers.
@@ -49,10 +49,10 @@ fn theory_normal_approximation(n: usize, k: usize, ebn0_db: &Bound<'_, PyAny>) -
     map_real(ebn0_db, |e| Ok(bounds::normal_approximation(n, k, e)))
 }
 
-/// The smallest `Eb/N0` at which BPSK supports a code rate.
+/// The smallest :math:`E_b/N_0` at which BPSK supports a code rate.
 ///
 /// Args:
-///     rate (float | array_like): the code rate `R`.
+///     rate (float | array_like): the code rate :math:`R`.
 ///
 /// Returns:
 ///     float | numpy.ndarray: the limit (dB).
@@ -69,15 +69,19 @@ fn theory_shannon_limit_ebn0_db(rate: &Bound<'_, PyAny>) -> PyResult<Py<PyAny>> 
     map_real(rate, |r| Ok(bounds::shannon_limit_ebn0_db(r)))
 }
 
-/// The noise variance per dimension of BPSK at `E_b/N_0` for a code of rate `rate`:
-/// `σ² = 1 / (2 R E_b/N_0)` (unit-energy symbols).
+/// The noise variance per dimension of BPSK at :math:`E_b/N_0` for a code of rate `rate`
+/// (unit-energy symbols):
+///
+/// .. math::
+///
+///     \sigma^2 = \frac{1}{2 R E_b/N_0}.
 ///
 /// Args:
-///     ebn0_db (float | array_like): `E_b/N_0` (dB).
-///     rate (float): the code rate.
+///     ebn0_db (float | array_like): :math:`E_b/N_0` (dB).
+///     rate (float): the code rate :math:`R`.
 ///
 /// Returns:
-///     float | numpy.ndarray: `σ²` at every `E_b/N_0`.
+///     float | numpy.ndarray: :math:`\sigma^2` at every :math:`E_b/N_0`.
 ///
 /// Raises:
 ///     ValueError: for values that are not real numbers.
@@ -91,13 +95,13 @@ fn bpsk_noise_variance(ebn0_db: &Bound<'_, PyAny>, rate: f64) -> PyResult<Py<PyA
     map_real(ebn0_db, |e| Ok(bounds::bpsk_noise_variance(e, rate)))
 }
 
-/// The LLRs of BPSK (`0 ↦ +1`, `1 ↦ -1`) received in real Gaussian noise of variance
-/// `noise_var` per dimension: `2y/σ²` (positive for a 0, as every decoder of the package
-/// expects).
+/// The LLRs of BPSK (:math:`0 \mapsto +1`, :math:`1 \mapsto -1`) received in real Gaussian
+/// noise of variance `noise_var` per dimension: :math:`2y/\sigma^2` (positive for a 0, as
+/// every decoder of the package expects).
 ///
 /// Args:
 ///     y (array_like): the received real samples.
-///     noise_var (float): the noise variance per dimension `σ²`.
+///     noise_var (float): the noise variance per dimension :math:`\sigma^2`.
 ///
 /// Returns:
 ///     numpy.ndarray: one LLR per sample (float64).

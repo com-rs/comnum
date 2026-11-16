@@ -92,7 +92,7 @@ impl PyRng {
         self.inner.next_u64()
     }
 
-    /// Uniform draws in `[0, 1)`.
+    /// Uniform draws in :math:`[0, 1)`.
     ///
     /// Args:
     ///     n (int): number of draws.
@@ -124,7 +124,7 @@ impl PyRng {
 
     /// Gamma draws of shape `shape` and unit scale (mean `shape`), by the method of
     /// Marsaglia and Tsang: the power of a Nakagami-m fading of unit mean is
-    /// `gamma(m) / m`.
+    /// :math:`\mathrm{gamma}(m) / m`.
     ///
     /// Args:
     ///     shape (float): the shape, positive.
@@ -149,11 +149,11 @@ impl PyRng {
         Ok(farr(py, (0..n).map(|_| self.inner.gamma(shape)).collect()))
     }
 
-    /// Circular complex Gaussian draws of variance `noise_var` (`E|w|² = noise_var`).
+    /// Circular complex Gaussian draws of variance `noise_var` (:math:`\mathbb{E}|w|^2 =` `noise_var`).
     ///
     /// Args:
     ///     n (int): number of draws.
-    ///     noise_var (float): the variance `E|w|²`.
+    ///     noise_var (float): the variance :math:`\mathbb{E}|w|^2`.
     ///
     /// Returns:
     ///     numpy.ndarray: `n` values (complex128).
@@ -166,7 +166,7 @@ impl PyRng {
         Ok(carr(py, self.inner.complex_noise(n, noise_var)))
     }
 
-    /// Uniform integers in `[0, high)`.
+    /// Uniform integers in :math:`[0, \mathtt{high})`.
     ///
     /// Args:
     ///     high (int): the exclusive upper bound (positive).

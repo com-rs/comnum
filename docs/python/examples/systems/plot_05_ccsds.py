@@ -32,7 +32,7 @@ from comnum.plot import BACKGROUND, BLUE, RUST, TEAL
 # Frame error rates: the information bits are random, the decoders run 50 iterations of
 # belief propagation (LDPC) or 8 of log-MAP (turbo), 400 frames per point at most and
 # stop after 40 frame errors.
-rng, noise = comnum.Rng(131), np.random.default_rng(131)
+rng = comnum.Rng(131)
 
 
 def fer(code, ebn0_db, frames=400, max_errors=40):
@@ -43,7 +43,7 @@ def fer(code, ebn0_db, frames=400, max_errors=40):
         errors = sent = 0
         while sent < frames and errors < max_errors:
             b = comnum.bits(code.k, rng)
-            y = 1.0 - 2.0 * code.encode(b) + np.sqrt(noise_var) * noise.normal(size=code.n)
+            y = 1.0 - 2.0 * code.encode(b) + np.sqrt(noise_var) * rng.gaussian(code.n)
             errors += int(np.any(code.decode(comnum.bpsk_llr(y, noise_var)) != b))
             sent += 1
         out.append(errors / sent if errors else np.nan)

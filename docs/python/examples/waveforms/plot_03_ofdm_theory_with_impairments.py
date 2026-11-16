@@ -57,12 +57,12 @@ c16 = comnum.Constellation("qam", 16).normalized()
 
 def simulate_16qam(ebn0_db, rho, n=150_000):
     idx = rng.integers(16, n)
-    h = rng.complex_noise(n, 1.0)
+    h = comnum.Fading("rayleigh").gains(n, rng)
     hh = rho * h + rng.complex_noise(n, 1.0 - rho**2)
     n0 = 1 / (4 * comnum.db2lin(ebn0_db))
     y = h * c16.points[idx] + rng.complex_noise(n, n0)
     dec = c16.demap_bits(y / hh)
-    return np.mean(dec != comnum.unpack_symbols(idx.astype(np.uint16), 4)[: 4 * n])
+    return comnum.ber(dec, comnum.unpack_symbols(idx.astype(np.uint16), 4)[: 4 * n])
 
 
 ebn0 = np.arange(0.0, 51.0, 2.0)

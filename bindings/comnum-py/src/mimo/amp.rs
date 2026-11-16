@@ -26,7 +26,7 @@ fn steps<'py>(py: Python<'py>, se: &[mp::StateEvolutionStep]) -> PyResult<Bound<
 ///     h (array_like): the channel `(n_rx, n_tx)`.
 ///     y (array_like): the received vector `(n_rx,)`.
 ///     constellation (Constellation): the alphabet of every stream.
-///     noise_var (float): noise variance per receive antenna `E|w_i|²`.
+///     noise_var (float): noise variance per receive antenna :math:`\mathbb{E}|w_i|^2`.
 ///     method (str): `"amp"` (LAMA) or `"oamp"`.
 ///     iterations (int): iterations.
 ///     linear (str): the linear estimator of OAMP, `"lmmse"`, `"pinv"` or `"mf"`.
@@ -105,9 +105,9 @@ pub(super) fn message_passing<'py>(
 ///
 /// Args:
 ///     constellation (Constellation): the alphabet of every stream.
-///     beta (float): the system ratio `n_tx / n_rx`.
+///     beta (float): the system ratio :math:`n_{\mathrm{tx}} / n_{\mathrm{rx}}`.
 ///     noise_var (float): noise variance per receive antenna, relative to columns of unit
-///         norm (`β Es / SNR`).
+///         norm (:math:`\beta E_s / \mathrm{SNR}`).
 ///     iterations (int): iterations.
 ///     px (array_like, optional): prior probabilities of the points (uniform by default).
 ///     real (bool): a real model.
@@ -191,7 +191,7 @@ pub(super) fn amp_thresholds<'py>(
 ///     real (bool): a real model.
 ///
 /// Returns:
-///     dict: ``noise_var`` (`τ²` of every iteration) and ``mse``.
+///     dict: ``noise_var`` (:math:`\tau^2` of every iteration) and ``mse``.
 ///
 /// Raises:
 ///     ValueError: for an invalid parameter or input (the message names it).

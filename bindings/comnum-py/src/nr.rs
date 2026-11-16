@@ -9,12 +9,13 @@ use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
 
-/// The numerology `mu` of NR (the subcarrier spacing `2^mu · 15` kHz; `mu = 0` is also
-/// the numerology of LTE).
+/// The numerology `mu` of NR (the subcarrier spacing :math:`2^{\mu} \times 15` kHz;
+/// :math:`\mu = 0` is also the numerology of LTE).
 ///
 /// Args:
 ///     mu (int): 0 to 4.
-///     extended_cp (bool): the extended cyclic prefix (`mu = 2`, or LTE with `mu = 0`).
+///     extended_cp (bool): the extended cyclic prefix (:math:`\mu = 2`, or LTE with
+///         :math:`\mu = 0`).
 ///     n_fft (int): the FFT size of the sampling rate and the prefixes (a multiple of
 ///         128).
 ///
@@ -45,20 +46,21 @@ fn nr_numerology(py: Python<'_>, mu: u32, extended_cp: bool, n_fft: usize) -> Py
     Ok(d)
 }
 
-/// OFDM-modulate a grid of NR: the subcarrier `k` at the frequency `(k - K/2) Δf`, the
-/// cyclic prefixes of the numerology (the first symbol of every half subframe longer),
-/// the IFFT scaled by `1/√K` (unit mean power for unit-energy symbols).
+/// OFDM-modulate a grid of NR: the subcarrier :math:`k` at the frequency
+/// :math:`(k - K/2) \, \Delta f`, the cyclic prefixes of the numerology (the first symbol of
+/// every half subframe longer), the IFFT scaled by :math:`1/\sqrt{K}` (unit mean power for
+/// unit-energy symbols).
 ///
 /// Args:
-///     grid (array_like): the grid, shape `(K, L)` (subcarriers × OFDM symbols), `K`
-///         even (`12 N_RB`).
+///     grid (array_like): the grid, shape `(K, L)` (subcarriers × OFDM symbols), :math:`K`
+///         even (:math:`12 N_{\mathrm{RB}}`).
 ///     mu (int): the numerology.
-///     n_fft (int): the FFT size (a multiple of 128, at least `K`).
+///     n_fft (int): the FFT size (a multiple of 128, at least :math:`K`).
 ///     extended_cp (bool): the extended cyclic prefix.
 ///     first_symbol (int): the index in the subframe of the first symbol of the grid.
 ///
 /// Returns:
-///     numpy.ndarray: the samples at `n_fft · Δf` (complex128).
+///     numpy.ndarray: the samples at :math:`n_{\mathrm{fft}} \, \Delta f` (complex128).
 ///
 /// Raises:
 ///     ValueError: for an invalid parameter or input (the message names it).
@@ -78,14 +80,14 @@ fn nr_ofdm_modulate<'py>(
     Ok(carr(py, carrier.modulate(&g).py()?))
 }
 
-/// The NR primary synchronisation signal of `N_ID2` (TS 38.211, Sec. 7.4.2.2): the BPSK
-/// m-sequence of length 127.
+/// The NR primary synchronisation signal of :math:`N_{\mathrm{ID}}^{(2)}` (TS 38.211, Sec.
+/// 7.4.2.2): the BPSK m-sequence of length 127.
 ///
 /// Args:
 ///     n_id2 (int): 0, 1 or 2.
 ///
 /// Returns:
-///     numpy.ndarray: 127 values ±1 (float64).
+///     numpy.ndarray: 127 values :math:`\pm 1` (float64).
 ///
 /// Raises:
 ///     ValueError: for an invalid parameter (the message names it).
@@ -94,15 +96,16 @@ fn nr_pss(py: Python<'_>, n_id2: u32) -> PyResult<FArr<'_>> {
     Ok(farr(py, nr::pss(n_id2).py()?))
 }
 
-/// The NR secondary synchronisation signal of `(N_ID1, N_ID2)` (TS 38.211, Sec.
-/// 7.4.2.3): the BPSK Gold sequence of length 127.
+/// The NR secondary synchronisation signal of
+/// :math:`(N_{\mathrm{ID}}^{(1)}, N_{\mathrm{ID}}^{(2)})` (TS 38.211, Sec. 7.4.2.3): the BPSK
+/// Gold sequence of length 127.
 ///
 /// Args:
 ///     n_id1 (int): 0 to 335.
 ///     n_id2 (int): 0, 1 or 2.
 ///
 /// Returns:
-///     numpy.ndarray: 127 values ±1 (float64).
+///     numpy.ndarray: 127 values :math:`\pm 1` (float64).
 ///
 /// Raises:
 ///     ValueError: for an invalid parameter (the message names it).
@@ -115,7 +118,7 @@ fn nr_sss(py: Python<'_>, n_id1: u32, n_id2: u32) -> PyResult<FArr<'_>> {
 ///
 /// Args:
 ///     n_cell_id (int): the cell identity, 0 to 1007.
-///     i_ssb_bar (int): the SSB index `ī_SSB`, 0 to 7.
+///     i_ssb_bar (int): the SSB index :math:`\bar{i}_{\mathrm{SSB}}`, 0 to 7.
 ///
 /// Returns:
 ///     numpy.ndarray: the values (complex128), in the order of their mapping.
@@ -128,7 +131,7 @@ fn nr_pbch_dmrs(py: Python<'_>, n_cell_id: u32, i_ssb_bar: u32) -> PyResult<CArr
     Ok(carr(py, nr::pbch_dmrs(n_cell_id, i_ssb_bar).py()?))
 }
 
-/// The resource elements of one kind in the SSB, as `(k, l)` pairs (subcarrier, symbol)
+/// The resource elements of one kind in the SSB, as :math:`(k, l)` pairs (subcarrier, symbol)
 /// in the order of the mapping, frequency first: ``grid[idx[:, 0], idx[:, 1]]`` reads them
 /// in a `(240, 4)` grid.
 ///
@@ -137,7 +140,7 @@ fn nr_pbch_dmrs(py: Python<'_>, n_cell_id: u32, i_ssb_bar: u32) -> PyResult<CArr
 ///     kind (str): ``"pss"``, ``"sss"``, ``"pbch"`` or ``"pbch_dmrs"``.
 ///
 /// Returns:
-///     numpy.ndarray: the pairs `(k, l)`, `(n, 2)` (int64).
+///     numpy.ndarray: the pairs :math:`(k, l)`, `(n, 2)` (int64).
 ///
 /// Raises:
 ///     ValueError: for an invalid parameter (the message names it).
@@ -163,7 +166,7 @@ fn pairs(py: Python<'_>, kl: impl IntoIterator<Item = (usize, usize)>) -> PyResu
 ///
 /// Args:
 ///     n_cell_id (int): the cell identity, 0 to 1007.
-///     i_ssb_bar (int): the SSB index `ī_SSB`, 0 to 7.
+///     i_ssb_bar (int): the SSB index :math:`\bar{i}_{\mathrm{SSB}}`, 0 to 7.
 ///     pbch (array_like | None): the 432 PBCH symbols (zeros when None).
 ///
 /// Returns:
@@ -212,14 +215,14 @@ fn nr_detect_cell_id(grid: &Bound<'_, PyAny>) -> PyResult<(u32, f64, f64)> {
 ///     n_rb (int): the resource blocks of the grid (from common resource block 0).
 ///     config_type (int): 1 (one subcarrier in two) or 2 (two in six).
 ///     type_a_position (int): the first DMRS symbol, 2 or 3.
-///     additional_position (int): 0 to 3: the symbols `{l0}`, `{l0, 11}`,
-///         `{l0, 7, 11}`, `{l0, 5, 8, 11}`.
+///     additional_position (int): 0 to 3: the symbols :math:`\{l_0\}`, :math:`\{l_0, 11\}`,
+///         :math:`\{l_0, 7, 11\}`, :math:`\{l_0, 5, 8, 11\}`.
 ///     n_id (int): the scrambling identity.
 ///     slot (int): the slot in the frame.
 ///
 /// Returns:
 ///     dict: ``symbols`` (the DMRS symbols), ``subcarriers``, ``values`` (shape
-///     `(len(subcarriers), len(symbols))`, complex128) and ``indices`` (the `(k, l)`
+///     `(len(subcarriers), len(symbols))`, complex128) and ``indices`` (the :math:`(k, l)`
 ///     pairs of the DMRS in the `(12 n_rb, 14)` grid, frequency first, `(n, 2)`).
 ///
 /// Raises:

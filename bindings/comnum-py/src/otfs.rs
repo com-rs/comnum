@@ -11,13 +11,13 @@ use numpy::{IntoPyArray, PyArray2};
 use pyo3::prelude::*;
 
 /// Orthogonal time frequency space (Raviteja et al. 2019) with rectangular pulses: the
-/// symbols of the `n_fft × n_symbols` delay–Doppler grid (`x[n * M + m]`, delay `m`,
-/// Doppler `n`) through the ISFFT and the Heisenberg transform, one cyclic prefix per
+/// symbols of the :math:`M \times N` delay–Doppler grid (`x[n * M + m]`, delay :math:`m`,
+/// Doppler :math:`n`) through the ISFFT and the Heisenberg transform, one cyclic prefix per
 /// frame.
 ///
 /// Args:
-///     n_fft (int): delay bins `M` (subcarriers).
-///     n_symbols (int): Doppler bins `N` (symbols of a frame).
+///     n_fft (int): delay bins :math:`M` (subcarriers).
+///     n_symbols (int): Doppler bins :math:`N` (symbols of a frame).
 ///     n_cp (int): the cyclic prefix of a frame (samples).
 ///
 /// Raises:
@@ -45,13 +45,13 @@ impl PyOtfs {
         Ok(PyOtfs { inner })
     }
 
-    /// int: Delay bins `M`.
+    /// int: Delay bins :math:`M`.
     #[getter]
     fn n_fft(&self) -> usize {
         self.inner.n_fft
     }
 
-    /// int: Doppler bins `N`.
+    /// int: Doppler bins :math:`N`.
     #[getter]
     fn n_symbols(&self) -> usize {
         self.inner.n_symbols
@@ -63,13 +63,13 @@ impl PyOtfs {
         self.inner.n_cp
     }
 
-    /// int: Samples per frame, `MN` plus the prefix.
+    /// int: Samples per frame, :math:`MN` plus the prefix.
     #[getter]
     fn block_len(&self) -> usize {
         self.inner.block_len()
     }
 
-    /// Modulate whole frames of `MN` delay–Doppler symbols.
+    /// Modulate whole frames of :math:`MN` delay–Doppler symbols.
     ///
     /// Args:
     ///     x (array_like): the symbols, `x[n * M + m]` frame after frame.
@@ -97,13 +97,13 @@ impl PyOtfs {
         Ok(carr(py, self.inner.demodulate(&cvec(r)?).py()?))
     }
 
-    /// The effective `MN × MN` delay–Doppler channel of paths (Raviteja et al. 2019,
+    /// The effective :math:`MN \times MN` delay–Doppler channel of paths (Raviteja et al. 2019,
     /// Theorem 1, eq. (12)), the prefix phase included.
     ///
     /// Args:
     ///     paths (list[tuple[complex, int, float]]): `(gain, delay in samples, Doppler
     ///         in Hz)`, as `delay_doppler_paths` draws them; the Doppler shifts must be
-    ///         whole bins `ν M N / fs`.
+    ///         whole bins :math:`\nu M N / f_s`.
     ///     fs (float): the sampling rate (Hz).
     ///
     /// Returns:
@@ -129,8 +129,9 @@ impl PyOtfs {
 }
 
 /// One realisation of a delay–Doppler channel: one path per tap of a power-delay
-/// profile, with a Rayleigh gain and a Doppler shift `ν_max cos θ`, `θ` uniform on
-/// `[-π, π)` (`DelayDopplerModel` of `comnum_channel::multipath`).
+/// profile, with a Rayleigh gain and a Doppler shift :math:`\nu_{\max} \cos\theta`,
+/// :math:`\theta` uniform on :math:`[-\pi, \pi)` (`DelayDopplerModel` of
+/// `comnum_channel::multipath`).
 ///
 /// Args:
 ///     profile (str | array_like): a profile name (as `power_delay_profile`) or taps

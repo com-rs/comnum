@@ -48,7 +48,7 @@ for bits in bits_range:
         x = a * np.exp(2j * np.pi * f * n)
         y = comnum.adc(x, int(bits), full_scale=1.0)
         c = np.mean(y * np.exp(-2j * np.pi * f * n))
-        noise += np.mean(np.abs(y - c * np.exp(2j * np.pi * f * n)) ** 2) / a**2
+        noise += comnum.power(y - c * np.exp(2j * np.pi * f * n)) / a**2
     measured.append(comnum.lin2db(8 / noise))
 
 fig, ax = plt.subplots()
@@ -73,9 +73,7 @@ fig, ax = plt.subplots()
 for bits, marker in zip([3, 5, 8], ["o", "s", "D"], strict=True):
     theory = [comnum.theory_quantization_mse(bits, lam) for lam in loadings]
     (line,) = ax.semilogy(loadings, theory, label=f"{bits} bits, exact")
-    sim = [
-        np.mean(np.abs(comnum.adc(x, bits, full_scale=lam) - x) ** 2) / 2 for lam in loadings[::3]
-    ]
+    sim = [comnum.power(comnum.adc(x, bits, full_scale=lam) - x) / 2 for lam in loadings[::3]]
     ax.semilogy(loadings[::3], sim, marker, color=line.get_color(), markeredgecolor=BACKGROUND,
                 label=f"{bits} bits, comnum.adc")  # fmt: skip
     best = comnum.optimal_loading(bits)
@@ -115,7 +113,7 @@ for jitter, marker in zip([25e-15, 100e-15, 400e-15], ["o", "s", "D"], strict=Tr
         tone = np.exp(2j * np.pi * cycles / n * np.arange(n))
         y = comnum.adc(tone, 14, fs=fs, full_scale=1.05, jitter_s=jitter, rng=rng)
         c = np.mean(y * np.conj(tone))
-        snr.append(comnum.lin2db(abs(c) ** 2 / np.mean(np.abs(y - c * tone) ** 2)))
+        snr.append(comnum.lin2db(abs(c) ** 2 / comnum.power(y - c * tone)))
     ax.semilogx(freqs, snr, marker, color=line.get_color(), markeredgecolor=BACKGROUND)
 ax.axhline(comnum.theory_sqnr_sine_db(14), color=GREY, linestyle=":", linewidth=1.2,
            label="14-bit quantisation")  # fmt: skip
@@ -138,16 +136,15 @@ fig, ax = plt.subplots()
 for bits, marker in zip([3, 4, 5, None], ["o", "s", "D", "^"], strict=True):
     ber = []
     for snr in snrs:
-        s2 = 1 / comnum.db2lin(snr)
         errors = total = 0
         for _ in range(30):
-            b = rng.integers(2, 256 * 4).astype(np.uint8)
+            b = comnum.bits(256 * 4, rng)
             x = np.fft.ifft(c16.map_bits(b)) * np.sqrt(256)
-            y = x + rng.complex_noise(256, s2)
+            y = comnum.awgn(x, snr, rng)
             if bits is not None:
                 y = comnum.adc(y, bits)
             d = c16.demap_bits(np.fft.fft(y) / np.sqrt(256))
-            errors += int(np.sum(d != b))
+            errors += round(comnum.ber(d, b) * b.size)
             total += b.size
         ber.append(errors / total)
     ber = np.array(ber)
@@ -194,10 +191,10 @@ for cycles in [10, 300, 700, 1100, 1500, 1900, 2040]:
     y = comnum.dac(tone, 16, full_scale=1.05, hold=hold)
     c = np.mean(y * np.exp(-2j * np.pi * f / hold * np.arange(y.size)))
     measured_f.append(f)
-    measured_g.append(20 * np.log10(abs(c)))
+    measured_g.append(comnum.amp2db(abs(c)))
 fig, ax = plt.subplots()
 ax.plot(
-    fr, [20 * np.log10(comnum.zero_order_hold_gain(f, 1.0, hold)) for f in fr], label="closed form"
+    fr, [comnum.amp2db(comnum.zero_order_hold_gain(f, 1.0, hold)) for f in fr], label="closed form"
 )
 ax.plot(measured_f, measured_g, "o", markeredgecolor=BACKGROUND, label="comnum.dac")
 ax.set(
