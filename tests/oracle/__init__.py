@@ -22,12 +22,14 @@ variable ``CI`` set, as GitHub Actions sets it): a deleted fixture must not turn
 tests into skips there (:func:`missing`).
 
 The outputs of a program are not covered by its licence: the fixtures are results of
-OptiCommPy (GPL-3.0), GNPy (BSD-3-Clause) and py3gpp (AGPL-3.0), not their code nor their
-data files.
+OptiCommPy (GPL-3.0), GNPy (BSD-3-Clause), py3gpp (AGPL-3.0), SciPy (BSD-3-Clause) and
+liquid-dsp (MIT), not their code nor their data files.
 """
 
 from __future__ import annotations
 
+import ctypes
+import ctypes.util
 import datetime
 import io
 import json
@@ -35,6 +37,7 @@ import os
 import platform
 import zipfile
 from collections.abc import Callable
+from functools import cache
 from pathlib import Path
 from typing import Any, NoReturn
 
@@ -43,12 +46,15 @@ import numpy as np
 DIR = Path(__file__).parent
 RECORD = os.environ.get("COMNUM_RECORD_ORACLE", "") not in ("", "0")
 INLINE = 64  # arrays of at most this many values stay in the JSON document
-DISTRIBUTIONS = {
+# the distribution of every tool (several: the first installed gives the version)
+DISTRIBUTIONS: dict[str, str | tuple[str, ...]] = {
     "OptiCommPy": "OptiCommPy",
     "GNPy": "gnpy",
     "py3gpp": "py3gpp",
-    "Sionna": "sionna",
+    "Sionna": ("sionna", "sionna-no-rt"),  # the package without ray tracing is enough
     "pyais": "pyais",
+    "SciPy": "scipy",
+    "liquid-dsp": "",  # a C library: its version is that of the shared library
 }
 # a fixed timestamp for the entries of the archive: `np.savez` would stamp the time
 STAMP = (1980, 1, 1, 0, 0, 0)
@@ -100,14 +106,12 @@ def recorded(name: str) -> Any:
 
 
 def _record(name: str, path: Path, value: Any, tool: str) -> None:
-    from importlib.metadata import version
-
     arrays: dict[str, np.ndarray] = {}
     data = _encode(value, "data", arrays)
     doc: dict[str, Any] = {
         "name": name,
         "tool": tool,
-        "version": version(DISTRIBUTIONS[tool]),
+        "version": _version(tool),
         "python": platform.python_version(),
         "numpy": np.__version__,
         "data": data,
@@ -126,6 +130,21 @@ def _record(name: str, path: Path, value: Any, tool: str) -> None:
             npz.write_bytes(blob)
     elif npz.exists():
         npz.unlink()
+
+
+def _version(tool: str) -> str:
+    """The version of the installed distribution of ``tool``."""
+    from importlib.metadata import PackageNotFoundError, version
+
+    if tool == "liquid-dsp":
+        return liquid_library().liquid_libversion().decode()
+    names = DISTRIBUTIONS[tool]
+    for name in (names,) if isinstance(names, str) else names:
+        try:
+            return version(name)
+        except PackageNotFoundError:
+            continue
+    raise PackageNotFoundError(f"{tool}: none of {names} is installed")
 
 
 def _date(path: Path, npz: Path, doc: dict, arrays: dict) -> str:
@@ -241,3 +260,32 @@ def _decode(value: Any, arrays: Any) -> Any:
     if "__tuple__" in value:
         return tuple(_decode(v, arrays) for v in value["__tuple__"])
     return {k: _decode(v, arrays) for k, v in value.items()}
+
+
+# ------------------------------------------------------------------------- tools
+
+
+@cache
+def liquid_library() -> ctypes.CDLL:
+    """liquid-dsp (MIT, <https://liquidsdr.org>), the C library of software radio, loaded
+    with ``ctypes`` to record its outputs (``test_liquid_fsk.py``), with the signatures of
+    the functions the recordings call. It is found by ``ctypes.util.find_library`` or in
+    the prefix of Homebrew (``brew install liquid-dsp``), and needed only to record."""
+    path = ctypes.util.find_library("liquid")
+    if path is None:
+        for prefix in ("/opt/homebrew/lib", "/usr/local/lib"):
+            if (Path(prefix) / "libliquid.dylib").exists():
+                path = str(Path(prefix) / "libliquid.dylib")
+    if path is None:
+        raise ImportError("liquid-dsp is not installed (brew install liquid-dsp)")
+    lib = ctypes.CDLL(path)
+    lib.liquid_libversion.restype = ctypes.c_char_p
+    for kind in ("fskmod", "fskdem"):
+        create = getattr(lib, f"{kind}_create")
+        create.restype = ctypes.c_void_p
+        create.argtypes = [ctypes.c_uint, ctypes.c_uint, ctypes.c_float]
+        getattr(lib, f"{kind}_destroy").argtypes = [ctypes.c_void_p]
+    lib.fskmod_modulate.argtypes = [ctypes.c_void_p, ctypes.c_uint, ctypes.c_void_p]
+    lib.fskdem_demodulate.argtypes = [ctypes.c_void_p, ctypes.c_void_p]
+    lib.fskdem_demodulate.restype = ctypes.c_uint
+    return lib

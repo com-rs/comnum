@@ -33,7 +33,7 @@
       "maxProperties": 1,
       "additionalProperties": false,
       "properties": {
-        "function": {"type": "string", "pattern": "^comnum\\.[A-Za-z_][A-Za-z0-9_]*$"},
+        "function": {"type": "string", "pattern": "^comnum\\.[A-Za-z_][A-Za-z0-9_]*(\\.[A-Za-z_][A-Za-z0-9_]*)?$"},
         "test": {"type": "string", "pattern": "^validation/tests/[a-z_]+/[a-z0-9_]+\\.rs(::[a-z0-9_]+)?$"},
         "spec": {"type": "string", "pattern": "^specs/validation/[a-z0-9_]+\\.yaml$"}
       }

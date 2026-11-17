@@ -61,7 +61,11 @@ tables of `docs/LITERATURE.md` show, for each entry, the evidence of its cards.
   value `{construct: comnum.FiberParams, args: {...}}` is built by calling the named
   constructor with `args`; `output` picks a field of a returned dictionary or tuple;
   `expected` may be a recorded output of a reference tool, `{oracle: nr_ssb, path: ["0",
-  "pss"]}` (`tests/oracle/<oracle>.json`). Another library can run the same cards by
+  "pss"]}` (`tests/oracle/<oracle>.json`), and an input the signal the tool was given
+  (`x: {oracle: scipy_spectrum, path: [signals, noise]}`). The runner may be a method,
+  `comnum.Scrambler.sequence`, run on the object of the input `self` (`self: {construct:
+  comnum.Scrambler, args: {c_init: 1}}`), or a static method, `comnum.Interleaver.from_name`;
+  `output` may then name an attribute of the returned object (`perm`). Another library can run the same cards by
   mapping the function to its own.
 - `test: validation/tests/<file>.rs::<name>`: a Rust test that only measures. It loads
   the card (`comnum_validation::card::Card::load("<id>")`), records each measured value

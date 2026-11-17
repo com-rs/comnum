@@ -1,0 +1,30 @@
+id: py3gpp_nr_prbs
+title: Gold sequence of 3GPP (TS 38.211, Sec. 5.2.1) against py3gpp
+literature: py3gpp
+evidence: [recording]
+source:
+  kind: tool
+  reference: "py3gpp (AGPL-3.0), nrPRBS, an open reimplementation of the 5G functions of MATLAB; 3GPP TS 38.211, Sec. 5.2.1"
+  locator: "recorded outputs tests/oracle/nr_prbs.json and .npz (tests/oracle/test_scrambling_interleaving_oracle.py: the first 20 000 bits for eight values of c_init)"
+  version: "0.6.0"
+description: >
+  The first 20 000 bits of the pseudo-random sequence c(n) of TS 38.211, Sec. 5.2.1,
+  by comnum.Scrambler(c_init).sequence and by py3gpp's nrPRBS, for c_init = 0 (the
+  second register empty), 1, 0x1234, 20061, 65535, 2^30, 2^31 - 1 (every bit of the
+  register set) and 1 234 567 890. The test compares the eight; the cases are four.
+run:
+  function: comnum.Scrambler.sequence
+tier: ci
+duration: "0.1 s on an Apple M6"
+tolerance: {exact: true}
+findings:
+  - "the eight sequences are the same, bit for bit, over 20 000 bits"
+cases:
+  - inputs: {self: {construct: comnum.Scrambler, args: {c_init: 0}}, n: 20000}
+    expected: {oracle: nr_prbs, path: ["0"]}
+  - inputs: {self: {construct: comnum.Scrambler, args: {c_init: 1}}, n: 20000}
+    expected: {oracle: nr_prbs, path: ["1"]}
+  - inputs: {self: {construct: comnum.Scrambler, args: {c_init: 2147483647}}, n: 20000}
+    expected: {oracle: nr_prbs, path: ["2147483647"]}
+  - inputs: {self: {construct: comnum.Scrambler, args: {c_init: 1234567890}}, n: 20000}
+    expected: {oracle: nr_prbs, path: ["1234567890"]}

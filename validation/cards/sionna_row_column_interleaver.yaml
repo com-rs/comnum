@@ -1,0 +1,28 @@
+id: sionna_row_column_interleaver
+title: Row-column block interleaver against Sionna
+literature: sionna
+evidence: [recording]
+source:
+  kind: tool
+  reference: "Sionna (NVIDIA, Apache-2.0), sionna.phy.fec.interleaving.RowColumnInterleaver"
+  locator: "recorded outputs tests/oracle/sionna_interleaving.json and .npz (tests/oracle/test_scrambling_interleaving_oracle.py: five shapes, 12 to 6144 positions)"
+  version: "2.2.0"
+description: >
+  Sionna's RowColumnInterleaver of depth d on n positions is comnum's
+  Interleaver.block(n / d, d): written row by row into n / d rows of d, read column by
+  column. Compared for (n, d) = (12, 3), (60, 4), (100, 10), (1000, 8), (6144, 64).
+run:
+  function: comnum.Interleaver.block
+output: perm
+tier: ci
+duration: "0.1 s on an Apple M6"
+tolerance: {exact: true}
+findings:
+  - "the five permutations are the same"
+cases:
+  - inputs: {rows: 4, cols: 3}
+    expected: {oracle: sionna_interleaving, path: [row_column, "12_3"]}
+  - inputs: {rows: 10, cols: 10}
+    expected: {oracle: sionna_interleaving, path: [row_column, "100_10"]}
+  - inputs: {rows: 96, cols: 64}
+    expected: {oracle: sionna_interleaving, path: [row_column, "6144_64"]}

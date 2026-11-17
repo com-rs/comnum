@@ -184,10 +184,13 @@
 - theme: Coding and shaping
   name: "Scrambling, interleaving"
   modules: "`comnum_fec::{scrambling, interleaving}`"
-  summary: "balanced sequences, invertible permutations"
+  summary: "py3gpp's nrPRBS and Sionna's scrambler and interleavers, bit for bit"
   evidence:
+    - recording: "py3gpp 0.6, recorded: card [`py3gpp_nr_prbs`](../validation/cards/py3gpp_nr_prbs.yaml) (the Gold sequence of TS 38.211 Sec. 5.2.1, 20 000 bits for eight values of c_init, bit for bit)"
+    - recording: "Sionna 2.2, recorded: cards [`sionna_tb_scrambling`](../validation/cards/sionna_tb_scrambling.yaml) (the scrambling sequences of the PDSCH codewords 0 and 1 and of the PUSCH, four (n_RNTI, n_ID)), [`sionna_lte_interleaver`](../validation/cards/sionna_lte_interleaver.yaml) (the 188 QPP coefficient pairs of TS 36.212 Table 5.1.3-3 and twelve permutations), [`sionna_row_column_interleaver`](../validation/cards/sionna_row_column_interleaver.yaml), bit for bit (`tests/oracle/test_scrambling_interleaving_oracle.py`)"
+    - recording: "GNU Radio gr-dtv: the convolutional interleaver of DVB (I = 12, M = 17) bit for bit within the outer coding of DVB-T (`tests/oracle/test_gr_dtv.py`)"
     - self: "self-consistency: `crates/comnum-fec/src/scrambling.rs::the_sequence_is_balanced_and_depends_on_its_seed`, `crates/comnum-fec/src/interleaving.rs::permutations_invert`"
-  gaps: "the Gold scrambler is not compared with TS 38.211 Sec. 5.2.1 (status needed)"
+  gaps: "• the random interleaver is comnum's own (a seeded shuffle): no reference to compare<br>• the bit interleavers of DVB-S2 and of the NR rate matching are compared with gr-dtv and py3gpp in their chains, not here"
 - theme: Coding and shaping
   name: "Finite-length bounds"
   modules: "`comnum_fec::bounds`"
@@ -281,8 +284,9 @@
   name: "Orthogonal FSK and the sound card"
   short: "FSK, sound card"
   modules: "`comnum_waveform::fsk`, `comnum_dsp::audio`, `comnum_math::bits`"
-  summary: "noncoherent M-FSK against its closed form; a text message through a simulated room"
+  summary: "liquid-dsp's fskmod and fskdem, recorded; noncoherent closed form"
   evidence:
+    - recording: "liquid-dsp 1.8.3, recorded: cards [`liquid_fsk_waveform`](../validation/cards/liquid_fsk_waveform.yaml) and [`liquid_fsk_decisions`](../validation/cards/liquid_fsk_decisions.yaml) (`tests/oracle/test_liquid_fsk.py`: the waveforms of fskmod for 2-, 4- and 8-FSK to 7e-5, its float32 oscillator; the decisions of fskdem in noise, the same 1000)"
     - closed_form: "`crates/comnum-waveform/src/fsk.rs::the_simulated_error_rate_is_that_of_orthogonal_noncoherent_signals` (2- and 4-FSK within 8 % of the error rate of orthogonal signals detected noncoherently, Proakis & Salehi, 5th ed., Sec. 4.5)"
     - self: "`crates/comnum-waveform/src/fsk.rs::the_timing_is_found_in_noise_at_every_offset`, `::the_tones_are_orthogonal_with_a_continuous_phase`; `crates/comnum-dsp/src/audio.rs::a_baseband_signal_survives_the_carrier_and_the_file`, `::the_wav_container_reads_what_it_writes_and_the_usual_formats`; `crates/comnum-math/src/bits.rs::a_text_is_its_utf8_bits_and_errors_do_not_stop_the_reading`"
     - self: "`tests/test_audio.py::test_a_text_message_crosses_a_simulated_room` (an HDLC frame on 4-FSK at 100 baud through a WAV file, clock offsets of 20 to 90 ppm, echoes at half the amplitude, a carrier 3 Hz off)"
@@ -360,11 +364,12 @@
 - theme: MIMO
   name: "Space-time block codes"
   modules: "`comnum_mimo::stbc`"
-  summary: "Tarokh et al. 1999 eqs. (39)–(40); MRC closed forms"
+  summary: "Alamouti 1998 Fig. 4 within a factor 1.09; Tarokh 1999 eqs. (39)–(40)"
   evidence:
+    - curve: "card [`alamouti1998_fig4`](../validation/cards/alamouti1998_fig4.yaml) (Alamouti, *IEEE J. Sel. Areas Commun.* 16(8), 1998, Fig. 4: the BER of the scheme with one and two receive antennas at six points read on the curves, from 10^-2.5 to 10^-5.5, within a factor 1.09; `validation/tests/mimo/alamouti1998.rs`)"
     - closed_form: "`crates/comnum-mimo/src/stbc.rs`, `literature::tarokh_1999_rate_3_4_designs_are_orthogonal` (Tarokh, Jafarkhani & Calderbank, *IEEE Trans. Inf. Theory* 45(5), 1999, eqs. (39)–(40))"
     - closed_form: "Alamouti against MRC of 2 n_r branches (Proakis & Salehi eq. (13.4-15)): `specs/mimo_diversity.yaml`, `validation/tests/mimo/mimo.rs::alamouti_over_rayleigh_fading` (ignored), `tests/test_performance.py::test_alamouti_is_mrc_of_two_branches_at_half_power`"
-  gaps: "• the error rates of the rate-3/4 codes are not compared with the paper<br>• Fig. 4 of Alamouti (1998) is shown in the gallery (`docs/python/examples/mimo/plot_03_alamouti1998_fig4.py`), not checked"
+  gaps: "• the error rates of the rate-3/4 codes have no reference: Tarokh, Jafarkhani & Calderbank (1999) give no error-rate figure, and no open tool implements them (Sionna and CommPy have no space-time block code)"
 - theme: MIMO
   name: "Capacity and precoding"
   modules: "`comnum_mimo::{capacity, precoding}`"
@@ -676,10 +681,11 @@
 - theme: Metrics and analysis
   name: "Spectral metrics (PSD, ACLR, PAPR, CCDF)"
   modules: "`comnum_metrics::spectrum`"
-  summary: "a tone lands in its bin"
+  summary: "SciPy's welch and ecdf, recorded"
   evidence:
+    - recording: "SciPy 1.18, recorded: cards [`scipy_psd`](../validation/cards/scipy_psd.yaml), [`scipy_periodogram`](../validation/cards/scipy_periodogram.yaml), [`scipy_aclr`](../validation/cards/scipy_aclr.yaml), [`scipy_ccdf`](../validation/cards/scipy_ccdf.yaml) (`tests/oracle/test_scipy_spectrum.py`: the densities of `welch` for three signals, segments of 64 to 1000 samples and two rates to 2e-15 of the largest bin; the CCDF of `ecdf` to 6e-17)"
     - self: "`crates/comnum-metrics/src/spectrum.rs::ccdf_counts_exceedances`, `::a_tone_lands_in_its_bin_and_a_band_limited_signal_has_a_high_aclr`"
-  gaps: "Welch's estimate and the ACLR are not compared with a reference implementation"
+  gaps: "• the ACLR is checked against the band powers of SciPy's density, not against the measurement procedure of a standard<br>• Welch's density with the Hann window and half overlap only: no other window from Python"
 - theme: Systems and standards
   name: "DVB-S"
   modules: "`comnum_systems::{dvb, dvbs}`, `comnum_fec::interleaving::ConvolutionalInterleaver`"

@@ -1,0 +1,35 @@
+id: sionna_tb_scrambling
+title: Scrambling of the codewords of the 5G PDSCH and PUSCH against Sionna
+literature: sionna
+evidence: [recording]
+source:
+  kind: tool
+  reference: "Sionna (NVIDIA, Apache-2.0), sionna.phy.fec.scrambling.TB5GScrambler; 3GPP TS 38.211, Secs. 6.3.1.1 and 7.3.1.1"
+  locator: "recorded outputs tests/oracle/sionna_interleaving.json and .npz (tests/oracle/test_scrambling_interleaving_oracle.py: 4096 bits of the PDSCH codewords 0 and 1 and of the PUSCH, four pairs (n_RNTI, n_ID))"
+  version: "2.2.0"
+description: >
+  TB5GScrambler applied to a word of zeros gives the sequence it adds to the bits:
+  compared with comnum.Scrambler(c_init).sequence for c_init = n_RNTI 2^15 + q 2^14 +
+  n_ID (q the codeword index of the PDSCH, 0 for the PUSCH), for (n_RNTI, n_ID) =
+  (1, 1), (65535, 1023), (4660, 0) and (17, 500). The test compares the twelve; the
+  cases are four.
+run:
+  function: comnum.Scrambler.sequence
+tier: ci
+duration: "0.1 s on an Apple M6"
+tolerance: {exact: true}
+findings:
+  - "the twelve sequences are the same, bit for bit, over 4096 bits: comnum's c_init formula and Gold sequence and Sionna's agree, the codeword index included"
+cases:
+  - inputs: {self: {construct: comnum.Scrambler, args: {c_init: 32769}}, n: 4096}
+    expected: {oracle: sionna_interleaving, path: [scrambler, PDSCH_0_1_1]}
+    note: "n_RNTI = 1, n_ID = 1, q = 0"
+  - inputs: {self: {construct: comnum.Scrambler, args: {c_init: 2147468287}}, n: 4096}
+    expected: {oracle: sionna_interleaving, path: [scrambler, PDSCH_1_65535_1023]}
+    note: "n_RNTI = 65535, n_ID = 1023, q = 1"
+  - inputs: {self: {construct: comnum.Scrambler, args: {c_init: 152698880}}, n: 4096}
+    expected: {oracle: sionna_interleaving, path: [scrambler, PUSCH_0_4660_0]}
+    note: "n_RNTI = 4660, n_ID = 0 (PUSCH)"
+  - inputs: {self: {construct: comnum.Scrambler, args: {c_init: 573940}}, n: 4096}
+    expected: {oracle: sionna_interleaving, path: [scrambler, PDSCH_1_17_500]}
+    note: "n_RNTI = 17, n_ID = 500, q = 1"

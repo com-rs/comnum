@@ -1,0 +1,44 @@
+id: scipy_psd
+title: Welch's power spectral density against SciPy
+literature: scipy
+evidence: [recording]
+source:
+  kind: tool
+  reference: "SciPy (BSD-3-Clause), scipy.signal.welch and scipy.stats.ecdf"
+  locator: "recorded outputs tests/oracle/scipy_spectrum.json and .npz (tests/oracle/test_scipy_spectrum.py: white noise, a band-limited QPSK signal and a tone of 5000 samples; segments of 64, 255, 256 and 1000 samples; 1 Hz and 30.72 MHz)"
+  version: "1.18.1"
+description: >
+  The same signals given to comnum and to SciPy. comnum.psd against welch with the
+  periodic Hann window, a hop of the segment length minus its half, no detrending, the
+  two-sided density sorted by frequency; comnum.periodogram against welch with the
+  rectangular window and no overlap; comnum.aclr_db of SciPy's density of the QPSK
+  signal (a channel of a quarter of the band, the adjacent ones a quarter away) against
+  the ratio of the band powers of that density; comnum.ccdf against the survival
+  function of scipy.stats.ecdf, at thresholds that fall on values of the sample (ties
+  at every tenth). The cases here are those of segments of 255 and 1000 samples at
+  1 Hz; tests/oracle/test_scipy_spectrum.py compares the 48 densities of the grid and
+  their frequencies.
+run:
+  function: comnum.psd
+tier: ci
+duration: "0.1 s on an Apple M6"
+tolerance: {rtol: 1.0e-9, atol: 1.0e-12}
+why: >
+  Both compute the same sums in double precision: the tolerance is the arithmetic
+  (the measured difference, 2e-15 of the largest bin, is a million times smaller).
+findings:
+  - "the densities of every signal, segment length (odd 255 included) and rate agree to 1.9e-15 of their largest bin, the frequencies to 6e-17 of the sampling rate"
+  - "the ACLR of SciPy's density is the same to 1.4e-14 dB; the CCDF agrees to 6e-17 (card scipy_ccdf)"
+cases:
+  - inputs: {x: {oracle: scipy_spectrum, path: [signals, noise]}, nfft: 255}
+    output: 1
+    expected: {oracle: scipy_spectrum, path: [psd, noise_255_1, density]}
+  - inputs: {x: {oracle: scipy_spectrum, path: [signals, qpsk]}, nfft: 255}
+    output: 1
+    expected: {oracle: scipy_spectrum, path: [psd, qpsk_255_1, density]}
+  - inputs: {x: {oracle: scipy_spectrum, path: [signals, qpsk]}, nfft: 1000}
+    output: 1
+    expected: {oracle: scipy_spectrum, path: [psd, qpsk_1000_1, density]}
+  - inputs: {x: {oracle: scipy_spectrum, path: [signals, qpsk]}, nfft: 1000}
+    output: 0
+    expected: {oracle: scipy_spectrum, path: [psd, qpsk_1000_1, freqs]}

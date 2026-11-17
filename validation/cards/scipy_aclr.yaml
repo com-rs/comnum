@@ -1,0 +1,31 @@
+id: scipy_aclr
+title: Adjacent channel leakage ratio of a density computed by SciPy
+literature: scipy
+evidence: [recording]
+source:
+  kind: tool
+  reference: "SciPy (BSD-3-Clause), scipy.signal.welch"
+  locator: "recorded outputs tests/oracle/scipy_spectrum.json and .npz (tests/oracle/test_scipy_spectrum.py: white noise, a band-limited QPSK signal and a tone of 5000 samples; segments of 64, 255, 256 and 1000 samples; 1 Hz and 30.72 MHz)"
+  version: "1.18.1"
+description: >
+  comnum.aclr_db of the density that scipy.signal.welch gives for the band-limited
+  QPSK signal (periodic Hann window, half overlap), a channel of a quarter of the band
+  and adjacent channels a quarter away, against the ratio of the band powers of the
+  same density, each the sum of its bins in [f_lo, f_hi) times the bin width. It
+  checks the edges of the bands (half-open, odd segment lengths) and the choice of the
+  larger adjacent channel, not the definition itself.
+run:
+  function: comnum.aclr_db
+tier: ci
+duration: "0.1 s on an Apple M6"
+tolerance: {atol: 1.0e-9}
+why: "the same sum of the same bins: the tolerance is the arithmetic (1.4e-14 dB measured)"
+findings:
+  - "57.81, 73.81, 73.60 and 74.34 dB for segments of 64, 255, 256 and 1000 samples, the same to 1.4e-14 dB"
+cases:
+  - inputs: {freqs: {oracle: scipy_spectrum, path: [psd, qpsk_64_1, freqs]}, density: {oracle: scipy_spectrum, path: [psd, qpsk_64_1, density]}, bandwidth_hz: 0.25, offset_hz: 0.25}
+    expected: {oracle: scipy_spectrum, path: [aclr, "64"]}
+  - inputs: {freqs: {oracle: scipy_spectrum, path: [psd, qpsk_255_1, freqs]}, density: {oracle: scipy_spectrum, path: [psd, qpsk_255_1, density]}, bandwidth_hz: 0.25, offset_hz: 0.25}
+    expected: {oracle: scipy_spectrum, path: [aclr, "255"]}
+  - inputs: {freqs: {oracle: scipy_spectrum, path: [psd, qpsk_1000_1, freqs]}, density: {oracle: scipy_spectrum, path: [psd, qpsk_1000_1, density]}, bandwidth_hz: 0.25, offset_hz: 0.25}
+    expected: {oracle: scipy_spectrum, path: [aclr, "1000"]}

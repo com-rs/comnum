@@ -1,0 +1,34 @@
+id: liquid_fsk_waveform
+title: Orthogonal M-FSK waveform against the modulator of liquid-dsp
+literature: liquid_dsp
+evidence: [recording]
+source:
+  kind: tool
+  reference: "liquid-dsp (MIT, J. D. Gaeddert, liquidsdr.org), fskmod and fskdem, called with ctypes"
+  locator: "recorded outputs tests/oracle/liquid_fsk.json and .npz (tests/oracle/test_liquid_fsk.py: 2-, 4- and 8-FSK with 8, 16 and 32 samples per symbol and spacing 2, 4-FSK with spacing 4; 64 symbols modulated, 250 symbols at Es/N0 = 3 dB demodulated)"
+  version: "1.8.3"
+description: >
+  liquid's fskmod centres its tones, symbol s at (s - (M-1)/2) b / ((M-1)/2) cycles per
+  sample; with its bandwidth b = (M-1)/2 Delta / N they are the tones s Delta / N of
+  comnum.Fsk shifted by -(M-1)/2 Delta cycles per symbol, a whole number for an even
+  spacing Delta, so that the two waveforms differ by the factor
+  exp(-j 2 pi (M-1)/2 Delta n / N). The recording divides liquid's waveform by that
+  factor (in double precision); comnum.Fsk.modulate of the same 64 symbols is compared
+  with it.
+run:
+  function: comnum.Fsk.modulate
+tier: ci
+duration: "0.1 s on an Apple M6"
+tolerance: {atol: 1.0e-4}
+why: "liquid's oscillator accumulates its phase in float32: 2.9e-5 to 7.1e-5 after 64 symbols, measured; the tolerance is that precision"
+findings:
+  - "the waveforms of the four alphabets agree to 2.9e-5 (2-FSK) to 7.1e-5 (4-FSK, spacing 2), liquid's float32 phase; the phase is continuous in both, each symbol making a whole number of cycles"
+cases:
+  - inputs: {self: {construct: comnum.Fsk, args: {m: 2, sps: 8, spacing: 2}}, symbols: {oracle: liquid_fsk, path: ["2_8_2", symbols]}}
+    expected: {oracle: liquid_fsk, path: ["2_8_2", waveform_comnum]}
+  - inputs: {self: {construct: comnum.Fsk, args: {m: 4, sps: 16, spacing: 2}}, symbols: {oracle: liquid_fsk, path: ["4_16_2", symbols]}}
+    expected: {oracle: liquid_fsk, path: ["4_16_2", waveform_comnum]}
+  - inputs: {self: {construct: comnum.Fsk, args: {m: 4, sps: 16, spacing: 4}}, symbols: {oracle: liquid_fsk, path: ["4_16_4", symbols]}}
+    expected: {oracle: liquid_fsk, path: ["4_16_4", waveform_comnum]}
+  - inputs: {self: {construct: comnum.Fsk, args: {m: 8, sps: 32, spacing: 2}}, symbols: {oracle: liquid_fsk, path: ["8_32_2", symbols]}}
+    expected: {oracle: liquid_fsk, path: ["8_32_2", waveform_comnum]}

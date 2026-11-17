@@ -1,0 +1,131 @@
+{
+ "data": {
+  "lte_coeffs": {
+   "__npz__": "data.lte_coeffs"
+  },
+  "lte_perm": {
+   "1008": {
+    "__npz__": "data.lte_perm.1008"
+   },
+   "1024": {
+    "__npz__": "data.lte_perm.1024"
+   },
+   "104": {
+    "__npz__": "data.lte_perm.104"
+   },
+   "2048": {
+    "__npz__": "data.lte_perm.2048"
+   },
+   "3072": {
+    "__npz__": "data.lte_perm.3072"
+   },
+   "40": {
+    "__array__": {
+     "dtype": "<i8",
+     "shape": [
+      40
+     ],
+     "values": [0, 13, 6, 19, 12, 25, 18, 31, 24, 37, 30, 3, 36, 9, 2, 15, 8, 21, 14, 27, 20, 33, 26, 39, 32, 5, 38, 11, 4, 17, 10, 23, 16, 29, 22, 35, 28, 1, 34, 7]
+    }
+   },
+   "4032": {
+    "__npz__": "data.lte_perm.4032"
+   },
+   "48": {
+    "__array__": {
+     "dtype": "<i8",
+     "shape": [
+      48
+     ],
+     "values": [0, 19, 14, 33, 28, 47, 42, 13, 8, 27, 22, 41, 36, 7, 2, 21, 16, 35, 30, 1, 44, 15, 10, 29, 24, 43, 38, 9, 4, 23, 18, 37, 32, 3, 46, 17, 12, 31, 26, 45, 40, 11, 6, 25, 20, 39, 34, 5]
+    }
+   },
+   "5056": {
+    "__npz__": "data.lte_perm.5056"
+   },
+   "512": {
+    "__npz__": "data.lte_perm.512"
+   },
+   "6080": {
+    "__npz__": "data.lte_perm.6080"
+   },
+   "6144": {
+    "__npz__": "data.lte_perm.6144"
+   }
+  },
+  "row_column": {
+   "1000_8": {
+    "__npz__": "data.row_column.1000_8"
+   },
+   "100_10": {
+    "__npz__": "data.row_column.100_10"
+   },
+   "12_3": {
+    "__array__": {
+     "dtype": "<i8",
+     "shape": [
+      12
+     ],
+     "values": [0, 3, 6, 9, 1, 4, 7, 10, 2, 5, 8, 11]
+    }
+   },
+   "60_4": {
+    "__array__": {
+     "dtype": "<i8",
+     "shape": [
+      60
+     ],
+     "values": [0, 4, 8, 12, 16, 20, 24, 28, 32, 36, 40, 44, 48, 52, 56, 1, 5, 9, 13, 17, 21, 25, 29, 33, 37, 41, 45, 49, 53, 57, 2, 6, 10, 14, 18, 22, 26, 30, 34, 38, 42, 46, 50, 54, 58, 3, 7, 11, 15, 19, 23, 27, 31, 35, 39, 43, 47, 51, 55, 59]
+    }
+   },
+   "6144_64": {
+    "__npz__": "data.row_column.6144_64"
+   }
+  },
+  "scrambler": {
+   "PDSCH_0_17_500": {
+    "__npz__": "data.scrambler.PDSCH_0_17_500"
+   },
+   "PDSCH_0_1_1": {
+    "__npz__": "data.scrambler.PDSCH_0_1_1"
+   },
+   "PDSCH_0_4660_0": {
+    "__npz__": "data.scrambler.PDSCH_0_4660_0"
+   },
+   "PDSCH_0_65535_1023": {
+    "__npz__": "data.scrambler.PDSCH_0_65535_1023"
+   },
+   "PDSCH_1_17_500": {
+    "__npz__": "data.scrambler.PDSCH_1_17_500"
+   },
+   "PDSCH_1_1_1": {
+    "__npz__": "data.scrambler.PDSCH_1_1_1"
+   },
+   "PDSCH_1_4660_0": {
+    "__npz__": "data.scrambler.PDSCH_1_4660_0"
+   },
+   "PDSCH_1_65535_1023": {
+    "__npz__": "data.scrambler.PDSCH_1_65535_1023"
+   },
+   "PUSCH_0_17_500": {
+    "__npz__": "data.scrambler.PUSCH_0_17_500"
+   },
+   "PUSCH_0_1_1": {
+    "__npz__": "data.scrambler.PUSCH_0_1_1"
+   },
+   "PUSCH_0_4660_0": {
+    "__npz__": "data.scrambler.PUSCH_0_4660_0"
+   },
+   "PUSCH_0_65535_1023": {
+    "__npz__": "data.scrambler.PUSCH_0_65535_1023"
+   }
+  }
+ },
+ "name": "sionna_interleaving",
+ "npz": "sionna_interleaving.npz",
+ "numpy": "2.5.5",
+ "python": "3.12.15",
+ "recorded": "2026-11-17",
+ "tool": "Sionna",
+ "version": "2.2.0"
+}

@@ -2,6 +2,7 @@
 //! massive MIMO, channel estimation, NOMA, DS-CDMA: one module per reference, each loading its cards of `validation/cards/`
 //! (`just card <id>` runs one).
 
+mod alamouti1998;
 mod biguesh2006;
 mod ding2014;
 mod dsss;

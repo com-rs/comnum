@@ -1,0 +1,115 @@
+{
+ "data": {
+  "2_8_2": {
+   "decisions": {
+    "__npz__": "data.2_8_2.decisions"
+   },
+   "received_comnum": {
+    "__npz__": "data.2_8_2.received_comnum"
+   },
+   "sent": {
+    "__npz__": "data.2_8_2.sent"
+   },
+   "symbols": {
+    "__array__": {
+     "dtype": "<i8",
+     "shape": [
+      64
+     ],
+     "values": [1, 0, 0, 1, 0, 1, 1, 1, 1, 1, 1, 0, 1, 0, 0, 0, 1, 1, 0, 1, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 1, 0, 0, 1, 0, 1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 1, 0, 0, 1, 0, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 0, 1]
+    }
+   },
+   "waveform": {
+    "__npz__": "data.2_8_2.waveform"
+   },
+   "waveform_comnum": {
+    "__npz__": "data.2_8_2.waveform_comnum"
+   }
+  },
+  "4_16_2": {
+   "decisions": {
+    "__npz__": "data.4_16_2.decisions"
+   },
+   "received_comnum": {
+    "__npz__": "data.4_16_2.received_comnum"
+   },
+   "sent": {
+    "__npz__": "data.4_16_2.sent"
+   },
+   "symbols": {
+    "__array__": {
+     "dtype": "<i8",
+     "shape": [
+      64
+     ],
+     "values": [1, 2, 3, 3, 2, 0, 1, 3, 1, 2, 2, 1, 3, 0, 0, 3, 0, 2, 2, 0, 3, 0, 3, 2, 0, 0, 0, 3, 2, 1, 0, 1, 1, 3, 1, 0, 3, 2, 1, 0, 1, 2, 0, 3, 3, 1, 2, 3, 1, 1, 2, 2, 3, 2, 2, 1, 3, 1, 2, 1, 0, 2, 3, 1]
+    }
+   },
+   "waveform": {
+    "__npz__": "data.4_16_2.waveform"
+   },
+   "waveform_comnum": {
+    "__npz__": "data.4_16_2.waveform_comnum"
+   }
+  },
+  "4_16_4": {
+   "decisions": {
+    "__npz__": "data.4_16_4.decisions"
+   },
+   "received_comnum": {
+    "__npz__": "data.4_16_4.received_comnum"
+   },
+   "sent": {
+    "__npz__": "data.4_16_4.sent"
+   },
+   "symbols": {
+    "__array__": {
+     "dtype": "<i8",
+     "shape": [
+      64
+     ],
+     "values": [3, 2, 2, 3, 1, 2, 3, 2, 0, 0, 0, 3, 3, 1, 1, 2, 1, 1, 3, 0, 3, 0, 0, 0, 0, 1, 1, 1, 0, 1, 3, 3, 2, 0, 0, 2, 3, 3, 0, 0, 1, 3, 1, 2, 1, 3, 3, 1, 2, 3, 0, 1, 0, 3, 1, 2, 3, 0, 2, 2, 2, 1, 0, 2]
+    }
+   },
+   "waveform": {
+    "__npz__": "data.4_16_4.waveform"
+   },
+   "waveform_comnum": {
+    "__npz__": "data.4_16_4.waveform_comnum"
+   }
+  },
+  "8_32_2": {
+   "decisions": {
+    "__npz__": "data.8_32_2.decisions"
+   },
+   "received_comnum": {
+    "__npz__": "data.8_32_2.received_comnum"
+   },
+   "sent": {
+    "__npz__": "data.8_32_2.sent"
+   },
+   "symbols": {
+    "__array__": {
+     "dtype": "<i8",
+     "shape": [
+      64
+     ],
+     "values": [5, 7, 4, 1, 3, 5, 0, 2, 4, 5, 7, 5, 5, 4, 5, 1, 0, 6, 1, 0, 0, 4, 2, 0, 1, 5, 4, 2, 2, 4, 4, 5, 2, 1, 2, 6, 0, 0, 0, 0, 3, 0, 5, 0, 7, 6, 2, 3, 4, 1, 1, 5, 0, 0, 6, 4, 3, 1, 7, 0, 2, 4, 5, 4]
+    }
+   },
+   "waveform": {
+    "__npz__": "data.8_32_2.waveform"
+   },
+   "waveform_comnum": {
+    "__npz__": "data.8_32_2.waveform_comnum"
+   }
+  }
+ },
+ "name": "liquid_fsk",
+ "npz": "liquid_fsk.npz",
+ "numpy": "2.5.5",
+ "python": "3.12.15",
+ "recorded": "2026-11-17",
+ "tool": "liquid-dsp",
+ "version": "1.8.3"
+}

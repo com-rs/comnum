@@ -8,6 +8,29 @@ and follow [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Comparisons with reference tools and with Fig. 4 of Alamouti (1998) for the four
+  modules that had none, recorded as fixtures of `tests/oracle/` and as 11 validation
+  cards; the maturity table goes from 71 modules at level A, 6 at B and 2 at C to 75 at
+  A and 4 at B:
+  - the spectral metrics against SciPy 1.18: `psd` and `periodogram` against
+    `scipy.signal.welch` (48 densities, segments of 64 to 1000 samples, odd ones
+    included) to 2e-15 of the largest bin, `aclr_db` on its densities to 1e-14 dB,
+    `ccdf` against `scipy.stats.ecdf` to 6e-17 (cards `scipy_psd`, `scipy_periodogram`,
+    `scipy_aclr`, `scipy_ccdf`);
+  - the Gold sequence of TS 38.211 Sec. 5.2.1 against py3gpp's `nrPRBS` (eight values of
+    c_init, 20 000 bits), the scrambling of the PDSCH and PUSCH codewords against
+    Sionna's `TB5GScrambler`, the 188 QPP interleavers of TS 36.212 Table 5.1.3-3 and the
+    row-column interleaver against Sionna 2.2, all bit for bit (cards `py3gpp_nr_prbs`,
+    `sionna_tb_scrambling`, `sionna_lte_interleaver`, `sionna_row_column_interleaver`);
+  - orthogonal FSK against liquid-dsp 1.8.3 (MIT, loaded with `ctypes` to record):
+    the waveforms of `fskmod` to 7e-5 (its float32 oscillator), the 1000 decisions of
+    `fskdem` in noise the same (cards `liquid_fsk_waveform`, `liquid_fsk_decisions`);
+  - the Alamouti scheme against Fig. 4 of the paper, six points read on the curves of
+    one and two receive antennas from 10^-2.5 to 10^-5.5, within a factor 1.09 (card
+    `alamouti1998_fig4`, `validation/tests/mimo/alamouti1998.rs`).
+  `Interleaver.from_name("lte", k)` is bound in Python. A card may run a method on an
+  object built by its constructor (`comnum.Scrambler.sequence` with the input `self`)
+  or a static method, and take an input from a recording (`{oracle: ..., path: ...}`).
 - The docstrings of the Python package state the model of each function and class as
   a displayed equation (267 blocks in the bindings, 48 before), with its
   conventions (normalisation, sign of the exponent, units), so that a reader can check

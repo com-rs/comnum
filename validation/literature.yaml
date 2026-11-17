@@ -608,11 +608,12 @@
   area: MIMO
   ref: "S. M. Alamouti, A simple transmit diversity technique for wireless communications, JSAC 16(8), 1998"
   module: comnum_mimo::stbc
-  tested: "the scheme against MRC of 2 nr branches (closed form)"
+  tested: "Fig. 4: the BER of the scheme with one and two receive antennas at six points read on the curves (10^-2.5 to 10^-5.5), within a factor 1.09; the scheme against MRC of 2 nr branches (closed form)"
   tests:
+    - validation/tests/mimo/alamouti1998.rs::alamouti_1998_fig_4
     - validation/tests/mimo/mimo.rs::alamouti_over_rayleigh_fading
-  badge: orange
-  not_covered: "Fig. 4 is shown in the gallery, not checked"
+  badge: green
+  not_covered: "the MRRC curves of Fig. 4 (receive diversity, not the scheme); Sec. V (channel estimation errors, antenna failure, delays)"
 - id: tarokh1999
   area: MIMO
   ref: "V. Tarokh, H. Jafarkhani, A. R. Calderbank, Space-time block codes from orthogonal designs, IT 45(5), 1999"
@@ -1711,11 +1712,12 @@
 - id: sionna
   area: Reference implementations
   ref: "Sionna (Apache-2.0), its reference vectors"
-  module: comnum_fec::{crc, conv, turbo, nr}, comnum_systems::nr::transport, comnum_channel::{multipath, pathloss}
-  tested: "CRC parity bits, convolutional and LTE turbo codewords and decisions bit for bit, NR LDPC and polar codewords; the PDSCH transport blocks of its TBEncoder (CRC, segmentation, LDPC of both base graphs, rate matching, scrambling) of R.PDSCH.1-1.2, 1-2.1 and 1-4.1 bit for bit (Sionna 2.2.0); its TDL tables and path losses (see tr38901)"
+  module: comnum_fec::{crc, conv, turbo, nr, scrambling, interleaving}, comnum_systems::nr::transport, comnum_channel::{multipath, pathloss}
+  tested: "CRC parity bits, convolutional and LTE turbo codewords and decisions bit for bit, NR LDPC and polar codewords; the PDSCH transport blocks of its TBEncoder (CRC, segmentation, LDPC of both base graphs, rate matching, scrambling) of R.PDSCH.1-1.2, 1-2.1 and 1-4.1 bit for bit (Sionna 2.2.0); its TDL tables and path losses (see tr38901); the scrambling sequences of TB5GScrambler (PDSCH codewords 0 and 1, PUSCH), the 188 QPP coefficient pairs of Turbo3GPPInterleaver and its permutations, its row-column interleaver, bit for bit"
   tests:
     - tests/oracle/test_sionna_vectors.py
     - tests/oracle/test_nr_pdsch_oracle.py::test_the_transport_blocks_are_those_of_sionna
+    - tests/oracle/test_scrambling_interleaving_oracle.py
   badge: green
 - id: gr_dtv
   area: Reference implementations
@@ -1730,25 +1732,36 @@
   area: Reference implementations
   ref: "py3gpp 0.6 (recorded outputs)"
   module: comnum_waveform::ofdm::nr, comnum_systems::nr
-  tested: "PSS, SSS, PBCH DMRS bit for bit; the PDSCH DMRS of 42 configurations; the OFDM modulation of a subframe to 1e-14; the TBS of 108 allocations (nrTBS); the four redundancy versions of three base-graph-1 transport blocks bit for bit (nrCRCEncode to nrRateMatchLDPC); the scrambled PDSCH symbols of QPSK to 256-QAM (nrPDSCH)"
+  tested: "PSS, SSS, PBCH DMRS bit for bit; the PDSCH DMRS of 42 configurations; the OFDM modulation of a subframe to 1e-14; the TBS of 108 allocations (nrTBS); the four redundancy versions of three base-graph-1 transport blocks bit for bit (nrCRCEncode to nrRateMatchLDPC); the scrambled PDSCH symbols of QPSK to 256-QAM (nrPDSCH); the Gold sequence of nrPRBS, 20 000 bits for eight c_init, bit for bit"
   tests:
     - tests/oracle/test_nr_oracle.py
     - tests/oracle/test_nr_pdsch_oracle.py::test_the_tbs_is_that_of_py3gpp
     - tests/oracle/test_nr_pdsch_oracle.py::test_the_redundancy_versions_are_those_of_py3gpp
     - tests/oracle/test_nr_pdsch_oracle.py::test_the_pdsch_symbols_are_those_of_py3gpp
+    - tests/oracle/test_scrambling_interleaving_oracle.py::test_the_gold_sequence_is_that_of_py3gpp
   badge: green
   remarks:
     - "py3gpp 0.6.0 encodes base graph 2 at Z_c = 64 (R.PDSCH.1-1.2) into a word outside the code: its default algorithm fails on the dimensions, the other gives parity bits that the parity checks of TS 38.212 reject; Sionna and comnum agree to the bit"
     - "py3gpp 0.6.0 nrPDSCHIndices reads SymbolAllocation as [start, end) where MATLAB has [start, length], and removes whole DM-RS symbols counted from the first allocated one; not used"
     - "py3gpp lengthens the prefix of the first symbol of every slot, TS 38.211 of every half subframe: they differ from 60 kHz"
     - "py3gpp adds symbol 7 to 8- and 9-symbol DMRS allocations without additional position"
+- id: liquid_dsp
+  area: Reference implementations
+  ref: "liquid-dsp 1.8.3 (MIT), J. D. Gaeddert, the C library of software radio (recorded outputs)"
+  module: comnum_waveform::fsk
+  tested: "fskmod: the waveforms of 2-, 4- and 8-FSK (spacing 2 and 4) equal to comnum's tones shifted by a whole number of cycles per symbol, to 7e-5 (its float32 oscillator); fskdem: the 1000 decisions of 250 symbols per alphabet at Es/N0 = 3 dB the same, errors included"
+  tests:
+    - tests/oracle/test_liquid_fsk.py
+  badge: green
+  not_covered: "the other modems of liquid (CPFSK, GMSK, the linear modems) and its filters"
 - id: scipy
   area: Reference implementations
   ref: "SciPy 1.18 (values recorded in the tests)"
-  module: comnum_math, comnum_dsp::{window, interpolation}
-  tested: "gammaln, gammainc, exp1, erf, i0e, j0; chebwin; CubicSpline (not-a-knot)"
+  module: comnum_math, comnum_dsp::{window, interpolation, spectrum}, comnum_metrics::spectrum
+  tested: "gammaln, gammainc, exp1, erf, i0e, j0; chebwin; CubicSpline (not-a-knot); Welch's density and the averaged periodogram of welch (48 densities: three signals, segments of 64 to 1000 samples, odd ones included, two rates) to 2e-15 of the largest bin, the ACLR of its density to 1e-14 dB, the CCDF of ecdf to 6e-17 (recorded outputs, tests/oracle/scipy_spectrum.json)"
   tests:
     - crates/comnum-math/src/lib.rs::gamma_e1_and_erf_against_scipy
+    - tests/oracle/test_scipy_spectrum.py
     - crates/comnum-dsp/src/window.rs::chebyshev_is_that_of_scipy
     - crates/comnum-dsp/src/interpolation.rs::the_spline_is_that_of_scipy_with_not_a_knot_ends
   badge: green

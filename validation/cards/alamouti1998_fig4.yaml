@@ -1,0 +1,40 @@
+id: alamouti1998_fig4
+title: BER of the two-branch transmit diversity scheme over Rayleigh fading
+literature: alamouti1998
+evidence: [curve]
+source:
+  kind: paper
+  reference: "S. M. Alamouti, A simple transmit diversity technique for wireless communications, IEEE J. Sel. Areas Commun. 16(8), 1451-1458, 1998"
+  locator: "Fig. 4, the curves 'new scheme (2 Tx, 1 Rx)' and 'new scheme (2 Tx, 2 Rx)', read where they cross 10^-2.5 to 10^-5.5"
+  file: mimo/1998_alamouti_transmit-diversity_jsac.pdf
+description: >
+  Uncoded coherent BPSK over i.i.d. Rayleigh fading with comnum's Ostbc::alamouti, one
+  or two receive antennas, the assumptions of Sec. IV: the two transmit antennas share
+  the energy of a bit (Eb/2 each, the total power of the single antenna of MRRC), every
+  pair fades independently with the same mean power, constant over the two symbol
+  periods of a block, and the receiver knows the channel (linear combining of eqs. (11)
+  and (15), then the sign). The figure is a raster image: each value of Eb/N0 is where
+  a curve crosses a level halfway between two decades (no grid line there), the mean of
+  its crossings 7 pixels (0.04 decade) above and below the level on a rendering at 400
+  dpi, the axis calibrated on the labels of the abscissa (32.2 pixels per dB). The test
+  measures the BER at each value until 400 errors; the expected value is the level.
+run:
+  test: validation/tests/mimo/alamouti1998.rs::alamouti_1998_fig_4
+tier: campaign
+duration: "50 s on an Apple M6"
+tolerance: {factor: 1.4}
+why: >
+  The crossings above and below a level differ by up to 0.4 dB: a reading within
+  0.3 dB, which on curves of slope 2 (one receive antenna) and 4 (two) decades per
+  10 dB is a factor 1.15 and 1.32 on the BER; the 400 errors add 5 % (one standard
+  error). The factor 1.4 covers both.
+findings:
+  - "the six points within a factor 1.09 of the levels (2.89e-3 against 3.16e-3 at 11.53 dB with one receive antenna, the largest gap; 3.21e-6 against 3.16e-6 at 14.33 dB with two), the order of the sampling error of 400 errors"
+  - "the readings lie within 0.2 dB of MRC of 2 n_rx branches at Eb/N0 - 3 dB (Proakis & Salehi eq. (13.4-15)), the equivalence of eq. (16): the figure is that closed form"
+cases:
+  - {inputs: {n_rx: 1, ebn0_db: 11.53}, expected: 3.16e-3, note: "10^-2.5"}
+  - {inputs: {n_rx: 1, ebn0_db: 16.65}, expected: 3.16e-4, note: "10^-3.5"}
+  - {inputs: {n_rx: 1, ebn0_db: 21.84}, expected: 3.16e-5, note: "10^-4.5"}
+  - {inputs: {n_rx: 2, ebn0_db: 7.05}, expected: 1.0e-3, note: "10^-3 (a grid line: the crossings at 6.86 and 7.25 dB)"}
+  - {inputs: {n_rx: 2, ebn0_db: 11.6}, expected: 3.16e-5, note: "10^-4.5"}
+  - {inputs: {n_rx: 2, ebn0_db: 14.33}, expected: 3.16e-6, note: "10^-5.5"}

@@ -29,11 +29,19 @@ from cards import CARDS, cards  # noqa: E402
 
 
 def resolve(name: str) -> Any:
+    """``comnum.<name>``, a function or class of the package, or ``comnum.<Class>.<method>``."""
+    if name.count(".") == 2 and name.startswith("comnum."):
+        _, cls, method = name.split(".")
+        return getattr(getattr(comnum, cls), method)
     module, _, attr = name.rpartition(".")
     return getattr(importlib.import_module(module), attr)
 
 
 def build(value: Any) -> Any:
+    """An input of a case: a value, an object built by its constructor, or a recorded
+    input of a reference tool (``{oracle: <name>, path: [...]}``)."""
+    if isinstance(value, dict) and "oracle" in value:
+        return expected_value(value)
     if isinstance(value, dict) and "construct" in value:
         return resolve(value["construct"])(
             **{k: build(v) for k, v in value.get("args", {}).items()}
@@ -133,11 +141,20 @@ def test_the_rule_of_the_cards():
 @pytest.mark.parametrize(("card", "i"), CASES)
 def test_card(card, i):
     case = card["cases"][i]
-    function = resolve(card["run"]["function"])
-    assert getattr(comnum, function.__name__, None) is function, "the runner is not in comnum"
-    got = function(**{k: build(v) for k, v in case["inputs"].items()})
+    name = card["run"]["function"]
+    function = resolve(name)
+    owner = getattr(comnum, name.split(".")[1], None)
+    assert owner is not None and (owner is function or name.count(".") == 2), (
+        "the runner is not in comnum"
+    )
+    inputs = {k: build(v) for k, v in case["inputs"].items()}
+    # a method runs on the object `self`, built by its constructor
+    args = [inputs.pop("self")] if "self" in inputs else []
+    got = function(*args, **inputs)
     output = case.get("output", card.get("output"))
-    if output is not None:
+    if isinstance(output, str) and not isinstance(got, dict):
+        got = getattr(got, output)  # an attribute of the returned object (`perm`)
+    elif output is not None:
         got = got[output]
     want = expected_value(case["expected"])
     tol = card.get("tolerance", {}) | case.get("tolerance", {})

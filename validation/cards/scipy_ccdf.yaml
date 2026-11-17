@@ -1,0 +1,24 @@
+id: scipy_ccdf
+title: Empirical complementary distribution against SciPy
+literature: scipy
+evidence: [recording]
+source:
+  kind: tool
+  reference: "SciPy (BSD-3-Clause), scipy.stats.ecdf"
+  locator: "recorded outputs tests/oracle/scipy_spectrum.json and .npz (tests/oracle/test_scipy_spectrum.py: 2000 exponential values rounded to a tenth, thresholds -1, 0, 0.5, 1, 2, 3, 4 and 6)"
+  version: "1.18.1"
+description: >
+  comnum.ccdf against the survival function of scipy.stats.ecdf, Pr(X > t), on a
+  sample with ties at every tenth and thresholds that fall on values of the sample:
+  a value equal to the threshold does not exceed it.
+run:
+  function: comnum.ccdf
+tier: ci
+duration: "0.1 s on an Apple M6"
+tolerance: {atol: 1.0e-15}
+why: "SciPy computes the survival function as 1 minus the distribution, a rounding of at most 5.6e-17 on these values: the tolerance is the arithmetic"
+findings:
+  - "the same eight probabilities, from 1 below the sample to 0.0205, to 5.6e-17 (the rounding of 1 - F in SciPy); a value equal to the threshold is not counted, as in SciPy"
+cases:
+  - inputs: {values: {oracle: scipy_spectrum, path: [signals, values]}, thresholds: [-1.0, 0.0, 0.5, 1.0, 2.0, 3.0, 4.0, 6.0]}
+    expected: {oracle: scipy_spectrum, path: [ccdf]}

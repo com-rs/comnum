@@ -1,0 +1,30 @@
+id: scipy_periodogram
+title: The averaged periodogram without window against SciPy
+literature: scipy
+evidence: [recording]
+source:
+  kind: tool
+  reference: "SciPy (BSD-3-Clause), scipy.signal.welch"
+  locator: "recorded outputs tests/oracle/scipy_spectrum.json and .npz (tests/oracle/test_scipy_spectrum.py: white noise, a band-limited QPSK signal and a tone of 5000 samples; segments of 64, 255, 256 and 1000 samples; 1 Hz and 30.72 MHz)"
+  version: "1.18.1"
+description: >
+  comnum.periodogram (non-overlapping segments, no window) against scipy.signal.welch
+  with the rectangular window, no overlap, no detrending, the two-sided density sorted
+  by frequency, on the signals of tests/oracle/test_scipy_spectrum.py; the cases are
+  segments of 64 and 255 samples at 1 Hz, the test compares the 24 densities of the
+  grid.
+run:
+  function: comnum.periodogram
+tier: ci
+duration: "0.1 s on an Apple M6"
+tolerance: {rtol: 1.0e-9, atol: 1.0e-12}
+why: "the same sums in double precision: the tolerance is the arithmetic (the measured difference is 6e-16 of the largest bin)"
+findings:
+  - "every density of the grid agrees to 6.3e-16 of its largest bin"
+cases:
+  - inputs: {x: {oracle: scipy_spectrum, path: [signals, noise]}, nfft: 64}
+    output: 1
+    expected: {oracle: scipy_spectrum, path: [periodogram, noise_64_1, density]}
+  - inputs: {x: {oracle: scipy_spectrum, path: [signals, qpsk]}, nfft: 255}
+    output: 1
+    expected: {oracle: scipy_spectrum, path: [periodogram, qpsk_255_1, density]}

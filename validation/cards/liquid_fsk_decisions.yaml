@@ -1,0 +1,31 @@
+id: liquid_fsk_decisions
+title: Noncoherent M-FSK decisions in noise against the demodulator of liquid-dsp
+literature: liquid_dsp
+evidence: [recording]
+source:
+  kind: tool
+  reference: "liquid-dsp (MIT, J. D. Gaeddert, liquidsdr.org), fskmod and fskdem, called with ctypes"
+  locator: "recorded outputs tests/oracle/liquid_fsk.json and .npz (tests/oracle/test_liquid_fsk.py: 2-, 4- and 8-FSK with 8, 16 and 32 samples per symbol and spacing 2, 4-FSK with spacing 4; 64 symbols modulated, 250 symbols at Es/N0 = 3 dB demodulated)"
+  version: "1.8.3"
+description: >
+  250 symbols in white noise at Es/N0 = 3 dB (complex64 samples) demodulated by
+  liquid's fskdem, the largest bin of an FFT of every symbol, and by
+  comnum.Fsk.demodulate, the largest correlation with the M tones, on the same
+  samples brought to comnum's tones (see liquid_fsk_waveform). The decisions include
+  49 to 117 symbol errors per alphabet, on which the two must agree too.
+run:
+  function: comnum.Fsk.demodulate
+tier: ci
+duration: "0.1 s on an Apple M6"
+tolerance: {exact: true}
+findings:
+  - "the 1000 decisions are the same, the 345 errors included; 120 000 decisions at 0 and 6 dB, compared before the recording, were the same too"
+cases:
+  - inputs: {self: {construct: comnum.Fsk, args: {m: 2, sps: 8, spacing: 2}}, samples: {oracle: liquid_fsk, path: ["2_8_2", received_comnum]}}
+    expected: {oracle: liquid_fsk, path: ["2_8_2", decisions]}
+  - inputs: {self: {construct: comnum.Fsk, args: {m: 4, sps: 16, spacing: 2}}, samples: {oracle: liquid_fsk, path: ["4_16_2", received_comnum]}}
+    expected: {oracle: liquid_fsk, path: ["4_16_2", decisions]}
+  - inputs: {self: {construct: comnum.Fsk, args: {m: 4, sps: 16, spacing: 4}}, samples: {oracle: liquid_fsk, path: ["4_16_4", received_comnum]}}
+    expected: {oracle: liquid_fsk, path: ["4_16_4", decisions]}
+  - inputs: {self: {construct: comnum.Fsk, args: {m: 8, sps: 32, spacing: 2}}, samples: {oracle: liquid_fsk, path: ["8_32_2", received_comnum]}}
+    expected: {oracle: liquid_fsk, path: ["8_32_2", decisions]}

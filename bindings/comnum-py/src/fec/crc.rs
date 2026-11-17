@@ -259,6 +259,27 @@ impl PyInterleaver {
         Ok(PyInterleaver { inner: Interleaver::qpp(k, f1, f2).py()? })
     }
 
+    /// The interleaver of a standard by name, for blocks of `k` bits.
+    ///
+    /// ``"lte"`` is the quadratic permutation polynomial of the LTE turbo code with the
+    /// coefficients :math:`(f_1, f_2)` of Table 5.1.3-3 of TS 36.212 for the size `k`
+    /// (one of its 188 sizes, 40 to 6144), as :meth:`qpp`. The name is
+    /// case-insensitive.
+    ///
+    /// Args:
+    ///     name (str): ``"lte"``.
+    ///     k (int): the block length.
+    ///
+    /// Returns:
+    ///     Interleaver: the interleaver.
+    ///
+    /// Raises:
+    ///     ValueError: for another name, or a size `k` outside the table.
+    #[staticmethod]
+    fn from_name(name: &str, k: usize) -> PyResult<Self> {
+        Ok(PyInterleaver { inner: Interleaver::from_name(name, k).py()? })
+    }
+
     /// numpy.ndarray: The permutation (int64): output :math:`i` is input `perm[i]`.
     #[getter]
     fn perm<'py>(&self, py: Python<'py>) -> IArr<'py> {
