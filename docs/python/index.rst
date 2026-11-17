@@ -91,7 +91,7 @@ Doing
       blocks, declarative specifications, the analysis of a campaign, wireless and
       optical links, the standards, recordings.
 
-   .. grid-item-card:: Gallery of classical results
+   .. grid-item-card:: Gallery
       :link: auto_examples/index
       :link-type: doc
 

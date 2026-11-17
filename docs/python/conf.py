@@ -79,6 +79,8 @@ sphinx_gallery_conf = {
     "remove_config_comments": True,
     "show_memory": False,
     "image_scrapers": ("matplotlib",),
+    # the highlights at the head of the gallery are a minigallery of file paths
+    "backreferences_dir": "gen_modules/backreferences",
 }
 
 # --- theme --------------------------------------------------------------------------
