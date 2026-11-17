@@ -82,7 +82,7 @@ Coding and shaping
      - AFF3CT, SC and CA-SCL
    * - 5G NR channel codes: LDPC and polar with rate matching
      - A
-     - Sionna vectors bit for bit; TS 38.212 tables
+     - Sionna's encoder and decoder bit for bit; TS 38.212 tables
    * - Reed–Solomon codes
      - A
      - AFF3CT; Lin & Costello; ETSI EN 300 744, CCSDS 131.0-B
@@ -161,7 +161,7 @@ MIMO
      - Strongest evidence
    * - MIMO detection
      - A
-     - Yang & Hanzo 2015 Table X; MRC closed forms
+     - Sionna's detectors, recorded; Yang & Hanzo 2015 Table X
    * - Message-passing detection of large MIMO (LAMA, OAMP)
      - A
      - Jeon et al. 2018 Table II; Ma & Ping 2017 eq. (42), Figs. 2–3

@@ -1,0 +1,67 @@
+{
+ "data": {
+  "card_min_sum_flooding": {
+   "__npz__": "data.card_min_sum_flooding"
+  },
+  "card_min_sum_layered": {
+   "__npz__": "data.card_min_sum_layered"
+  },
+  "card_sum_product_flooding": {
+   "__npz__": "data.card_sum_product_flooding"
+  },
+  "card_sum_product_layered": {
+   "__npz__": "data.card_sum_product_layered"
+  },
+  "decisions": {
+   "1000_1500_min_sum_flooding": {
+    "__npz__": "data.decisions.1000_1500_min_sum_flooding"
+   },
+   "1000_1500_min_sum_layered": {
+    "__npz__": "data.decisions.1000_1500_min_sum_layered"
+   },
+   "1000_1500_sum_product_flooding": {
+    "__npz__": "data.decisions.1000_1500_sum_product_flooding"
+   },
+   "1000_1500_sum_product_layered": {
+    "__npz__": "data.decisions.1000_1500_sum_product_layered"
+   },
+   "3000_6000_min_sum_flooding": {
+    "__npz__": "data.decisions.3000_6000_min_sum_flooding"
+   },
+   "3000_6000_min_sum_layered": {
+    "__npz__": "data.decisions.3000_6000_min_sum_layered"
+   },
+   "3000_6000_sum_product_flooding": {
+    "__npz__": "data.decisions.3000_6000_sum_product_flooding"
+   },
+   "3000_6000_sum_product_layered": {
+    "__npz__": "data.decisions.3000_6000_sum_product_layered"
+   },
+   "500_1200_min_sum_flooding": {
+    "__npz__": "data.decisions.500_1200_min_sum_flooding"
+   },
+   "500_1200_min_sum_layered": {
+    "__npz__": "data.decisions.500_1200_min_sum_layered"
+   },
+   "500_1200_sum_product_flooding": {
+    "__npz__": "data.decisions.500_1200_sum_product_flooding"
+   },
+   "500_1200_sum_product_layered": {
+    "__npz__": "data.decisions.500_1200_sum_product_layered"
+   }
+  },
+  "info_500": {
+   "__npz__": "data.info_500"
+  },
+  "llr_500": {
+   "__npz__": "data.llr_500"
+  }
+ },
+ "name": "sionna_ldpc",
+ "npz": "sionna_ldpc.npz",
+ "numpy": "2.5.5",
+ "python": "3.12.15",
+ "recorded": "2026-11-17",
+ "tool": "Sionna",
+ "version": "2.2.0"
+}

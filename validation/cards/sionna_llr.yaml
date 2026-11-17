@@ -1,0 +1,33 @@
+id: sionna_llr
+title: Exact and max-log bit LLRs of a constellation against Sionna
+literature: sionna
+evidence: [recording]
+source:
+  kind: tool
+  reference: "Sionna (NVIDIA, Apache-2.0), sionna.phy.mapping.Demapper (app and maxlog) with a custom constellation, double precision"
+  locator: "recorded outputs tests/oracle/sionna_detection.json and .npz (tests/oracle/test_sionna_detection.py)"
+  version: "2.2.0"
+description: >
+  The LLRs of comnum.Constellation.llr against those of Sionna's Demapper given comnum's
+  normalised points as a custom constellation (labels the binary indices, most
+  significant bit first), on 120 noisy samples of 4- to 256-QAM, 8-PSK and 4-PAM (a
+  real channel) at noise variances 0.01, 0.1 and 1. Sionna's LLR is ln P(1|y)/P(0|y):
+  the recording keeps its opposite, comnum's convention. The test compares the 36
+  combinations; the cases are four.
+run:
+  function: comnum.Constellation.llr
+tier: ci
+duration: "0.1 s on an Apple M6"
+tolerance: {rtol: 1.0e-12, atol: 1.0e-10}
+why: "the same sums in double precision: the tolerance is the arithmetic (2.2e-15 of the larger of 1 and the LLR, measured)"
+findings:
+  - "the 36 sets of LLRs (exact and max-log) agree to 2.2e-15 relative, up to LLRs of several hundred at the variance 0.01"
+cases:
+  - inputs: {self: {construct: comnum.Constellation.from_points, args: {points: {oracle: sionna_detection, path: [llr, qam16_0.1, points]}}}, z: {oracle: sionna_detection, path: [llr, qam16_0.1, y]}, noise_var: 0.1}
+    expected: {oracle: sionna_detection, path: [llr, qam16_0.1, app]}
+  - inputs: {self: {construct: comnum.Constellation.from_points, args: {points: {oracle: sionna_detection, path: [llr, qam256_0.01, points]}}}, z: {oracle: sionna_detection, path: [llr, qam256_0.01, y]}, noise_var: 0.01, max_log: true}
+    expected: {oracle: sionna_detection, path: [llr, qam256_0.01, maxlog]}
+  - inputs: {self: {construct: comnum.Constellation.from_points, args: {points: {oracle: sionna_detection, path: [llr, psk8_1, points]}}}, z: {oracle: sionna_detection, path: [llr, psk8_1, y]}, noise_var: 1.0}
+    expected: {oracle: sionna_detection, path: [llr, psk8_1, app]}
+  - inputs: {self: {construct: comnum.Constellation.from_points, args: {points: {oracle: sionna_detection, path: [llr, pam4_0.1, points]}}}, z: {oracle: sionna_detection, path: [llr, pam4_0.1, y]}, noise_var: 0.1}
+    expected: {oracle: sionna_detection, path: [llr, pam4_0.1, app]}

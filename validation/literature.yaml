@@ -1657,12 +1657,14 @@
   area: Reference implementations
   ref: "OptiCommPy 0.11 (recorded outputs)"
   module: mapping, metrics, filters, equalisers, carrier and clock recovery, fibre, optical front ends
-  tested: "the same inputs give the same outputs (relative tolerance down to 1e-8)"
+  tested: "the same inputs give the same outputs (relative tolerance down to 1e-8); on a random grid of 160 cases with the edges (1024-QAM, 64-PSK, the singular samples of the RRC, filters longer than the signal), the same outputs, the BER above 1e-9"
   tests:
     - tests/oracle/test_oracle.py
+    - tests/oracle/test_opticommpy_grid.py
   badge: green
   remarks:
     - "theoryBER of BPSK counts two neighbours and doubles the BER"
+    - "Qfunc computes 0.5 - 0.5 erf(x / sqrt 2) where its docstring (eq. (1)) has erfc(x / sqrt 2) / 2: the subtraction cancels, so theoryBER loses its relative accuracy below 1e-9 and returns 0 below 1e-17 (17 of 60 random cases)"
 - id: speth1999
   area: Receiver DSP
   ref: "M. Speth, S. A. Fechtel, G. Fock, H. Meyr, Optimum receiver design for wireless broad-band systems using OFDM - Part I, IEEE Trans. Commun. 47(11), 1999"
@@ -1712,12 +1714,14 @@
 - id: sionna
   area: Reference implementations
   ref: "Sionna (Apache-2.0), its reference vectors"
-  module: comnum_fec::{crc, conv, turbo, nr, scrambling, interleaving}, comnum_systems::nr::transport, comnum_channel::{multipath, pathloss}
-  tested: "CRC parity bits, convolutional and LTE turbo codewords and decisions bit for bit, NR LDPC and polar codewords; the PDSCH transport blocks of its TBEncoder (CRC, segmentation, LDPC of both base graphs, rate matching, scrambling) of R.PDSCH.1-1.2, 1-2.1 and 1-4.1 bit for bit (Sionna 2.2.0); its TDL tables and path losses (see tr38901); the scrambling sequences of TB5GScrambler (PDSCH codewords 0 and 1, PUSCH), the 188 QPP coefficient pairs of Turbo3GPPInterleaver and its permutations, its row-column interleaver, bit for bit"
+  module: comnum_fec::{crc, conv, turbo, nr, scrambling, interleaving}, comnum_mapping::constellation, comnum_mimo::detection, comnum_systems::nr::transport, comnum_channel::{multipath, pathloss}
+  tested: "CRC parity bits, convolutional and LTE turbo codewords and decisions bit for bit, NR LDPC and polar codewords; the PDSCH transport blocks of its TBEncoder (CRC, segmentation, LDPC of both base graphs, rate matching, scrambling) of R.PDSCH.1-1.2, 1-2.1 and 1-4.1 bit for bit (Sionna 2.2.0); its TDL tables and path losses (see tr38901); the scrambling sequences of TB5GScrambler (PDSCH codewords 0 and 1, PUSCH), the 188 QPP coefficient pairs of Turbo3GPPInterleaver and its permutations, its row-column interleaver, bit for bit; the exact and max-log LLRs of its Demapper (4- to 256-QAM, 8-PSK, 4-PAM) to 2.2e-15; the decisions of its LMMSE, ZF, ML and K-best (16 paths) detectors on 400 vectors, identical; the belief-propagation decoding of LDPC5GDecoder (sum-product and min-sum, flooding and layered) on 480 noisy blocks, the same bits, failed blocks included, but for layered min-sum where it fails"
   tests:
     - tests/oracle/test_sionna_vectors.py
     - tests/oracle/test_nr_pdsch_oracle.py::test_the_transport_blocks_are_those_of_sionna
     - tests/oracle/test_scrambling_interleaving_oracle.py
+    - tests/oracle/test_sionna_detection.py
+    - tests/oracle/test_sionna_ldpc_decoding.py
   badge: green
 - id: gr_dtv
   area: Reference implementations

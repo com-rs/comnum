@@ -24,6 +24,8 @@
   modules: "`comnum_mapping::{constellation, demapper, theory}`"
   summary: "OptiCommPy outputs; closed forms of Proakis & Salehi"
   evidence:
+    - recording: "OptiCommPy 0.11 on a random grid: card [`opticommpy_grid`](../validation/cards/opticommpy_grid.yaml) (`tests/oracle/test_opticommpy_grid.py`: 60 closed-form BERs of 4- to 1024-QAM, 4- to 64-PSK and 2- to 16-PAM from -2 to 30 dB, 20 links of Gray modulation, demodulation and EVM, the same; below 1e-9 OptiCommPy's theoryBER cancels and comnum keeps the exact value)"
+    - recording: "Sionna 2.2, recorded: card [`sionna_llr`](../validation/cards/sionna_llr.yaml) (`tests/oracle/test_sionna_detection.py`: the exact and max-log LLRs of 4- to 256-QAM, 8-PSK and 4-PAM at three noise variances to 2.2e-15 relative)"
     - recording: "OptiCommPy 0.11, recorded: `tests/oracle/test_oracle.py::test_gray_mapping_points_and_labels`, `::test_gray_code`, `::test_modulate_and_demodulate`, `::test_theory_ber`, `::test_theory_ber_of_bpsk_is_exact_where_opticommpy_doubles_it`"
     - closed_form: "Proakis & Salehi, *Digital Communications*, 5th ed., 2008, Sec. 4.3: `specs/validation/proakis_awgn.yaml` (47 checks; CI, `comnum verify`), `specs/validation/required_snr.yaml` (the inverted closed forms, `validation/tests/simulation/specs.rs::operating_points_follow_the_inverted_closed_forms`)"
     - table: "Cho & Yoon, *IEEE Trans. Commun.* 50(7), 2002: Table I verbatim (`crates/comnum-mapping/src/theory/mod.rs`, `literature::cho_2002_table_1`), the exact Gray BER of PAM, square and rectangular QAM (eqs. (9)–(22)) against an enumeration of the decision regions of the library's Gray labels (10⁻¹³), the 4–5 dB per extra bit of Fig. 2"
@@ -150,10 +152,11 @@
 - theme: Coding and shaping
   name: "5G NR channel codes: LDPC and polar with rate matching"
   modules: "`comnum_fec::nr`"
-  summary: "Sionna vectors bit for bit; TS 38.212 tables"
+  summary: "Sionna's encoder and decoder bit for bit; TS 38.212 tables"
   evidence:
     - table: "the tables of 3GPP TS 38.212 V18.5.0 extracted from the standard (the 513 entries of the two LDPC base graphs, the polar sequence of 1024 positions, the input and sub-block interleavers), the base graphs and the polar sequence identical to the transcriptions of Sionna; `nr::ldpc::tests`, `nr::polar::tests` (dimensions, permutations, the extension structure, every lifting size encodes codewords, round trips through puncturing, shortening, repetition and parity-check bits)"
     - recording: "Sionna (Apache-2.0), its reference vectors: `tests/oracle/test_sionna_vectors.py::test_nr_ldpc` (the codewords of 28 (K', E) through its generator matrices, 64 to 8448 bits, both base graphs, the circular buffer with repetition), `::test_nr_polar_uplink` (five (A, E) of the uplink control information, CRC11, puncturing, shortening, repetition, the triangular interleaver), bit for bit"
+    - recording: "Sionna 2.2, recorded: card [`sionna_ldpc_decoding`](../validation/cards/sionna_ldpc_decoding.yaml) (`tests/oracle/test_sionna_ldpc_decoding.py`: the belief-propagation decoding of LDPC5GDecoder, sum-product and min-sum, flooding and layered, 20 iterations, on 40 noisy blocks of three codes near the waterfall: the same decoded bits, failed blocks included, but for layered min-sum, chaotic where it fails)"
     - closed_form: "`validation/tests/coding/nr_codes.rs` (ignored): the block error rate at 1e-2 over BPSK within 0.2 to 1 dB of the normal approximation (Polyanskiy, Poor & Verdú 2010) for the LDPC code (measured 0.63 dB, K' = 500, E = 1000) and within 0.5 to 2 dB for the polar code (1.1 dB, A = 40, E = 128, L = 8); gallery `coding/plot_03_nr_codes.py`"
   gaps: "• one code block: no segmentation, no limited buffer, no HARQ combining; the DCI CRC (24 ones prepended, RNTI masking) is left to the caller<br>• the decoders are those of `comnum_fec::ldpc` and `comnum_fec::polar`: not compared with the decoding of a reference implementation"
 - theme: Coding and shaping
@@ -344,12 +347,13 @@
 - theme: MIMO
   name: "MIMO detection"
   modules: "`comnum_mimo::{detection, receiver}`"
-  summary: "Yang & Hanzo 2015 Table X; MRC closed forms"
+  summary: "Sionna's detectors, recorded; Yang & Hanzo 2015 Table X"
   evidence:
+    - recording: "Sionna 2.2, recorded: card [`sionna_mimo_detection`](../validation/cards/sionna_mimo_detection.yaml) (`tests/oracle/test_sionna_detection.py`: the decisions of MMSE, ZF, ML, the sphere decoder and K-best with 16 paths identical to those of Sionna on 400 vectors, 2 × 4 to 8 × 8, QPSK and 16-QAM; K-best with 4 paths differs on 15, Sionna ordering the columns by norm)"
     - table: "`validation/tests/mimo/mimo.rs::diversity_orders_follow_yang_hanzo_2015_table_x` (Yang & Hanzo, *IEEE Commun. Surveys Tuts.* 17(4), 2015, Table X: the high-SNR slopes of ML, sphere, ZF, MMSE, ZF/MMSE-(O)SIC and K-best (K = 1, 2, 4) on 2 × 2 and 2 × 4 QPSK links within ±0.3 of the slope of MRC of the order of the table; ignored)"
     - closed_form: "`specs/mimo_diversity.yaml` (zero forcing against MRC of one branch, Proakis & Salehi eq. (13.4-15); `tests/test_performance.py::test_specification_reproduces_its_closed_forms[mimo_diversity]`), `validation/tests/mimo/mimo.rs::zero_forcing_over_rayleigh_fading` (ignored)"
     - self: "`crates/comnum-mimo/src/detection.rs::the_sphere_decoder_is_the_exhaustive_ml_detector`, `::every_detector_is_exact_without_noise`, `::soft_outputs_agree_in_sign_with_the_decisions`"
-  gaps: "• on 2 × 4 the ZF- and MMSE-OSIC slopes lie between orders 3 and 4 at every reachable SNR (Table X: 3); the test bounds them by 3 and 4<br>• QPSK over i.i.d. Rayleigh fading, 2 × 2 and 2 × 4 only<br>• the soft outputs (LLRs) are checked for consistency only"
+  gaps: "• on 2 × 4 the ZF- and MMSE-OSIC slopes lie between orders 3 and 4 at every reachable SNR (Table X: 3); the test bounds them by 3 and 4<br>• the slopes: QPSK over i.i.d. Rayleigh fading, 2 × 2 and 2 × 4 only<br>• the detectors of large systems (AMP, OAMP) have no tool to compare with (Sionna's EP is another algorithm)<br>• the soft outputs (LLRs) are checked for consistency only"
 - theme: MIMO
   name: "Message-passing detection of large MIMO"
   short: "Message-passing detection of large MIMO (LAMA, OAMP)"
@@ -593,6 +597,7 @@
   modules: "`comnum_dsp::{filter, resample, signal}`"
   summary: "OptiCommPy outputs"
   evidence:
+    - recording: "OptiCommPy 0.11 on a random grid: card [`opticommpy_grid`](../validation/cards/opticommpy_grid.yaml) (37 RRC and RC pulses with the singular samples of the RRC and the roll-off of 1 to 4.3e-14 of their peak, 23 FIR filterings, filters longer than the signal included, 20 low-pass FIRs)"
     - recording: "OptiCommPy 0.11, recorded: `tests/oracle/test_oracle.py::test_pulse_shape_even_lengths`, `::test_pulse_shape_odd_length_sits_on_the_samples`, `::test_fir_filter`, `::test_low_pass_fir`, `::test_moving_average`, `::test_upsample_and_decimate`"
     - self: "`crates/comnum-dsp/src/filter.rs::rrc_pair_is_nyquist_on_a_periodic_block`, `::rc_taps_are_nyquist`"
   gaps: "`resample_fft` and `delay_fft`: self-consistency only"

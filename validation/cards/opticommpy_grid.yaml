@@ -1,0 +1,39 @@
+id: opticommpy_grid
+title: Closed-form BER, pulses, filters, Gray modulation and EVM against OptiCommPy on a random grid
+literature: opticommpy
+evidence: [recording]
+source:
+  kind: tool
+  reference: "OptiCommPy 0.11 (GPL-3.0), theoryBER, pulseShape, firFilter, lowPassFIR, modulateGray, demodulateGray, calcEVM"
+  locator: "recorded outputs tests/oracle/opticommpy_grid.json and .npz (tests/oracle/test_opticommpy_grid.py: 160 cases drawn by comnum's generator, seed 20261117, and the edge cases)"
+  version: "0.11.0"
+description: >
+  The parameters drawn at random rather than chosen: 60 closed-form BERs (4- to
+  1024-QAM, 4- to 64-PSK, 2- to 16-PAM, Eb/N0 from -2 to 30 dB), 37 RRC and RC pulses (2
+  to 16 samples per symbol, 16 to 1038 taps, roll-offs 0.01 to 1, and the roll-offs that
+  put a singularity t = ±T/(4 beta) of the RRC on a sample), 23 FIR filterings (1 to 80
+  taps, filters longer than the signal), 20 low-pass FIRs (rectangular and Gaussian, odd
+  and even lengths), 20 links (Gray modulation of 400 symbols, demodulation of their
+  noisy samples at 0 to 30 dB, EVM against the reference). The cases here are five BERs;
+  the test compares the 160.
+run:
+  function: comnum.theory_ber
+tier: ci
+duration: "0.3 s on an Apple M6"
+tolerance: {rtol: 1.0e-6}
+why: "both evaluate the same closed forms in double precision: the tolerance is the arithmetic of OptiCommPy, whose BER is right to 1e-8 relative above 1e-9 (measured)"
+findings:
+  - "the pulses (the singular samples of the RRC and the roll-off of 1 included) to 4.3e-14 of their peak, the filters, the low-pass FIRs, the Gray labels, the decisions and the EVM agree on every case; OptiCommPy raised no error"
+  - "theoryBER loses its relative accuracy below 1e-9 and returns 0 in 17 of the 60 cases (below 1e-17; comnum: 2.1e-186 for BPSK at 26.3 dB, 1.0e-310 at 28.5 dB): its Qfunc computes 0.5 - 0.5 erf(x / sqrt 2), which cancels, where its docstring (eq. (1)) has erfc(x / sqrt 2) / 2; at 1.1e-14 its values are multiples of 2^-52 (2-PAM at 14.65 dB: 1.1102e-14, 0.24 % below the exact 1.1129e-14). comnum's values are the exact Gray BER of PAM and QAM (theory_ber_gray, Cho & Yoon 2002) to 1e-12"
+cases:
+  - {inputs: {m: 1024, ebn0_db: 16.15, kind: qam}, expected: {oracle: opticommpy_grid, path: [theory, 21, value]}}
+  - {inputs: {m: 16, ebn0_db: -0.26, kind: qam}, expected: {oracle: opticommpy_grid, path: [theory, 24, value]}}
+  - {inputs: {m: 4, ebn0_db: 7.552, kind: psk}, expected: {oracle: opticommpy_grid, path: [theory, 12, value]}}
+  - inputs: {m: 2, ebn0_db: 14.648, kind: pam}
+    expected: {oracle: opticommpy_grid, path: [theory, 17, value]}
+    tolerance: {atol: 1.0e-15}
+    why: "OptiCommPy's 0.5 - 0.5 erf cancels: 1.1102e-14 (50 x 2^-52) where the BER is 1.1129e-14; the agreement is absolute, its rounding"
+  - inputs: {m: 16, ebn0_db: 24.262, kind: qam}
+    expected: {oracle: opticommpy_grid, path: [theory, 13, value]}
+    tolerance: {atol: 1.0e-15}
+    why: "OptiCommPy returns 0, comnum 9.1e-49: the agreement is absolute, OptiCommPy's rounding"

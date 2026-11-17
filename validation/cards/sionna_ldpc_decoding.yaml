@@ -1,0 +1,37 @@
+id: sionna_ldpc_decoding
+title: Belief-propagation decoding of the 5G NR LDPC code against Sionna
+literature: sionna
+evidence: [recording]
+source:
+  kind: tool
+  reference: "Sionna (NVIDIA, Apache-2.0), sionna.phy.fec.ldpc.LDPC5GDecoder (boxplus-phi and minsum, flooding and layered, 20 iterations, llr_max None), double precision"
+  locator: "recorded outputs tests/oracle/sionna_ldpc.json and .npz (tests/oracle/test_sionna_ldpc_decoding.py: k = 500, 1000, 3000 bits rate-matched to 1200, 1500, 6000; 40 blocks of BPSK over AWGN each, near the waterfall)"
+  version: "2.2.0"
+description: >
+  The same noisy LLRs (BPSK over AWGN, drawn by comnum's generator from fixed seeds)
+  decoded by comnum.NrLdpc and by Sionna's LDPC5GDecoder with the same check-node rule
+  and schedule, 20 iterations, no clipping; comnum stops early on a codeword, Sionna
+  runs every iteration. The decoded information bits are compared block by block,
+  the blocks that fail included: equal words there mean the same iterates. The cases
+  are 4 of the 8 recorded blocks of k = 500, E = 1200 at 1 dB with sum-product and
+  flooding, two of which both decoders fail; the test compares the 480 blocks of the
+  12 combinations.
+run:
+  function: comnum.NrLdpc.decode
+tier: ci
+duration: "0.5 s on an Apple M6"
+tolerance: {exact: true}
+findings:
+  - "sum-product (flooding and layered) and flooding min-sum: the 360 blocks decoded to the same bits, the 121 blocks that fail included (the same iterates, to the end)"
+  - "layered min-sum: the same blocks decoded (BLER 36/40, 0/40, 40/40 on both sides), but 70 of the 76 blocks that both fail end on different words; the two are identical up to the 17th iteration (k = 500), and in these blocks the layered min-sum decoder is chaotic: a relative perturbation of 1e-12 of the LLRs changes comnum's own output on all 36 failed blocks (on none with the three other combinations), so the difference is the rounding of the sums, in another order, amplified by a decoder that does not converge"
+cases:
+  - inputs: {self: {construct: comnum.NrLdpc, args: {k: 500, e: 1200, rule: sum_product, max_iterations: 20, layered: false}}, llr: {oracle: sionna_ldpc, path: [llr_500, 0]}}
+    expected: {oracle: sionna_ldpc, path: [card_sum_product_flooding, 0]}
+  - inputs: {self: {construct: comnum.NrLdpc, args: {k: 500, e: 1200, rule: sum_product, max_iterations: 20, layered: false}}, llr: {oracle: sionna_ldpc, path: [llr_500, 1]}}
+    expected: {oracle: sionna_ldpc, path: [card_sum_product_flooding, 1]}
+    note: "a block both decoders fail"
+  - inputs: {self: {construct: comnum.NrLdpc, args: {k: 500, e: 1200, rule: sum_product, max_iterations: 20, layered: false}}, llr: {oracle: sionna_ldpc, path: [llr_500, 3]}}
+    expected: {oracle: sionna_ldpc, path: [card_sum_product_flooding, 3]}
+    note: "a block both decoders fail"
+  - inputs: {self: {construct: comnum.NrLdpc, args: {k: 500, e: 1200, rule: min_sum, max_iterations: 20, layered: false}}, llr: {oracle: sionna_ldpc, path: [llr_500, 2]}}
+    expected: {oracle: sionna_ldpc, path: [card_min_sum_flooding, 2]}

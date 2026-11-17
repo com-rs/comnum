@@ -1,0 +1,36 @@
+id: sionna_mimo_detection
+title: Linear, ML, sphere and K-best MIMO detection against Sionna
+literature: sionna
+evidence: [recording]
+source:
+  kind: tool
+  reference: "Sionna (NVIDIA, Apache-2.0), sionna.phy.mimo LinearDetector (lmmse, zf), MaximumLikelihoodDetector and KBestDetector, hard symbol decisions, double precision"
+  locator: "recorded outputs tests/oracle/sionna_detection.json and .npz (tests/oracle/test_sionna_detection.py)"
+  version: "2.2.0"
+description: >
+  The decisions of comnum.mimo_detect against those of Sionna on 100 vectors of four
+  configurations (2 x 4 16-QAM, 4 x 4 QPSK and 16-QAM, 8 x 8 QPSK; i.i.d. Rayleigh
+  channels, noise variances 0.05 to 0.3 per receive antenna), Sionna given comnum's
+  points as a custom constellation: "mmse" against LMMSE equalisation then the nearest
+  point, "zf" against ZF, "ml" and "sphere" against the exhaustive ML detector, "kbest"
+  against KBestDetector with the same number of paths. The cases are the 4 x 4 16-QAM
+  configuration, the hardest of the four; the test compares all.
+run:
+  function: comnum.mimo_detect
+tier: ci
+duration: "0.5 s on an Apple M6"
+tolerance: {exact: true}
+findings:
+  - "LMMSE, ZF, ML and the sphere decoder take the same decisions as Sionna on the 400 vectors (1800 symbols) of the four configurations; the K-best search with 16 paths too"
+  - "with 4 paths the K-best searches differ on 15 of the 400 vectors (10 of the 100 of 4 x 4 16-QAM): Sionna sorts the columns of the channel by decreasing norm before its QR decomposition, comnum keeps the order of the streams, so they prune different branches; comnum's decision is the closer to y on 10 of the 15, Sionna's on 5, and comnum's is the ML decision on 390 vectors against 386"
+cases:
+  - inputs: {h: {oracle: sionna_detection, path: [mimo, 4x4_qam16_0.05, h]}, y: {oracle: sionna_detection, path: [mimo, 4x4_qam16_0.05, y]}, constellation: {construct: comnum.Constellation.from_points, args: {points: {oracle: sionna_detection, path: [mimo, 4x4_qam16_0.05, points]}}}, noise_var: 0.05, method: mmse}
+    expected: {oracle: sionna_detection, path: [mimo, 4x4_qam16_0.05, lmmse]}
+  - inputs: {h: {oracle: sionna_detection, path: [mimo, 4x4_qam16_0.05, h]}, y: {oracle: sionna_detection, path: [mimo, 4x4_qam16_0.05, y]}, constellation: {construct: comnum.Constellation.from_points, args: {points: {oracle: sionna_detection, path: [mimo, 4x4_qam16_0.05, points]}}}, noise_var: 0.05, method: zf}
+    expected: {oracle: sionna_detection, path: [mimo, 4x4_qam16_0.05, zf]}
+  - inputs: {h: {oracle: sionna_detection, path: [mimo, 4x4_qam16_0.05, h]}, y: {oracle: sionna_detection, path: [mimo, 4x4_qam16_0.05, y]}, constellation: {construct: comnum.Constellation.from_points, args: {points: {oracle: sionna_detection, path: [mimo, 4x4_qam16_0.05, points]}}}, noise_var: 0.05, method: ml}
+    expected: {oracle: sionna_detection, path: [mimo, 4x4_qam16_0.05, ml]}
+  - inputs: {h: {oracle: sionna_detection, path: [mimo, 4x4_qam16_0.05, h]}, y: {oracle: sionna_detection, path: [mimo, 4x4_qam16_0.05, y]}, constellation: {construct: comnum.Constellation.from_points, args: {points: {oracle: sionna_detection, path: [mimo, 4x4_qam16_0.05, points]}}}, noise_var: 0.05, method: sphere}
+    expected: {oracle: sionna_detection, path: [mimo, 4x4_qam16_0.05, ml]}
+  - inputs: {h: {oracle: sionna_detection, path: [mimo, 8x8_qam4_0.3, h]}, y: {oracle: sionna_detection, path: [mimo, 8x8_qam4_0.3, y]}, constellation: {construct: comnum.Constellation.from_points, args: {points: {oracle: sionna_detection, path: [mimo, 8x8_qam4_0.3, points]}}}, noise_var: 0.3, method: ml}
+    expected: {oracle: sionna_detection, path: [mimo, 8x8_qam4_0.3, ml]}

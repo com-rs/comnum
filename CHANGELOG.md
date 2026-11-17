@@ -8,6 +8,27 @@ and follow [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Differential comparisons with Sionna 2.2 and OptiCommPy 0.11 on recorded inputs, 4
+  new validation cards:
+  - the exact and max-log LLRs of `Constellation.llr` against Sionna's `Demapper`
+    (4- to 256-QAM, 8-PSK, 4-PAM, three noise variances) to 2.2e-15 relative (card
+    `sionna_llr`);
+  - the decisions of `mimo_detect` against Sionna's detectors on 400 vectors, 2 × 4 to
+    8 × 8: MMSE, ZF, ML, the sphere decoder and K-best with 16 paths identical; with 4
+    paths the K-best searches differ on 15 vectors, Sionna ordering the columns of the
+    channel by norm before its QR decomposition, and comnum's is the ML decision on 390
+    against 386 (card `sionna_mimo_detection`);
+  - the belief-propagation decoding of `NrLdpc` against `LDPC5GDecoder` (sum-product
+    and min-sum, flooding and layered, 20 iterations) on 480 noisy blocks: the same
+    decoded bits, failed blocks included, but for layered min-sum, which in the blocks
+    both fail is chaotic (a relative change of 1e-12 of the LLRs changes comnum's own
+    word) (card `sionna_ldpc_decoding`);
+  - 160 cases drawn at random with the edges (1024-QAM, 64-PSK, the singular samples of
+    the RRC, a roll-off of 1, filters longer than the signal) against OptiCommPy's
+    theoryBER, pulseShape, firFilter, lowPassFIR, Gray modulation and EVM: the same
+    outputs; below 1e-9 OptiCommPy's theoryBER cancels (its Qfunc computes 0.5 - 0.5
+    erf) and returns 0 in 17 of 60 cases, where comnum keeps the exact value (card
+    `opticommpy_grid`).
 - Comparisons with reference tools and with Fig. 4 of Alamouti (1998) for the four
   modules that had none, recorded as fixtures of `tests/oracle/` and as 11 validation
   cards; the maturity table goes from 71 modules at level A, 6 at B and 2 at C to 75 at
