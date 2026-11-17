@@ -31,7 +31,7 @@ pub(super) fn blocks() -> Vec<Extension> {
         ),
         builtin!(
             WirelessChannel, "awgn_ebn0",
-            "Add white Gaussian noise for an E_b/N_0 (matched-filter definition).",
+            "Add white Gaussian noise for an E_b/N_0 (matched-filter definition), on the expected power of the signal.",
             AwgnEbn0,
             needs [Samples, Constellation],
             gives [Noise],
@@ -87,7 +87,7 @@ block_params! {
     struct AwgnSpec {
         snr_db: f64 [required] "dB", "signal-to-noise ratio";
         reference: NoiseReference ["signal"] one_of ["signal", "unit"],
-            "signal: measured power (OptiCommPy); unit: E_s = 1 whatever the samples, σ² = 10^(-SNR/10) per symbol";
+            "signal: the power of the signal, expected when the transmitter knows it, else measured (OptiCommPy); unit: E_s = 1 whatever the samples, σ² = 10^(-SNR/10) per symbol";
         bandwidth_hz: Option<f64> [absent "symbol rate"] "Hz" > 0, "noise bandwidth B: σ² = (f_s/B) P / SNR";
     }
 }
@@ -96,7 +96,8 @@ block_params! {
 #[derive(Clone, Copy, PartialEq, Eq, Deserialize)]
 #[serde(rename_all = "lowercase")]
 enum NoiseReference {
-    /// The measured power of the signal.
+    /// The power of the signal: its expected power when the blocks that produced it
+    /// declared it ([`Frame::signal_power`]), else the measured one.
     Signal,
     /// Unit-energy symbols.
     Unit,

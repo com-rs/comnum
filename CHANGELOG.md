@@ -573,6 +573,20 @@ and follow [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- The noise of `awgn_ebn0` and `awgn` (`reference: signal`) in a chain is set on the
+  expected power of the signal, declared by the blocks that produce it (the energy of
+  the constellation under the probabilities of the source; `pulse_shape`, `mimo_tx`,
+  `ofdm_tx` from theirs), and no longer on the power measured on the samples of each
+  trial, which follows the symbols drawn: with 16-QAM at 10 dB the BER of frames of 16
+  symbols was 6.9 % above the exact one (7.2 % for 64-QAM at 14 dB), of 64 symbols 2.0 %;
+  it is now within 0.12 % (the Monte Carlo interval). `pulse_shape` scales the shaped
+  symbols to unit expected power (`E_s ||h||^2 / sps`) instead of the power of the trial.
+  A block that changes the samples without declaring their power leaves the measured
+  power, as before. The validation specifications are unchanged for PSK and the optical
+  links (bit for bit) and move within their Monte Carlo spread for QAM (0.9 % at most).
+  The function `awgn_ebn0` keeps the measured power of its input and takes the expected
+  one as `power`. Found by comparing a coded chain block by block with Sionna
+  (`tests/oracle/test_sionna_chain.py`), which agrees with it to the arithmetic.
 - Playground: on a logarithmic axis, an error rate of zero was left out by Plotly, so a
   curve with no error at any condition was drawn empty (the tutorials, one trial each:
   the SER of `04_nyquist`, `06_carrier_sync`, `10_iq_imbalance` and `13_text_fsk`). A

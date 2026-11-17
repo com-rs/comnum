@@ -425,8 +425,9 @@
   summary: "closed forms of the error rates"
   evidence:
     - closed_form: "`validation/tests/modulation/closed_forms.rs::bpsk_over_awgn_follows_q_of_sqrt_2_ebn0` (ignored), `specs/validation/proakis_awgn.yaml`"
-    - self: "`crates/comnum-channel/src/awgn.rs::noise_levels`, `::the_block_matches_the_function_and_is_the_identity_without_noise`"
-  gaps: "—"
+    - self: "`crates/comnum-channel/src/awgn.rs::noise_levels`, `::the_block_matches_the_function_and_is_the_identity_without_noise`; `crates/comnum-spec/src/blocks/tests.rs::the_noise_of_a_short_frame_does_not_follow_its_symbols` (the noise of `awgn_ebn0` on the nominal power of the signal: with the measured power, the BER of frames of 16 symbols of 16-QAM at 10 dB was 6.9 % above the exact one, now 0.1 %), `::the_transmitters_declare_the_power_they_produce`"
+    - recording: "Sionna 2.2: the noise variance of `awgn_ebn0` in a coded chain is that of its ebnodb2no to 3e-8 (`tests/oracle/test_sionna_chain.py`)"
+  gaps: "the function `awgn_ebn0` measures the power of the vector it is given unless `power` is given (OptiCommPy's convention): on a short vector the noise follows the symbols"
 - theme: Wireless channels
   name: "Flat fading and antenna correlation"
   modules: "`comnum_channel::{fading, spatial}`"
@@ -793,8 +794,9 @@
 - theme: Simulation and specifications
   name: "Specifications, verification and operating-point search"
   modules: "`comnum_spec`"
-  summary: "the search against the inverted closed forms"
+  summary: "a coded chain block by block against Sionna; the inverted closed forms"
   evidence:
+    - recording: "Sionna 2.2, recorded: `tests/oracle/test_sionna_chain.py` (the declarative chain fec_encode (LDPC 1200/600) → map → awgn_ebn0 → demap → fec_decode traced for QPSK, 16- and 64-QAM, and each block against Sionna given the same inputs: the mapping exact, the noise variance of ebnodb2no with the rate on the nominal energy to 3e-8 (its float32), the LLRs of its Demapper to 7e-8, the 36 blocks decoded by LDPCBPDecoder with the same bits)"
     - closed_form: "`specs/validation/required_snr.yaml` (QPSK, 16- and 64-QAM at a BER of 10⁻³ within 0.02 dB of the inverted closed forms; `validation/tests/simulation/specs.rs::operating_points_follow_the_inverted_closed_forms`), `crates/comnum-spec/src/search.rs::the_operating_points_follow_the_theory`"
     - self: "`crates/comnum/tests/specs.rs::every_specification_runs_one_trial_per_condition`, `::every_specification_passes_the_check_of_its_ports`, `::a_specification_reproduces_its_rust_counterpart`; `crates/comnum-spec/src/verify.rs::values_curves_and_theory`; `crates/comnum-spec/tests/extension.rs`; `tests/test_chain.py` (the Rust and Python runners agree)"
   gaps: "—"

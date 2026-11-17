@@ -580,3 +580,79 @@ fn the_keys_of_the_nested_mappings_are_documented_and_checked() {
     let e = build(&json!({"type": "source", "constellation": {"kind": "qam", "m": 16, "gray": true}}), &ctx);
     assert!(e.err().unwrap().to_string().contains("unknown field `gray`"));
 }
+
+/// The noise of `awgn_ebn0` is set on the nominal power of the samples, so that its
+/// variance does not follow the symbols drawn: `E_s sps / (b E_b/N_0)` for every frame,
+/// however short (with the measured power, frames of 16 symbols of 16-QAM at 10 dB had a
+/// BER 7 % above the exact one).
+#[test]
+fn the_noise_of_a_short_frame_does_not_follow_its_symbols() {
+    for seed in 0..20 {
+        let s = run(
+            &[
+                json!({"type": "source", "constellation": "16-QAM", "n_symbols": 16}),
+                json!({"type": "awgn_ebn0", "ebn0_db": 10.0}),
+            ],
+            seed,
+        );
+        let expected = 1.0 / (4.0 * 10f64.powf(1.0));
+        assert!((s.channel.noise_var.unwrap() / expected - 1.0).abs() < 1e-12, "seed {seed}");
+    }
+    // a coded link: the energy of the constellation, the rate in the bits per symbol
+    let s = run(
+        &[
+            json!({"type": "fec_encode", "code": {"type": "ldpc", "n": 240, "k": 120}}),
+            json!({"type": "map", "constellation": "16-QAM"}),
+            json!({"type": "awgn_ebn0", "ebn0_db": 2.0}),
+        ],
+        3,
+    );
+    assert!((s.channel.noise_var.unwrap() * 2.0 * 10f64.powf(0.2) - 1.0).abs() < 1e-12);
+}
+
+/// A block that changes the samples without declaring their power changes their
+/// fingerprint: the noise blocks then measure the power, as before.
+#[test]
+fn the_nominal_power_holds_only_for_the_samples_it_was_set_for() {
+    let mut s = run(&[json!({"type": "source", "constellation": "16-QAM", "n_symbols": 64})], 1);
+    assert_eq!(s.nominal_power(), Some(1.0));
+    assert!((s.mean_power() - 1.0).abs() > 1e-6, "the measured power of 64 symbols is not 1");
+    s.samples[0] *= 2.0;
+    assert_eq!(s.nominal_power(), None);
+    assert_eq!(s.signal_power(), s.mean_power());
+    // the probabilities of a shaped source enter the energy
+    let shaped = run(&[json!({"type": "source", "constellation": "64-QAM", "n_symbols": 8, "mb_lambda": 0.5})], 1);
+    let c = shaped.constellation.as_ref().unwrap();
+    let es = c.energy_with(shaped.pmf.as_ref().unwrap()).unwrap();
+    assert!((shaped.nominal_power().unwrap() - es).abs() < 1e-12);
+}
+
+/// The transmitters that know their gain declare the power of their samples: on a long
+/// frame it is the measured one, within the spread of the symbols.
+#[test]
+fn the_transmitters_declare_the_power_they_produce() {
+    let cases = [
+        vec![json!({"type": "pulse_shape", "kind": "RRC", "sps": 4, "rolloff": 0.2})],
+        vec![json!({"type": "mimo_tx", "n_tx": 2})],
+        vec![json!({"type": "mimo_tx", "n_tx": 2, "scheme": "alamouti"})],
+        vec![json!({"type": "ofdm_tx", "n_fft": 128, "n_subcarriers": 100, "n_cp": 8, "oversampling": 2})],
+        vec![json!({"type": "mimo_tx", "n_tx": 2}), json!({"type": "ofdm_tx", "n_fft": 64, "n_subcarriers": 48})],
+    ];
+    for blocks in cases {
+        let mut link = vec![json!({"type": "source", "constellation": "16-QAM", "n_symbols": 40000})];
+        link.extend(blocks.iter().cloned());
+        let s = run(&link, 7);
+        let nominal = s.nominal_power().unwrap_or_else(|| panic!("{blocks:?}: no nominal power"));
+        assert!((s.mean_power() / nominal - 1.0).abs() < 0.02, "{blocks:?}: {} against {nominal}", s.mean_power());
+    }
+    // the pulse is scaled to the unit expected power, not to the power of the trial
+    let s = run(
+        &[
+            json!({"type": "source", "constellation": "16-QAM", "n_symbols": 32}),
+            json!({"type": "pulse_shape", "kind": "RRC", "sps": 4, "rolloff": 0.2}),
+        ],
+        2,
+    );
+    assert_eq!(s.nominal_power(), Some(1.0));
+    assert!((s.mean_power() - 1.0).abs() > 1e-3);
+}

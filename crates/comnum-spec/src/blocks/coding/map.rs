@@ -42,6 +42,8 @@ impl Block for Map {
         s.samples = s.symbols.clone();
         s.sps = 1.0;
         s.symbol_rate = self.symbol_rate;
+        // uniform coded bits: the energy of the constellation
+        s.set_nominal_power(self.c.energy());
         Ok(())
     }
 }

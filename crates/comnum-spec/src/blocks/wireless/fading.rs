@@ -36,7 +36,7 @@ fn fade(
     rng: &mut Rng,
     channel: impl FnOnce(&[Vec<C64>], f64, &mut Rng) -> Result<(Vec<Vec<C64>>, Csi)>,
 ) -> Result<()> {
-    s.channel.faded_power = Some(s.mean_power() * s.n_streams() as f64);
+    s.channel.faded_power = Some(s.signal_power() * s.n_streams() as f64);
     let fs = s.fs();
     let x = s.take_streams();
     let (y, csi) = channel(&x, fs, rng)?;

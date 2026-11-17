@@ -68,7 +68,12 @@ fn awgn<'py>(
 ///     y[k] = x[k] + n[k], \qquad n[k] \sim \mathcal{CN}(0, \sigma^2), \qquad
 ///     \sigma^2 = \frac{P_x \cdot \mathrm{sps}}{b \cdot E_b/N_0},
 ///
-/// with :math:`P_x` the mean power of `x`.
+/// with :math:`P_x` the power of the signal: ``power`` when given, its expected power
+/// (1 for the points of a normalised constellation), else the mean power measured on
+/// `x` (OptiCommPy's convention). Measured on a short vector, the power follows the
+/// symbols drawn and the noise with it: with 16 symbols of 16-QAM at 10 dB the BER is
+/// 7 % above the exact one; give ``power`` for short vectors. The blocks of a chain
+/// (``AwgnEbn0``) use the expected power.
 ///
 /// Args:
 ///     x (array_like): the signal.
@@ -77,6 +82,8 @@ fn awgn<'py>(
 ///         coded or shaped signal).
 ///     rng (Rng): the generator.
 ///     sps (float): samples per symbol.
+///     power (float, optional): the power :math:`P_x` the noise refers to (default: the
+///         mean power of `x`).
 ///
 /// Returns:
 ///     numpy.ndarray: the noisy signal (complex128).
@@ -96,7 +103,7 @@ fn awgn<'py>(
 ///     >>> abs(comnum.ber(c.demap_bits(y), b) / comnum.theory_ber(4, 6.0) - 1) < 0.15
 ///     True
 #[pyfunction]
-#[pyo3(signature = (x, ebn0_db, bits_per_symbol, rng, *, sps = 1.0))]
+#[pyo3(signature = (x, ebn0_db, bits_per_symbol, rng, *, sps = 1.0, power = None))]
 fn awgn_ebn0<'py>(
     py: Python<'py>,
     x: &Bound<'py, PyAny>,
@@ -104,8 +111,21 @@ fn awgn_ebn0<'py>(
     bits_per_symbol: f64,
     mut rng: PyRefMut<'py, PyRng>,
     sps: f64,
+    power: Option<f64>,
 ) -> PyResult<CArr<'py>> {
-    Ok(carr(py, awgn_ch::awgn_ebn0(&cvec(x)?, ebn0_db, bits_per_symbol, sps, &mut rng.inner)))
+    let x = cvec(x)?;
+    let y = match power {
+        Some(p) => {
+            if !(p.is_finite() && p > 0.0) {
+                return Err(pyo3::exceptions::PyValueError::new_err(format!("power must be positive, got {p}")));
+            }
+            let mut y = x;
+            awgn_ch::add_noise(&mut y, awgn_ch::ebn0_noise_variance(p, ebn0_db, bits_per_symbol, sps), &mut rng.inner);
+            y
+        }
+        None => awgn_ch::awgn_ebn0(&x, ebn0_db, bits_per_symbol, sps, &mut rng.inner),
+    };
+    Ok(carr(py, y))
 }
 
 /// The samples of a receiver whose sampling clock is off by ``ppm`` parts per million.

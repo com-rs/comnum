@@ -81,7 +81,9 @@ fn a_specification_reproduces_its_rust_counterpart() {
         let c = Constellation::qam(16)?.normalized();
         let (idx, x) = source::symbols(&c, 1000, None, rng)?;
         let bits = comnum::mapping::constellation::indices_to_bits(&idx, 4);
-        let y = awgn::awgn_ebn0(&x, cond.f64("ebn0_db")?, 4.0, 1.0, rng);
+        // the noise of the nominal power of the constellation, as the block sets it
+        let mut y = x.clone();
+        awgn::add_noise(&mut y, awgn::ebn0_noise_variance(c.energy(), cond.f64("ebn0_db")?, 4.0, 1.0), rng);
         rec.errors("ber", metrics::bit_errors(&c.demap_bits(&y), &bits)? as u64, bits.len() as u64);
         Ok(())
     });

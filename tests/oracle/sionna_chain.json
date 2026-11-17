@@ -1,0 +1,50 @@
+{
+ "data": {
+  "16-QAM": {
+   "decoded": {
+    "__npz__": "data.16-QAM.decoded"
+   },
+   "llr": {
+    "__npz__": "data.16-QAM.llr"
+   },
+   "noise_var": 0.1990535855293274,
+   "symbols": {
+    "__npz__": "data.16-QAM.symbols"
+   },
+   "valid": true
+  },
+  "64-QAM": {
+   "decoded": {
+    "__npz__": "data.64-QAM.decoded"
+   },
+   "llr": {
+    "__npz__": "data.64-QAM.llr"
+   },
+   "noise_var": 0.05927598103880882,
+   "symbols": {
+    "__npz__": "data.64-QAM.symbols"
+   },
+   "valid": true
+  },
+  "QPSK": {
+   "decoded": {
+    "__npz__": "data.QPSK.decoded"
+   },
+   "llr": {
+    "__npz__": "data.QPSK.llr"
+   },
+   "noise_var": 0.7079457640647888,
+   "symbols": {
+    "__npz__": "data.QPSK.symbols"
+   },
+   "valid": true
+  }
+ },
+ "name": "sionna_chain",
+ "npz": "sionna_chain.npz",
+ "numpy": "2.5.5",
+ "python": "3.12.15",
+ "recorded": "2026-11-17",
+ "tool": "Sionna",
+ "version": "2.2.0"
+}

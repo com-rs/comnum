@@ -92,12 +92,26 @@ impl OfdmTx {
 impl Block for OfdmTx {
     fn apply(&self, s: &mut Frame, rng: &mut Rng) -> Result<()> {
         s.require_one_sps("ofdm_tx")?;
+        let data_power = s.nominal_power();
         let (out, frame) = transmit(&self.ofdm, &self.grid, s.take_streams(), rng).map_err(|e| e.context("ofdm_tx"))?;
         let (k, ln) = (self.ofdm.n_active, self.ofdm.fft_len());
+        let n_ports = frame.n_ports;
         s.set_streams(out);
         s.sps = ln as f64 / k as f64;
         s.symbol_rate = k as f64 * self.scs;
         s.in_flight.ofdm = Some(frame);
+        if let Some(p) = data_power {
+            // K/(LN) times the mean energy of a resource element of a grid: the data at
+            // their nominal power, the pilots of every port at theirs
+            let n_data = self.grid.n_data();
+            let res = (self.grid.n_subcarriers * self.grid.n_symbols) as f64;
+            let mut energy = 0.0;
+            for port in 0..n_ports {
+                let pilots = self.grid.map_port(&vec![C64::new(0.0, 0.0); n_data], port, n_ports)?;
+                energy += comnum_math::energy(&pilots) + n_data as f64 * p;
+            }
+            s.set_nominal_power(k as f64 / ln as f64 * energy / (n_ports as f64 * res));
+        }
         Ok(())
     }
 }

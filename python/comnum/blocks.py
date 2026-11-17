@@ -151,7 +151,7 @@ class Awgn(Native):
 
     Args:
         snr_db (float): signal-to-noise ratio [dB]; required
-        reference (str): signal: measured power (OptiCommPy); unit: E_s = 1 whatever the samples, σ² = 10^(-SNR/10) per symbol; one of signal, unit; default signal
+        reference (str): signal: the power of the signal, expected when the transmitter knows it, else measured (OptiCommPy); unit: E_s = 1 whatever the samples, σ² = 10^(-SNR/10) per symbol; one of signal, unit; default signal
         bandwidth_hz (float): noise bandwidth B: σ² = (f_s/B) P / SNR [Hz]; default symbol rate
     """
 
@@ -171,7 +171,7 @@ class Awgn(Native):
 
 
 class AwgnEbn0(Native):
-    """Add white Gaussian noise for an E_b/N_0 (matched-filter definition).
+    """Add white Gaussian noise for an E_b/N_0 (matched-filter definition), on the expected power of the signal.
 
     Needs: samples, constellation. Gives: noise.
 
@@ -587,7 +587,7 @@ class Dbp(Native):
 
 
 class PulseShape(Native):
-    """Upsample and filter with a transmit pulse, then normalise to unit power.
+    """Upsample and filter with a transmit pulse, then normalise to unit power (the expected power of symbols of known energy, else the measured one).
 
     Needs: samples. Gives: nothing.
 

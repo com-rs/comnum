@@ -56,6 +56,7 @@ impl Block for MimoTx {
     fn apply(&self, s: &mut Frame, _: &mut Rng) -> Result<()> {
         ensure(s.antennas.is_empty(), || "mimo_tx: the signal already has several antennas".into())?;
         s.require_one_sps("mimo_tx")?;
+        let power = s.nominal_power();
         let x = std::mem::take(&mut s.samples);
         let nt = self.n_tx;
         ensure(x.len() % nt == 0, || format!("mimo_tx: {} symbols is not a multiple of {nt} antennas", x.len()))?;
@@ -69,6 +70,10 @@ impl Block for MimoTx {
         s.set_streams(streams);
         s.layout.layers = nt;
         s.layout.alamouti = self.alamouti;
+        // every antenna radiates 1/n_t of the power (Alamouti: s/sqrt 2 on each)
+        if let Some(p) = power {
+            s.set_nominal_power(p / nt as f64);
+        }
         Ok(())
     }
 }

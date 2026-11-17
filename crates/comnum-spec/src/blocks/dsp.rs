@@ -28,7 +28,7 @@ pub(super) fn blocks() -> Vec<Extension> {
     vec![
         builtin!(
             Waveform, per_polarization "pulse_shape",
-            "Upsample and filter with a transmit pulse, then normalise to unit power.",
+            "Upsample and filter with a transmit pulse, then normalise to unit power (the expected power of symbols of known energy, else the measured one).",
             PulseSpec,
             needs [Samples],
             gives [],
@@ -145,8 +145,20 @@ impl Block for PulseShaping {
     fn apply(&self, s: &mut Frame, _: &mut Rng) -> Result<()> {
         let k = s.int_sps("pulse_shape")?;
         ensure(k == 1, || "pulse_shape expects symbols (1 sample per symbol)".into())?;
-        s.samples = signal::pnorm(&filter::upfirdn(&self.taps, &s.samples, self.sps, 1));
+        let shaped = filter::upfirdn(&self.taps, &s.samples, self.sps, 1);
         s.sps = self.sps as f64;
+        match s.nominal_power() {
+            // symbols of known energy E_s: the filtered train has the power
+            // E_s ||h||^2 / sps per sample (away from its ends); scaled to 1
+            Some(es) => {
+                let p = es * self.taps.iter().map(|h| h * h).sum::<f64>() / self.sps as f64;
+                let a = 1.0 / p.sqrt();
+                s.samples = shaped.into_iter().map(|v| v * a).collect();
+                s.set_nominal_power(1.0);
+            }
+            // otherwise the measured power, as the samples come
+            None => s.samples = signal::pnorm(&shaped),
+        }
         Ok(())
     }
 }

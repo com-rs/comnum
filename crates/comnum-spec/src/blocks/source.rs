@@ -106,6 +106,14 @@ impl Block for Source {
             layout: Layout { polarisations: self.pols == 2, ..Layout::default() },
             ..Frame::default()
         };
+        // the energy of the constellation under the probabilities of the source (unit
+        // variance for the Gaussian source)
+        let es = match (&self.c, &self.px) {
+            (Some(c), Some(px)) => c.energy_with(px)?,
+            (Some(c), None) => c.energy(),
+            (None, _) => 1.0,
+        };
+        s.set_nominal_power(es);
         Ok(())
     }
 }

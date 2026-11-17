@@ -52,6 +52,30 @@ pub struct Frame {
     /// The signals taken by the `scope` blocks: `Some` in a traced trial
     /// ([`crate::Spec::trace`]), `None` (nothing taken) in a campaign.
     pub traces: Option<Vec<super::analysis::ScopeTrace>>,
+    /// The expected power of the samples, set by the blocks that know it (see
+    /// [`Frame::set_nominal_power`]).
+    pub nominal: Option<NominalPower>,
+}
+
+/// The expected power per sample of the samples of a [`Frame`], over every stream, as
+/// the block that produced them knows it (the energy of the constellation under the
+/// probabilities of the source, the gain of a transmitter), with the fingerprint of the
+/// samples it describes: their number and their exact energy when it was set.
+///
+/// The noise blocks set the SNR on this power rather than on the power measured on the
+/// samples of the trial, which fluctuates with the symbols drawn (by 2.3 % for 600
+/// symbols of 16-QAM): with the measured power the noise follows the data, and the
+/// error rate of short frames is biased (by 7 % for frames of 16 symbols of 16-QAM at
+/// 10 dB). A block that changes the samples without setting the power again changes
+/// the fingerprint, and the noise blocks fall back to the measured power.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct NominalPower {
+    /// The expected power per sample.
+    pub power: f64,
+    /// The number of samples over every stream when it was set.
+    len: usize,
+    /// Their energy when it was set (compared bit for bit).
+    energy: f64,
 }
 
 /// What the streams of a [`Frame`] are.
@@ -251,13 +275,40 @@ impl Frame {
     /// The reference power of a noise block: the power entering the fading channel if
     /// there is one, else the mean power of the samples.
     pub fn reference_power(&self) -> f64 {
-        self.channel.faded_power.unwrap_or_else(|| self.mean_power())
+        self.channel.faded_power.unwrap_or_else(|| self.signal_power())
+    }
+
+    /// The power per sample of the current samples: their nominal power when the block
+    /// that produced them set it and they have not changed since
+    /// ([`Frame::set_nominal_power`]), else the power measured on them.
+    pub fn signal_power(&self) -> f64 {
+        self.nominal_power().unwrap_or_else(|| self.mean_power())
+    }
+
+    /// Declare the expected power per sample of the current samples (all streams): the
+    /// noise blocks use it while the samples stay as they are.
+    pub fn set_nominal_power(&mut self, power: f64) {
+        let (energy, len) = self.energy_and_len();
+        self.nominal = Some(NominalPower { power, len, energy });
+    }
+
+    /// The nominal power of the current samples, if it was set for them and they have
+    /// not changed since.
+    pub fn nominal_power(&self) -> Option<f64> {
+        let n = self.nominal?;
+        let (energy, len) = self.energy_and_len();
+        (len == n.len && energy.to_bits() == n.energy.to_bits()).then_some(n.power)
+    }
+
+    /// The energy and the number of the samples over every stream.
+    fn energy_and_len(&self) -> (f64, usize) {
+        self.streams().fold((0.0, 0usize), |(e, n), x| (e + comnum_math::energy(x), n + x.len()))
     }
 
     /// Mean power of the samples over every antenna: their energy
     /// ([`comnum_math::energy`]) over their number.
     pub fn mean_power(&self) -> f64 {
-        let (e, n) = self.streams().fold((0.0, 0usize), |(e, n), x| (e + comnum_math::energy(x), n + x.len()));
+        let (e, n) = self.energy_and_len();
         if n == 0 { 0.0 } else { e / n as f64 }
     }
 
