@@ -98,7 +98,11 @@ def test_the_decoded_bits_are_those_of_sionna(sionna, config, rule, schedule):
 
 def test_the_recorded_llrs_are_those_comnum_draws(sionna):
     u, llr = draw(*CONFIGS[0])
-    np.testing.assert_array_equal(sionna["llr_500"], llr[:8])
+    # the Gaussian draws go through ln, sqrt and cos of the platform's libm, which
+    # differ by one ulp between macOS and glibc: the LLRs drawn again agree to 1e-15
+    # (the bits exactly), and the decoders are insensitive to it but for layered
+    # min-sum where it fails, which the test already allows
+    np.testing.assert_allclose(sionna["llr_500"], llr[:8], rtol=1e-12, atol=1e-12)
     np.testing.assert_array_equal(sionna["info_500"], u[:8])
     packed = np.asarray(sionna["decisions"][key(500, 1200, "sum_product", "flooding")], np.uint8)
     np.testing.assert_array_equal(
