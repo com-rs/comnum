@@ -212,12 +212,16 @@ wrapper_methods! {
 ///     \sigma^2 &= (G - 1)\, n_{\mathrm{sp}}\, h f_c f_s
 ///     \end{aligned}
 ///
-/// (OptiCommPy `edfa`). The defaults are those of OptiCommPy.
+/// ([1]_, eq. (54); OptiCommPy `edfa`). The defaults are those of OptiCommPy.
 ///
 /// Args:
 ///     gain_db (float): gain (dB, positive).
 ///     nf_db (float): noise figure (dB, at least 3 dB).
 ///     fc_hz (float): carrier frequency (Hz).
+///
+/// References:
+///     .. [1] Essiambre et al., "Capacity limits of optical fiber networks," *J. Lightw.
+///        Technol.*, 28(4), 2010.
 #[pyclass(name = "Edfa", module = "comnum")]
 #[derive(Clone)]
 pub struct PyEdfa {
@@ -309,7 +313,7 @@ wrapper_methods! {
 /// Loss and dispersion of `length_km` of fibre on a block sampled at `fs`
 /// (OptiCommPy `linearFiberChannel`).
 ///
-/// The channel is exact in the frequency domain on the block:
+/// The channel [1]_ is exact in the frequency domain on the block:
 ///
 /// .. math::
 ///
@@ -327,6 +331,9 @@ wrapper_methods! {
 ///
 /// Raises:
 ///     ValueError: for an input that is not an array of numbers of the expected shape.
+///
+/// References:
+///     .. [1] G. P. Agrawal, *Nonlinear Fiber Optics*, 5th ed., Academic Press, 2013.
 #[pyfunction]
 fn linear_fiber_channel<'py>(
     py: Python<'py>,
@@ -395,8 +402,8 @@ fn nonlinear_step_name(step: NonlinearStep) -> &'static str {
 ///
 ///     A(z + h) \approx e^{\hat D h/2}\, e^{\hat N h}\, e^{\hat D h/2} A(z),
 ///
-/// a symmetric splitting whose local error is of the third order in :math:`h` (G. P.
-/// Agrawal, *Nonlinear Fiber Optics*, 5th ed., Sec. 2.4). The half linear step multiplies
+/// a symmetric splitting whose local error is of the third order in :math:`h` ([1]_,
+/// Sec. 2.4). The half linear step multiplies
 /// the spectrum of the block,
 ///
 /// .. math::
@@ -427,18 +434,17 @@ fn nonlinear_step_name(step: NonlinearStep) -> &'static str {
 ///     \texttt{trapezoidal}: &\quad \phi = \gamma\, \frac{|A(z)|^2 + |A(z + h)|^2}{2}\, h.
 ///     \end{aligned}
 ///
-/// The midpoint rule takes the power at the middle of the step (Sinkin et al. 2003, eq.
+/// The midpoint rule takes the power at the middle of the step ([2]_, eq.
 /// (3)). Optilux's effective length integrates the loss within the step exactly: its first
 /// half step carries the dispersion only, and the attenuation of the whole step,
 /// :math:`e^{-\alpha h/2}` on the field, follows the phase with the second half of the
-/// dispersion (Shao, Liang & Kumar 2014). OptiCommPy's trapezoidal mean needs the field at
+/// dispersion [3]_. OptiCommPy's trapezoidal mean needs the field at
 /// the end of the step, which depends on the phase: the step is iterated until it
 /// converges.
 ///
 /// **The steps.** Every span is cut into :math:`n = \lceil L_{\mathrm{span}}/h \rceil`
 /// equal steps of :math:`\delta = L_{\mathrm{span}}/n` (:math:`h` itself when it divides
-/// the span), or, with ``steps_per_span``, into the logarithmic steps of Bosco et al. (IEEE
-/// PTL 12(5), 2000, eq. (6)),
+/// the span), or, with ``steps_per_span``, into the logarithmic steps of [4]_ (eq. (6)),
 ///
 /// .. math::
 ///
@@ -465,7 +471,7 @@ fn nonlinear_step_name(step: NonlinearStep) -> &'static str {
 ///     fiber (FiberParams): the link.
 ///     step_km (float): step size :math:`h` (km).
 ///     steps_per_span (int, optional): this number of logarithmic steps per span
-///         instead of `step_km` (Bosco et al., IEEE PTL 12(5), 2000, eq. (6)): every step
+///         instead of `step_km` ([4]_, eq. (6)): every step
 ///         carries the same integrated power, short at the start of the span; double
 ///         precision only.
 ///     amplification (str): `"edfa"`, `"ideal"` or `"none"`.
@@ -478,6 +484,18 @@ fn nonlinear_step_name(step: NonlinearStep) -> &'static str {
 ///
 /// Raises:
 ///     ValueError: for an invalid parameter or input (the message names it).
+///
+/// References:
+///     .. [1] G. P. Agrawal, *Nonlinear Fiber Optics*, 5th ed., Academic Press, 2013.
+///     .. [2] O. V. Sinkin, R. Holzlöhner, J. Zweck and C. R. Menyuk, "Optimization of
+///        the split-step Fourier method in modeling optical-fiber communications
+///        systems," *J. Lightw. Technol.*, 21(1), 61–68, 2003.
+///     .. [3] J. Shao, X. Liang and S. Kumar, "Comparison of split-step Fourier schemes
+///        for simulating fiber optic communication systems," *IEEE Photonics J.*, 6(4),
+///        7200515, 2014.
+///     .. [4] G. Bosco, A. Carena, V. Curri, R. Gaudino, P. Poggiolini and S. Benedetto,
+///        "Suppression of spurious tones induced by the split-step method in fiber
+///        systems simulation," *IEEE Photon. Technol. Lett.*, 12(5), 489–491, 2000.
 ///
 /// Examples:
 ///     >>> import comnum, numpy as np
@@ -678,7 +696,7 @@ impl PySsfm {
 ///
 /// Every span is cut into `sections_per_span` sections; a section applies the loss and
 /// the dispersion, a random rotation and a differential group delay (the PMD), then the
-/// averaged Kerr phase
+/// averaged Kerr phase of the Manakov-PMD equation [1]_
 ///
 /// .. math::
 ///
@@ -694,6 +712,11 @@ impl PySsfm {
 ///
 /// Raises:
 ///     ValueError: for an invalid parameter (the message names it).
+///
+/// References:
+///     .. [1] D. Marcuse, C. R. Menyuk and P. K. A. Wai, "Application of the Manakov-PMD
+///        equation to studies of signal propagation in optical fibers with randomly
+///        varying birefringence," *J. Lightw. Technol.*, 15(9), 1735–1746, 1997.
 #[pyclass(name = "ManakovPmd", module = "comnum")]
 pub struct PyManakov {
     inner: ManakovPmd,
@@ -800,7 +823,7 @@ impl PyManakov {
 /// ``manakovSSF``, ``"effective_length"`` Optilux's ``fiber``).
 ///
 /// Averaged over the fast rotations of the birefringence, the two polarisations
-/// :math:`A_x`, :math:`A_y` obey
+/// :math:`A_x`, :math:`A_y` obey [1]_
 ///
 /// .. math::
 ///
@@ -832,12 +855,12 @@ impl PyManakov {
 ///
 /// Args:
 ///     fiber (FiberParams): the link.
-///     step_rule (str): ``"fwm"``, the rule of Musetti et al. (2018): the first step of a
+///     step_rule (str): ``"fwm"``, the rule of [2]_: the first step of a
 ///         span bounds the four-wave-mixing phase across the signal bandwidth to
 ///         ``fwm_phase``, the next ones grow with the loss (about 0.01 dB of error on the
 ///         SNR at 20 rad, whatever the power); ``"nonlinear_phase"``, OptiCommPy's
 ///         ``max_nl_phase`` per step; or ``"logarithmic"``, ``steps_per_span``
-///         logarithmic steps (Bosco et al. 2000).
+///         logarithmic steps ([3]_, eq. (6)).
 ///     steps_per_span (int): logarithmic steps per span, with
 ///         ``step_rule="logarithmic"``.
 ///     fwm_phase (float): the four-wave-mixing phase of the first step (rad).
@@ -859,10 +882,21 @@ impl PyManakov {
 ///         :func:`raman_profile`).
 ///     check_sampling (bool): refuse a field whose sampling rate is below 3/2 of its
 ///         bandwidth or whose block is shorter than the walk-off of the link (the
-///         four-wave mixing would alias, Musetti et al. 2018, Appendix B).
+///         four-wave mixing would alias, [2]_, Appendix B).
 ///
 /// Raises:
 ///     ValueError: for an invalid parameter or input (the message names it).
+///
+/// References:
+///     .. [1] D. Marcuse, C. R. Menyuk and P. K. A. Wai, "Application of the Manakov-PMD
+///        equation to studies of signal propagation in optical fibers with randomly
+///        varying birefringence," *J. Lightw. Technol.*, 15(9), 1735–1746, 1997.
+///     .. [2] S. Musetti, P. Serena and A. Bononi, "On the accuracy of split-step Fourier
+///        simulations for wideband nonlinear optical communications," *J. Lightw.
+///        Technol.*, 36(23), 5669–5677, 2018.
+///     .. [3] G. Bosco, A. Carena, V. Curri, R. Gaudino, P. Poggiolini and S. Benedetto,
+///        "Suppression of spurious tones induced by the split-step method in fiber
+///        systems simulation," *IEEE Photon. Technol. Lett.*, 12(5), 489–491, 2000.
 #[pyclass(name = "ManakovSsfm", module = "comnum")]
 pub struct PyManakovSsfm {
     inner: ManakovSsfm,

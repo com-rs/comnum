@@ -22,9 +22,10 @@ fn cumulant_dict<'py>(py: Python<'py>, c: &Cumulants) -> PyResult<Bound<'py, PyD
 }
 
 /// The sample cumulants of order two and four of a zero-mean signal, and the normalised
-/// :math:`C_{40}/C_{21}^2`, :math:`C_{42}/C_{21}^2` (Swami & Sadler 2000).
+/// :math:`C_{40}/C_{21}^2`, :math:`C_{42}/C_{21}^2`.
 ///
 /// With the moments :math:`M_{pq} = \mathbb{E}[r^{p-q} (r^*)^q]`, replaced by sample means,
+/// the cumulants are [1]_
 ///
 /// .. math::
 ///
@@ -44,6 +45,10 @@ fn cumulant_dict<'py>(py: Python<'py>, c: &Cumulants) -> PyResult<Bound<'py, PyD
 ///
 /// Raises:
 ///     ValueError: for an invalid parameter or input (the message names it).
+///
+/// References:
+///     .. [1] A. Swami and B. M. Sadler, "Hierarchical digital modulation classification
+///        using cumulants," *IEEE Trans. Commun.*, 48(3), 416–429, 2000.
 ///
 /// Examples:
 ///     >>> import comnum, numpy as np
@@ -86,11 +91,11 @@ fn theory_cumulants<'py>(
 /// Blind modulation classification at one sample per symbol, timing and carrier
 /// recovered.
 ///
-/// Methods: `"ml"` (the likelihood, the scale and the noise estimated by M2M4 under
+/// Methods: `"ml"` (the likelihood, the scale and the noise estimated by M2M4 [1]_ under
 /// every candidate), `"ml_known"` (the likelihood with the noise variance ``noise_var``
-/// known and the symbols of unit energy, Wei & Mendel 2000), `"cumulants"` (the nearest
-/// fourth-order features :math:`|C_{40}|/C_{21}^2`, :math:`C_{42}/C_{21}^2`, Swami & Sadler
-/// 2000; with ``noise_var``, normalised by :math:`C_{21} - \mathrm{noise\_var}`).
+/// known and the symbols of unit energy, [2]_), `"cumulants"` (the nearest
+/// fourth-order features :math:`|C_{40}|/C_{21}^2`, :math:`C_{42}/C_{21}^2`, [3]_; with
+/// ``noise_var``, normalised by :math:`C_{21} - \mathrm{noise\_var}`).
 ///
 /// The score of a candidate alphabet :math:`\{a\}` of :math:`M` points under `"ml_known"` is
 /// the mean log-likelihood of the :math:`L` samples in noise of variance :math:`N`:
@@ -114,6 +119,14 @@ fn theory_cumulants<'py>(
 ///
 /// Raises:
 ///     ValueError: for an invalid parameter or input (the message names it).
+///
+/// References:
+///     .. [1] D. R. Pauluzzi and N. C. Beaulieu, "A comparison of SNR estimation techniques
+///        for the AWGN channel," *IEEE Trans. Commun.*, 48(10), 1681–1691, 2000.
+///     .. [2] W. Wei and J. M. Mendel, "Maximum-likelihood classification for digital
+///        amplitude-phase modulations," *IEEE Trans. Commun.*, 48(2), 189–193, 2000.
+///     .. [3] A. Swami and B. M. Sadler, "Hierarchical digital modulation classification
+///        using cumulants," *IEEE Trans. Commun.*, 48(3), 416–429, 2000.
 ///
 /// Examples:
 ///     >>> import comnum, numpy as np
@@ -141,8 +154,8 @@ fn classify_modulation<'py>(
     Ok(out)
 }
 
-/// The M2M4 estimate of the SNR (Pauluzzi & Beaulieu 2000), generalised to alphabets of
-/// several amplitudes by their kurtosis; it degrades at high SNR for QAM.
+/// The M2M4 estimate of the SNR, generalised to alphabets of several amplitudes by their
+/// kurtosis; it degrades at high SNR for QAM.
 ///
 /// With :math:`M_2 = \mathbb{E}|r|^2` and :math:`M_4 = \mathbb{E}|r|^4` (sample means) and
 /// the kurtosis :math:`k_a = \mathbb{E}|a|^4/(\mathbb{E}|a|^2)^2` of the alphabet (1 for
@@ -152,8 +165,8 @@ fn classify_modulation<'py>(
 ///
 ///     \hat{S} = \sqrt{\frac{2 M_2^2 - M_4}{2 - k_a}}, \qquad \hat{N} = M_2 - \hat{S},
 ///
-/// and the SNR is :math:`\hat{S}/\hat{N}` (eq. (37) of the paper with the kurtosis 2 of
-/// complex noise, eq. (39) for PSK).
+/// and the SNR is :math:`\hat{S}/\hat{N}` ([1]_, eq. (37), with the kurtosis 2 of
+/// complex noise; eq. (39) for PSK).
 ///
 /// Args:
 ///     x (array_like): the samples (complex), at one sample per symbol.
@@ -164,6 +177,10 @@ fn classify_modulation<'py>(
 ///
 /// Raises:
 ///     ValueError: for an invalid parameter or input (the message names it).
+///
+/// References:
+///     .. [1] D. R. Pauluzzi and N. C. Beaulieu, "A comparison of SNR estimation techniques
+///        for the AWGN channel," *IEEE Trans. Commun.*, 48(10), 1681–1691, 2000.
 ///
 /// Examples:
 ///     >>> import comnum
@@ -179,8 +196,9 @@ fn snr_m2m4_db(x: &Bound<'_, PyAny>, constellation: &PyConstellation) -> PyResul
 }
 
 /// The Cramér–Rao bound on the normalised mean squared error of an unbiased SNR
-/// estimator from known PSK symbols (Pauluzzi & Beaulieu 2000, eq. (65) in complex AWGN,
-/// eq. (67), twice it, in real AWGN):
+/// estimator from known PSK symbols.
+///
+/// The bound is ([1]_, eq. (65) in complex AWGN, eq. (67), twice it, in real AWGN)
 ///
 /// .. math::
 ///
@@ -201,6 +219,10 @@ fn snr_m2m4_db(x: &Bound<'_, PyAny>, constellation: &PyConstellation) -> PyResul
 /// Raises:
 ///     ValueError: for an invalid parameter or input (the message names it).
 ///
+/// References:
+///     .. [1] D. R. Pauluzzi and N. C. Beaulieu, "A comparison of SNR estimation techniques
+///        for the AWGN channel," *IEEE Trans. Commun.*, 48(10), 1681–1691, 2000.
+///
 /// Examples:
 ///     >>> import comnum
 ///     >>> round(comnum.snr_crb_nmse(30.0, 64), 4)  # tends to 1/64
@@ -212,10 +234,10 @@ fn snr_crb_nmse(snr_db: &Bound<'_, PyAny>, n_symbols: usize, sps: usize, real: b
 }
 
 /// The symbol rate of a linearly modulated signal from the strongest line of the
-/// spectrum of its instantaneous power (cyclostationarity, Gardner 1991); the pulse must
+/// spectrum of its instantaneous power (cyclostationarity); the pulse must
 /// have an excess bandwidth.
 ///
-/// At :math:`\tau = 0` the cyclic autocorrelation (`cyclic_autocorrelation`),
+/// At :math:`\tau = 0` the cyclic autocorrelation [1]_ (`cyclic_autocorrelation`),
 ///
 /// .. math::
 ///
@@ -237,6 +259,10 @@ fn snr_crb_nmse(snr_db: &Bound<'_, PyAny>, n_symbols: usize, sps: usize, real: b
 /// Raises:
 ///     ValueError: for an invalid parameter or input (the message names it).
 ///
+/// References:
+///     .. [1] W. A. Gardner, "Exploitation of spectral redundancy in cyclostationary
+///        signals," *IEEE Signal Process. Mag.*, 8(2), 14–36, 1991.
+///
 /// Examples:
 ///     >>> import comnum, numpy as np
 ///     >>> n = np.arange(4096)
@@ -254,6 +280,8 @@ fn estimate_symbol_rate(x: &Bound<'_, PyAny>, fs: f64, f_min_hz: f64, f_max_hz: 
 ///
 ///     R^\alpha(\tau) = \operatorname{mean}_n\, x[n+\tau]\, x^*[n]\, e^{-j2\pi \alpha n/f_s}.
 ///
+/// The definition is that of [1]_.
+///
 /// Args:
 ///     x (array_like): the samples (complex).
 ///     alpha (float): the cycle frequency (Hz).
@@ -265,6 +293,10 @@ fn estimate_symbol_rate(x: &Bound<'_, PyAny>, fs: f64, f_min_hz: f64, f_max_hz: 
 ///
 /// Raises:
 ///     ValueError: for an input that is not an array of numbers of the expected shape.
+///
+/// References:
+///     .. [1] W. A. Gardner, "Exploitation of spectral redundancy in cyclostationary
+///        signals," *IEEE Signal Process. Mag.*, 8(2), 14–36, 1991.
 ///
 /// Examples:
 ///     >>> import comnum, numpy as np

@@ -23,11 +23,11 @@ fn modulation_index(h: &Bound<'_, PyAny>) -> PyResult<(u32, u32)> {
 ///     s(t) = \exp(j\phi(t)), \qquad \phi(t) = 2\pi h \sum_k a_k q(t - kT),
 ///
 /// where :math:`h = p/q` is the modulation index and :math:`q(t)` the integral of a
-/// frequency pulse of :math:`L` symbols and area :math:`1/2` (Proakis & Salehi, *Digital
-/// Communications*, 5th ed., Sec. 3.3-2). The pulses: `"rec"` (rectangular; 1REC is CPFSK
-/// and MSK is 1REC with :math:`h = 1/2`), `"rc"` (raised cosine) and `"gmsk"` (the Gaussian
-/// pulse of Murota & Hirade, *IEEE Trans. Commun.* 29(7), 1981, of normalised bandwidth
-/// `bt`, truncated to :math:`L` symbols). The trellis has :math:`2q M^{L-1}` states.
+/// frequency pulse of :math:`L` symbols and area :math:`1/2` ([1]_, Sec. 3.3-2). The
+/// pulses: `"rec"` (rectangular; 1REC is CPFSK and MSK is 1REC with :math:`h = 1/2`),
+/// `"rc"` (raised cosine) and `"gmsk"` (the Gaussian pulse of [2]_, of normalised
+/// bandwidth `bt`, truncated to :math:`L` symbols). The trellis has :math:`2q M^{L-1}`
+/// states.
 ///
 /// Symbols are **indices** :math:`i \in \{0, \dots, M-1\}`, the level being
 /// :math:`a = 2i - (M-1)` (see :meth:`levels`): for binary CPM the bits themselves are the
@@ -47,6 +47,12 @@ fn modulation_index(h: &Bound<'_, PyAny>) -> PyResult<(u32, u32)> {
 ///
 /// Raises:
 ///     ValueError: for an invalid parameter or input (the message names it).
+///
+/// References:
+///     .. [1] J. G. Proakis and M. Salehi, *Digital Communications*, 5th ed., McGraw-Hill,
+///        2008.
+///     .. [2] K. Murota and K. Hirade, "GMSK modulation for digital mobile radio
+///        telephony," *IEEE Trans. Commun.*, 29(7), 1044–1050, 1981.
 ///
 /// Examples:
 ///     >>> import comnum, numpy as np
@@ -395,7 +401,7 @@ impl PyCpm {
 ///     d_n = 2b_n - 1, \qquad a_n = d_n d_{n+1},
 ///
 /// with :math:`d_0 = +1`, as indices :math:`(a_n + 1)/2`, so that the signal is OQPSK with
-/// half-sinusoid pulses carrying :math:`d_n` (Proakis & Salehi, Sec. 3.3-2); the ML
+/// half-sinusoid pulses carrying :math:`d_n` ([1]_, Sec. 3.3-2); the ML
 /// detector then has the BER of BPSK.
 ///
 /// Args:
@@ -406,6 +412,10 @@ impl PyCpm {
 ///
 /// Raises:
 ///     ValueError: for bits that are not 0 or 1, or not a 1-D array.
+///
+/// References:
+///     .. [1] J. G. Proakis and M. Salehi, *Digital Communications*, 5th ed., McGraw-Hill,
+///        2008.
 ///
 /// Examples:
 ///     >>> import comnum
@@ -442,14 +452,14 @@ fn msk_bits<'py>(py: Python<'py>, phase_states: &Bound<'py, PyAny>) -> PyResult<
 }
 
 /// The power spectral density of MSK at the normalised frequency :math:`fT`, unit power and
-/// :math:`T = 1` (Proakis & Salehi, Sec. 3.4-3):
+/// :math:`T = 1`:
 ///
 /// .. math::
 ///
 ///     S(f) = \frac{16}{\pi^2} \left[ \frac{\cos(2\pi fT)}{1 - 16 f^2 T^2} \right]^2,
 ///
 /// finite at :math:`fT = \pm 1/4`, with nulls at :math:`fT = \pm 3/4, \pm 5/4, \dots` and a
-/// 3 dB bandwidth of about :math:`0.59/T`.
+/// 3 dB bandwidth of about :math:`0.59/T` ([1]_, Sec. 3.4-3).
 ///
 /// Args:
 ///     ft (float | array_like): normalised frequencies :math:`fT`.
@@ -459,6 +469,10 @@ fn msk_bits<'py>(py: Python<'py>, phase_states: &Bound<'py, PyAny>) -> PyResult<
 ///
 /// Raises:
 ///     ValueError: for values that are not real numbers.
+///
+/// References:
+///     .. [1] J. G. Proakis and M. Salehi, *Digital Communications*, 5th ed., McGraw-Hill,
+///        2008.
 ///
 /// Examples:
 ///     >>> import comnum

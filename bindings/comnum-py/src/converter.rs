@@ -131,7 +131,9 @@ fn dac<'py>(
     Ok(carr(py, py.detach(|| d.convert(&x, fs)).py()?))
 }
 
-/// The SQNR of a full-scale sine through an ideal quantiser (Bennett 1948):
+/// The SQNR of a full-scale sine through an ideal quantiser.
+///
+/// The SQNR [1]_ is
 ///
 /// .. math::
 ///
@@ -142,6 +144,10 @@ fn dac<'py>(
 ///
 /// Returns:
 ///     float: the SQNR (dB).
+///
+/// References:
+///     .. [1] W. R. Bennett, "Spectra of quantized signals," *Bell Syst. Tech. J.*, 27(3),
+///        446–472, 1948.
 ///
 /// Examples:
 ///     >>> import comnum
@@ -183,8 +189,9 @@ fn theory_quantization_mse(bits: u32, full_scale: f64, sigma: f64) -> PyResult<f
     Ok(conv::gaussian_mse(&Quantizer::new(bits, full_scale).py()?, sigma))
 }
 
-/// The loading factor :math:`A/\sigma` that minimises the error of a Gaussian input (the
-/// optimal uniform quantiser of Max 1960):
+/// The loading factor :math:`A/\sigma` that minimises the error of a Gaussian input.
+///
+/// The optimal uniform quantiser of [1]_ (Table II) has the loading
 ///
 /// .. math::
 ///
@@ -198,6 +205,10 @@ fn theory_quantization_mse(bits: u32, full_scale: f64, sigma: f64) -> PyResult<f
 /// Returns:
 ///     float: the optimal loading factor.
 ///
+/// References:
+///     .. [1] J. Max, "Quantizing for minimum distortion," *IRE Trans. Inf. Theory*, 6(1),
+///        7–12, 1960.
+///
 /// Examples:
 ///     >>> import comnum
 ///     >>> round(comnum.optimal_loading(1), 3)
@@ -207,8 +218,9 @@ fn optimal_loading(bits: u32) -> f64 {
     conv::optimal_loading(bits)
 }
 
-/// The SNR of a sine of frequency ``f_hz`` sampled with an RMS clock jitter ``jitter_s``
-/// (Walden 1999):
+/// The SNR of a sine of frequency ``f_hz`` sampled with an RMS clock jitter ``jitter_s``.
+///
+/// The SNR [1]_ is
 ///
 /// .. math::
 ///
@@ -224,6 +236,10 @@ fn optimal_loading(bits: u32) -> f64 {
 /// Raises:
 ///     ValueError: for values that are not real numbers.
 ///
+/// References:
+///     .. [1] R. H. Walden, "Analog-to-digital converter survey and analysis," *IEEE J.
+///        Sel. Areas Commun.*, 17(4), 539–550, 1999.
+///
 /// Examples:
 ///     >>> import comnum
 ///     >>> round(comnum.theory_jitter_snr_db(1e9, 100e-15), 1)
@@ -233,7 +249,9 @@ fn theory_jitter_snr_db(f_hz: &Bound<'_, PyAny>, jitter_s: f64) -> PyResult<Py<P
     map_real(f_hz, |f| Ok(conv::jitter_snr_db(f, jitter_s)))
 }
 
-/// The effective number of bits of a SINAD measured on a full-scale sine (IEEE Std 1241):
+/// The effective number of bits of a SINAD measured on a full-scale sine.
+///
+/// The ENOB [1]_ is
 ///
 /// .. math::
 ///
@@ -247,6 +265,10 @@ fn theory_jitter_snr_db(f_hz: &Bound<'_, PyAny>, jitter_s: f64) -> PyResult<Py<P
 ///
 /// Raises:
 ///     ValueError: for values that are not real numbers.
+///
+/// References:
+///     .. [1] IEEE Std 1241-2010, *Standard for terminology and test methods for
+///        analog-to-digital converters*.
 ///
 /// Examples:
 ///     >>> import comnum

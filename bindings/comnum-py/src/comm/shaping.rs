@@ -48,14 +48,22 @@ fn entropy(px: &Bound<'_, PyAny>) -> PyResult<f64> {
     Ok(metrics::entropy(&crate::fvec(px)?))
 }
 
-/// Constant-composition distribution matching (Schulte & Böcherer 2016): ``k`` uniform
-/// bits to a sequence of ``n`` symbols of a fixed composition, by enumerative coding.
+/// Constant-composition distribution matching: ``k`` uniform bits to a sequence of
+/// ``n`` symbols of a fixed composition, by enumerative coding.
+///
+/// The matcher of [1]_, by the enumerative coding of [2]_.
 ///
 /// Args:
 ///     composition (list[int]): occurrences of every symbol in a block.
 ///
 /// Raises:
 ///     ValueError: for an invalid parameter (the message names it).
+///
+/// References:
+///     .. [1] P. Schulte and G. Böcherer, "Constant composition distribution matching,"
+///        *IEEE Trans. Inf. Theory*, 62(1), 430–434, 2016.
+///     .. [2] T. M. Cover, "Enumerative source coding," *IEEE Trans. Inf. Theory*, 19(1),
+///        73–77, 1973.
 ///
 /// Examples:
 ///     >>> import comnum, numpy as np

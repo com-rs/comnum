@@ -3,17 +3,19 @@
 
 use super::*;
 
-/// The LDPC code of the data channels of 5G NR (3GPP TS 38.212, Sec. 5.3.2, 5.4.2): one
-/// code block of :math:`k` information bits rate-matched to :math:`n` bits; base graph 1
-/// or 2 chosen as the shared channels do (or forced), the smallest lifting size :math:`Z`
-/// with :math:`K_b Z \ge k`, filler bits, the first :math:`2Z` bits punctured, the
-/// circular buffer read from the start of redundancy version `rv`, the bit interleaver of
-/// `qm` bits per symbol; decoded by belief propagation.
+/// The LDPC code of the data channels of 5G NR.
+///
+/// The code of [1]_ (Sec. 5.3.2, 5.4.2; its design in [2]_): one code block of :math:`k`
+/// information bits rate-matched to :math:`n` bits; base graph 1 or 2 chosen as the
+/// shared channels do (or forced), the smallest lifting size :math:`Z` with
+/// :math:`K_b Z \ge k`, filler bits, the first :math:`2Z` bits punctured, the circular
+/// buffer read from the start of redundancy version `rv`, the bit interleaver of `qm`
+/// bits per symbol; decoded by belief propagation.
 ///
 /// Args:
 ///     k (int): information bits per block (at most 8448 for base graph 1, 3840 for 2).
 ///     e (int): transmitted bits per block :math:`E` (the rate-matched length).
-///     base_graph (int, optional): 1 or 2 (default: the rule of Sec. 7.2.2).
+///     base_graph (int, optional): 1 or 2 (default: the rule of [1]_, Sec. 7.2.2).
 ///     rv (int): the redundancy version, 0 to 3.
 ///     qm (int): bits per modulation symbol of the bit interleaver (1: none).
 ///     rule (str): the check-node rule (as `LdpcCode.set_decoder`).
@@ -24,6 +26,11 @@ use super::*;
 ///
 /// Raises:
 ///     ValueError: for an invalid parameter (the message names it).
+///
+/// References:
+///     .. [1] 3GPP TS 38.212 V18.5.0, *NR; Multiplexing and channel coding*.
+///     .. [2] T. Richardson and S. Kudekar, "Design of low-density parity check codes for
+///        5G new radio," *IEEE Commun. Mag.*, 56(3), 28–34, 2018.
 ///
 /// Examples:
 ///     >>> import comnum, numpy as np
@@ -141,10 +148,12 @@ impl PyNrLdpc {
     }
 }
 
-/// The polar code of the control channels of 5G NR (3GPP TS 38.212, Sec. 5.3.1, 5.4.1):
-/// :math:`k` payload bits with their CRC rate-matched to :math:`n` bits (puncturing,
-/// shortening or repetition by the sub-block interleaver), the frozen set of the polar
-/// sequence of Table 5.3.1.2-1; decoded by CRC-aided SC list.
+/// The polar code of the control channels of 5G NR.
+///
+/// The code of [1]_ (Sec. 5.3.1, 5.4.1; its design in [2]_): :math:`k` payload bits with
+/// their CRC rate-matched to :math:`n` bits (puncturing, shortening or repetition by the
+/// sub-block interleaver), the frozen set of the polar sequence of Table 5.3.1.2-1;
+/// decoded by CRC-aided SC list.
 ///
 /// ``"uplink"``: the uplink control information (CRC6 and 3 parity-check bits for
 /// :math:`12 \le k \le 19`, CRC11 above, the triangular interleaver of the coded bits).
@@ -159,6 +168,11 @@ impl PyNrLdpc {
 ///
 /// Raises:
 ///     ValueError: for an invalid parameter (the message names it).
+///
+/// References:
+///     .. [1] 3GPP TS 38.212 V18.5.0, *NR; Multiplexing and channel coding*.
+///     .. [2] V. Bioglio, C. Condo and I. Land, "Design of polar codes in 5G New Radio,"
+///        *IEEE Commun. Surveys Tuts.*, 23(1), 29–40, 2021.
 ///
 /// Examples:
 ///     >>> import comnum, numpy as np

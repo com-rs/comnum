@@ -15,10 +15,10 @@ use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
 
-/// The GN model of the nonlinear interference of a WDM link (Poggiolini 2012).
+/// The GN model of the nonlinear interference of a WDM link.
 ///
 /// The NLI power spectral density at the receiver is the double integral of the GN
-/// reference formula,
+/// reference formula [1]_,
 ///
 /// .. math::
 ///
@@ -44,13 +44,13 @@ use pyo3::types::PyDict;
 ///
 /// With ``raman`` (the keys of ``fiber.raman``, see :func:`raman_profile`), the power
 /// profiles of the channels along the span replace the exponential decay in the link
-/// function (the generalised GN model of Semrau et al. 2019), the noise is the
+/// function (the generalised GN model of [2]_), the noise is the
 /// spontaneous Raman noise plus the ASE of the EDFA that restores every channel, and
 /// the channels are restored to their launch power after every span.
 ///
 /// With ``modulation`` (a constellation, a name such as ``"16-QAM"``, or
 /// ``"gaussian"``) and optionally its probabilities ``px``, the NLI is that of the EGN
-/// model (Carena et al. 2014): the GN model corrected for the fourth and sixth moments
+/// model [3]_: the GN model corrected for the fourth and sixth moments
 /// of the symbols (see :func:`format_moments`), for the self-channel interference and
 /// the cross-channel interference of every other channel.
 ///
@@ -79,6 +79,16 @@ use pyo3::types::PyDict;
 ///
 /// Raises:
 ///     ValueError: for an invalid parameter or input (the message names it).
+///
+/// References:
+///     .. [1] P. Poggiolini, "The GN model of non-linear propagation in uncompensated
+///        coherent optical systems," *J. Lightw. Technol.*, 30(24), 3857–3879, 2012.
+///     .. [2] D. Semrau, R. I. Killey and P. Bayvel, "A closed-form approximation of the
+///        Gaussian noise model in the presence of inter-channel stimulated Raman
+///        scattering," *J. Lightw. Technol.*, 37(9), 1924–1936, 2019.
+///     .. [3] A. Carena, G. Bosco, V. Curri, Y. Jiang, P. Poggiolini and F. Forghieri, "EGN
+///        model of non-linear fiber propagation," *Opt. Express*, 22(13), 16335–16362,
+///        2014.
 #[pyfunction]
 #[pyo3(signature = (fiber, freqs, power_dbm, symbol_rate, *, rolloff = 0.1, channel = None, coherent = true, resolution_hz = None, raman = None, modulation = None, px = None))]
 #[allow(clippy::too_many_arguments, reason = "the link, the grid and the options of the model, by keyword")]
@@ -141,7 +151,9 @@ fn format_moments_of(py: Python<'_>, f: &Bound<'_, PyAny>, px: Option<&[f64]>) -
     FormatMoments::of(c.points(), px).py()
 }
 
-/// The moments of a modulation format that the EGN model needs (Carena et al. 2014):
+/// The moments of a modulation format that the EGN model needs.
+///
+/// In the EGN model [1]_, they are
 ///
 /// .. math::
 ///
@@ -161,6 +173,11 @@ fn format_moments_of(py: Python<'_>, f: &Bound<'_, PyAny>, px: Option<&[f64]>) -
 ///
 /// Raises:
 ///     ValueError: for an input that is not an array of numbers of the expected shape.
+///
+/// References:
+///     .. [1] A. Carena, G. Bosco, V. Curri, Y. Jiang, P. Poggiolini and F. Forghieri, "EGN
+///        model of non-linear fiber propagation," *Opt. Express*, 22(13), 16335–16362,
+///        2014.
 ///
 /// Examples:
 ///     >>> import comnum
@@ -184,8 +201,8 @@ fn format_moments(
 ///
 /// **The model.** Every wave :math:`k` (a channel, a slice of the spectrum of a field in
 /// the split-step solvers, or a pump) of frequency :math:`f_k` and power :math:`P_k(z)` (W)
-/// obeys the coupled power equations of stimulated Raman scattering (Bromage 2004, eq. (1);
-/// Agrawal, *Nonlinear Fiber Optics*, ch. 8)
+/// obeys the coupled power equations of stimulated Raman scattering ([1]_, eq. (1);
+/// [2]_, ch. 8)
 ///
 /// .. math::
 ///
@@ -215,13 +232,13 @@ fn format_moments(
 /// logarithms of the powers are integrated by the fourth-order Runge-Kutta method on a
 /// grid of ``step_km``, forward for the co-propagating waves and backward for the
 /// counter-propagating ones, sweep after sweep until they change by less than a tolerance
-/// (the relaxation method of Perlin & Winful 2002).
+/// (the relaxation method of [3]_).
 ///
 /// **The gains and the noise.** For channel :math:`k`, with
 /// :math:`G_k(z) = P_k(z)/P_k(0)`, the net gain of the span is :math:`G_k(L)`, the on-off
 /// gain is the net gain with the pumps and ISRS over that of the loss alone,
 /// :math:`G_k(L)\, e^{\alpha_k L}`, and the spontaneous scattering of the pumps adds a noise
-/// of power spectral density, both polarisations (Bromage 2004, eq. (4)),
+/// of power spectral density, both polarisations ([1]_, eq. (4)),
 ///
 /// .. math::
 ///
@@ -233,7 +250,7 @@ fn format_moments(
 /// generated at :math:`z` is amplified by the rest of the span. With ``rayleigh_db_km``, a
 /// fraction :math:`\kappa` (1/km) of the signal is backscattered by Rayleigh scattering,
 /// and the light scattered twice travels with the signal again; its power over that of the
-/// signal at the end of the span is (Bromage 2004, Sec. V-A)
+/// signal at the end of the span is ([1]_, Sec. V-A)
 ///
 /// .. math::
 ///
@@ -270,11 +287,18 @@ fn format_moments(
 ///     the span, at its start), ``double_rayleigh`` (the effective Rayleigh reflection coefficient of every
 ///     channel, the doubly backscattered power over the signal power at the end of the
 ///     span, linear; 0 without ``rayleigh_db_km``), ``noise_figure_db`` (of the span,
-///     Bromage 2004 eq. (9)), ``effective_noise_figure_db`` (the noise figure minus the
+///     [1]_, eq. (9)), ``effective_noise_figure_db`` (the noise figure minus the
 ///     loss of the span, eq. (12)) and ``iterations``.
 ///
 /// Raises:
 ///     ValueError: for an invalid parameter or input (the message names it).
+///
+/// References:
+///     .. [1] J. Bromage, "Raman amplification for fiber communications systems," *J.
+///        Lightw. Technol.*, 22(1), 79–93, 2004.
+///     .. [2] G. P. Agrawal, *Nonlinear Fiber Optics*, 5th ed., Academic Press, 2013.
+///     .. [3] V. E. Perlin and H. G. Winful, "Optimal design of flat-gain wide-band fiber
+///        Raman amplifiers," *J. Lightw. Technol.*, 20(2), 250–254, 2002.
 ///
 /// Examples:
 ///     >>> import comnum
@@ -322,8 +346,8 @@ fn raman_profile<'py>(
 
 /// The pump powers that flatten the on-off gain of the channels over one span.
 ///
-/// The pump-power optimiser of Perlin & Winful (*J. Lightw. Technol.* 20(2), 2002) at fixed
-/// pump wavelengths (Hu, Marks & Menyuk, *J. Lightw. Technol.* 22(6), 2004): the
+/// The pump-power optimiser of [1]_ at fixed
+/// pump wavelengths [2]_: the
 /// integrated pump powers that fit the targets (non-negative least squares or the
 /// minimax fit of Lawson's iteratively reweighted least squares), then the launch powers
 /// whose profiles have these integrals (Newton's method on the solved profiles), until
@@ -343,7 +367,7 @@ fn raman_profile<'py>(
 /// :math:`\ln G_k(L) = -\alpha_k L + \sum_j C_{kj} I_j`, and the on-off gain removes the
 /// loss. The targets fix the integrals of the pumps (a linear fit), then the launch powers
 /// are searched whose solved profiles have these integrals: the design splits in two
-/// (Perlin & Winful 2002, Sec. II).
+/// ([1]_, Sec. II).
 ///
 /// Args:
 ///     fiber (FiberParams): the span (length, attenuation, carrier frequency).
@@ -367,6 +391,12 @@ fn raman_profile<'py>(
 /// Raises:
 ///     ValueError: for an invalid parameter, no pump, or a design that does not
 ///         converge.
+///
+/// References:
+///     .. [1] V. E. Perlin and H. G. Winful, "Optimal design of flat-gain wide-band fiber
+///        Raman amplifiers," *J. Lightw. Technol.*, 20(2), 250–254, 2002.
+///     .. [2] J. Hu, B. S. Marks and C. R. Menyuk, "Flat-gain fiber Raman amplifiers using
+///        equally spaced pumps," *J. Lightw. Technol.*, 22(6), 1519–1522, 2004.
 ///
 /// Examples:
 ///     >>> import comnum
@@ -412,10 +442,10 @@ fn raman_design<'py>(
     Ok(out)
 }
 
-/// Poggiolini's closed form of the NLI power spectral density at the centre of
+/// The closed form of the NLI power spectral density at the centre of
 /// ``n_channels`` rectangular channels spaced by ``spacing`` (incoherent accumulation).
 ///
-/// The closed form is
+/// The closed form of the GN model [1]_ is
 ///
 /// .. math::
 ///
@@ -436,16 +466,20 @@ fn raman_design<'py>(
 ///
 /// Returns:
 ///     float: the NLI power spectral density (W/Hz).
+///
+/// References:
+///     .. [1] P. Poggiolini, "The GN model of non-linear propagation in uncompensated
+///        coherent optical systems," *J. Lightw. Technol.*, 30(24), 3857–3879, 2012.
 #[pyfunction]
 fn gn_closed_form(fiber: &PyFiber, n_channels: usize, symbol_rate: f64, spacing_hz: f64, power_dbm: f64) -> f64 {
     closed_form_nli_psd(&fiber.inner, n_channels, symbol_rate, spacing_hz, dbm2w(power_dbm))
 }
 
-/// The closed form of the ISRS GN model of Semrau, Killey & Bayvel (2019). It gives the
-/// NLI coefficient (*J. Lightw. Technol.* 37(9), 1924–1936) of a channel of a WDM signal
-/// whose power profile along the span is tilted by inter-channel stimulated Raman
-/// scattering, in microseconds instead of the minutes of the integral of
-/// :func:`gn_model`. The SPM of
+/// The closed form of the ISRS GN model.
+///
+/// The closed form of [1]_ gives the NLI coefficient of a channel of a WDM signal whose
+/// power profile along the span is tilted by inter-channel stimulated Raman scattering,
+/// in microseconds instead of the minutes of the integral of :func:`gn_model`. The SPM of
 /// the channel (eq. (10)) and the XPM of every other channel (eq. (11)) are summed over
 /// the :math:`n` spans by eq. (5), the SPM coherently, the XPM incoherently:
 ///
@@ -478,8 +512,8 @@ fn gn_closed_form(fiber: &PyFiber, n_channels: usize, symbol_rate: f64, spacing_
 ///     channel (int, optional): the channel of interest (the middle one by default).
 ///     raman_slope_w_km_thz (float): the slope :math:`C_r` of the linear regression of the
 ///         normalised Raman gain spectrum (1/W/km/THz).
-///     epsilon (float, optional): the coherence factor of the SPM; by default Poggiolini's
-///         eq. (22) (*J. Lightw. Technol.* 30(24), 2012) over the bandwidth of the channel.
+///     epsilon (float, optional): the coherence factor of the SPM; by default eq. (22) of
+///         [2]_ over the bandwidth of the channel.
 ///
 /// Returns:
 ///     dict: ``eta`` (1/W²: the NLI power of the channel is :math:`\eta P^3`; divide by
@@ -489,6 +523,13 @@ fn gn_closed_form(fiber: &PyFiber, n_channels: usize, symbol_rate: f64, spacing_
 ///
 /// Raises:
 ///     ValueError: for an invalid parameter or input (the message names it).
+///
+/// References:
+///     .. [1] D. Semrau, R. I. Killey and P. Bayvel, "A closed-form approximation of the
+///        Gaussian noise model in the presence of inter-channel stimulated Raman
+///        scattering," *J. Lightw. Technol.*, 37(9), 1924–1936, 2019.
+///     .. [2] P. Poggiolini, "The GN model of non-linear propagation in uncompensated
+///        coherent optical systems," *J. Lightw. Technol.*, 30(24), 3857–3879, 2012.
 ///
 /// Examples:
 ///     >>> import comnum

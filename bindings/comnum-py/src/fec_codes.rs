@@ -56,8 +56,10 @@ fn symbols_out(py: Python<'_>, v: Vec<u16>) -> IArr<'_> {
 
 /// A Reed–Solomon code over :math:`\mathrm{GF}(2^m)` (symbols of :math:`m` bits) correcting
 /// :math:`t` symbols per word, with systematic encoding, errors-and-erasures decoding
-/// (Berlekamp–Massey, Chien search, Forney 1965) and shortening (Lin & Costello 2004,
-/// ch. 7).
+/// and shortening.
+///
+/// The code of [1]_ with errors-and-erasures decoding (Berlekamp–Massey [2]_, Chien
+/// search [3]_, the error values of [4]_) and shortening ([5]_, ch. 7).
 ///
 /// The generator polynomial has the roots :math:`\beta^b, \dots, \beta^{b+2t-1}`,
 ///
@@ -87,11 +89,22 @@ fn symbols_out(py: Python<'_>, v: Vec<u16>) -> IArr<'_> {
 ///     root_step (int): exponent :math:`c` of :math:`\beta = \alpha^c`, coprime with
 ///         :math:`2^m - 1`.
 ///     poly (int | None): the primitive polynomial of the field, bit :math:`i` the
-///         coefficient of :math:`x^i` (the conventional one of Lin & Costello, Table 2.7,
-///         by default: ``0x11D`` for :math:`m = 8`).
+///         coefficient of :math:`x^i` (the conventional one of [5]_, Table 2.7, by
+///         default: ``0x11D`` for :math:`m = 8`).
 ///
 /// Raises:
 ///     ValueError: for an invalid parameter (the message names it).
+///
+/// References:
+///     .. [1] I. S. Reed and G. Solomon, "Polynomial codes over certain finite fields,"
+///        *J. SIAM*, 8(2), 300–304, 1960.
+///     .. [2] J. L. Massey, "Shift-register synthesis and BCH decoding," *IEEE Trans.
+///        Inf. Theory*, 15(1), 122–127, 1969.
+///     .. [3] R. T. Chien, "Cyclic decoding procedures for Bose-Chaudhuri-Hocquenghem
+///        codes," *IEEE Trans. Inf. Theory*, 10(4), 357–363, 1964.
+///     .. [4] G. D. Forney, "On decoding BCH codes," *IEEE Trans. Inf. Theory*, 11(4),
+///        549–557, 1965.
+///     .. [5] S. Lin and D. J. Costello, *Error Control Coding*, 2nd ed., Pearson, 2004.
 ///
 /// Examples:
 ///     The RS(204, 188) outer code of DVB-T and DVB-S (ETSI EN 300 744 V1.6.1,
@@ -373,9 +386,10 @@ fn unpack_symbols<'py>(py: Python<'py>, symbols: &Bound<'py, PyAny>, m: u32) -> 
 }
 
 /// The word error rate of a bounded-distance decoder of a :math:`t`-error-correcting code
-/// of :math:`n` symbols over a memoryless channel of symbol error probability :math:`p_s`
-/// (Proakis & Salehi, *Digital Communications*, 5th ed., Sec. 7.5.2): the probability
-/// of more than :math:`t` wrong symbols,
+/// of :math:`n` symbols over a memoryless channel of symbol error probability
+/// :math:`p_s`.
+///
+/// The probability of more than :math:`t` wrong symbols ([1]_, Sec. 7.5.2),
 ///
 /// .. math::
 ///
@@ -394,6 +408,10 @@ fn unpack_symbols<'py>(py: Python<'py>, symbols: &Bound<'py, PyAny>, m: u32) -> 
 /// Raises:
 ///     ValueError: for values that are not real numbers.
 ///
+/// References:
+///     .. [1] J. G. Proakis and M. Salehi, *Digital Communications*, 5th ed., McGraw-Hill,
+///        2008.
+///
 /// Examples:
 ///     >>> import comnum
 ///     >>> pw = comnum.theory_rs_wer(255, 16, [1e-3, 1e-2])
@@ -405,8 +423,9 @@ fn theory_rs_wer(n: usize, t: usize, p_s: &Bound<'_, PyAny>) -> PyResult<Py<PyAn
 }
 
 /// The symbol error rate after decoding, approximating that a word of :math:`i > t`
-/// errors keeps its :math:`i` wrong symbols (Proakis & Salehi, Sec. 7.5.2; Sklar,
-/// *Digital Communications*, 2nd ed., Sec. 8.1.2):
+/// errors keeps its :math:`i` wrong symbols.
+///
+/// The approximation of [1]_ (Sec. 7.5.2) and [2]_ (Sec. 8.1.2):
 ///
 /// .. math::
 ///
@@ -426,6 +445,12 @@ fn theory_rs_wer(n: usize, t: usize, p_s: &Bound<'_, PyAny>) -> PyResult<Py<PyAn
 /// Raises:
 ///     ValueError: for values that are not real numbers.
 ///
+/// References:
+///     .. [1] J. G. Proakis and M. Salehi, *Digital Communications*, 5th ed., McGraw-Hill,
+///        2008.
+///     .. [2] B. Sklar, *Digital Communications: Fundamentals and Applications*, 2nd ed.,
+///        Prentice Hall, 2001.
+///
 /// Examples:
 ///     >>> import comnum
 ///     >>> bool(comnum.theory_rs_ser(255, 16, 1e-2) < comnum.theory_rs_wer(255, 16, 1e-2))
@@ -435,11 +460,11 @@ fn theory_rs_ser(n: usize, t: usize, p_s: &Bound<'_, PyAny>) -> PyResult<Py<PyAn
     map_real(p_s, |p| rs::symbol_error_probability(n, t, p).py())
 }
 
-/// The bit error rate after decoding of a code over :math:`\mathrm{GF}(2^m)` (Sklar,
-/// Sec. 8.1.2).
+/// The bit error rate after decoding of a code over :math:`\mathrm{GF}(2^m)`.
 ///
-/// A wrong symbol carries on average :math:`2^{m-1} / (2^m - 1)` wrong bits per bit, so
-/// that, with the symbol error rate :math:`P_s^{\mathrm{out}}` of :func:`theory_rs_ser`,
+/// A wrong symbol carries on average :math:`2^{m-1} / (2^m - 1)` wrong bits per bit
+/// ([1]_, Sec. 8.1.2), so that, with the symbol error rate :math:`P_s^{\mathrm{out}}` of
+/// :func:`theory_rs_ser`,
 ///
 /// .. math::
 ///
@@ -456,15 +481,21 @@ fn theory_rs_ser(n: usize, t: usize, p_s: &Bound<'_, PyAny>) -> PyResult<Py<PyAn
 ///
 /// Raises:
 ///     ValueError: for values that are not real numbers.
+///
+/// References:
+///     .. [1] B. Sklar, *Digital Communications: Fundamentals and Applications*, 2nd ed.,
+///        Prentice Hall, 2001.
 #[pyfunction]
 fn theory_rs_ber(n: usize, t: usize, m: u32, p_s: &Bound<'_, PyAny>) -> PyResult<Py<PyAny>> {
     map_real(p_s, |p| rs::bit_error_probability(n, t, m, p).py())
 }
 
-/// A binary BCH code of :math:`\mathrm{GF}(2^m)`, narrow sense, of designed distance :math:`2t + 1`
-/// (Lin & Costello, *Error Control Coding*, 2nd ed., 2004, ch. 6), shortened to :math:`n`
-/// bits: the outer code of DVB-S2 (ETSI EN 302 307-1 V1.4.1, Sec. 5.3.1). Systematic
+/// A binary BCH code of :math:`\mathrm{GF}(2^m)`, narrow sense, of designed distance
+/// :math:`2t + 1`, shortened to :math:`n` bits: the outer code of DVB-S2. Systematic
 /// encoding; decoding of hard decisions by Berlekamp–Massey and a Chien search.
+///
+/// The code of [1]_ (ch. 6), the outer code of [2]_ (Sec. 5.3.1); decoded by
+/// Berlekamp–Massey [3]_ and a Chien search [4]_.
 ///
 /// The code follows the contract of every code of the package: ``encode`` maps whole
 /// blocks of :math:`k` bits to :math:`n` coded bits, ``decode`` whole blocks of :math:`n`
@@ -482,6 +513,16 @@ fn theory_rs_ber(n: usize, t: usize, m: u32, p_s: &Bound<'_, PyAny>) -> PyResult
 ///
 /// Raises:
 ///     ValueError: for an invalid parameter (the message names it).
+///
+/// References:
+///     .. [1] S. Lin and D. J. Costello, *Error Control Coding*, 2nd ed., Pearson, 2004.
+///     .. [2] ETSI EN 302 307-1 V1.4.1, *Digital Video Broadcasting (DVB); Second
+///        generation framing structure, channel coding and modulation systems (DVB-S2)*,
+///        2014.
+///     .. [3] J. L. Massey, "Shift-register synthesis and BCH decoding," *IEEE Trans.
+///        Inf. Theory*, 15(1), 122–127, 1969.
+///     .. [4] R. T. Chien, "Cyclic decoding procedures for Bose-Chaudhuri-Hocquenghem
+///        codes," *IEEE Trans. Inf. Theory*, 10(4), 357–363, 1964.
 ///
 /// Examples:
 ///     The (15, 7) code correcting two errors, :math:`g(x) = 1 + x^4 + x^6 + x^7 + x^8`
@@ -610,8 +651,9 @@ impl PyBch {
 }
 
 /// The free distance of a feed-forward convolutional code, punctured or not: a
-/// shortest path on the periodically time-varying trellis. Reproduces Yasuda, Kashiki
-/// & Hirata, *IEEE Trans. Commun.* 32(3), 1984, Table I.
+/// shortest path on the periodically time-varying trellis.
+///
+/// Reproduces Table I of [1]_.
 ///
 /// Args:
 ///     generators (list[int]): octal generators.
@@ -624,6 +666,11 @@ impl PyBch {
 ///
 /// Raises:
 ///     ValueError: for an invalid parameter or input (the message names it).
+///
+/// References:
+///     .. [1] Y. Yasuda, K. Kashiki and Y. Hirata, "High-rate punctured convolutional
+///        codes for soft decision Viterbi decoding," *IEEE Trans. Commun.*, 32(3),
+///        315–319, 1984.
 ///
 /// Examples:
 ///     >>> import comnum

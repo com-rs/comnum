@@ -28,7 +28,7 @@ fn bits<'py>(py: Python<'py>, n: i64, mut rng: PyRefMut<'py, PyRng>) -> PyResult
 ///
 /// Args:
 ///     order (int): 7, 9, 11, 15, 20, 23, 29 or 31 (period :math:`2^{\text{order}} - 1`); the
-///         polynomials of ITU-T O.150 at another phase, never inverted: see
+///         polynomials of ITU-T O.150 [1]_ at another phase, never inverted: see
 ///         :func:`o150_sequence` for the sequences of the Recommendation.
 ///     length (int): number of bits.
 ///     seed (int): initial register state (non-zero after masking).
@@ -38,6 +38,11 @@ fn bits<'py>(py: Python<'py>, n: i64, mut rng: PyRefMut<'py, PyRng>) -> PyResult
 ///
 /// Raises:
 ///     ValueError: for an invalid parameter (the message names it).
+///
+/// References:
+///     .. [1] ITU-T Recommendation O.150 (05/96), *General requirements for
+///        instrumentation for performance measurements on digital transmission
+///        equipment*.
 ///
 /// Examples:
 ///     >>> import comnum
@@ -51,7 +56,7 @@ fn prbs(py: Python<'_>, order: u32, length: i64, seed: u64) -> PyResult<BArr<'_>
 
 /// A pseudo-random test sequence of ITU-T O.150 (05/96), Sec. 5.
 ///
-/// The eight sequences of the error-rate test sets, exactly as the Recommendation
+/// The eight sequences of the error-rate test sets, exactly as the Recommendation [1]_
 /// defines them: the shift register of :math:`n` stages fed back from the stages
 /// :math:`k` and :math:`n`, the output inverted for `prbs15`, `prbs23`, `prbs29` and
 /// `prbs31`, the zero suppression of `prbs20z` (Sec. 5.5). Every register starts with its
@@ -68,6 +73,11 @@ fn prbs(py: Python<'_>, order: u32, length: i64, seed: u64) -> PyResult<BArr<'_>
 ///
 /// Raises:
 ///     ValueError: for an unknown name or a negative length.
+///
+/// References:
+///     .. [1] ITU-T Recommendation O.150 (05/96), *General requirements for
+///        instrumentation for performance measurements on digital transmission
+///        equipment*.
 ///
 /// Examples:
 ///     >>> import comnum

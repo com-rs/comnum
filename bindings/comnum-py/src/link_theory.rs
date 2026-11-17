@@ -13,12 +13,12 @@ use pyo3::prelude::*;
 
 /// The bit error rate over flat Rayleigh fading of a receiver that equalises with a
 /// channel estimate jointly Gaussian with the channel, of correlations `rho1` (real) and
-/// `rho2` (imaginary) and of standard deviation ratio `sigma_ratio` :math:`= \sigma_2/\sigma_1`
-/// (M.-X. Chang and Y. T. Su, *IEEE Trans. Wireless Commun.* 1(4), 2002, eqs. 31, 32, 53;
-/// every linear pilot-assisted estimate has this form). `rho1 = 1`, `rho2 = 0`,
-/// `sigma_ratio = 1`: the perfect channel.
+/// `rho2` (imaginary) and of standard deviation ratio `sigma_ratio`
+/// :math:`= \sigma_2/\sigma_1`. `rho1 = 1`, `rho2 = 0`, `sigma_ratio = 1`: the perfect
+/// channel.
 ///
-/// The received sample of a subcarrier is
+/// The model of [1]_ (eqs. 31, 32, 53; every linear pilot-assisted estimate has this
+/// form): the received sample of a subcarrier is
 ///
 /// .. math::
 ///
@@ -41,8 +41,8 @@ use pyo3::prelude::*;
 ///     - \frac{(\rho_1 + \rho_2)^2}{2}}}\right],
 ///     \end{aligned}
 ///
-/// and that of Gray 16-QAM the sum of 24 terms of eq. 53 with the coefficients of their
-/// Table I.
+/// and that of Gray 16-QAM the sum of 24 terms of eq. 53 with the coefficients of
+/// Table I of [1]_.
 ///
 /// Args:
 ///     modulation (str): ``"bpsk"``, ``"qpsk"`` (Gray) or ``"16qam"`` (Gray), any name of
@@ -58,6 +58,10 @@ use pyo3::prelude::*;
 ///
 /// Raises:
 ///     ValueError: for an invalid parameter or input (the message names it).
+///
+/// References:
+///     .. [1] M.-X. Chang and Y. T. Su, "Performance analysis of equalized OFDM systems in
+///        Rayleigh fading," *IEEE Trans. Wireless Commun.*, 1(4), 721–732, 2002.
 ///
 /// Examples:
 ///     >>> import comnum
@@ -78,9 +82,9 @@ fn theory_ber_imperfect_csi(
 }
 
 /// The bit error rate of DBPSK (`m = 2`) or Gray DQPSK (`m = 4`) over Jakes' Rayleigh
-/// fading of normalised Doppler `fd_ts` (Chang & Su 2002, eqs. 40, 41).
+/// fading of normalised Doppler `fd_ts`.
 ///
-/// At the mean SNR per bit :math:`\bar{\gamma}_b`:
+/// At the mean SNR per bit :math:`\bar{\gamma}_b` ([1]_, eqs. 40, 41):
 ///
 /// .. math::
 ///
@@ -103,6 +107,10 @@ fn theory_ber_imperfect_csi(
 ///
 /// Raises:
 ///     ValueError: for an invalid parameter or input (the message names it).
+///
+/// References:
+///     .. [1] M.-X. Chang and Y. T. Su, "Performance analysis of equalized OFDM systems in
+///        Rayleigh fading," *IEEE Trans. Wireless Commun.*, 1(4), 721–732, 2002.
 #[pyfunction]
 fn theory_ber_dpsk_jakes(m: usize, ebn0_db: &Bound<'_, PyAny>, fd_ts: f64) -> PyResult<Py<PyAny>> {
     let g = |e: f64| comnum::math::db2lin(e);
@@ -114,10 +122,11 @@ fn theory_ber_dpsk_jakes(m: usize, ebn0_db: &Bound<'_, PyAny>, fd_ts: f64) -> Py
 }
 
 /// The coefficients :math:`c_n` of the output autocorrelation of a memoryless envelope
-/// nonlinearity :math:`f` driven by a circular complex Gaussian signal of unit power
-/// (P. Banelli and S. Cacopardi, *IEEE Trans. Commun.* 48(3), 2000, eq. 7): :math:`c_0` is
-/// the useful power :math:`|\alpha|^2` (Bussgang), the term :math:`n` has the input spectrum
-/// convolved :math:`2n + 1` times with itself, and the coefficients sum to the output power.
+/// nonlinearity :math:`f` driven by a circular complex Gaussian signal of unit power.
+///
+/// The expansion of [1]_ (eq. 7): :math:`c_0` is the useful power :math:`|\alpha|^2`
+/// [2]_, the term :math:`n` has the input spectrum convolved :math:`2n + 1` times with
+/// itself, and the coefficients sum to the output power.
 ///
 /// For an envelope nonlinearity :math:`y = f(r) e^{j\theta}` and an input of power
 /// :math:`2\sigma^2` (here 1), of autocorrelation :math:`R_{xx}` (eqs. 6–8):
@@ -143,6 +152,13 @@ fn theory_ber_dpsk_jakes(m: usize, ebn0_db: &Bound<'_, PyAny>, fd_ts: f64) -> Py
 /// Raises:
 ///     ValueError: for an input that is not an array of numbers of the expected shape.
 ///
+/// References:
+///     .. [1] P. Banelli and S. Cacopardi, "Theoretical analysis and performance of OFDM
+///        signals in nonlinear AWGN channels," *IEEE Trans. Commun.*, 48(3), 430–441,
+///        2000.
+///     .. [2] J. J. Bussgang, "Crosscorrelation functions of amplitude-distorted Gaussian
+///        signals," *MIT RLE Tech. Rep.* 216, 1952.
+///
 /// Examples:
 ///     >>> import comnum, numpy as np
 ///     >>> c = comnum.envelope_series(lambda r: np.minimum(r, np.sqrt(2.0)), 60)  # 3 dB IBO
@@ -160,7 +176,9 @@ fn envelope_series<'py>(py: Python<'py>, f: &Bound<'py, PyAny>, n_terms: i64) ->
 /// The power of the useful term and of the distortion on each of `bins` frequency bins,
 /// for the coefficients `c` of `envelope_series` and an input flat on the `occupied`
 /// bins centred on bin 0 (an OFDM signal of `occupied` subcarriers oversampled to
-/// `bins`; Banelli & Cacopardi, eq. 9).
+/// `bins`).
+///
+/// The spectra of eq. 9 of [1]_.
 ///
 /// Args:
 ///     c (array_like): the coefficients :math:`c_n`.
@@ -172,6 +190,11 @@ fn envelope_series<'py>(py: Python<'py>, f: &Bound<'py, PyAny>, n_terms: i64) ->
 ///
 /// Raises:
 ///     ValueError: for an invalid parameter or input (the message names it).
+///
+/// References:
+///     .. [1] P. Banelli and S. Cacopardi, "Theoretical analysis and performance of OFDM
+///        signals in nonlinear AWGN channels," *IEEE Trans. Commun.*, 48(3), 430–441,
+///        2000.
 #[pyfunction]
 fn distortion_spectrum<'py>(
     py: Python<'py>,

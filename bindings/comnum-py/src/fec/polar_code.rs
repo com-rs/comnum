@@ -3,9 +3,10 @@
 use super::*;
 
 /// A polar code of length :math:`n` (a power of two) and :math:`k` information bits, built
-/// by the Gaussian approximation at `design_ebn0_db` (Trifonov 2012); decoded by SC
-/// (Arıkan 2009), or SC list of size `list_size` (Tal & Vardy 2015) with the CRC `crc`
-/// choosing the path (CA-SCL).
+/// by the Gaussian approximation at `design_ebn0_db`; decoded by SC, or SC list of size
+/// `list_size` with the CRC `crc` choosing the path (CA-SCL).
+///
+/// The construction of [1]_; the SC decoder of [2]_ and the list decoder of [3]_.
 ///
 /// Args:
 ///     n (int): coded bits per block, a power of two.
@@ -16,6 +17,15 @@ use super::*;
 ///
 /// Raises:
 ///     ValueError: for an invalid parameter (the message names it).
+///
+/// References:
+///     .. [1] P. Trifonov, "Efficient design and decoding of polar codes," *IEEE Trans.
+///        Commun.*, 60(11), 3221–3227, 2012.
+///     .. [2] E. Arıkan, "Channel polarization: a method for constructing
+///        capacity-achieving codes for symmetric binary-input memoryless channels,"
+///        *IEEE Trans. Inf. Theory*, 55(7), 3051–3073, 2009.
+///     .. [3] I. Tal and A. Vardy, "List decoding of polar codes," *IEEE Trans. Inf.
+///        Theory*, 61(5), 2213–2226, 2015.
 ///
 /// Examples:
 ///     >>> import comnum, numpy as np

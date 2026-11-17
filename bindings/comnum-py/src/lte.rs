@@ -30,7 +30,9 @@ fn phich_resource(ng: f64) -> PyResult<PhichResource> {
 /// the PBCH of slot 1 carrying the master information block of the frame (its 8 bits of
 /// frame number `sfn // 4`, its quarter `sfn % 4` of the 40 ms period, transmit
 /// diversity for 2 or 4 ports), and QPSK symbols at random on the other elements of port
-/// 0 when `rng` is given (TS 36.211 Sec. 6.6, 6.10.1, 6.11).
+/// 0 when `rng` is given.
+///
+/// The signals and their mapping are those of [1]_ (Secs. 6.6, 6.10.1, 6.11).
 ///
 /// Args:
 ///     n_cell_id (int): the cell identity, 0 to 503.
@@ -48,6 +50,9 @@ fn phich_resource(ng: f64) -> PyResult<PhichResource> {
 ///
 /// Raises:
 ///     ValueError: for an invalid parameter (the message names it).
+///
+/// References:
+///     .. [1] 3GPP TS 36.211 V18.0.2, *E-UTRA; Physical channels and modulation*.
 ///
 /// Examples:
 ///     >>> import comnum
@@ -92,6 +97,9 @@ fn lte_frame<'py>(
 /// half frame, equalised by the channel of the PSS, gives the group
 /// :math:`N_{\mathrm{ID}}^{(1)}` and the start of the frames.
 ///
+/// The PSS and the SSS are those of [1]_ (Sec. 6.11); the refinement on the cyclic
+/// prefixes is the correlation term of [2]_ (eq. 6).
+///
 /// Args:
 ///     x (array_like): at least 10.5 ms of complex samples at 1.92 MS/s.
 ///     max_cfo_hz (float): the largest frequency offset searched (Hz).
@@ -107,6 +115,12 @@ fn lte_frame<'py>(
 ///
 /// Raises:
 ///     ValueError: for fewer than 10.5 ms of samples or invalid settings.
+///
+/// References:
+///     .. [1] 3GPP TS 36.211 V18.0.2, *E-UTRA; Physical channels and modulation*.
+///     .. [2] J.-J. van de Beek, M. Sandell and P. O. Börjesson, "ML estimation of time and
+///        frequency offset in OFDM systems," *IEEE Trans. Signal Process.*, 45(7),
+///        1800–1805, 1997.
 ///
 /// Examples:
 ///     >>> import comnum, numpy as np
@@ -143,7 +157,9 @@ fn lte_cell_search<'py>(
 /// on the CRS of subframe 0, the PBCH equalised for 1, 2 and 4 ports (transmit
 /// diversity), descrambled for each quarter of the 40 ms period, decoded by the
 /// wrap-around Viterbi algorithm (tail-biting code) and checked by its CRC, whose mask
-/// tells the number of ports (TS 36.212 Sec. 5.3.1).
+/// tells the number of ports.
+///
+/// The coding of the BCH is that of [1]_ (Sec. 5.3.1).
 ///
 /// Args:
 ///     x (array_like): the complex samples at 1.92 MS/s.
@@ -158,6 +174,9 @@ fn lte_cell_search<'py>(
 ///
 /// Raises:
 ///     ValueError: for a cell without its keys, an identity above 503 or no pass.
+///
+/// References:
+///     .. [1] 3GPP TS 36.212 V18.1.0, *E-UTRA; Multiplexing and channel coding*.
 ///
 /// Examples:
 ///     >>> import comnum, numpy as np
@@ -200,8 +219,10 @@ fn lte_decode_mib<'py>(
     Ok(out)
 }
 
-/// The PSS of LTE of the identity :math:`N_{\mathrm{ID}}^{(2)}` (the 62 values of the punctured
-/// Zadoff–Chu sequence of length 63, roots 25, 29, 34; TS 36.211 Sec. 6.11.1.1):
+/// The PSS of LTE of the identity :math:`N_{\mathrm{ID}}^{(2)}`.
+///
+/// It is made of the 62 values of the punctured Zadoff–Chu sequence of length 63, roots
+/// 25, 29, 34 ([1]_, Sec. 6.11.1.1):
 ///
 /// .. math::
 ///
@@ -218,6 +239,9 @@ fn lte_decode_mib<'py>(
 ///
 /// Raises:
 ///     ValueError: for an identity above 2.
+///
+/// References:
+///     .. [1] 3GPP TS 36.211 V18.0.2, *E-UTRA; Physical channels and modulation*.
 #[pyfunction]
 fn lte_pss(py: Python<'_>, n_id2: u32) -> PyResult<CArr<'_>> {
     Ok(carr(py, comnum::waveform::ofdm::lte::pss(n_id2).py()?))

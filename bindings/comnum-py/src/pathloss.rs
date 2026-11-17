@@ -44,7 +44,9 @@ fn scenario(
     })
 }
 
-/// The path loss of a link of 3GPP TR 38.901 (Table 7.4.1-1).
+/// The path loss of a link of 3GPP TR 38.901.
+///
+/// The models of the scenarios are those of [1]_ (Table 7.4.1-1).
 ///
 /// Args:
 ///     scenario (str): ``"rma"``, ``"uma"``, ``"umi"`` (street canyon), ``"inh"`` (office),
@@ -66,6 +68,10 @@ fn scenario(
 /// Raises:
 ///     ValueError: for an unknown scenario, a carrier or a distance outside the range of
 ///         the scenario, or a non-positive height.
+///
+/// References:
+///     .. [1] 3GPP TR 38.901 V19.5.0 (2026-09), *Study on channel model for frequencies
+///        from 0.5 to 100 GHz*.
 ///
 /// Examples:
 ///     >>> import comnum
@@ -90,7 +96,9 @@ fn path_loss_db(
     pl::path_loss_db(&s, &LinkGeometry { d2d_m, h_bs_m: h_bs_m.unwrap_or(hb), h_ut_m }, fc_hz, los).py()
 }
 
-/// The standard deviation of the log-normal shadow fading of a link (Table 7.4.1-1).
+/// The standard deviation of the log-normal shadow fading of a link.
+///
+/// The values are those of [1]_ (Table 7.4.1-1).
 ///
 /// Args:
 ///     scenario (str): as ``path_loss_db``.
@@ -105,6 +113,10 @@ fn path_loss_db(
 ///
 /// Raises:
 ///     ValueError: for an unknown scenario.
+///
+/// References:
+///     .. [1] 3GPP TR 38.901 V19.5.0 (2026-09), *Study on channel model for frequencies
+///        from 0.5 to 100 GHz*.
 #[pyfunction]
 #[pyo3(signature = (scenario, d2d_m, fc_hz, *, los=true, h_bs_m=None, h_ut_m=1.5))]
 fn shadow_fading_std_db(
@@ -119,7 +131,9 @@ fn shadow_fading_std_db(
     Ok(pl::shadow_fading_std_db(&s, &LinkGeometry { d2d_m, h_bs_m: h_bs_m.unwrap_or(hb), h_ut_m }, fc_hz, los))
 }
 
-/// The probability of a line of sight (TR 38.901 Table 7.4.2-1).
+/// The probability of a line of sight.
+///
+/// The models of the scenarios are those of [1]_ (Table 7.4.2-1).
 ///
 /// Args:
 ///     scenario (str): as ``path_loss_db``.
@@ -137,6 +151,10 @@ fn shadow_fading_std_db(
 ///
 /// Raises:
 ///     ValueError: for an unknown scenario or office.
+///
+/// References:
+///     .. [1] 3GPP TR 38.901 V19.5.0 (2026-09), *Study on channel model for frequencies
+///        from 0.5 to 100 GHz*.
 ///
 /// Examples:
 ///     >>> import comnum
@@ -159,7 +177,9 @@ fn los_probability(
     Ok(pl::los_probability(&s, d2d_out_m, h_ut_m, h_bs_m.unwrap_or(hb)))
 }
 
-/// The effective environment height of a UMa link (TR 38.901 Table 7.4.1-1, NOTE 1).
+/// The effective environment height of a UMa link.
+///
+/// It is drawn as in [1]_ (Table 7.4.1-1, NOTE 1).
 ///
 /// Args:
 ///     d2d_m (float): the horizontal BS-UT distance (m).
@@ -168,14 +188,18 @@ fn los_probability(
 ///
 /// Returns:
 ///     float: 1 m, or one of 12, 15, ..., h_UT - 1.5 m.
+///
+/// References:
+///     .. [1] 3GPP TR 38.901 V19.5.0 (2026-09), *Study on channel model for frequencies
+///        from 0.5 to 100 GHz*.
 #[pyfunction]
 fn uma_environment_height(d2d_m: f64, h_ut_m: f64, mut rng: PyRefMut<'_, PyRng>) -> f64 {
     pl::uma_environment_height(d2d_m, h_ut_m, &mut rng.inner)
 }
 
-/// The outdoor-to-indoor penetration of a building (TR 38.901 eq. (7.4-2), Table 7.4.3-2).
+/// The outdoor-to-indoor penetration of a building.
 ///
-/// The mean loss is :math:`PL_{tw} + PL_{in}` (dB), with
+/// The mean loss ([1]_, eq. (7.4-2), Table 7.4.3-2) is :math:`PL_{tw} + PL_{in}` (dB), with
 ///
 /// .. math::
 ///
@@ -196,6 +220,10 @@ fn uma_environment_height(d2d_m: f64, h_ut_m: f64, mut rng: PyRefMut<'_, PyRng>)
 ///
 /// Raises:
 ///     ValueError: for an unknown model.
+///
+/// References:
+///     .. [1] 3GPP TR 38.901 V19.5.0 (2026-09), *Study on channel model for frequencies
+///        from 0.5 to 100 GHz*.
 #[pyfunction]
 fn building_penetration_db(model: &str, fc_hz: f64, d2d_in_m: f64) -> PyResult<(f64, f64)> {
     let m = match model {

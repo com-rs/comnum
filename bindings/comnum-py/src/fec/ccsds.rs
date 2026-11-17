@@ -5,11 +5,13 @@ use super::*;
 use comnum::fec::block::SoftDecode;
 use comnum::fec::ccsds::{self, Ar4jaRate, TurboRate};
 
-/// The interleaved Reed–Solomon codeblock of CCSDS 131.0-B-5, Sec. 4: the
-/// :math:`\mathrm{RS}(255, 255 - 2E)` code over the field of :math:`x^8 + x^7 + x^2 + x + 1`
-/// with the roots :math:`\alpha^{11 j}`, :math:`j = 128 - E, \dots, 127 + E`, its symbols
-/// in the dual basis of Annex F, ``depth`` codewords interleaved symbol by symbol,
-/// shortened by a virtual fill of ``fill`` symbols per codeword.
+/// The interleaved Reed–Solomon codeblock of CCSDS 131.0-B-5.
+///
+/// The codeblock of [1]_ (Sec. 4): the :math:`\mathrm{RS}(255, 255 - 2E)` code over the
+/// field of :math:`x^8 + x^7 + x^2 + x + 1` with the roots :math:`\alpha^{11 j}`,
+/// :math:`j = 128 - E, \dots, 127 + E`, its symbols in the dual basis of Annex F,
+/// ``depth`` codewords interleaved symbol by symbol, shortened by a virtual fill of
+/// ``fill`` symbols per codeword.
 ///
 /// The code works on octets (``encode_bytes``, ``decode_bytes``, dual-basis octets as
 /// they are transmitted) and on bits, eight per octet, the most significant first
@@ -24,6 +26,10 @@ use comnum::fec::ccsds::{self, Ar4jaRate, TurboRate};
 /// Raises:
 ///     ValueError: for another :math:`E` or :math:`I`, or a fill that leaves no
 ///         information.
+///
+/// References:
+///     .. [1] CCSDS 131.0-B-5, *TM Synchronization and Channel Coding*, Recommended
+///        Standard (Blue Book), Issue 5, September 2023.
 ///
 /// Examples:
 ///     The codeblock of :math:`E = 16` and :math:`I = 5` (Sec. 4.3.8): 1115 octets of frame,
@@ -160,12 +166,14 @@ impl PyCcsdsRs {
     }
 }
 
-/// An LDPC code of CCSDS 131.0-B-5, Sec. 7: the (8160, 7136) code of rate 223/255 (Sec.
-/// 7.3, ``CcsdsLdpc("7/8")``), or an AR4JA code of :math:`k` = 1024, 4096 or 16384 bits
-/// and rate 1/2, 2/3 or 4/5 (Sec. 7.4, ``CcsdsLdpc("1/2", 1024)``), with the encoder of
-/// the standard (the circulants of Table C-1, the matrix :math:`C` of Sec. 7.4.2), the
-/// virtual zeros and the punctured bits, decoded by belief propagation on the full
-/// parity-check matrix.
+/// An LDPC code of CCSDS 131.0-B-5: the (8160, 7136) code of rate 223/255 or an AR4JA
+/// code, decoded by belief propagation on the full parity-check matrix.
+///
+/// The codes of [1]_ (Sec. 7): the (8160, 7136) code of rate 223/255 (Sec. 7.3,
+/// ``CcsdsLdpc("7/8")``), or an AR4JA code of :math:`k` = 1024, 4096 or 16384 bits and
+/// rate 1/2, 2/3 or 4/5 (Sec. 7.4, ``CcsdsLdpc("1/2", 1024)``), with the encoder of the
+/// standard (the circulants of Table C-1, the matrix :math:`C` of Sec. 7.4.2), the
+/// virtual zeros and the punctured bits.
 ///
 /// Building the AR4JA code of :math:`k = 16384` and rate 1/2 inverts an
 /// :math:`8192 \times 8192` binary matrix: about a second.
@@ -180,6 +188,10 @@ impl PyCcsdsRs {
 ///
 /// Raises:
 ///     ValueError: for another rate or :math:`k`.
+///
+/// References:
+///     .. [1] CCSDS 131.0-B-5, *TM Synchronization and Channel Coding*, Recommended
+///        Standard (Blue Book), Issue 5, September 2023.
 ///
 /// Examples:
 ///     The lengths of Table 7-5 and a codeword decoded through a noisy channel:
@@ -323,11 +335,13 @@ impl PyCcsdsLdpc {
     }
 }
 
-/// A turbo code of CCSDS 131.0-B-5, Sec. 6: two 16-state recursive encoders
-/// (:math:`G_0 = 23`, :math:`G_1 = 33`, :math:`G_2 = 25`, :math:`G_3 = 37` in octal), the
-/// permutation of Sec. 6.3 g) for :math:`k` = 1784, 3568, 7136 or 8920 bits, 4 termination
-/// steps, the outputs of Sec. 6.4 at rates 1/2, 1/3, 1/4 and 1/6, :math:`n = (k + 4)/r`
-/// (Table 6-2); decoded by iterative log-MAP decoding.
+/// A turbo code of CCSDS 131.0-B-5, decoded by iterative log-MAP decoding.
+///
+/// The code of [1]_ (Sec. 6): two 16-state recursive encoders (:math:`G_0 = 23`,
+/// :math:`G_1 = 33`, :math:`G_2 = 25`, :math:`G_3 = 37` in octal), the permutation of
+/// Sec. 6.3 g) for :math:`k` = 1784, 3568, 7136 or 8920 bits, 4 termination steps, the
+/// outputs of Sec. 6.4 at rates 1/2, 1/3, 1/4 and 1/6, :math:`n = (k + 4)/r`
+/// (Table 6-2).
 ///
 /// Args:
 ///     k (int): information bits per codeword.
@@ -337,6 +351,10 @@ impl PyCcsdsLdpc {
 ///
 /// Raises:
 ///     ValueError: for another :math:`k` or rate.
+///
+/// References:
+///     .. [1] CCSDS 131.0-B-5, *TM Synchronization and Channel Coding*, Recommended
+///        Standard (Blue Book), Issue 5, September 2023.
 ///
 /// Examples:
 ///     >>> import comnum, numpy as np

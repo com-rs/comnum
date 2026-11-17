@@ -3318,7 +3318,7 @@ one layer down, instead of written again (`docs/ARCHITECTURE.md`, placement).
 
 ### `src/amplifier.rs`
 
-- `struct PyDpd` — A memory-polynomial digital predistorter, trained by indirect learning (Eun & Powers
+- `struct PyDpd` — A memory-polynomial digital predistorter, trained by indirect learning.
 
 ### `src/cdl.rs`
 
@@ -3339,7 +3339,7 @@ one layer down, instead of written again (`docs/ARCHITECTURE.md`, placement).
 
 ### `src/comm/shaping.rs`
 
-- `struct PyCcdm` — Constant-composition distribution matching (Schulte & Böcherer 2016): ``k`` uniform
+- `struct PyCcdm` — Constant-composition distribution matching: ``k`` uniform bits to a sequence of
 
 ### `src/devices.rs`
 
@@ -3351,29 +3351,29 @@ one layer down, instead of written again (`docs/ARCHITECTURE.md`, placement).
 
 ### `src/fec/ccsds.rs`
 
-- `struct PyCcsdsRs` — The interleaved Reed–Solomon codeblock of CCSDS 131.0-B-5, Sec. 4: the
-- `struct PyCcsdsLdpc` — An LDPC code of CCSDS 131.0-B-5, Sec. 7: the (8160, 7136) code of rate 223/255 (Sec.
-- `struct PyCcsdsTurbo` — A turbo code of CCSDS 131.0-B-5, Sec. 6: two 16-state recursive encoders
+- `struct PyCcsdsRs` — The interleaved Reed–Solomon codeblock of CCSDS 131.0-B-5.
+- `struct PyCcsdsLdpc` — An LDPC code of CCSDS 131.0-B-5: the (8160, 7136) code of rate 223/255 or an AR4JA
+- `struct PyCcsdsTurbo` — A turbo code of CCSDS 131.0-B-5, decoded by iterative log-MAP decoding.
 
 ### `src/fec/conv.rs`
 
-- `struct PyConv` — A terminated rate-1/n convolutional code on blocks of `k` bits, decoded by Viterbi
+- `struct PyConv` — A terminated rate-1/n convolutional code on blocks of `k` bits, decoded by Viterbi:
 - `struct PyTurbo` — The turbo code of LTE: two (13, 15) recursive systematic codes in parallel, rate
 
 ### `src/fec/crc.rs`
 
-- `struct PyCrc` — A cyclic redundancy check of 5G NR (3GPP TS 38.212, Sec. 5.1).
-- `struct PyScrambler` — The Gold scrambler of 3GPP (TS 38.211, Sec. 5.2.1).
+- `struct PyCrc` — A cyclic redundancy check of 5G NR.
+- `struct PyScrambler` — The Gold scrambler of 3GPP.
 - `struct PyInterleaver` — A permutation of the positions of a block: `Interleaver.random(n, seed=…)`,
 
 ### `src/fec/ldpc_code.rs`
 
-- `struct PyLdpc` — An LDPC code: `LdpcCode.peg(n, k, var_degree=…, seed=…)` (progressive edge growth,
+- `struct PyLdpc` — An LDPC code: `LdpcCode.peg(n, k, var_degree=…, seed=…)` (progressive edge growth)
 
 ### `src/fec/nr.rs`
 
-- `struct PyNrLdpc` — The LDPC code of the data channels of 5G NR (3GPP TS 38.212, Sec. 5.3.2, 5.4.2): one
-- `struct PyNrPolar` — The polar code of the control channels of 5G NR (3GPP TS 38.212, Sec. 5.3.1, 5.4.1):
+- `struct PyNrLdpc` — The LDPC code of the data channels of 5G NR.
+- `struct PyNrPolar` — The polar code of the control channels of 5G NR.
 
 ### `src/fec/polar_code.rs`
 
@@ -3382,7 +3382,7 @@ one layer down, instead of written again (`docs/ARCHITECTURE.md`, placement).
 ### `src/fec_codes.rs`
 
 - `struct PyReedSolomon` — A Reed–Solomon code over :math:`\mathrm{GF}(2^m)` (symbols of :math:`m` bits) correcting
-- `struct PyBch` — A binary BCH code of :math:`\mathrm{GF}(2^m)`, narrow sense, of designed distance :math:`2t + 1`
+- `struct PyBch` — A binary BCH code of :math:`\mathrm{GF}(2^m)`, narrow sense, of designed distance
 
 ### `src/fiber.rs`
 
@@ -3394,7 +3394,7 @@ one layer down, instead of written again (`docs/ARCHITECTURE.md`, placement).
 
 ### `src/mimo/estimation.rs`
 
-- `struct PyMimoTraining` — A training matrix for the estimation of a flat MIMO channel (Biguesh & Gershman 2006).
+- `struct PyMimoTraining` — A training matrix for the estimation of a flat MIMO channel.
 
 ### `src/mimo/mod.rs`
 
@@ -3403,13 +3403,13 @@ one layer down, instead of written again (`docs/ARCHITECTURE.md`, placement).
 ### `src/multicarrier.rs`
 
 - `struct PyFbmc` — FBMC/OQAM (staggered multitone) with the PHYDYAS prototype filter.
-- `struct PyUfmc` — Universal filtered multicarrier (Schaich & Wild 2014): OFDM filtered per sub-band by
+- `struct PyUfmc` — Universal filtered multicarrier: OFDM filtered per sub-band by Dolph–Chebyshev
 
 ### `src/nr_pdsch.rs`
 
-- `struct PyNrTransportBlock` — A transport block of the PDSCH and its segmentation (TS 38.212 Sec. 7.2): TB CRC,
+- `struct PyNrTransportBlock` — A transport block of the PDSCH and its segmentation: TB CRC, code blocks with their
 - `struct PyNrHarqProcess` — The soft buffers of a HARQ process of a transport block: the LLRs of every
-- `struct PyNrPdsch` — One slot of a single-layer PDSCH (TS 38.211 Sec. 7.3.1): scrambling, modulation,
+- `struct PyNrPdsch` — One slot of a single-layer PDSCH: scrambling, modulation, resource mapping around the
 
 ### `src/ofdm.rs`
 
@@ -3418,26 +3418,26 @@ one layer down, instead of written again (`docs/ARCHITECTURE.md`, placement).
 
 ### `src/ofdm_link.rs`
 
-- `struct PyTdl` — A tapped-delay-line multipath channel with Clarke/Jakes Doppler (sum of sinusoids of
+- `struct PyTdl` — A tapped-delay-line multipath channel with Clarke/Jakes Doppler (sum of sinusoids),
 - `struct PyTaps` — The taps of one realisation of a `TdlChannel` or a `CdlChannel`: one tap per
-- `struct PyGrid` — An OFDM resource grid of `n_subcarriers` × `n_symbols` with pilots (Coleri et al.
-- `struct PyWiener2d` — The two-dimensional Wiener interpolator of pilots in time and frequency (Hoeher,
-- `struct PyRobustDesign` — The robust channel estimator of Li, Cimini & Sollenberger (1998): designed for the
-- `struct PyLowRank` — The rank-:math:`p` LMMSE estimator of Edfors et al. (1998) for the correlation ``r_hh``
+- `struct PyGrid` — An OFDM resource grid of `n_subcarriers` × `n_symbols` with pilots. A grid is a
+- `struct PyWiener2d` — The two-dimensional Wiener interpolator of pilots in time and frequency, for a WSSUS
+- `struct PyRobustDesign` — The robust channel estimator: designed for the worst channel of delay spread
+- `struct PyLowRank` — The rank-:math:`p` LMMSE estimator for the correlation ``r_hh`` of :math:`N` values:
 
 ### `src/otfs.rs`
 
-- `struct PyOtfs` — Orthogonal time frequency space (Raviteja et al. 2019) with rectangular pulses: the
+- `struct PyOtfs` — Orthogonal time frequency space with rectangular pulses: the symbols of the
 
 ### `src/owc.rs`
 
 - `struct PyImpulseResponse` — The received optical power of an indoor channel, bin by bin (see
-- `struct PyRoom` — An empty rectangular room :math:`[0, L] \times [0, W] \times [0, H]` with Lambertian walls
+- `struct PyRoom` — An empty rectangular room :math:`[0, L] \times [0, W] \times [0, H]` with Lambertian
 - `struct PyIllumination` — The light of a set of emitters carried to the elements of a room
-- `struct PyGammaGamma` — The gamma–gamma distribution of the intensity, of unit mean (Al-Habash, Andrews &
+- `struct PyGammaGamma` — The gamma–gamma distribution of the intensity, of unit mean.
 - `struct PyPointingError` — The misalignment of a Gaussian beam on a circular aperture, a Rayleigh radial
 - `struct PyFso` — A free-space optical link: a deterministic loss, turbulence and pointing errors.
-- `struct PyPinFet` — A PIN photodiode with a FET preamplifier: shot and thermal noise (Komine & Nakagawa
+- `struct PyPinFet` — A PIN photodiode with a FET preamplifier: shot and thermal noise.
 
 ### `src/rng.rs`
 
@@ -3456,7 +3456,7 @@ one layer down, instead of written again (`docs/ARCHITECTURE.md`, placement).
 - `struct PyDvbs2` — A DVB-S2 transmitter and receiver (ETSI EN 302 307-1) of one MODCOD, constant coding
 - `struct PyDvbs` — A DVB-S transmitter and frame-aligned receiver (ETSI EN 300 421 V1.1.2) of one inner
 - `struct PyDvbt` — A DVB-T transmitter and receiver (ETSI EN 300 744 V1.6.2) of one non-hierarchical
-- `struct PyCcsdsConvolutional` — The convolutional code of CCSDS 131.0-B-5, Sec. 3: constraint length 7, :math:`G_1 = 171`
+- `struct PyCcsdsConvolutional` — The convolutional code of CCSDS 131.0-B-5.
 
 ### `src/verify.rs`
 
@@ -3464,7 +3464,7 @@ one layer down, instead of written again (`docs/ARCHITECTURE.md`, placement).
 
 ### `src/waveform/ce_ofdm.rs`
 
-- `struct PyCeOfdm` — A constant-envelope OFDM (CE-OFDM) modulator and phase demodulator (Thompson et al.
+- `struct PyCeOfdm` — A constant-envelope OFDM (CE-OFDM) modulator and phase demodulator.
 
 ### `src/waveform/continuous_phase.rs`
 
@@ -3472,7 +3472,7 @@ one layer down, instead of written again (`docs/ARCHITECTURE.md`, placement).
 
 ### `src/waveform/css.rs`
 
-- `struct PyCss` — Chirp spread spectrum, the frequency-shift chirp modulation of LoRa (Chiani and
+- `struct PyCss` — Chirp spread spectrum, the frequency-shift chirp modulation of LoRa:
 
 ### `src/waveform/dsss.rs`
 

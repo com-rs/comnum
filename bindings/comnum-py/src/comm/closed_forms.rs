@@ -4,7 +4,7 @@ use super::*;
 
 /// Theoretical BER over AWGN with Gray mapping (OptiCommPy `theoryBER`, exact for BPSK).
 ///
-/// With :math:`L = \sqrt{M}` for the QAM:
+/// With :math:`L = \sqrt{M}` for the QAM [1]_:
 ///
 /// .. math::
 ///
@@ -31,6 +31,10 @@ use super::*;
 /// Raises:
 ///     ValueError: for an invalid parameter or input (the message names it).
 ///
+/// References:
+///     .. [1] J. G. Proakis and M. Salehi, *Digital Communications*, 5th ed., McGraw-Hill,
+///        2008.
+///
 /// Examples:
 ///     >>> import comnum
 ///     >>> round(comnum.theory_ber(4, 0.0), 6)
@@ -44,10 +48,9 @@ fn theory_ber(m: usize, ebn0_db: &Bound<'_, PyAny>, kind: &str) -> PyResult<Py<P
     map_real(ebn0_db, |e| metrics::theory_ber(k, m, e).py())
 }
 
-/// Exact BER of Gray-mapped PAM, square QAM or rectangular QAM over AWGN (K. Cho and
-/// D. Yoon, *IEEE Trans. Commun.* 50(7), 2002, eqs. (9)–(22)).
+/// Exact BER of Gray-mapped PAM, square QAM or rectangular QAM over AWGN.
 ///
-/// For an :math:`I`-PAM (eqs. (9)–(10)):
+/// For an :math:`I`-PAM ([1]_, eqs. (9)–(10)):
 ///
 /// .. math::
 ///
@@ -55,8 +58,8 @@ fn theory_ber(m: usize, ebn0_db: &Bound<'_, PyAny>, kind: &str) -> PyResult<Py<P
 ///     P_b(k) = \frac{1}{I} \sum_i X_{i,k}\, \operatorname{erfc}\!\left((2i + 1)
 ///     \sqrt{\frac{3 \log_2 I \cdot E_b/N_0}{I^2 - 1}}\right),
 ///
-/// with the coefficients :math:`X_{i,k}` of Table I of the paper. An :math:`I \times J`
-/// QAM is two such PAM in quadrature (eqs. (19)–(22)):
+/// with the coefficients :math:`X_{i,k}` of Table I of [1]_. An :math:`I \times J`
+/// QAM is two such PAM in quadrature ([1]_, eqs. (19)–(22)):
 ///
 /// .. math::
 ///
@@ -81,6 +84,11 @@ fn theory_ber(m: usize, ebn0_db: &Bound<'_, PyAny>, kind: &str) -> PyResult<Py<P
 /// Raises:
 ///     ValueError: for an invalid parameter or input (the message names it).
 ///
+/// References:
+///     .. [1] K. Cho and D. Yoon, "On the general BER expression of one- and
+///        two-dimensional amplitude modulations," *IEEE Trans. Commun.*, 50(7),
+///        1074–1080, 2002.
+///
 /// Examples:
 ///     >>> import comnum
 ///     >>> round(comnum.theory_ber_gray(4, 0.0, "qam"), 6)
@@ -103,8 +111,9 @@ fn theory_ber_gray(m: usize, ebn0_db: &Bound<'_, PyAny>, kind: &str, mq: Option<
 }
 
 /// BER of BPSK (or Gray QPSK, per bit) with maximal-ratio combining of ``branches``
-/// independent Rayleigh-faded branches (J. G. Proakis and M. Salehi, *Digital
-/// Communications*, 5th ed., eq. (13.4-15)):
+/// independent Rayleigh-faded branches.
+///
+/// The closed form of [1]_ (eq. (13.4-15)):
 ///
 /// .. math::
 ///
@@ -123,6 +132,10 @@ fn theory_ber_gray(m: usize, ebn0_db: &Bound<'_, PyAny>, kind: &str, mq: Option<
 ///
 /// Raises:
 ///     ValueError: for no branch.
+///
+/// References:
+///     .. [1] J. G. Proakis and M. Salehi, *Digital Communications*, 5th ed., McGraw-Hill,
+///        2008.
 ///
 /// Examples:
 ///     >>> import comnum, math
@@ -151,11 +164,8 @@ fn theory_ber_rayleigh_mrc(ebn0_db: &Bound<'_, PyAny>, branches: usize) -> PyRes
 ///   the real axis and :math:`q^2/(1 + q^2)` on the imaginary one;
 /// - ``"awgn"``: no fading, :math:`h = 1`.
 ///
-/// The densities are those of Table 2 of M. K. Simon and M.-S. Alouini, "A unified
-/// approach to the performance analysis of digital communication over generalized
-/// fading channels," Proc. IEEE 86(9), 1998; the error rates are the averages by the
-/// moment generating function of the SNR (its Table 3; M.-S. Alouini and A. J.
-/// Goldsmith, IEEE Trans. Commun. 47(9), 1999).
+/// The densities are those of Table 2 of [1]_; the error rates are the averages by the
+/// moment generating function of the SNR ([1]_, Table 3; [2]_).
 ///
 /// Args:
 ///     kind (str): ``"rayleigh"`` (the default), ``"rice"``, ``"nakagami"``, ``"hoyt"``
@@ -165,6 +175,14 @@ fn theory_ber_rayleigh_mrc(ebn0_db: &Bound<'_, PyAny>, branches: usize) -> PyRes
 ///
 /// Raises:
 ///     ValueError: for an unknown channel, a missing or an invalid parameter.
+///
+/// References:
+///     .. [1] M. K. Simon and M.-S. Alouini, "A unified approach to the performance
+///        analysis of digital communication over generalized fading channels," *Proc.
+///        IEEE*, 86(9), 1860–1877, 1998.
+///     .. [2] M.-S. Alouini and A. J. Goldsmith, "A unified approach for calculating
+///        error rates of linearly modulated signals over generalized fading channels,"
+///        *IEEE Trans. Commun.*, 47(9), 1324–1334, 1999.
 ///
 /// Examples:
 ///     >>> import comnum, numpy as np
@@ -348,16 +366,17 @@ fn snr_fading(fading: Option<&Bound<'_, PyAny>>, parameter: Option<f64>) -> PyRe
 
 /// Average symbol error rate of M-PSK, square M-QAM or M-PAM over a flat fading
 /// channel, by the moment generating function (MGF) of the SNR with Craig's form of the
-/// Q function (M.-S. Alouini and A. J. Goldsmith, "A unified approach for calculating
-/// error rates of linearly modulated signals over generalized fading channels," IEEE
-/// Trans. Commun. 47(9), 1999, eqs. (41), (45), (48)):
+/// Q function.
+///
+/// The average of [1]_ (eqs. (41), (45), (48)):
 ///
 /// .. math::
 ///
 ///     P_s = \frac{1}{\pi} \int M_\gamma\!\left(-\frac{g}{\sin^2 \varphi}\right) d\varphi
 ///
 /// over the intervals of the family, with the MGF of Rayleigh, Rice (Rician factor
-/// :math:`K`), Nakagami-m (:math:`m`) or Hoyt (:math:`q`) fading (eqs. (23), (28), (30), (26)).
+/// :math:`K`), Nakagami-m (:math:`m`) or Hoyt (:math:`q`) fading ([1]_, eqs. (23), (28),
+/// (30), (26)).
 ///
 /// Args:
 ///     m (int): the order of the constellation.
@@ -373,6 +392,11 @@ fn snr_fading(fading: Option<&Bound<'_, PyAny>>, parameter: Option<f64>) -> PyRe
 ///
 /// Raises:
 ///     ValueError: for an invalid parameter or input (the message names it).
+///
+/// References:
+///     .. [1] M.-S. Alouini and A. J. Goldsmith, "A unified approach for calculating
+///        error rates of linearly modulated signals over generalized fading channels,"
+///        *IEEE Trans. Commun.*, 47(9), 1324–1334, 1999.
 ///
 /// Examples:
 ///     >>> import comnum, math
@@ -399,13 +423,11 @@ fn theory_ser_fading(
 }
 
 /// Average bit error rate of a coherent binary signal over a flat fading channel, with
-/// maximal-ratio combining of independent branches of the same mean (M. K. Simon and
-/// M.-S. Alouini, "A unified approach to the performance analysis of digital
-/// communication over generalized fading channels," Proc. IEEE 86(9), 1998, eqs. (17),
-/// (23) and Table 3).
+/// maximal-ratio combining of independent branches of the same mean.
 ///
 /// The conditional BER :math:`Q(\sqrt{2 g \gamma})` at the SNR :math:`\gamma`, averaged
-/// by the moment generating function of the SNR over :math:`L` branches:
+/// by the moment generating function of the SNR over :math:`L` branches ([1]_, eqs. (17),
+/// (23) and Table 3):
 ///
 /// .. math::
 ///
@@ -430,6 +452,11 @@ fn theory_ser_fading(
 /// Raises:
 ///     ValueError: for an invalid parameter or input (the message names it).
 ///
+/// References:
+///     .. [1] M. K. Simon and M.-S. Alouini, "A unified approach to the performance
+///        analysis of digital communication over generalized fading channels," *Proc.
+///        IEEE*, 86(9), 1860–1877, 1998.
+///
 /// Examples:
 ///     >>> import comnum
 ///     >>> # BPSK over Nakagami-m with an integer m is the MRC of m Rayleigh branches
@@ -451,11 +478,11 @@ fn theory_ber_binary_fading(
 }
 
 /// Average bit error rate of a binary signal detected noncoherently or differentially
-/// over a flat fading channel (Simon & Alouini 1998, eq. (53) averaged; eq. (64) over
-/// Rayleigh fading).
+/// over a flat fading channel.
 ///
-/// The conditional BER :math:`0.5 \exp(-g \gamma)` at the SNR :math:`\gamma`, averaged
-/// by the moment generating function of the SNR:
+/// The conditional BER :math:`0.5 \exp(-g \gamma)` at the SNR :math:`\gamma` ([1]_,
+/// eq. (53)), averaged by the moment generating function of the SNR (eq. (64) of [1]_
+/// over Rayleigh fading):
 ///
 /// .. math::
 ///
@@ -477,6 +504,11 @@ fn theory_ber_binary_fading(
 /// Raises:
 ///     ValueError: for an invalid parameter or input (the message names it).
 ///
+/// References:
+///     .. [1] M. K. Simon and M.-S. Alouini, "A unified approach to the performance
+///        analysis of digital communication over generalized fading channels," *Proc.
+///        IEEE*, 86(9), 1860–1877, 1998.
+///
 /// Examples:
 ///     >>> import comnum
 ///     >>> # DPSK over Rayleigh fading at 10 dB: 1 / (2 (1 + 10))
@@ -494,11 +526,10 @@ fn theory_ber_noncoherent_binary_fading(
     map_real(ebn0_db, |e| theory::ber_noncoherent_binary_fading(g, f, e).py())
 }
 
-/// Density of the phase error of a carrier in circular Gaussian noise (S. O. Rice 1948;
-/// eq. (8) of Ahmed, Thompson and Zeidler, MILCOM 2007).
+/// Density of the phase error of a carrier in circular Gaussian noise.
 ///
 /// The phase error :math:`\theta = \arg r - \varphi` of :math:`r = A e^{j\varphi} + w`
-/// at the SNR :math:`\rho = A^2/\mathbb{E}|w|^2` has the density
+/// at the SNR :math:`\rho = A^2/\mathbb{E}|w|^2` has the density ([1]_; [2]_, eq. (8))
 ///
 /// .. math::
 ///
@@ -519,6 +550,11 @@ fn theory_ber_noncoherent_binary_fading(
 /// Raises:
 ///     ValueError: for values that are not real numbers.
 ///
+/// References:
+///     .. [1] S. O. Rice, *Bell Syst. Tech. J.*, 27(1), 1948.
+///     .. [2] A. U. Ahmed, S. C. Thompson and J. R. Zeidler, "Threshold extending receiver
+///        structures for CE-OFDM," *Proc. IEEE MILCOM*, 2007.
+///
 /// Examples:
 ///     >>> import comnum, math
 ///     >>> round(comnum.theory_phase_pdf(1.0, 0.0) * 2 * math.pi, 12)
@@ -530,7 +566,7 @@ fn theory_phase_pdf(theta: &Bound<'_, PyAny>, snr_lin: f64) -> PyResult<Py<PyAny
 
 /// Theoretical SER over AWGN (exact for square QAM and PAM, a tight bound for PSK).
 ///
-/// With :math:`L = \sqrt{M}` and :math:`E_s/N_0 = \log_2 M \cdot E_b/N_0`:
+/// With :math:`L = \sqrt{M}` and :math:`E_s/N_0 = \log_2 M \cdot E_b/N_0` [1]_:
 ///
 /// .. math::
 ///
@@ -554,6 +590,10 @@ fn theory_phase_pdf(theta: &Bound<'_, PyAny>, snr_lin: f64) -> PyResult<Py<PyAny
 ///
 /// Raises:
 ///     ValueError: for an invalid parameter or input (the message names it).
+///
+/// References:
+///     .. [1] J. G. Proakis and M. Salehi, *Digital Communications*, 5th ed., McGraw-Hill,
+///        2008.
 ///
 /// Examples:
 ///     >>> import comnum
@@ -655,7 +695,7 @@ fn theory_mi(
 ///
 ///     \mathrm{GMI} = H(X) - \sum_k H(B_k \mid Y),
 ///
-/// the rate of bit-metric decoding; for uniform symbols it is
+/// the rate of bit-metric decoding [1]_; for uniform symbols it is
 /// :math:`\sum_k I(B_k; Y)`, OptiCommPy's formula.
 ///
 /// Args:
@@ -671,6 +711,10 @@ fn theory_mi(
 ///
 /// Raises:
 ///     ValueError: for an invalid parameter or input (the message names it).
+///
+/// References:
+///     .. [1] G. Böcherer, "Achievable rates for shaped bit-metric decoding,"
+///        arXiv:1410.8075, 2014.
 #[pyfunction]
 #[pyo3(signature = (m, snr_db, kind = "qam", *, px = None, fading = "awgn", points = theory::DEFAULT_QUADRATURE_POINTS))]
 fn theory_gmi(
@@ -687,10 +731,11 @@ fn theory_gmi(
 }
 
 /// The CM capacity (bits per channel use) of a constellation with uniform inputs over
-/// AWGN or Rayleigh fading known at the receiver (Caire, Taricco & Biglieri 1998, eq.
-/// (10)): :func:`theory_mi` of any constellation, uniform inputs.
+/// AWGN or Rayleigh fading known at the receiver: :func:`theory_mi` of any constellation,
+/// uniform inputs.
 ///
-/// For :math:`M = 2^m` points :math:`\mathcal{X}` and the channel :math:`y = g x + n`:
+/// For :math:`M = 2^m` points :math:`\mathcal{X}` and the channel :math:`y = g x + n`
+/// ([1]_, eq. (10)):
 ///
 /// .. math::
 ///
@@ -707,6 +752,10 @@ fn theory_gmi(
 ///
 /// Raises:
 ///     ValueError: for an invalid parameter or input (the message names it).
+///
+/// References:
+///     .. [1] G. Caire, G. Taricco and E. Biglieri, "Bit-interleaved coded modulation,"
+///        *IEEE Trans. Inf. Theory*, 44(3), 927–946, 1998.
 ///
 /// Examples:
 ///     >>> import comnum
@@ -725,11 +774,12 @@ fn theory_cm_capacity(
 }
 
 /// The BICM capacity (bits per channel use) of a labelled constellation with uniform
-/// inputs (Caire, Taricco & Biglieri 1998, eq. (14)): the GMI of the bit-wise decoder,
-/// labels as `constellation` gives them (Gray, or `Constellation.set_partitioning`):
-/// :func:`theory_gmi` of any labelled constellation, uniform inputs.
+/// inputs: the GMI of the bit-wise decoder, labels as `constellation` gives them (Gray,
+/// or `Constellation.set_partitioning`): :func:`theory_gmi` of any labelled
+/// constellation, uniform inputs.
 ///
-/// With :math:`\mathcal{X}_b^i` the points whose bit :math:`i` is :math:`b`:
+/// With :math:`\mathcal{X}_b^i` the points whose bit :math:`i` is :math:`b` ([1]_,
+/// eq. (14)):
 ///
 /// .. math::
 ///
@@ -737,7 +787,7 @@ fn theory_cm_capacity(
 ///     \frac{\sum_{z \in \mathcal{X}} p(y|z)}{\sum_{z \in \mathcal{X}_b^i} p(y|z)}\right]
 ///     \le \tilde{C}
 ///
-/// (eq. (16)), below the CM capacity of :func:`theory_cm_capacity`.
+/// ([1]_, eq. (16)), below the CM capacity of :func:`theory_cm_capacity`.
 ///
 /// Args:
 ///     constellation (Constellation): the labelled points.
@@ -750,6 +800,10 @@ fn theory_cm_capacity(
 ///
 /// Raises:
 ///     ValueError: for an invalid parameter or input (the message names it).
+///
+/// References:
+///     .. [1] G. Caire, G. Taricco and E. Biglieri, "Bit-interleaved coded modulation,"
+///        *IEEE Trans. Inf. Theory*, 44(3), 927–946, 1998.
 #[pyfunction]
 #[pyo3(signature = (constellation, snr_db, *, fading = "awgn", points = theory::DEFAULT_QUADRATURE_POINTS))]
 fn theory_bicm_capacity(
@@ -762,11 +816,10 @@ fn theory_bicm_capacity(
     map_real(snr_db, |s| theory::constellation_gmi(&constellation.inner, s, None, f, points).py())
 }
 
-/// The CM cutoff rate (bits per channel use) with uniform inputs, in closed form
-/// (Caire, Taricco & Biglieri 1998, eq. (17)).
+/// The CM cutoff rate (bits per channel use) with uniform inputs, in closed form.
 ///
 /// For :math:`M = 2^m` points :math:`\mathcal{X}` of unit mean energy, the noise
-/// variance :math:`\sigma^2` and the gain :math:`g`:
+/// variance :math:`\sigma^2` and the gain :math:`g` ([1]_, eq. (17)):
 ///
 /// .. math::
 ///
@@ -786,6 +839,10 @@ fn theory_bicm_capacity(
 /// Raises:
 ///     ValueError: for values that are not real numbers.
 ///
+/// References:
+///     .. [1] G. Caire, G. Taricco and E. Biglieri, "Bit-interleaved coded modulation,"
+///        *IEEE Trans. Inf. Theory*, 44(3), 927–946, 1998.
+///
 /// Examples:
 ///     >>> import comnum, math
 ///     >>> r0 = comnum.theory_cm_cutoff_rate(comnum.Constellation("psk", 2), 0.0)
@@ -802,11 +859,10 @@ fn theory_cm_cutoff_rate(
     map_real(snr_db, |s| Ok(bicm::cm_cutoff_rate(&constellation.inner, s, f)))
 }
 
-/// The BICM cutoff rate (bits per channel use) of a labelled constellation (Caire,
-/// Taricco & Biglieri 1998, eqs. (19), (21)).
+/// The BICM cutoff rate (bits per channel use) of a labelled constellation.
 ///
 /// With the Bhattacharyya factor :math:`B` and :math:`\mathcal{X}_b^i` the points whose
-/// bit :math:`i` is :math:`b`:
+/// bit :math:`i` is :math:`b` ([1]_, eqs. (19), (21)):
 ///
 /// .. math::
 ///
@@ -825,6 +881,10 @@ fn theory_cm_cutoff_rate(
 ///
 /// Raises:
 ///     ValueError: for an invalid parameter or input (the message names it).
+///
+/// References:
+///     .. [1] G. Caire, G. Taricco and E. Biglieri, "Bit-interleaved coded modulation,"
+///        *IEEE Trans. Inf. Theory*, 44(3), 927–946, 1998.
 #[pyfunction]
 #[pyo3(signature = (constellation, snr_db, *, fading = "awgn", points = theory::DEFAULT_QUADRATURE_POINTS))]
 fn theory_bicm_cutoff_rate(

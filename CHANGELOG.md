@@ -19,6 +19,15 @@ and follow [Semantic Versioning](https://semver.org/).
   nonlinear phases, the logarithmic steps, the gain efficiencies, the boundary
   conditions, the gains and the noise. The stray first line of the docstring of
   `zadoff_chu` is removed.
+- The docstrings of the Python package cite their sources as NumPy does: a marker
+  `[1]_` where the paper, book or standard is used, with its equation, table or section
+  beside it, and a `References:` section of full entries (220 classes and functions,
+  309 entries), copied from the `# References` of the rustdoc and of
+  `references/README.md`. The prose citations ("Bosco et al. 2000") of the classes and
+  functions became markers; methods keep theirs, being rendered on the page of their
+  class. Sphinx makes the labels unique per object, so that a module page that shows
+  several docstrings (`comnum.sim`) keeps its links, and keeps the initials of an
+  entry ("G. P. Agrawal"). `docs/ARCHITECTURE.md` states the convention.
 - The top bar of the Python documentation has seven entries and the playground, none
   under "More": Getting started, Learn (a new page leading to the course and the
   tutorials), User guide, Examples, Validation (with the maturity, the comparisons and

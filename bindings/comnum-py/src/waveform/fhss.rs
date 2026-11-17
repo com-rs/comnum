@@ -11,6 +11,7 @@ use comnum::waveform::fhss::{Fhss, theory as fhss_theory};
 /// keeps the :math:`M` bins of the current channel of a DFT.
 ///
 /// The symbol :math:`a` sent while the link sits on the channel :math:`q` is the tone
+/// ([1]_, Sec. 12.3)
 ///
 /// .. math::
 ///
@@ -24,6 +25,10 @@ use comnum::waveform::fhss::{Fhss, theory as fhss_theory};
 ///
 /// Raises:
 ///     ValueError: for an invalid parameter (the message names it).
+///
+/// References:
+///     .. [1] J. G. Proakis and M. Salehi, *Digital Communications*, 5th ed., McGraw-Hill,
+///        2008.
 ///
 /// Examples:
 ///     >>> import comnum
@@ -197,7 +202,7 @@ fn partial_band_noise<'py>(
 /// jammer on the fraction `rho` of the band.
 ///
 /// With :math:`P_b(\gamma)` the bit error rate of noncoherent :math:`M`-FSK at
-/// :math:`E_b/N_0 = \gamma`,
+/// :math:`E_b/N_0 = \gamma` ([1]_, Sec. 12.3; [2]_),
 ///
 /// .. math::
 ///
@@ -218,6 +223,14 @@ fn partial_band_noise<'py>(
 /// Raises:
 ///     ValueError: for an invalid parameter (the message names it).
 ///
+/// References:
+///     .. [1] J. G. Proakis and M. Salehi, *Digital Communications*, 5th ed., McGraw-Hill,
+///        2008.
+///     .. [2] A. J. Viterbi and I. M. Jacobs, "Advances in coding and modulation for
+///        noncoherent channels affected by fading, partial band, and multiple-access
+///        interference," in *Advances in Communication Systems*, vol. 4, Academic Press,
+///        1975, 279–308.
+///
 /// Examples:
 ///     >>> import comnum, math
 ///     >>> round(comnum.theory_ber_fh_partial_band(10.0, 1.0), 9) == round(0.5 * math.exp(-5), 9)
@@ -236,7 +249,9 @@ fn theory_ber_fh_partial_band(
 /// The worst partial-band noise jammer of slow frequency hopping with noncoherent
 /// :math:`M`-FSK: the fraction of the band that maximises the bit error rate, and that
 /// error rate (:math:`2 N_J/E_b` and :math:`e^{-1} N_J/E_b` for binary FSK without thermal
-/// noise, Viterbi and Jacobs 1975).
+/// noise).
+///
+/// The binary case without thermal noise is that of [1]_ and [2]_ (Sec. 12.3).
 ///
 /// Args:
 ///     ebnj_db (float): :math:`E_b/N_J` (dB).
@@ -248,6 +263,14 @@ fn theory_ber_fh_partial_band(
 ///
 /// Raises:
 ///     ValueError: for an invalid parameter (the message names it).
+///
+/// References:
+///     .. [1] A. J. Viterbi and I. M. Jacobs, "Advances in coding and modulation for
+///        noncoherent channels affected by fading, partial band, and multiple-access
+///        interference," in *Advances in Communication Systems*, vol. 4, Academic Press,
+///        1975, 279–308.
+///     .. [2] J. G. Proakis and M. Salehi, *Digital Communications*, 5th ed., McGraw-Hill,
+///        2008.
 ///
 /// Examples:
 ///     >>> import comnum

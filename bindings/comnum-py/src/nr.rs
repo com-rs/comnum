@@ -12,6 +12,8 @@ use pyo3::types::PyDict;
 /// The numerology `mu` of NR (the subcarrier spacing :math:`2^{\mu} \times 15` kHz;
 /// :math:`\mu = 0` is also the numerology of LTE).
 ///
+/// The numerologies are those of [1]_.
+///
 /// Args:
 ///     mu (int): 0 to 4.
 ///     extended_cp (bool): the extended cyclic prefix (:math:`\mu = 2`, or LTE with
@@ -26,6 +28,9 @@ use pyo3::types::PyDict;
 ///
 /// Raises:
 ///     ValueError: for an invalid parameter (the message names it).
+///
+/// References:
+///     .. [1] 3GPP TS 38.211 V18.10.0, *NR; Physical channels and modulation*.
 ///
 /// Examples:
 ///     >>> import comnum
@@ -51,7 +56,7 @@ fn nr_numerology(py: Python<'_>, mu: u32, extended_cp: bool, n_fft: usize) -> Py
 /// every half subframe longer), the IFFT scaled by :math:`1/\sqrt{K}` (unit mean power for
 /// unit-energy symbols).
 ///
-/// The useful part of the OFDM symbol :math:`l`, after its prefix, is
+/// The useful part of the OFDM symbol :math:`l`, after its prefix, is ([1]_, Sec. 5.3)
 ///
 /// .. math::
 ///
@@ -73,6 +78,9 @@ fn nr_numerology(py: Python<'_>, mu: u32, extended_cp: bool, n_fft: usize) -> Py
 ///
 /// Raises:
 ///     ValueError: for an invalid parameter or input (the message names it).
+///
+/// References:
+///     .. [1] 3GPP TS 38.211 V18.10.0, *NR; Physical channels and modulation*.
 #[pyfunction]
 #[pyo3(signature = (grid, mu, n_fft, *, extended_cp = false, first_symbol = 0))]
 fn nr_ofdm_modulate<'py>(
@@ -89,8 +97,9 @@ fn nr_ofdm_modulate<'py>(
     Ok(carr(py, carrier.modulate(&g).py()?))
 }
 
-/// The NR primary synchronisation signal of :math:`N_{\mathrm{ID}}^{(2)}` (TS 38.211, Sec.
-/// 7.4.2.2): the BPSK m-sequence of length 127,
+/// The NR primary synchronisation signal of :math:`N_{\mathrm{ID}}^{(2)}`.
+///
+/// It is the BPSK m-sequence of length 127 ([1]_, Sec. 7.4.2.2),
 ///
 /// .. math::
 ///
@@ -107,14 +116,18 @@ fn nr_ofdm_modulate<'py>(
 ///
 /// Raises:
 ///     ValueError: for an invalid parameter (the message names it).
+///
+/// References:
+///     .. [1] 3GPP TS 38.211 V18.10.0, *NR; Physical channels and modulation*.
 #[pyfunction]
 fn nr_pss(py: Python<'_>, n_id2: u32) -> PyResult<FArr<'_>> {
     Ok(farr(py, nr::pss(n_id2).py()?))
 }
 
 /// The NR secondary synchronisation signal of
-/// :math:`(N_{\mathrm{ID}}^{(1)}, N_{\mathrm{ID}}^{(2)})` (TS 38.211, Sec. 7.4.2.3): the BPSK
-/// Gold sequence of length 127,
+/// :math:`(N_{\mathrm{ID}}^{(1)}, N_{\mathrm{ID}}^{(2)})`.
+///
+/// It is the BPSK Gold sequence of length 127 ([1]_, Sec. 7.4.2.3),
 ///
 /// .. math::
 ///
@@ -137,12 +150,17 @@ fn nr_pss(py: Python<'_>, n_id2: u32) -> PyResult<FArr<'_>> {
 ///
 /// Raises:
 ///     ValueError: for an invalid parameter (the message names it).
+///
+/// References:
+///     .. [1] 3GPP TS 38.211 V18.10.0, *NR; Physical channels and modulation*.
 #[pyfunction]
 fn nr_sss(py: Python<'_>, n_id1: u32, n_id2: u32) -> PyResult<FArr<'_>> {
     Ok(farr(py, nr::sss(n_id1, n_id2).py()?))
 }
 
-/// The 144 QPSK values of the PBCH DMRS (TS 38.211, Sec. 7.4.1.4):
+/// The 144 QPSK values of the PBCH DMRS.
+///
+/// The values are ([1]_, Sec. 7.4.1.4)
 ///
 /// .. math::
 ///
@@ -164,6 +182,9 @@ fn nr_sss(py: Python<'_>, n_id1: u32, n_id2: u32) -> PyResult<FArr<'_>> {
 ///
 /// Raises:
 ///     ValueError: for an invalid parameter (the message names it).
+///
+/// References:
+///     .. [1] 3GPP TS 38.211 V18.10.0, *NR; Physical channels and modulation*.
 #[pyfunction]
 #[pyo3(signature = (n_cell_id, i_ssb_bar = 0))]
 fn nr_pbch_dmrs(py: Python<'_>, n_cell_id: u32, i_ssb_bar: u32) -> PyResult<CArr<'_>> {
@@ -248,10 +269,10 @@ fn nr_detect_cell_id(grid: &Bound<'_, PyAny>) -> PyResult<(u32, f64, f64)> {
 }
 
 /// The DMRS of a PDSCH of mapping type A over a slot of 14 symbols, single-symbol, port
-/// 1000 (TS 38.211, Sec. 7.4.1.1).
+/// 1000.
 ///
-/// In the DMRS symbol :math:`l` of the slot :math:`n_s`, the subcarriers
-/// :math:`k = 4n + 2k'` (configuration type 1) or :math:`k = 6n + k'` (type 2),
+/// In the DMRS symbol :math:`l` of the slot :math:`n_s` ([1]_, Sec. 7.4.1.1), the
+/// subcarriers :math:`k = 4n + 2k'` (configuration type 1) or :math:`k = 6n + k'` (type 2),
 /// :math:`k' \in \{0, 1\}`, carry the QPSK value :math:`r(2n + k')` of the Gold sequence
 /// :math:`c` of
 ///
@@ -278,6 +299,9 @@ fn nr_detect_cell_id(grid: &Bound<'_, PyAny>) -> PyResult<(u32, f64, f64)> {
 ///
 /// Raises:
 ///     ValueError: for an invalid parameter (the message names it).
+///
+/// References:
+///     .. [1] 3GPP TS 38.211 V18.10.0, *NR; Physical channels and modulation*.
 #[pyfunction]
 #[pyo3(signature = (n_rb, *, config_type = 1, type_a_position = 2, additional_position = 0, n_id = 0, slot = 0))]
 fn nr_pdsch_dmrs(

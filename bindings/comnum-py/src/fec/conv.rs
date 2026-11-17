@@ -2,14 +2,15 @@
 
 use super::*;
 
-/// A terminated rate-1/n convolutional code on blocks of `k` bits, decoded by Viterbi
-/// (Viterbi 1967): the (133, 171) code of constraint length 7 by default, punctured by
-/// `puncture` (Cain, Clark & Geist 1979): the name of a pattern of a standard
-/// (`"ieee80211_2_3"`, `"ieee80211_3_4"`, `"ieee80211_5_6"` of IEEE 802.11-2020,
-/// Sec. 17.3.5.6 and 19.3.11.6; `"dvbs_2_3"`, `"dvbs_3_4"`, `"dvbs_5_6"`, `"dvbs_7_8"`
-/// of ETSI EN 300 421, Table 1) or the rows of a pattern, row `i` the output `i`
-/// (`[[1, 1, 0], [1, 0, 1]]`). The receiver puts a zero LLR at every punctured
-/// position.
+/// A terminated rate-1/n convolutional code on blocks of `k` bits, decoded by Viterbi:
+/// the (133, 171) code of constraint length 7 by default, punctured by `puncture`.
+///
+/// The decoder is the Viterbi algorithm of [1]_, the puncturing that of [2]_: `puncture`
+/// is the name of a pattern of a standard (`"ieee80211_2_3"`, `"ieee80211_3_4"`,
+/// `"ieee80211_5_6"` of [3]_, Sec. 17.3.5.6 and 19.3.11.6; `"dvbs_2_3"`, `"dvbs_3_4"`,
+/// `"dvbs_5_6"`, `"dvbs_7_8"` of [4]_, Table 1) or the rows of a pattern, row `i` the
+/// output `i` (`[[1, 1, 0], [1, 0, 1]]`). The receiver puts a zero LLR at every
+/// punctured position.
 ///
 /// The code follows the contract of every code of the package: `encode` maps whole
 /// blocks of `k` bits to `n` coded bits, `decode` whole blocks of `n` LLRs (positive
@@ -24,6 +25,17 @@ use super::*;
 ///
 /// Raises:
 ///     ValueError: for an invalid parameter or input (the message names it).
+///
+/// References:
+///     .. [1] A. J. Viterbi, "Error bounds for convolutional codes and an asymptotically
+///        optimum decoding algorithm," *IEEE Trans. Inf. Theory*, 13(2), 260–269, 1967.
+///     .. [2] J. B. Cain, G. C. Clark and J. M. Geist, "Punctured convolutional codes of
+///        rate :math:`(n-1)/n` and simplified maximum likelihood decoding," *IEEE Trans.
+///        Inf. Theory*, 25(1), 97–100, 1979.
+///     .. [3] IEEE Std 802.11-2020.
+///     .. [4] ETSI EN 300 421 V1.1.2, *Digital Video Broadcasting (DVB); Framing
+///        structure, channel coding and modulation for 11/12 GHz satellite services*,
+///        1997.
 ///
 /// Examples:
 ///     >>> import comnum, numpy as np
@@ -153,13 +165,15 @@ impl PyConv {
 }
 
 /// The turbo code of LTE: two (13, 15) recursive systematic codes in parallel, rate
-/// about 1/3, decoded by iterative log-MAP (Berrou, Glavieux & Thitimajshima 1993).
-/// The interleaver is the QPP `(f1, f2)` if given (`"lte"`: the coefficients of LTE for
-/// `k`, TS 36.212 Table 5.1.3-3), else a random permutation.
+/// about 1/3, decoded by iterative log-MAP.
+///
+/// The code of [1]_ with the constituent codes of [2]_. The interleaver is the QPP
+/// `(f1, f2)` [3]_ if given (`"lte"`: the coefficients of LTE for `k`, [2]_
+/// Table 5.1.3-3), else a random permutation.
 /// `puncture` punctures the systematic and the two parity streams by a pattern of
 /// three rows applied at every information index (the tail bits are kept): the name
 /// `"turbo_1_2"` (systematic 1 1, parity 1: 1 0, parity 2: 0 1, the rate-1/2 code of
-/// Berrou et al. 1993, Sec. II) or the rows of a pattern.
+/// [1]_, Sec. II) or the rows of a pattern.
 ///
 /// Args:
 ///     k (int): information bits per block.
@@ -171,6 +185,15 @@ impl PyConv {
 ///
 /// Raises:
 ///     ValueError: for an invalid parameter or input (the message names it).
+///
+/// References:
+///     .. [1] C. Berrou, A. Glavieux and P. Thitimajshima, "Near Shannon limit
+///        error-correcting coding and decoding: turbo-codes," *Proc. IEEE ICC*,
+///        1064–1070, 1993.
+///     .. [2] 3GPP TS 36.212, *E-UTRA; Multiplexing and channel coding*.
+///     .. [3] J. Sun and O. Y. Takeshita, "Interleavers for turbo codes using permutation
+///        polynomials over integer rings," *IEEE Trans. Inf. Theory*, 51(1), 101–119,
+///        2005.
 ///
 /// Examples:
 ///     >>> import comnum, numpy as np

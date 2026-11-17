@@ -7,6 +7,8 @@ use pyo3::prelude::*;
 
 /// Welch's power spectral density (periodic Hann window, 50 % overlap), centred.
 ///
+/// The averaged periodogram of windowed segments of [1]_.
+///
 /// Args:
 ///     x (array_like): the signal.
 ///     fs (float): sampling rate (Hz).
@@ -18,6 +20,10 @@ use pyo3::prelude::*;
 ///
 /// Raises:
 ///     ValueError: for an invalid parameter or input (the message names it).
+///
+/// References:
+///     .. [1] P. D. Welch, "The use of fast Fourier transform for the estimation of power
+///        spectra," *IEEE Trans. Audio Electroacoust.*, 15(2), 70–73, 1967.
 #[pyfunction]
 #[pyo3(signature = (x, *, fs=1.0, nfft=1024))]
 fn psd<'py>(py: Python<'py>, x: &Bound<'py, PyAny>, fs: f64, nfft: usize) -> PyResult<(FArr<'py>, FArr<'py>)> {

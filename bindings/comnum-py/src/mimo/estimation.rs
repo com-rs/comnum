@@ -88,11 +88,11 @@ fn channel_estimator(name: &str, r_h: Option<Array2<C64>>, trace: Option<f64>) -
     })
 }
 
-/// A training matrix for the estimation of a flat MIMO channel (Biguesh & Gershman 2006).
+/// A training matrix for the estimation of a flat MIMO channel.
 ///
 /// The :math:`r \times t` channel :math:`\mathbf{H}` is probed by the :math:`N \ge t`
 /// columns of the :math:`t \times N` training :math:`\mathbf{P}`, and every estimator is
-/// linear (eqs. (2), (4), (25)):
+/// linear ([1]_, eqs. (2), (4), (25)):
 ///
 /// .. math::
 ///
@@ -117,6 +117,11 @@ fn channel_estimator(name: &str, r_h: Option<Array2<C64>>, trace: Option<f64>) -
 ///
 /// Raises:
 ///     ValueError: for an empty matrix, fewer columns than rows or a non-finite entry.
+///
+/// References:
+///     .. [1] M. Biguesh and A. B. Gershman, "Training-based MIMO channel estimation: a
+///        study of estimator tradeoffs and optimal training signals,"
+///        *IEEE Trans. Signal Process.*, 54(3), 884–893, 2006.
 ///
 /// Examples:
 ///     >>> import comnum, numpy as np
@@ -301,7 +306,9 @@ fn trainings(list: &[PyRef<'_, PyMimoTraining>]) -> Vec<Training> {
 }
 
 /// The weights of the best linear unbiased combination of the LS estimates of several
-/// training periods (Biguesh & Gershman, Lemma 4, eq. (54)):
+/// training periods.
+///
+/// The weights are ([1]_, Lemma 4, eq. (54))
 ///
 /// .. math::
 ///
@@ -319,12 +326,19 @@ fn trainings(list: &[PyRef<'_, PyMimoTraining>]) -> Vec<Training> {
 /// Raises:
 ///     ValueError: for no period, a training of rank below :math:`t` or periods of
 ///         different :math:`t`.
+///
+/// References:
+///     .. [1] M. Biguesh and A. B. Gershman, "Training-based MIMO channel estimation: a
+///        study of estimator tradeoffs and optimal training signals,"
+///        *IEEE Trans. Signal Process.*, 54(3), 884–893, 2006.
 #[pyfunction]
 pub(super) fn blue_weights<'py>(py: Python<'py>, trainings: Vec<PyRef<'py, PyMimoTraining>>) -> PyResult<FArr<'py>> {
     Ok(farr(py, est::blue_weights(&self::trainings(&trainings)).py()?))
 }
 
-/// The combination of channel estimates (eq. (52)):
+/// The combination of channel estimates.
+///
+/// The combined estimate is ([1]_, eq. (52))
 ///
 /// .. math::
 ///
@@ -340,6 +354,11 @@ pub(super) fn blue_weights<'py>(py: Python<'py>, trainings: Vec<PyRef<'py, PyMim
 /// Raises:
 ///     ValueError: for no estimate, estimates of different shapes, or as many weights
 ///         as estimates.
+///
+/// References:
+///     .. [1] M. Biguesh and A. B. Gershman, "Training-based MIMO channel estimation: a
+///        study of estimator tradeoffs and optimal training signals,"
+///        *IEEE Trans. Signal Process.*, 54(3), 884–893, 2006.
 #[pyfunction]
 pub(super) fn blue_combine<'py>(
     py: Python<'py>,
@@ -350,8 +369,9 @@ pub(super) fn blue_combine<'py>(
     Ok(est::blue_combine(&hs, &crate::fvec(weights)?).py()?.into_pyarray(py))
 }
 
-/// The MSE of the BLUE combination of the LS estimates of several periods (eqs. (59),
-/// (61)):
+/// The MSE of the BLUE combination of the LS estimates of several periods.
+///
+/// The error is ([1]_, eqs. (59), (61))
 ///
 /// .. math::
 ///
@@ -371,6 +391,11 @@ pub(super) fn blue_combine<'py>(
 /// Raises:
 ///     ValueError: for no period, a training of rank below :math:`t`, a negative noise or no
 ///         receive antenna.
+///
+/// References:
+///     .. [1] M. Biguesh and A. B. Gershman, "Training-based MIMO channel estimation: a
+///        study of estimator tradeoffs and optimal training signals,"
+///        *IEEE Trans. Signal Process.*, 54(3), 884–893, 2006.
 #[pyfunction]
 pub(super) fn blue_mse(trainings: Vec<PyRef<'_, PyMimoTraining>>, noise_var: f64, n_rx: usize) -> PyResult<f64> {
     est::blue_mse(&self::trainings(&trainings), noise_var, n_rx).py()

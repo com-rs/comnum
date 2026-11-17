@@ -19,13 +19,12 @@ fn steps<'py>(py: Python<'py>, se: &[mp::StateEvolutionStep]) -> PyResult<Bound<
 }
 
 /// The iterations of LAMA or OAMP on one received vector: the MMSE estimate of every
-/// iteration, and the decoupled channel of the last one (Jeon et al. 2018; Ma & Ping
-/// 2017).
+/// iteration, and the decoupled channel of the last one.
 ///
 /// Both solve :math:`\mathbf{y} = \mathbf{H}\mathbf{x} + \mathbf{w}` (:math:`M` rows,
 /// :math:`N` columns, :math:`\beta = N/M`) with the posterior mean :math:`F(r, \tau)` and
 /// variance :math:`G(r, \tau)` of a symbol seen in Gaussian noise of variance :math:`\tau`.
-/// LAMA (Jeon et al., Algorithm 2), with the columns of :math:`\mathbf{H}` normalised to a
+/// LAMA ([1]_, Algorithm 2), with the columns of :math:`\mathbf{H}` normalised to a
 /// unit norm, iterates
 ///
 /// .. math::
@@ -36,7 +35,7 @@ fn steps<'py>(py: Python<'py>, se: &[mp::StateEvolutionStep]) -> PyResult<Bound<
 ///     \mathbf{r}' = \mathbf{y} - \mathbf{H} \hat{\mathbf{s}}'
 ///     + \frac{\beta \langle G(\mathbf{z}, \gamma) \rangle}{\gamma}\, \mathbf{r},
 ///
-/// and OAMP (Ma & Ping, eqs. 19, 14 and 38)
+/// and OAMP ([2]_, eqs. 19, 14 and 38)
 ///
 /// .. math::
 ///
@@ -69,6 +68,12 @@ fn steps<'py>(py: Python<'py>, se: &[mp::StateEvolutionStep]) -> PyResult<Bound<
 ///
 /// Raises:
 ///     ValueError: for an invalid parameter or input (the message names it).
+///
+/// References:
+///     .. [1] C. Jeon, R. Ghods, A. Maleki and C. Studer, "Optimal data detection in large
+///        MIMO," arXiv:1811.01917, 2018.
+///     .. [2] J. Ma and L. Ping, "Orthogonal AMP," *IEEE Access*, 5, 2020–2033, 2017
+///        (arXiv:1602.06509).
 ///
 /// Examples:
 ///     >>> import comnum, numpy as np
@@ -126,9 +131,10 @@ pub(super) fn message_passing<'py>(
     Ok(d)
 }
 
-/// The state evolution of LAMA (Jeon et al. 2018, Corollary 2): the variance of the
-/// decoupled channel and the predicted MSE of every iteration, in the large-system limit
-/// with columns of unit norm.
+/// The state evolution of LAMA: the variance of the decoupled channel and the predicted
+/// MSE of every iteration, in the large-system limit with columns of unit norm.
+///
+/// The recursion is ([1]_, Corollary 2)
 ///
 /// .. math::
 ///
@@ -153,6 +159,10 @@ pub(super) fn message_passing<'py>(
 /// Raises:
 ///     ValueError: for an input that is not an array of numbers of the expected shape.
 ///
+/// References:
+///     .. [1] C. Jeon, R. Ghods, A. Maleki and C. Studer, "Optimal data detection in large
+///        MIMO," arXiv:1811.01917, 2018.
+///
 /// Examples:
 ///     >>> import comnum
 ///     >>> c = comnum.Constellation("qam", 4).normalized()
@@ -175,9 +185,11 @@ pub(super) fn amp_state_evolution<'py>(
     steps(py, &se)
 }
 
-/// The recovery thresholds of LAMA (Jeon et al. 2018, Table II): below ``beta_min`` LAMA
-/// is optimal at every SNR, below ``beta_max`` it recovers the noiseless signal;
-/// ``n0_min`` and ``n0_max`` are the critical noise variances at those ratios.
+/// The recovery thresholds of LAMA: below ``beta_min`` LAMA is optimal at every SNR,
+/// below ``beta_max`` it recovers the noiseless signal; ``n0_min`` and ``n0_max`` are the
+/// critical noise variances at those ratios.
+///
+/// The thresholds and the critical noise variances are those of [1]_ (Table II).
 ///
 /// Args:
 ///     constellation (Constellation): the alphabet.
@@ -189,6 +201,10 @@ pub(super) fn amp_state_evolution<'py>(
 ///
 /// Raises:
 ///     ValueError: for an input that is not an array of numbers of the expected shape.
+///
+/// References:
+///     .. [1] C. Jeon, R. Ghods, A. Maleki and C. Studer, "Optimal data detection in large
+///        MIMO," arXiv:1811.01917, 2018.
 ///
 /// Examples:
 ///     >>> import comnum
@@ -212,8 +228,10 @@ pub(super) fn amp_thresholds<'py>(
     Ok(d)
 }
 
-/// The empirical state evolution of OAMP with the optimal denoiser (Ma & Ping 2017,
-/// eqs. 32 and 39) for the singular values of a channel.
+/// The empirical state evolution of OAMP with the optimal denoiser for the singular
+/// values of a channel.
+///
+/// The recursion is that of [1]_ (eqs. 32 and 39).
 ///
 /// Args:
 ///     constellation (Constellation): the alphabet of every stream.
@@ -230,6 +248,10 @@ pub(super) fn amp_thresholds<'py>(
 ///
 /// Raises:
 ///     ValueError: for an invalid parameter or input (the message names it).
+///
+/// References:
+///     .. [1] J. Ma and L. Ping, "Orthogonal AMP," *IEEE Access*, 5, 2020–2033, 2017
+///        (arXiv:1602.06509).
 ///
 /// Examples:
 ///     >>> import comnum, numpy as np

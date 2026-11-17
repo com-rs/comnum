@@ -8,12 +8,16 @@ use pyo3::prelude::*;
 
 /// A seeded random generator (xoshiro256** seeded through SplitMix64).
 ///
-/// The same generator as the Rust crate: a seed gives the same draws in Rust and in
-/// Python. Every function of `comnum` that draws takes one as its `rng` argument and
-/// advances it.
+/// The generator of [1]_, the same as the Rust crate: a seed gives the same draws in
+/// Rust and in Python. Every function of `comnum` that draws takes one as its `rng`
+/// argument and advances it.
 ///
 /// Args:
 ///     seed (int): the seed (any 64-bit unsigned integer).
+///
+/// References:
+///     .. [1] D. Blackman and S. Vigna, "Scrambled linear pseudorandom number
+///        generators," *ACM Trans. Math. Softw.*, 47(4), 2021 (arXiv:1805.01407, 2018).
 ///
 /// Examples:
 ///     >>> import comnum

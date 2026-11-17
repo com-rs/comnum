@@ -2,15 +2,13 @@
 
 use super::*;
 
-/// Chirp spread spectrum, the frequency-shift chirp modulation of LoRa (Chiani and
-/// Elzanaty 2019; Afisiadis et al. 2020): :math:`M = 2^{\mathrm{SF}}` chirps of :math:`M`
-/// chips, a noncoherent DFT receiver. LoRa is a trademark of Semtech; this models the published
-/// descriptions for research.
+/// Chirp spread spectrum, the frequency-shift chirp modulation of LoRa:
+/// :math:`M = 2^{\mathrm{SF}}` chirps of :math:`M` chips, a noncoherent DFT receiver. LoRa
+/// is a trademark of Semtech; this models the published descriptions for research.
 ///
 /// The symbol :math:`a \in \{0, \dots, M - 1\}` is a chirp over the bandwidth :math:`B`
 /// whose initial frequency is shifted by :math:`aB/M` and folded at :math:`B/2`; its
-/// complex envelope over :math:`0 \le t < T_s = M/B` is (Chiani and Elzanaty 2019,
-/// eq. (5))
+/// complex envelope over :math:`0 \le t < T_s = M/B` is ([1]_, eq. (5))
 ///
 /// .. math::
 ///
@@ -18,16 +16,27 @@ use super::*;
 ///     u\left(t - \frac{M - a}{B}\right)\right)\right\},
 ///
 /// sampled `oversampling` times per chip. The receiver multiplies every symbol by the
-/// conjugate of the chirp of symbol 0, takes a DFT and decides the bin of largest energy.
+/// conjugate of the chirp of symbol 0, takes a DFT and decides the bin of largest energy
+/// [2]_.
 ///
 /// Args:
 ///     sf (int): spreading factor.
 ///     oversampling (int): samples per chip.
 ///     waveform (str): `"lora"`, or for comparison `"vangelista"` (the discrete chirp of
-///         Vangelista 2017) and `"fsk"` (one sample per chip).
+///         [3]_) and `"fsk"` (one sample per chip).
 ///
 /// Raises:
 ///     ValueError: for an invalid parameter (the message names it).
+///
+/// References:
+///     .. [1] M. Chiani and A. Elzanaty, "On the LoRa modulation for IoT: waveform
+///        properties and spectral analysis," *IEEE Internet Things J.*, 6(5), 8463–8470,
+///        2019.
+///     .. [2] O. Afisiadis, M. Cotting, A. Burg and A. Balatsoukas-Stimming, "On the error
+///        rate of the LoRa modulation with interference," *IEEE Trans. Wireless Commun.*,
+///        19(2), 1292–1304, 2020.
+///     .. [3] L. Vangelista, "Frequency shift chirp modulation: the LoRa modulation," *IEEE
+///        Signal Process. Lett.*, 24(12), 1818–1821, 2017.
 ///
 /// Examples:
 ///     >>> import comnum
@@ -156,7 +165,7 @@ impl PyCss {
 /// The SER of the noncoherent CSS receiver over AWGN at the SNR per sample (dB).
 ///
 /// The exact SER, that of :math:`M` orthogonal signals detected noncoherently, is
-/// (Afisiadis et al. 2020, eq. (16))
+/// ([1]_, eq. (16))
 ///
 /// .. math::
 ///
@@ -177,6 +186,11 @@ impl PyCss {
 ///
 /// Raises:
 ///     ValueError: for an invalid parameter or input (the message names it).
+///
+/// References:
+///     .. [1] O. Afisiadis, M. Cotting, A. Burg and A. Balatsoukas-Stimming, "On the error
+///        rate of the LoRa modulation with interference," *IEEE Trans. Wireless Commun.*,
+///        19(2), 1292–1304, 2020.
 ///
 /// Examples:
 ///     >>> import comnum
@@ -222,8 +236,8 @@ fn theory_css_ber(sf: u32, snr_db: &Bound<'_, PyAny>) -> PyResult<Py<PyAny>> {
 
 /// The cross-correlation of two continuous-time LoRa waveforms.
 ///
-/// The correlation of the waveforms of the symbols :math:`\ell` and :math:`m` (Chiani
-/// and Elzanaty 2019, eq. (7)) is
+/// The correlation of the waveforms of the symbols :math:`\ell` and :math:`m` ([1]_,
+/// eq. (7)) is
 ///
 /// .. math::
 ///
@@ -243,13 +257,19 @@ fn theory_css_ber(sf: u32, snr_db: &Bound<'_, PyAny>) -> PyResult<Py<PyAny>> {
 ///
 /// Raises:
 ///     ValueError: for an invalid parameter (the message names it).
+///
+/// References:
+///     .. [1] M. Chiani and A. Elzanaty, "On the LoRa modulation for IoT: waveform
+///        properties and spectral analysis," *IEEE Internet Things J.*, 6(5), 8463–8470,
+///        2019.
 #[pyfunction]
 fn css_cross_correlation(sf: u32, l: usize, m: usize) -> PyResult<C64> {
     css_theory::cross_correlation(sf, l, m).py()
 }
 
-/// The largest real cross-correlation of the continuous-time waveforms (Chiani and
-/// Elzanaty 2019, Table I).
+/// The largest real cross-correlation of the continuous-time waveforms.
+///
+/// See Table I of [1]_.
 ///
 /// Args:
 ///     sf (int): spreading factor.
@@ -259,6 +279,11 @@ fn css_cross_correlation(sf: u32, l: usize, m: usize) -> PyResult<C64> {
 ///
 /// Raises:
 ///     ValueError: for an invalid parameter (the message names it).
+///
+/// References:
+///     .. [1] M. Chiani and A. Elzanaty, "On the LoRa modulation for IoT: waveform
+///        properties and spectral analysis," *IEEE Internet Things J.*, 6(5), 8463–8470,
+///        2019.
 ///
 /// Examples:
 ///     >>> import comnum
@@ -273,7 +298,7 @@ fn css_max_cross_correlation(sf: u32) -> PyResult<f64> {
 /// of :math:`B`.
 ///
 /// With :math:`X(f; \ell)` the Fourier transform of the waveform of symbol :math:`\ell`
-/// (Chiani and Elzanaty 2019, eqs. (20)–(25)),
+/// ([1]_, eqs. (20)–(25)),
 ///
 /// .. math::
 ///
@@ -291,6 +316,11 @@ fn css_max_cross_correlation(sf: u32) -> PyResult<f64> {
 ///
 /// Raises:
 ///     ValueError: for an invalid parameter or input (the message names it).
+///
+/// References:
+///     .. [1] M. Chiani and A. Elzanaty, "On the LoRa modulation for IoT: waveform
+///        properties and spectral analysis," *IEEE Internet Things J.*, 6(5), 8463–8470,
+///        2019.
 #[pyfunction]
 fn css_continuous_spectrum<'py>(py: Python<'py>, sf: u32, f: &Bound<'py, PyAny>) -> PyResult<FArr<'py>> {
     Ok(farr(py, css_theory::continuous_spectrum(sf, &fvec(f)?).py()?))
@@ -298,7 +328,7 @@ fn css_continuous_spectrum<'py>(py: Python<'py>, sf: u32, f: &Bound<'py, PyAny>)
 
 /// The lines of the spectrum of LoRa at :math:`n B/M`, :math:`|n| \le n_{\max}`.
 ///
-/// The line :math:`n` has the power (Chiani and Elzanaty 2019, eq. (21))
+/// The line :math:`n` has the power ([1]_, eq. (21))
 ///
 /// .. math::
 ///
@@ -316,6 +346,11 @@ fn css_continuous_spectrum<'py>(py: Python<'py>, sf: u32, f: &Bound<'py, PyAny>)
 ///
 /// Raises:
 ///     ValueError: for an invalid parameter (the message names it).
+///
+/// References:
+///     .. [1] M. Chiani and A. Elzanaty, "On the LoRa modulation for IoT: waveform
+///        properties and spectral analysis," *IEEE Internet Things J.*, 6(5), 8463–8470,
+///        2019.
 #[pyfunction]
 fn css_spectral_lines<'py>(py: Python<'py>, sf: u32, n_max: i64) -> PyResult<(FArr<'py>, FArr<'py>)> {
     let lines = css_theory::spectral_lines(sf, count(n_max, "n_max")?).py()?;
@@ -323,8 +358,9 @@ fn css_spectral_lines<'py>(py: Python<'py>, sf: u32, n_max: i64) -> PyResult<(FA
     Ok((farr(py, f), farr(py, p)))
 }
 
-/// The band (units of :math:`B`) that holds `fraction` of the power of LoRa (Chiani and
-/// Elzanaty 2019, Table I, :math:`B_{99}`).
+/// The band (units of :math:`B`) that holds `fraction` of the power of LoRa.
+///
+/// See Table I of [1]_ (:math:`B_{99}`).
 ///
 /// Args:
 ///     sf (int): spreading factor.
@@ -337,6 +373,11 @@ fn css_spectral_lines<'py>(py: Python<'py>, sf: u32, n_max: i64) -> PyResult<(FA
 /// Raises:
 ///     ValueError: for an invalid parameter (the message names it).
 ///
+/// References:
+///     .. [1] M. Chiani and A. Elzanaty, "On the LoRa modulation for IoT: waveform
+///        properties and spectral analysis," *IEEE Internet Things J.*, 6(5), 8463–8470,
+///        2019.
+///
 /// Examples:
 ///     >>> import comnum
 ///     >>> round(comnum.css_occupied_bandwidth(5), 2)
@@ -347,8 +388,9 @@ fn css_occupied_bandwidth(sf: u32, fraction: f64, span: f64) -> PyResult<f64> {
     css_theory::occupied_bandwidth(sf, fraction, span).py()
 }
 
-/// The pattern :math:`R_k` that a same-SF interferer leaves after the dechirping (Afisiadis et
-/// al. 2020, eq. (25)).
+/// The pattern :math:`R_k` that a same-SF interferer leaves after the dechirping.
+///
+/// See eq. (25) of [1]_.
 ///
 /// Args:
 ///     sf (int): spreading factor.
@@ -361,14 +403,21 @@ fn css_occupied_bandwidth(sf: u32, fraction: f64, span: f64) -> PyResult<f64> {
 ///
 /// Raises:
 ///     ValueError: for an invalid parameter (the message names it).
+///
+/// References:
+///     .. [1] O. Afisiadis, M. Cotting, A. Burg and A. Balatsoukas-Stimming, "On the error
+///        rate of the LoRa modulation with interference," *IEEE Trans. Wireless Commun.*,
+///        19(2), 1292–1304, 2020.
 #[pyfunction]
 fn css_interference_pattern<'py>(py: Python<'py>, sf: u32, s1: usize, s2: usize, tau: f64) -> PyResult<CArr<'py>> {
     Ok(carr(py, css_theory::interference_pattern(sf, s1, s2, tau).py()?))
 }
 
 /// The approximate SER (or, with `frame`, the frame error rate) under AWGN and a same-SF
-/// interferer of power `pi_db` relative to the signal (Afisiadis et al. 2020, eqs.
-/// (61)–(67), with the strongest bin at :math:`-\operatorname{round}(\tau)`).
+/// interferer of power `pi_db` relative to the signal.
+///
+/// The approximation is that of [1]_ (eqs. (61)–(67)), with the strongest bin at
+/// :math:`-\operatorname{round}(\tau)`.
 ///
 /// Args:
 ///     sf (int): spreading factor.
@@ -382,6 +431,11 @@ fn css_interference_pattern<'py>(py: Python<'py>, sf: u32, s1: usize, s2: usize,
 ///
 /// Raises:
 ///     ValueError: for an invalid parameter (the message names it).
+///
+/// References:
+///     .. [1] O. Afisiadis, M. Cotting, A. Burg and A. Balatsoukas-Stimming, "On the error
+///        rate of the LoRa modulation with interference," *IEEE Trans. Wireless Commun.*,
+///        19(2), 1292–1304, 2020.
 #[pyfunction]
 #[pyo3(signature = (sf, snr_db, pi_db, *, frame=None, eps=0.2))]
 fn theory_css_ser_interference(

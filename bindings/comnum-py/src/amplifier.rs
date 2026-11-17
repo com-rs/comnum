@@ -12,7 +12,7 @@ use pyo3::prelude::*;
 /// Bussgang's decomposition of a memoryless amplifier driven by a circular complex
 /// Gaussian signal: the complex gain and the power of the distortion.
 ///
-/// The output is written
+/// The output is written [1]_
 ///
 /// .. math::
 ///
@@ -22,7 +22,7 @@ use pyo3::prelude::*;
 /// of power :math:`\sigma_d^2`.
 ///
 /// The parameters of each model default to those of :func:`pa_rapp` and
-/// :func:`pa_saleh` (Rapp with :math:`p = 2`, Saleh's fit of 1981).
+/// :func:`pa_saleh` (Rapp [2]_ with :math:`p = 2`, the fit of [3]_).
 ///
 /// Args:
 ///     model (str): `"rapp"` (gain 1, `saturation`, `smoothness`) or
@@ -41,8 +41,20 @@ use pyo3::prelude::*;
 /// Raises:
 ///     ValueError: for an unknown model.
 ///
+/// References:
+///     .. [1] J. J. Bussgang, "Crosscorrelation functions of amplitude-distorted Gaussian
+///        signals," MIT RLE Tech. Rep. 216, 1952.
+///     .. [2] C. Rapp, "Effects of HPA-nonlinearity on a 4-DPSK/OFDM-signal for a digital
+///        sound broadcasting system," *Proc. 2nd European Conf. on Satellite
+///        Communications*, Liège, 179–184, 1991.
+///     .. [3] A. A. M. Saleh, "Frequency-independent and frequency-dependent nonlinear
+///        models of TWT amplifiers," *IEEE Trans. Commun.*, 29(11), 1715–1720, 1981.
+///     .. [4] H. Bouhadda, H. Shaiek, D. Roviras, R. Zayani, Y. Medjahdi and R.
+///        Bouallegue, "Theoretical analysis of BER performance of nonlinearly amplified
+///        FBMC/OQAM and OFDM signals," *EURASIP J. Adv. Signal Process.*, 2014:60, 2014.
+///
 /// Examples:
-///     The TWTA of Bouhadda et al. (2014, Table 3) at 4 dB of input back-off,
+///     The TWTA of [4]_ (Table 3) at 4 dB of input back-off,
 ///     :math:`\phi_0 = \pi/6`:
 ///
 ///     >>> import comnum, math
@@ -81,7 +93,9 @@ fn amplifier_bussgang(
     Ok((b.gain, b.distortion))
 }
 
-/// Rapp's solid-state amplifier, no AM/PM (Rapp 1991):
+/// Rapp's solid-state amplifier, no AM/PM.
+///
+/// The AM/AM conversion [1]_ is
 ///
 /// .. math::
 ///
@@ -94,7 +108,7 @@ fn amplifier_bussgang(
 ///     smoothness (float): the smoothness :math:`p`.
 ///     obo_db (float | None): when given, the input is first scaled so that the mean
 ///         output power of the block sits `obo_db` dB below the saturation power
-///         (the output back-off of Saul, VTC2004-Fall, eq. (3)); by bisection.
+///         (the output back-off of [2]_, eq. (3)); by bisection.
 ///
 /// Returns:
 ///     numpy.ndarray: the output (complex128).
@@ -102,6 +116,13 @@ fn amplifier_bussgang(
 /// Raises:
 ///     ValueError: for an input that is not an array of numbers of the expected shape,
 ///         a back-off that is not positive, or a silent input with a back-off.
+///
+/// References:
+///     .. [1] C. Rapp, "Effects of HPA-nonlinearity on a 4-DPSK/OFDM-signal for a digital
+///        sound broadcasting system," *Proc. 2nd European Conf. on Satellite
+///        Communications*, Liège, 179–184, 1991.
+///     .. [2] A. Saul, "Peak reduction for OFDM by shaping the clipping noise," *Proc. IEEE
+///        VTC2004-Fall*, vol. 1, 443–447, 2004.
 #[pyfunction]
 #[pyo3(signature = (x, *, gain=Rapp::default().gain, saturation=Rapp::default().saturation, smoothness=Rapp::default().smoothness, obo_db=None))]
 fn pa_rapp<'py>(
@@ -156,10 +177,11 @@ fn rapp_predistort<'py>(
     Ok(carr(py, Rapp { gain, saturation, smoothness }.predistort(&cvec(x)?, max_output).py()?))
 }
 
-/// Saleh's travelling-wave tube amplifier (AM/AM and AM/PM; Saleh 1981, default
-/// coefficients of his fit).
+/// Saleh's travelling-wave tube amplifier (AM/AM and AM/PM, default coefficients of his
+/// fit).
 ///
-/// An input :math:`x = r e^{j\theta}` gives :math:`y = A(r)\, e^{j(\theta + \Phi(r))}` with
+/// In the model [1]_, an input :math:`x = r e^{j\theta}` gives
+/// :math:`y = A(r)\, e^{j(\theta + \Phi(r))}` with
 ///
 /// .. math::
 ///
@@ -178,6 +200,10 @@ fn rapp_predistort<'py>(
 ///
 /// Raises:
 ///     ValueError: for an input that is not an array of numbers of the expected shape.
+///
+/// References:
+///     .. [1] A. A. M. Saleh, "Frequency-independent and frequency-dependent nonlinear
+///        models of TWT amplifiers," *IEEE Trans. Commun.*, 29(11), 1715–1720, 1981.
 #[pyfunction]
 #[pyo3(signature = (
     x,
@@ -198,9 +224,9 @@ fn pa_saleh<'py>(
     Ok(carr(py, Saleh { alpha_a, beta_a, alpha_p, beta_p }.amplify(&cvec(x)?).py()?))
 }
 
-/// The memory-polynomial amplifier of Ding et al. (2004): orders 1, 3, 5, memory 3.
+/// The memory-polynomial amplifier: orders 1, 3, 5, memory 3.
 ///
-/// The output is
+/// The output of the amplifier of [1]_ is
 ///
 /// .. math::
 ///
@@ -216,15 +242,20 @@ fn pa_saleh<'py>(
 ///
 /// Raises:
 ///     ValueError: for an input that is not an array of numbers of the expected shape.
+///
+/// References:
+///     .. [1] L. Ding, G. T. Zhou, D. R. Morgan, Z. Ma, J. S. Kenney, J. Kim and C. R.
+///        Giardina, "A robust digital baseband predistorter constructed using memory
+///        polynomials," *IEEE Trans. Commun.*, 52(1), 159–165, 2004.
 #[pyfunction]
 fn pa_memory_polynomial<'py>(py: Python<'py>, x: &Bound<'py, PyAny>) -> PyResult<CArr<'py>> {
     Ok(carr(py, MemoryPolynomial::ding2004().amplify(&cvec(x)?)))
 }
 
-/// A memory-polynomial digital predistorter, trained by indirect learning (Eun & Powers
-/// 1997; Ding et al. 2004; Morgan et al. 2006).
+/// A memory-polynomial digital predistorter, trained by indirect learning.
 ///
-/// The predistorter placed before the amplifier is the memory polynomial
+/// The predistorter placed before the amplifier is the memory polynomial ([1]_, [2]_,
+/// [3]_)
 ///
 /// .. math::
 ///
@@ -236,6 +267,16 @@ fn pa_memory_polynomial<'py>(py: Python<'py>, x: &Bound<'py, PyAny>) -> PyResult
 /// Args:
 ///     orders (list[int]): nonlinearity orders (odd: 1, 3, 5, …).
 ///     memory (int): memory depth :math:`M` (samples).
+///
+/// References:
+///     .. [1] C. Eun and E. J. Powers, "A new Volterra predistorter based on the indirect
+///        learning architecture," *IEEE Trans. Signal Process.*, 45(1), 223–227, 1997.
+///     .. [2] L. Ding, G. T. Zhou, D. R. Morgan, Z. Ma, J. S. Kenney, J. Kim and C. R.
+///        Giardina, "A robust digital baseband predistorter constructed using memory
+///        polynomials," *IEEE Trans. Commun.*, 52(1), 159–165, 2004.
+///     .. [3] D. R. Morgan, Z. Ma, J. Kim, M. G. Zierdt and J. Pastalan, "A generalized
+///        memory polynomial model for digital predistortion of RF power amplifiers,"
+///        *IEEE Trans. Signal Process.*, 54(10), 3852–3860, 2006.
 ///
 /// Examples:
 ///     >>> import comnum, numpy as np

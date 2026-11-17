@@ -17,7 +17,7 @@ use pyo3::types::PyDict;
 /// `n_subcarriers` active subcarriers centred on the carrier, out of a grid of `n_fft`;
 /// the IFFT has :math:`LN` points (:math:`L` = 4 by default, as the PAPR measurements
 /// need). With :math:`X_k` the symbol of subcarrier
-/// :math:`k \in \{-K/2, \dots, K/2 - 1\}` (unit average energy), a block is
+/// :math:`k \in \{-K/2, \dots, K/2 - 1\}` (unit average energy), a block is [1]_
 ///
 /// .. math::
 ///
@@ -25,7 +25,7 @@ use pyo3::types::PyDict;
 ///     n = 0, \dots, L N - 1,
 ///
 /// so that the samples have unit average power, and a cyclic prefix is prepended. With
-/// `dft_spread`, the data are first spread by a unitary DFT (localised SC-FDMA).
+/// `dft_spread`, the data are first spread by a unitary DFT (localised SC-FDMA [2]_).
 ///
 /// Args:
 ///     n_fft (int): grid size :math:`N`.
@@ -44,6 +44,12 @@ use pyo3::types::PyDict;
 ///
 /// Raises:
 ///     ValueError: for an invalid parameter (the message names it).
+///
+/// References:
+///     .. [1] R. van Nee and R. Prasad, *OFDM for Wireless Multimedia Communications*,
+///        Artech House, 2000.
+///     .. [2] H. G. Myung, J. Lim and D. J. Goodman, "Single carrier FDMA for uplink
+///        wireless transmission," *IEEE Veh. Technol. Mag.*, 1(3), 30–38, 2006.
 ///
 /// Examples:
 ///     >>> import comnum, numpy as np
@@ -65,6 +71,32 @@ pub struct PyOfdm {
 /// A PAPR reduction technique for `Ofdm.modulate_with` and `Ofdm.demodulate_with`; build it with
 /// one of the static methods (`clip`, `clip_filter`, `slm`, `pts`, `tone_reservation`,
 /// `ace`, `mu_law`, `exponential`).
+///
+/// The techniques are clipping [1]_, repeated clipping and filtering [2]_, selected
+/// mapping [3]_, partial transmit sequences [4]_, tone reservation [5]_, active
+/// constellation extension [6]_, and :math:`\mu`-law [7]_ and exponential [8]_
+/// companding.
+///
+/// References:
+///     .. [1] X. Li and L. J. Cimini, "Effects of clipping and filtering on the performance
+///        of OFDM," *IEEE Commun. Lett.*, 2(5), 131–133, 1998.
+///     .. [2] J. Armstrong, "Peak-to-average power reduction for OFDM by repeated clipping
+///        and frequency domain filtering," *Electron. Lett.*, 38(5), 246–247, 2002.
+///     .. [3] R. W. Bäuml, R. F. H. Fischer and J. B. Huber, "Reducing the peak-to-average
+///        power ratio of multicarrier modulation by selected mapping," *Electron. Lett.*,
+///        32(22), 2056–2057, 1996.
+///     .. [4] S. H. Müller and J. B. Huber, "OFDM with reduced peak-to-average power ratio
+///        by optimum combination of partial transmit sequences," *Electron. Lett.*, 33(5),
+///        368–369, 1997.
+///     .. [5] J. Tellado, *Multicarrier Modulation with Low PAR: Applications to DSL and
+///        Wireless*, Kluwer, 2000.
+///     .. [6] B. S. Krongold and D. L. Jones, "PAR reduction in OFDM via active
+///        constellation extension," *IEEE Trans. Broadcast.*, 49(3), 258–268, 2003.
+///     .. [7] X. Wang, T. T. Tjhung and C. S. Ng, "Reduction of peak-to-average power ratio
+///        of OFDM system using a companding technique," *IEEE Trans. Broadcast.*, 45(3),
+///        303–307, 1999.
+///     .. [8] T. Jiang, Y. Yang and Y.-H. Song, "Exponential companding technique for PAPR
+///        reduction in OFDM systems," *IEEE Trans. Broadcast.*, 51(2), 244–248, 2005.
 ///
 /// Examples:
 ///     >>> import comnum, numpy as np
@@ -610,8 +642,7 @@ fn ccdf<'py>(py: Python<'py>, values: &Bound<'py, PyAny>, thresholds: &Bound<'py
 
 /// The theoretical CCDF of the PAPR of OFDM with `n` subcarriers.
 ///
-/// For the continuous signal (Ochiai & Imai 2001) and at the Nyquist rate (van Nee &
-/// Prasad 2000),
+/// For the continuous signal [1]_ and at the Nyquist rate [2]_,
 ///
 /// .. math::
 ///
@@ -634,6 +665,12 @@ fn ccdf<'py>(py: Python<'py>, values: &Bound<'py, PyAny>, thresholds: &Bound<'py
 /// Raises:
 ///     ValueError: for values that are not real numbers.
 ///
+/// References:
+///     .. [1] H. Ochiai and H. Imai, "On the distribution of the peak-to-average power
+///        ratio in OFDM signals," *IEEE Trans. Commun.*, 49(2), 282–289, 2001.
+///     .. [2] R. van Nee and R. Prasad, *OFDM for Wireless Multimedia Communications*,
+///        Artech House, 2000.
+///
 /// Examples:
 ///     >>> import comnum
 ///     >>> p = comnum.theory_papr_ccdf(256, [8.0, 10.0])
@@ -652,7 +689,7 @@ fn theory_papr_ccdf(n: i64, papr_db: &Bound<'_, PyAny>, oversampled: bool, candi
 /// complex Gaussian signal.
 ///
 /// An envelope limiter at the amplitude :math:`A`, :math:`\gamma = A^2` above the unit
-/// average power, gives a gain plus an uncorrelated distortion (Ochiai & Imai 2002):
+/// average power, gives a gain plus an uncorrelated distortion [1]_:
 ///
 /// .. math::
 ///
@@ -672,6 +709,10 @@ fn theory_papr_ccdf(n: i64, papr_db: &Bound<'_, PyAny>, oversampled: bool, candi
 ///
 /// Raises:
 ///     ValueError: for an invalid parameter (the message names it).
+///
+/// References:
+///     .. [1] H. Ochiai and H. Imai, "Performance analysis of deliberately clipped OFDM
+///        signals," *IEEE Trans. Commun.*, 50(1), 89–101, 2002.
 #[pyfunction]
 fn clipping_bussgang(py: Python<'_>, ratio_db: f64) -> PyResult<Bound<'_, PyDict>> {
     let b = comnum::dsp::nonlinear::clipping_bussgang(ratio_db);
@@ -683,9 +724,9 @@ fn clipping_bussgang(py: Python<'_>, ratio_db: f64) -> PyResult<Bound<'_, PyDict
     Ok(d)
 }
 
-/// Pilot-based gain correction limited to `eps` (Cimini 1985, eq. (16)).
+/// Pilot-based gain correction limited to `eps`.
 ///
-/// Every sample becomes
+/// Every sample becomes ([1]_, eq. (16))
 ///
 /// .. math::
 ///
@@ -705,6 +746,11 @@ fn clipping_bussgang(py: Python<'_>, ratio_db: f64) -> PyResult<Bound<'_, PyDict
 ///
 /// Raises:
 ///     ValueError: for an input that is not an array of numbers of the expected shape.
+///
+/// References:
+///     .. [1] L. J. Cimini, Jr., "Analysis and simulation of a digital mobile channel using
+///        orthogonal frequency division multiplexing," *IEEE Trans. Commun.*, 33(7),
+///        665–675, 1985.
 #[pyfunction]
 fn gain_limited_correction<'py>(
     py: Python<'py>,
@@ -716,10 +762,11 @@ fn gain_limited_correction<'py>(
 }
 
 /// The signal-to-distortion ratio (dB) of gain-limited correction against a cochannel
-/// interferer in Rayleigh fading (Cimini 1985, eq. (25); eq. (20) for an ideal pilot).
+/// interferer in Rayleigh fading.
 ///
 /// With the limit :math:`\varepsilon` and the correlation
-/// :math:`\rho e^{j\phi} = \mathbb{E}[Z_d Z_p^*]` of the data and pilot envelopes,
+/// :math:`\rho e^{j\phi} = \mathbb{E}[Z_d Z_p^*]` of the data and pilot envelopes ([1]_,
+/// eq. (25); eq. (20) for an ideal pilot),
 ///
 /// .. math::
 ///
@@ -740,6 +787,11 @@ fn gain_limited_correction<'py>(
 /// Raises:
 ///     ValueError: for values that are not real numbers.
 ///
+/// References:
+///     .. [1] L. J. Cimini, Jr., "Analysis and simulation of a digital mobile channel using
+///        orthogonal frequency division multiplexing," *IEEE Trans. Commun.*, 33(7),
+///        665–675, 1985.
+///
 /// Examples:
 ///     >>> import comnum
 ///     >>> round(comnum.theory_sdr_gain_limited(25.0, -17.0), 1)
@@ -752,12 +804,14 @@ fn theory_sdr_gain_limited(sir_db: &Bound<'_, PyAny>, eps_db: f64, rho: C64) -> 
 }
 
 /// The signal-to-distortion ratio (dB) of the optimum gain correction against a
-/// cochannel interferer in Rayleigh fading (Cimini 1985, eq. (21)):
+/// cochannel interferer in Rayleigh fading:
 ///
 /// .. math::
 ///
 ///     \mathrm{SDR}^{-1} = \frac{1}{\mathrm{SIR} - 1}\left(\frac{\mathrm{SIR}}{\mathrm{SIR} - 1}
 ///     \ln \mathrm{SIR} - 1\right).
+///
+/// This is eq. (21) of [1]_.
 ///
 /// Args:
 ///     sir_db (float | array_like): the signal-to-interference ratio (dB).
@@ -767,6 +821,11 @@ fn theory_sdr_gain_limited(sir_db: &Bound<'_, PyAny>, eps_db: f64, rho: C64) -> 
 ///
 /// Raises:
 ///     ValueError: for values that are not real numbers.
+///
+/// References:
+///     .. [1] L. J. Cimini, Jr., "Analysis and simulation of a digital mobile channel using
+///        orthogonal frequency division multiplexing," *IEEE Trans. Commun.*, 33(7),
+///        665–675, 1985.
 #[pyfunction]
 fn theory_sdr_optimum_correction(sir_db: &Bound<'_, PyAny>) -> PyResult<Py<PyAny>> {
     map_real(sir_db, |s| Ok(comnum::math::lin2db(correction::sdr_optimum(comnum::math::db2lin(s)))))

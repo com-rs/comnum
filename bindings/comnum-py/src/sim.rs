@@ -229,7 +229,7 @@ impl PyStop {
 /// (``comnum_sim::stats::ErrorRate``).
 ///
 /// With :math:`k` errors among :math:`n` trials, the estimate is :math:`\hat{p} = k/n`
-/// and the Wilson score interval at the confidence :math:`1 - \alpha` is
+/// and the Wilson score interval at the confidence :math:`1 - \alpha` is ([1]_, eq. (4))
 ///
 /// .. math::
 ///
@@ -241,6 +241,10 @@ impl PyStop {
 /// Args:
 ///     errors (int): errors counted.
 ///     total (int): trials counted.
+///
+/// References:
+///     .. [1] L. D. Brown, T. T. Cai and A. DasGupta, "Interval estimation for a binomial
+///        proportion," *Statistical Science*, 16(2), 101–133, 2001.
 ///
 /// Examples:
 ///     >>> from comnum.sim import ErrorRate
@@ -1016,10 +1020,10 @@ fn binomial_interval(method: &str, confidence: f64) -> PyResult<BinomialInterval
     method.parse().py()
 }
 
-/// The exact coverage probability of a binomial interval (Brown, Cai & DasGupta 2001,
-/// Sec. 2), no simulation.
+/// The exact coverage probability of a binomial interval, no simulation.
 ///
-/// With the ends :math:`L` and :math:`U` of the interval and :math:`X \sim \mathrm{Bin}(n, p)`:
+/// With the ends :math:`L` and :math:`U` of the interval and
+/// :math:`X \sim \mathrm{Bin}(n, p)` ([1]_, Sec. 2):
 ///
 /// .. math::
 ///
@@ -1041,6 +1045,10 @@ fn binomial_interval(method: &str, confidence: f64) -> PyResult<BinomialInterval
 ///     ValueError: for an unknown method, ``p`` outside :math:`[0, 1]` or a level outside
 ///         :math:`(0, 1)`.
 ///
+/// References:
+///     .. [1] L. D. Brown, T. T. Cai and A. DasGupta, "Interval estimation for a binomial
+///        proportion," *Statistical Science*, 16(2), 101–133, 2001.
+///
 /// Example:
 ///     >>> from comnum import sim
 ///     >>> round(sim.interval_coverage("wald", 10, 0.5), 3)  # Brown et al., Table 1
@@ -1053,10 +1061,10 @@ fn interval_coverage(method: &str, n: u64, p: f64, confidence: f64) -> PyResult<
     Ok(comnum::sim::stats::coverage(method, n, p, confidence))
 }
 
-/// The expected length of a binomial interval (Brown, Cai & DasGupta 2001, Sec. 3.3).
+/// The expected length of a binomial interval.
 ///
 /// With the ends :math:`L` and :math:`U` of :meth:`ErrorRate.interval` and
-/// :math:`X \sim \mathrm{Bin}(n, p)`:
+/// :math:`X \sim \mathrm{Bin}(n, p)` ([1]_, Sec. 3.3):
 ///
 /// .. math::
 ///
@@ -1074,6 +1082,10 @@ fn interval_coverage(method: &str, n: u64, p: f64, confidence: f64) -> PyResult<
 /// Raises:
 ///     ValueError: for an unknown method, ``p`` outside :math:`[0, 1]` or a level outside
 ///         :math:`(0, 1)`.
+///
+/// References:
+///     .. [1] L. D. Brown, T. T. Cai and A. DasGupta, "Interval estimation for a binomial
+///        proportion," *Statistical Science*, 16(2), 101–133, 2001.
 #[pyfunction]
 #[pyo3(signature = (method, n, p, confidence = 0.95))]
 fn interval_length(method: &str, n: u64, p: f64, confidence: f64) -> PyResult<f64> {

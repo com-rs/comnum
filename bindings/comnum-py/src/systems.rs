@@ -23,7 +23,7 @@ use pyo3::types::PyDict;
 /// and modulation.
 ///
 /// The transmitter takes a BBFRAME of ``k`` bits (see :func:`dvbs2_bbframe`), encodes it
-/// (BCH, then the LDPC code of the standard), interleaves the bits (8PSK, 16APSK,
+/// (BCH, then the LDPC code of [1]_), interleaves the bits (8PSK, 16APSK,
 /// 32APSK), maps them on the constellation of the MODCOD and builds the PLFRAME: the
 /// PLHEADER in :math:`\pi/2`-BPSK, the slots of 90 symbols, pilot blocks of 36 symbols every
 /// 16 slots, and the Gold scrambling sequence number ``scrambling_code``. Every symbol has
@@ -33,7 +33,7 @@ use pyo3::types::PyDict;
 ///
 /// Args:
 ///     modulation (str): ``"QPSK"``, ``"8PSK"``, ``"16APSK"`` or ``"32APSK"``.
-///     rate (str): ``"1/4"`` … ``"9/10"`` (the 28 MODCODs of Table 12).
+///     rate (str): ``"1/4"`` … ``"9/10"`` (the 28 MODCODs of [1]_, Table 12).
 ///     frame (str): ``"normal"`` or ``"64800"`` (64 800 bits), ``"short"`` or ``"16200"``
 ///         (16 200 bits).
 ///     pilots (bool): pilot blocks.
@@ -41,6 +41,12 @@ use pyo3::types::PyDict;
 ///
 /// Raises:
 ///     ValueError: for an invalid parameter (the message names it).
+///
+/// References:
+///     .. [1] ETSI EN 302 307-1 V1.4.1, *Digital Video Broadcasting (DVB); Second
+///        generation framing structure, channel coding and modulation systems for
+///        Broadcasting, Interactive Services, News Gathering and other broadband satellite
+///        applications; Part 1: DVB-S2*, 2014.
 ///
 /// Examples:
 ///     >>> import comnum, numpy as np
@@ -182,11 +188,10 @@ impl PyDvbs2 {
 /// inverted to ``0xB8``), the outer code RS(204, 188), the convolutional interleaver
 /// :math:`I = 12`, :math:`M = 17` (flushed with 11 packets of zeros, so that the whole burst
 /// decodes), the inner code of constraint length 7 (X from 171, Y from 133, octal) punctured
-/// by Table 2
-/// of the standard, and the Gray QPSK of its Figure 5 with unit energy, at one sample per
-/// symbol. The receiver computes the exact LLRs, decodes the inner code by soft Viterbi,
-/// deinterleaves, decodes RS(204, 188) and removes the energy dispersal; it assumes the
-/// burst found and the carrier recovered.
+/// by Table 2 of [1]_, and the Gray QPSK of its Figure 5 with unit energy, at one sample
+/// per symbol. The receiver computes the exact LLRs, decodes the inner code by soft
+/// Viterbi, deinterleaves, decodes RS(204, 188) and removes the energy dispersal; it
+/// assumes the burst found and the carrier recovered.
 ///
 /// Args:
 ///     rate (str): the inner code rate, ``"1/2"``, ``"2/3"``, ``"3/4"``, ``"5/6"`` or
@@ -194,6 +199,10 @@ impl PyDvbs2 {
 ///
 /// Raises:
 ///     ValueError: for another rate.
+///
+/// References:
+///     .. [1] ETSI EN 300 421 V1.1.2, *Digital Video Broadcasting (DVB); Framing structure,
+///        channel coding and modulation for 11/12 GHz satellite services*, 1997.
 ///
 /// Examples:
 ///     >>> import comnum, numpy as np
@@ -371,7 +380,7 @@ impl PyDvbs {
 /// The transmitter takes a burst of whole MPEG-2 transport packets (see
 /// :func:`dvb_packets`): the energy dispersal, RS(204, 188) and the outer interleaver of
 /// DVB-S (flushed by 11 packets of zeros), the inner code (171, 133, octal) punctured by
-/// Table 2, the inner interleaver (six bit interleavers of 126 bits and the symbol
+/// Table 2 of [1]_, the inner interleaver (six bit interleavers of 126 bits and the symbol
 /// interleaver of the mode), the constellation of Figure 9 normalised by Table 6, the OFDM
 /// frame with its scattered and continual pilots (boosted to 4/3) and its TPS (signalling
 /// the mode, the guard interval, the constellation and the rate, BCH-protected,
@@ -393,6 +402,10 @@ impl PyDvbs {
 ///
 /// Raises:
 ///     ValueError: for an invalid parameter (the message names it).
+///
+/// References:
+///     .. [1] ETSI EN 300 744 V1.6.2, *Digital Video Broadcasting (DVB); Framing structure,
+///        channel coding and modulation for digital terrestrial television*, 2015.
 ///
 /// Examples:
 ///     >>> import comnum, numpy as np
@@ -714,7 +727,7 @@ impl PyDvbt {
 /// gain.
 ///
 /// The echoes of amplitude :math:`\rho_i`, delay :math:`\tau_i` and phase
-/// :math:`\theta_i` of Table B.1 give
+/// :math:`\theta_i` of [1]_ (Table B.1) give
 ///
 /// .. math::
 ///
@@ -733,6 +746,10 @@ impl PyDvbt {
 ///
 /// Raises:
 ///     ValueError: for another profile.
+///
+/// References:
+///     .. [1] ETSI EN 300 744 V1.6.2, *Digital Video Broadcasting (DVB); Framing structure,
+///        channel coding and modulation for digital terrestrial television*, 2015.
 #[pyfunction]
 fn dvbt_channel_gains<'py>(py: Python<'py>, profile: &str, frequencies: &Bound<'py, PyAny>) -> PyResult<CArr<'py>> {
     let e = match profile.trim().to_ascii_uppercase().as_str() {
@@ -766,6 +783,8 @@ fn dvb_packets<'py>(py: Python<'py>, n: usize, mut rng: PyRefMut<'py, PyRng>) ->
 /// stream, :math:`\mathrm{DFL} = K_{\mathrm{bch}} - 80`, CRC-8) and the
 /// :math:`K_{\mathrm{bch}} - 80` data bits, randomised by the PRBS of the standard.
 ///
+/// The BBHEADER and the BBFRAME are those of [1]_ (Secs. 5.1.6 and 5.2).
+///
 /// Args:
 ///     data (array_like): the :math:`K_{\mathrm{bch}} - 80` data bits.
 ///     k_bch (int): the bits of the BBFRAME (``Dvbs2.k``).
@@ -776,6 +795,12 @@ fn dvb_packets<'py>(py: Python<'py>, n: usize, mut rng: PyRefMut<'py, PyRng>) ->
 ///
 /// Raises:
 ///     ValueError: for an invalid parameter or input (the message names it).
+///
+/// References:
+///     .. [1] ETSI EN 302 307-1 V1.4.1, *Digital Video Broadcasting (DVB); Second
+///        generation framing structure, channel coding and modulation systems for
+///        Broadcasting, Interactive Services, News Gathering and other broadband satellite
+///        applications; Part 1: DVB-S2*, 2014.
 #[pyfunction]
 #[pyo3(signature = (data, k_bch, *, rolloff = 0))]
 fn dvbs2_bbframe<'py>(py: Python<'py>, data: &Bound<'py, PyAny>, k_bch: usize, rolloff: u8) -> PyResult<BArr<'py>> {
@@ -783,6 +808,9 @@ fn dvbs2_bbframe<'py>(py: Python<'py>, data: &Bound<'py, PyAny>, k_bch: usize, r
 }
 
 /// The data bits of a received BBFRAME and whether the CRC-8 of its BBHEADER holds.
+///
+/// The CRC-8 of the BBHEADER is :math:`x^{8} + x^{7} + x^{6} + x^{4} + x^{2} + 1` ([1]_,
+/// Sec. 5.1.4).
 ///
 /// Args:
 ///     bbframe (array_like): the bits of a BBFRAME.
@@ -792,6 +820,12 @@ fn dvbs2_bbframe<'py>(py: Python<'py>, data: &Bound<'py, PyAny>, k_bch: usize, r
 ///
 /// Raises:
 ///     ValueError: for an invalid parameter or input (the message names it).
+///
+/// References:
+///     .. [1] ETSI EN 302 307-1 V1.4.1, *Digital Video Broadcasting (DVB); Second
+///        generation framing structure, channel coding and modulation systems for
+///        Broadcasting, Interactive Services, News Gathering and other broadband satellite
+///        applications; Part 1: DVB-S2*, 2014.
 #[pyfunction]
 fn dvbs2_bbframe_data<'py>(py: Python<'py>, bbframe: &Bound<'py, PyAny>) -> PyResult<(BArr<'py>, bool)> {
     let (d, ok) = dvbs2::bbframe_data(&bvec(bbframe)?).py()?;
@@ -801,6 +835,8 @@ fn dvbs2_bbframe_data<'py>(py: Python<'py>, bbframe: &Bound<'py, PyAny>) -> PyRe
 /// The MODCOD field, the short-frame flag and the pilot flag of a received PLHEADER (90
 /// symbols), by maximum likelihood over the 128 PLS codewords.
 ///
+/// The PLHEADER carries its PLS codeword in :math:`\pi/2`-BPSK ([1]_, Sec. 5.5.2).
+///
 /// Args:
 ///     rx (array_like): the 90 received symbols of the PLHEADER.
 ///
@@ -809,24 +845,35 @@ fn dvbs2_bbframe_data<'py>(py: Python<'py>, bbframe: &Bound<'py, PyAny>) -> PyRe
 ///
 /// Raises:
 ///     ValueError: for an invalid parameter or input (the message names it).
+///
+/// References:
+///     .. [1] ETSI EN 302 307-1 V1.4.1, *Digital Video Broadcasting (DVB); Second
+///        generation framing structure, channel coding and modulation systems for
+///        Broadcasting, Interactive Services, News Gathering and other broadband satellite
+///        applications; Part 1: DVB-S2*, 2014.
 #[pyfunction]
 fn dvbs2_decode_plheader(rx: &Bound<'_, PyAny>) -> PyResult<(u8, bool, bool)> {
     let code = dvbs2::decode_plheader(&cvec(rx)?).py()?;
     Ok((code.modcod, code.short, code.pilots))
 }
 
-/// The convolutional code of CCSDS 131.0-B-5, Sec. 3: constraint length 7, :math:`G_1 = 171`
-/// then :math:`G_2 = 133` (octal), :math:`G_2` inverted at rate 1/2, punctured by Table 3-1
-/// at rates 2/3, 3/4, 5/6 and 7/8 (:math:`C_1` and :math:`C_2` sent in the order of the
+/// The convolutional code of CCSDS 131.0-B-5.
+///
+/// The code of [1]_ (Sec. 3): constraint length 7, :math:`G_1 = 171` then
+/// :math:`G_2 = 133` (octal), :math:`G_2` inverted at rate 1/2, punctured by Table 3-1 at
+/// rates 2/3, 3/4, 5/6 and 7/8 (:math:`C_1` and :math:`C_2` sent in the order of the
 /// table); the encoder starts in state 0 and is not terminated, the decoder is the soft
-/// Viterbi
-/// decoder of the whole stream.
+/// Viterbi decoder of the whole stream.
 ///
 /// Args:
 ///     rate (str): ``"1/2"``, ``"2/3"``, ``"3/4"``, ``"5/6"`` or ``"7/8"``.
 ///
 /// Raises:
 ///     ValueError: for another rate.
+///
+/// References:
+///     .. [1] CCSDS 131.0-B-5, *TM Synchronization and Channel Coding*, Recommended
+///        Standard (Blue Book), Issue 5, September 2023.
 ///
 /// Examples:
 ///     The first symbols of a one followed by zeros at rate 1/2: :math:`C_1` follows
@@ -921,8 +968,13 @@ fn randomizer(name: &str) -> PyResult<Randomizer> {
 /// Raises:
 ///     ValueError: for another sequence.
 ///
+/// References:
+///     .. [1] CCSDS 131.0-B-5, *TM Synchronization and Channel Coding*, Recommended
+///        Standard (Blue Book), Issue 5, September 2023.
+///
 /// Examples:
-///     The first 40 bits of the short sequence, ``FF 48 0E C0 9A`` (Sec. 10.4.3, NOTE 2):
+///     The first 40 bits of the short sequence, ``FF 48 0E C0 9A`` ([1]_, Sec. 10.4.3,
+///     NOTE 2):
 ///
 ///     >>> import comnum, numpy as np
 ///     >>> s = comnum.ccsds_randomizer("short", 40)
@@ -936,7 +988,7 @@ fn ccsds_randomizer<'py>(py: Python<'py>, sequence: &str, n: usize) -> PyResult<
 /// A synchronization marker of CCSDS 131.0-B-5, Sec. 9, as octets.
 ///
 /// Args:
-///     name (str): ``"asm"`` (``1ACFFC1D``, Sec. 9.3.2: uncoded, convolutional,
+///     name (str): ``"asm"`` (``1ACFFC1D``, [1]_, Sec. 9.3.2: uncoded, convolutional,
 ///         Reed–Solomon and LDPC codes), ``"turbo_1_2"`` (``034776C7272895B0``, also the
 ///         marker of the LDPC codes of rate 1/2 to 4/5 is ``"asm"``), ``"turbo_1_3"``,
 ///         ``"turbo_1_4"``, ``"turbo_1_6"`` (Figures 9-3 to 9-6) or ``"embedded"``
@@ -947,6 +999,10 @@ fn ccsds_randomizer<'py>(py: Python<'py>, sequence: &str, n: usize) -> PyResult<
 ///
 /// Raises:
 ///     ValueError: for another name.
+///
+/// References:
+///     .. [1] CCSDS 131.0-B-5, *TM Synchronization and Channel Coding*, Recommended
+///        Standard (Blue Book), Issue 5, September 2023.
 ///
 /// Examples:
 ///     >>> import comnum
@@ -974,6 +1030,8 @@ fn ccsds_marker<'py>(py: Python<'py>, name: &str) -> PyResult<BArr<'py>> {
 /// A channel access data unit (CCSDS 131.0-B-5, Table 9-1): the bits of a marker, then the
 /// bits of a codeblock, randomized if ``randomizer`` is given (the marker never is).
 ///
+/// The layout is that of [1]_ (Table 9-1).
+///
 /// Args:
 ///     marker (array_like): the octets of the marker (:func:`ccsds_marker`).
 ///     block (array_like): the bits of the codeblock, codeword or frame.
@@ -984,6 +1042,10 @@ fn ccsds_marker<'py>(py: Python<'py>, name: &str) -> PyResult<BArr<'py>> {
 ///
 /// Raises:
 ///     ValueError: for another randomizer or a marker value above 255.
+///
+/// References:
+///     .. [1] CCSDS 131.0-B-5, *TM Synchronization and Channel Coding*, Recommended
+///        Standard (Blue Book), Issue 5, September 2023.
 ///
 /// Examples:
 ///     The randomized zeros carry the sequence; the receiver removes it from the LLRs by

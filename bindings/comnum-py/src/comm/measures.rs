@@ -60,9 +60,8 @@ fn snr_db(rx: &Bound<'_, PyAny>, tx: &Bound<'_, PyAny>) -> PyResult<f64> {
 ///     \sigma_\theta = \sqrt{\frac{1}{N}\sum_k \arg(g z_k x_k^*)^2}, \qquad
 ///     g = \frac{\sum_k x_k z_k^*}{\sum_k |z_k|^2},
 ///
-/// the metric of Ip & Kahn (J. Lightw. Technol. 26(20), 2008) for a phase-modulated
-/// signal; over AWGN at high SNR it tends to :math:`1/\sqrt{2\,\mathrm{SNR}}`.
-/// Transmitted symbols at zero are skipped.
+/// the metric of [1]_ for a phase-modulated signal; over AWGN at high SNR it tends to
+/// :math:`1/\sqrt{2\,\mathrm{SNR}}`. Transmitted symbols at zero are skipped.
 ///
 /// Args:
 ///     rx (array_like): the received symbols.
@@ -73,6 +72,10 @@ fn snr_db(rx: &Bound<'_, PyAny>, tx: &Bound<'_, PyAny>) -> PyResult<f64> {
 ///
 /// Raises:
 ///     ValueError: for sequences of different lengths.
+///
+/// References:
+///     .. [1] E. Ip and J. M. Kahn, "Compensation of dispersion and nonlinear impairments
+///        using digital backpropagation," *J. Lightw. Technol.*, 26(20), 3416–3425, 2008.
 ///
 /// Examples:
 ///     >>> import comnum, numpy as np
@@ -148,7 +151,7 @@ fn evm(symbols: &Bound<'_, PyAny>, constellation: &PyConstellation, tx: Option<&
 ///     constellation (Constellation): the alphabet.
 ///     px (array_like, optional): prior probabilities of the points (probabilistic
 ///         shaping); uniform by default. The constellation is normalised to unit energy
-///         under them and the LLRs include them.
+///         under them and the LLRs include them [1]_.
 ///
 /// Returns:
 ///     tuple[float, float]: GMI (bits/symbol) and normalised GMI (per bit of
@@ -156,6 +159,10 @@ fn evm(symbols: &Bound<'_, PyAny>, constellation: &PyConstellation, tx: Option<&
 ///
 /// Raises:
 ///     ValueError: for an invalid parameter or input (the message names it).
+///
+/// References:
+///     .. [1] G. Böcherer, "Achievable rates for shaped bit-metric decoding,"
+///        arXiv:1410.8075, 2014.
 #[pyfunction]
 #[pyo3(signature = (rx, tx, constellation, *, px = None))]
 fn monte_carlo_gmi(
@@ -213,7 +220,7 @@ fn monte_carlo_mi(
 ///
 /// on the unit-energy constellation, without any gain correction, and its bit-wise
 /// version with the LLRs of :math:`q`. Scaling the exponent by :math:`s` and maximising
-/// gives `air_opt` (per block);
+/// gives `air_opt` [1]_ (per block);
 ///
 /// .. math::
 ///
@@ -234,6 +241,11 @@ fn monte_carlo_mi(
 ///
 /// Raises:
 ///     ValueError: for an invalid parameter or input (the message names it).
+///
+/// References:
+///     .. [1] G. Kaplan and S. Shamai, "Information rates and error exponents of compound
+///        channels with application to antipodal signaling in a fading environment,"
+///        *AEÜ*, 47(4), 228–239, 1993.
 #[pyfunction]
 #[pyo3(signature = (z, indices, constellation, noise_var, *, px = None))]
 fn posterior_rates<'py>(
@@ -279,7 +291,7 @@ fn posterior_rates<'py>(
 ///
 ///     a = \frac{\sum y x^*}{\sum |x|^2}, \qquad \sigma^2 = \operatorname{mean}|y - a x|^2;
 ///
-/// the rates use the priors.
+/// the rates use the priors [1]_.
 ///
 /// Args:
 ///     rx (array_like): the received symbols.
@@ -293,6 +305,10 @@ fn posterior_rates<'py>(
 ///
 /// Raises:
 ///     ValueError: for an invalid parameter or input (the message names it).
+///
+/// References:
+///     .. [1] G. Böcherer, "Achievable rates for shaped bit-metric decoding,"
+///        arXiv:1410.8075, 2014.
 #[pyfunction]
 #[pyo3(signature = (rx, indices, constellation, *, px = None))]
 fn information_rates<'py>(

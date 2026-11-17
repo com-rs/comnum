@@ -20,11 +20,11 @@ use pyo3::prelude::*;
 /// The bits of a symbol are the Gray label of its transition, so the nearest wrong
 /// transitions differ by one bit. The noncoherent detector decides the transition nearest
 /// to :math:`\arg(r_k r_{k-1}^*)`, which a constant phase rotation of the received symbols
-/// leaves unchanged (Proakis & Salehi, *Digital Communications*, 5th ed., 2008, Sec. 4.5);
-/// its bit error rate over AWGN is `theory_ber_dpsk(m, ebn0_db)`. Coherent decisions on
-/// the absolute phase followed by differential decoding spoil two differences per symbol
-/// error, hence :math:`2p(1 - p)` for DBPSK
-/// (`theory_ber_dpsk(2, ebn0_db, detection="coherent")`, Sec. 3.2-2).
+/// leaves unchanged ([1]_, Sec. 4.5); its bit error rate over AWGN is
+/// `theory_ber_dpsk(m, ebn0_db)`. Coherent decisions on the absolute phase followed by
+/// differential decoding spoil two differences per symbol error, hence
+/// :math:`2p(1 - p)` for DBPSK (`theory_ber_dpsk(2, ebn0_db, detection="coherent")`,
+/// [1]_, Sec. 3.2-2).
 ///
 /// The methods work at two levels: bits (`modulate`, `demodulate`,
 /// `demodulate_coherent`, and `indices`/`bits` between bits and differential indices)
@@ -36,6 +36,10 @@ use pyo3::prelude::*;
 ///
 /// Raises:
 ///     ValueError: for an invalid parameter (the message names it).
+///
+/// References:
+///     .. [1] J. G. Proakis and M. Salehi, *Digital Communications*, 5th ed., McGraw-Hill,
+///        2008.
 ///
 /// Examples:
 ///     >>> import comnum, numpy as np
@@ -271,8 +275,7 @@ impl PyDpsk {
 
 /// Bit error rate of Gray-labelled M-DPSK over AWGN.
 ///
-/// With noncoherent detection (the default), for DBPSK (Proakis & Salehi, *Digital
-/// Communications*, 5th ed., 2008, Sec. 4.5):
+/// With noncoherent detection (the default), for DBPSK ([1]_, Sec. 4.5):
 ///
 /// .. math::
 ///
@@ -282,15 +285,14 @@ impl PyDpsk {
 /// :math:`M \ge 4` the average number of wrong bits over the decision sectors of the
 /// differential phase, whose probabilities come from the distribution of the phase angle
 /// between two vectors of the same SNR :math:`E_s/N_0 = (E_b/N_0) \log_2 M` perturbed by
-/// Gaussian noise (Pawula, Rice & Roberts, *IEEE Trans. Commun.* 30(8), 1982, Sec. IV;
-/// see `theory_differential_phase_tail`). For DQPSK:
+/// Gaussian noise ([2]_, Sec. IV; see `theory_differential_phase_tail`). For DQPSK:
 ///
 /// .. math::
 ///
 ///     P_b = \tfrac{1}{2} \left[ P(|\Delta\theta| > \pi/4) + P(|\Delta\theta| > 3\pi/4) \right].
 ///
 /// With coherent detection and differential decoding (DBPSK only), an isolated symbol
-/// error spoils two differences (Proakis & Salehi, 5th ed., Sec. 3.2-2):
+/// error spoils two differences ([1]_, Sec. 3.2-2):
 ///
 /// .. math::
 ///
@@ -307,6 +309,13 @@ impl PyDpsk {
 ///
 /// Raises:
 ///     ValueError: for an unknown detection, or coherent detection with `m != 2`.
+///
+/// References:
+///     .. [1] J. G. Proakis and M. Salehi, *Digital Communications*, 5th ed., McGraw-Hill,
+///        2008.
+///     .. [2] R. F. Pawula, S. O. Rice and J. H. Roberts, "Distribution of the phase angle
+///        between two vectors perturbed by Gaussian noise," *IEEE Trans. Commun.*, 30(8),
+///        1828–1841, 1982.
 ///
 /// Examples:
 ///     >>> import comnum, math
@@ -328,8 +337,8 @@ fn theory_ber_dpsk(m: usize, ebn0_db: &Bound<'_, PyAny>, detection: &str) -> PyR
 /// by independent Gaussian noise exceeds :math:`\psi` in absolute value,
 /// :math:`0 \le \psi \le \pi`.
 ///
-/// The integral form of Pawula, Rice & Roberts (*IEEE Trans. Commun.* 30(8), 1982,
-/// Sec. IV) for equal SNRs :math:`\gamma_s = E_s/N_0`, by Simpson's rule:
+/// The integral form of [1]_ (Sec. IV) for equal SNRs :math:`\gamma_s = E_s/N_0`, by
+/// Simpson's rule:
 ///
 /// .. math::
 ///
@@ -348,6 +357,11 @@ fn theory_ber_dpsk(m: usize, ebn0_db: &Bound<'_, PyAny>, detection: &str) -> PyR
 ///
 /// Raises:
 ///     ValueError: for values that are not real numbers.
+///
+/// References:
+///     .. [1] R. F. Pawula, S. O. Rice and J. H. Roberts, "Distribution of the phase angle
+///        between two vectors perturbed by Gaussian noise," *IEEE Trans. Commun.*, 30(8),
+///        1828–1841, 1982.
 ///
 /// Examples:
 ///     >>> import comnum, math

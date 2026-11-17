@@ -5,6 +5,7 @@ after ``maturin develop --release``: the API pages are generated from the docstr
 the compiled extension, and the gallery runs every script of ``examples/``.
 """
 
+import re
 import sys
 from pathlib import Path
 
@@ -104,3 +105,32 @@ html_theme_options = {
 }
 html_sidebars = {"index": [], "getting_started": []}
 html_context = {"default_mode": "light"}
+
+# --- references ---------------------------------------------------------------------
+
+# The docstrings cite their sources as NumPy does: ``[1]_`` in the text and a
+# ``References:`` section of ``.. [1] G. P. Agrawal, ...`` entries. Two adjustments when
+# they are rendered, help() keeping the plain text:
+# - a module page (``comnum.sim``) shows several docstrings, whose labels "1" would
+#   collide: the labels become auto-numbered footnotes named after the object;
+# - a one-line entry that opens with an initial ("G. P. Agrawal") would be read by
+#   reStructuredText as an enumerated list ("G.", "P."), which drops the initials: the
+#   period of a leading initial is escaped.
+_CITATION = re.compile(r"\[(\d+)\]_")
+_REFERENCE = re.compile(r"^(\s*)\.\. \[(\d+)\] (?:([A-Z])\. )?")
+
+
+def _render_references(app, what, name, obj, options, lines):
+    key = re.sub(r"[^A-Za-z0-9]+", "-", name).strip("-")
+
+    def entry(m):
+        initial = f"{m.group(3)}\\. " if m.group(3) else ""
+        return f"{m.group(1)}.. [#{key}-{m.group(2)}] {initial}"
+
+    for i, line in enumerate(lines):
+        line = _REFERENCE.sub(entry, line)
+        lines[i] = _CITATION.sub(lambda m: f"[#{key}-{m.group(1)}]_", line)
+
+
+def setup(app):
+    app.connect("autodoc-process-docstring", _render_references)

@@ -2,11 +2,9 @@
 
 use super::*;
 
-/// A constant-envelope OFDM (CE-OFDM) modulator and phase demodulator (Thompson et al.
-/// 2008).
+/// A constant-envelope OFDM (CE-OFDM) modulator and phase demodulator.
 ///
-/// After Thompson, Ahmed, Proakis, Zeidler & Geile, "Constant envelope OFDM," *IEEE
-/// Trans. Commun.* 56(8), 2008.
+/// After [1]_.
 ///
 /// A block carries :math:`K` data symbols :math:`d` (unit mean energy) on the subcarriers
 /// :math:`1, \dots, K` of a DFT of size :math:`N = 2J(K+1)`, :math:`J` the oversampling
@@ -37,8 +35,8 @@ use super::*;
 /// the phase demodulator (a carrier-to-noise ratio near 10 dB, Sec. III-B), every data
 /// subcarrier sees the SNR :math:`(2\pi h)^2 (E_s/N_0) N/(N + N_{cp})` (:meth:`snr`), and
 /// the error rates are those of the constellation over AWGN at that SNR (:meth:`ser_esn0`,
-/// :meth:`ber_esn0`). For :math:`M`-PAM on every real subcarrier this is eq. (15) of the
-/// paper, the nearest-neighbour term of the Gray BER:
+/// :meth:`ber_esn0`). For :math:`M`-PAM on every real subcarrier this is eq. (15) of
+/// [1]_, the nearest-neighbour term of the Gray BER:
 ///
 /// .. math::
 ///
@@ -57,6 +55,10 @@ use super::*;
 ///
 /// Raises:
 ///     ValueError: for an invalid parameter (the message names it).
+///
+/// References:
+///     .. [1] S. C. Thompson, A. U. Ahmed, J. G. Proakis, J. R. Zeidler and M. J. Geile,
+///        "Constant envelope OFDM," *IEEE Trans. Commun.*, 56(8), 1300–1312, 2008.
 ///
 /// Examples:
 ///     >>> import comnum, numpy as np
@@ -428,8 +430,8 @@ impl PyCeOfdm {
 /// The powers of the intermodulation products of a phase modulator driven by a Gaussian
 /// signal.
 ///
-/// For a Gaussian signal of standard deviation :math:`\phi = 2\pi h` (Guerreiro et al.
-/// 2015, eqs. (12)–(14); Pacheco and Hatzinakos 2006, eq. (2)):
+/// For a Gaussian signal of standard deviation :math:`\phi = 2\pi h` ([1]_,
+/// eqs. (12)–(14); [2]_, eq. (2)):
 ///
 /// .. math::
 ///
@@ -447,6 +449,12 @@ impl PyCeOfdm {
 /// Raises:
 ///     ValueError: for a negative count.
 ///
+/// References:
+///     .. [1] J. Guerreiro, R. Dinis and P. Montezuma, "Optimum performance and spectral
+///        characterization of CE-OFDM signals," *Proc. IEEE VTC Fall*, 2015.
+///     .. [2] R. A. Pacheco and D. Hatzinakos, "Error rate analysis of phase-modulated OFDM
+///        (OFDM-PM) in AWGN channels," *Proc. IEEE ICASSP*, 2006.
+///
 /// Examples:
 ///     >>> import comnum, math
 ///     >>> round(float(comnum.ce_ofdm_imp_powers(1.0, 3)[0]), 6) == round(math.exp(-1), 6)
@@ -457,12 +465,13 @@ fn ce_ofdm_imp_powers<'py>(py: Python<'py>, two_pi_h: f64, n: i64) -> PyResult<F
 }
 
 /// The optimum asymptotic gain :math:`G` of CE-OFDM over linear OFDM in AWGN,
-/// :math:`(2\pi h)^2`, or with the phase clipped to :math:`\pm\theta_{\max}` (Guerreiro et al.
-/// 2015, eq. (20); 2016, eq. (7)):
+/// :math:`(2\pi h)^2`, or with the phase clipped to :math:`\pm\theta_{\max}`:
 ///
 /// .. math::
 ///
 ///     G = (2\pi h)^2 \operatorname{erf}\!\left(\frac{\theta_{\max}}{\sqrt{2} \cdot 2\pi h}\right).
+///
+/// These are eq. (20) of [1]_ and eq. (7) of [2]_.
 ///
 /// Args:
 ///     two_pi_h (float): :math:`2\pi h`.
@@ -470,6 +479,12 @@ fn ce_ofdm_imp_powers<'py>(py: Python<'py>, two_pi_h: f64, n: i64) -> PyResult<F
 ///
 /// Returns:
 ///     float: :math:`G` (linear).
+///
+/// References:
+///     .. [1] J. Guerreiro, R. Dinis and P. Montezuma, "Optimum performance and spectral
+///        characterization of CE-OFDM signals," *Proc. IEEE VTC Fall*, 2015.
+///     .. [2] J. Guerreiro, R. Dinis and P. Montezuma, "On the detection of CE-OFDM
+///        signals," *IEEE Commun. Lett.*, 20(11), 2165–2168, 2016.
 ///
 /// Examples:
 ///     >>> import comnum, math
@@ -481,11 +496,13 @@ fn ce_ofdm_optimum_gain(two_pi_h: f64, theta_max: Option<f64>) -> f64 {
     theory::optimum_gain(two_pi_h, theta_max)
 }
 
-/// The optimum asymptotic BER of QPSK CE-OFDM in AWGN (Guerreiro et al. 2016, eq. (8)):
+/// The optimum asymptotic BER of QPSK CE-OFDM in AWGN:
 ///
 /// .. math::
 ///
 ///     P_b = Q\left(\sqrt{2 G E_b/N_0}\right).
+///
+/// This is eq. (8) of [1]_.
 ///
 /// Args:
 ///     two_pi_h (float): :math:`2\pi h`.
@@ -496,14 +513,19 @@ fn ce_ofdm_optimum_gain(two_pi_h: f64, theta_max: Option<f64>) -> f64 {
 ///
 /// Raises:
 ///     ValueError: for values that are not real numbers.
+///
+/// References:
+///     .. [1] J. Guerreiro, R. Dinis and P. Montezuma, "On the detection of CE-OFDM
+///        signals," *IEEE Commun. Lett.*, 20(11), 2165–2168, 2016.
 #[pyfunction]
 fn theory_ce_ofdm_ber_optimum(two_pi_h: f64, ebn0_db: &Bound<'_, PyAny>) -> PyResult<Py<PyAny>> {
     map_real(ebn0_db, |e| Ok(theory::ber_optimum(two_pi_h, e)))
 }
 
 /// The occupied bandwidth :math:`B_y/(2B_m)` of a carrier phase-modulated by a Gaussian message
-/// of standard deviation `sigma` with a flat spectrum (Pacheco and Hatzinakos 2006,
-/// eqs. (2)–(5), Fig. 1), the carrier line removed.
+/// of standard deviation `sigma` with a flat spectrum, the carrier line removed.
+///
+/// The band follows [1]_ (eqs. (2)–(5), Fig. 1).
 ///
 /// Args:
 ///     sigma (float): standard deviation of the phase (rad).
@@ -514,6 +536,10 @@ fn theory_ce_ofdm_ber_optimum(two_pi_h: f64, ebn0_db: &Bound<'_, PyAny>) -> PyRe
 ///
 /// Raises:
 ///     ValueError: for an invalid parameter (the message names it).
+///
+/// References:
+///     .. [1] R. A. Pacheco and D. Hatzinakos, "Error rate analysis of phase-modulated OFDM
+///        (OFDM-PM) in AWGN channels," *Proc. IEEE ICASSP*, 2006.
 ///
 /// Examples:
 ///     >>> import comnum

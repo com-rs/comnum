@@ -39,10 +39,12 @@ fn m_sequence(py: Python<'_>, order: usize) -> PyResult<BArr<'_>> {
     Ok(sequences::m_sequence(order).py()?.into_pyarray(py))
 }
 
-/// The :math:`2^{\mathrm{order}} + 1` Gold codes of length :math:`N = 2^{\mathrm{order}} - 1`
-/// (Gold 1967): the m-sequence :math:`u`, its decimation :math:`v` and the sums
+/// The :math:`2^{\mathrm{order}} + 1` Gold codes of length
+/// :math:`N = 2^{\mathrm{order}} - 1`.
+///
+/// The set of [1]_ is the m-sequence :math:`u`, its decimation :math:`v` and the sums
 /// :math:`u \oplus T^k v`. The periodic correlations between two codes, and of each off its
-/// peak, take the three values :math:`-1`, :math:`-t` and :math:`t - 2`,
+/// peak, take [2]_ the three values :math:`-1`, :math:`-t` and :math:`t - 2`,
 /// :math:`t = 1 + 2^{\lfloor (\mathrm{order} + 2)/2 \rfloor}`.
 ///
 /// Args:
@@ -53,6 +55,12 @@ fn m_sequence(py: Python<'_>, order: usize) -> PyResult<BArr<'_>> {
 ///
 /// Raises:
 ///     ValueError: for an order without preferred pair or outside the range.
+///
+/// References:
+///     .. [1] R. Gold, "Optimal binary sequences for spread spectrum multiplexing," *IEEE
+///        Trans. Inf. Theory*, 13(4), 619–621, 1967.
+///     .. [2] D. V. Sarwate and M. B. Pursley, "Crosscorrelation properties of pseudorandom
+///        and related sequences," *Proc. IEEE*, 68(5), 593–619, 1980.
 ///
 /// Examples:
 ///     >>> import comnum, numpy as np
@@ -110,6 +118,8 @@ fn walsh_codes(py: Python<'_>, n: usize) -> PyResult<Bound<'_, numpy::PyArray2<u
 /// The Barker code of length `n`: aperiodic autocorrelation sidelobes of magnitude at
 /// most 1.
 ///
+/// The codes are those of [1]_.
+///
 /// Args:
 ///     n (int): 2, 3, 4, 5, 7, 11 or 13.
 ///
@@ -118,6 +128,10 @@ fn walsh_codes(py: Python<'_>, n: usize) -> PyResult<Bound<'_, numpy::PyArray2<u
 ///
 /// Raises:
 ///     ValueError: for another length.
+///
+/// References:
+///     .. [1] R. H. Barker, "Group synchronizing of binary digital systems," in
+///        *Communication Theory*, W. Jackson, Ed., Butterworths, London, 1953, 273–287.
 ///
 /// Examples:
 ///     >>> import comnum
@@ -210,8 +224,8 @@ fn matrix<T: numpy::Element + Clone>(py: Python<'_>, rows: Vec<Vec<T>>) -> PyRes
 /// with :math:`S` the :math:`(N, K)` matrix of the unit-norm signatures, :math:`A` the
 /// diagonal matrix of the received amplitudes, :math:`b` the symbols of the users and
 /// :math:`w` the noise. The receivers are the bank of matched filters (`demodulate`), the multiuser
-/// detectors of `mimo_detect` on the signature matrix (`detect`) and the rake
-/// receiver over a multipath channel (`rake`).
+/// detectors of `mimo_detect` on the signature matrix (`detect`) [1]_ and the rake
+/// receiver over a multipath channel (`rake`) [2]_.
 ///
 /// Args:
 ///     codes (array_like): the binary codes, :math:`(K, N)` (or :math:`(N,)` for one user),
@@ -220,6 +234,13 @@ fn matrix<T: numpy::Element + Clone>(py: Python<'_>, rows: Vec<Vec<T>>) -> PyRes
 ///
 /// Raises:
 ///     ValueError: for an invalid parameter (the message names it).
+///
+/// References:
+///     .. [1] R. Lupas and S. Verdú, "Linear multiuser detectors for synchronous
+///        code-division multiple-access channels," *IEEE Trans. Inf. Theory*, 35(1),
+///        123–136, 1989.
+///     .. [2] R. Price and P. E. Green, "A communication technique for multipath channels,"
+///        *Proc. IRE*, 46(3), 555–570, 1958.
 ///
 /// Examples:
 ///     >>> import comnum, numpy as np
@@ -427,7 +448,7 @@ fn signature_matrix(h: &Bound<'_, PyAny>) -> PyResult<Array2<C64>> {
 ///
 /// With :math:`G = H^H H` the Gram matrix of :math:`H = S A` and :math:`\sigma^2` the
 /// noise variance per chip, the conventional receiver (the mean over the patterns of
-/// the interfering bits, 21 users at most) and the decorrelator (Lupas and Verdú 1989)
+/// the interfering bits, 21 users at most) and the decorrelator [1]_
 /// give
 ///
 /// .. math::
@@ -450,6 +471,11 @@ fn signature_matrix(h: &Bound<'_, PyAny>) -> PyResult<Array2<C64>> {
 ///
 /// Raises:
 ///     ValueError: for an invalid parameter (the message names it).
+///
+/// References:
+///     .. [1] R. Lupas and S. Verdú, "Linear multiuser detectors for synchronous
+///        code-division multiple-access channels," *IEEE Trans. Inf. Theory*, 35(1),
+///        123–136, 1989.
 ///
 /// Examples:
 ///     >>> import comnum
@@ -481,7 +507,7 @@ fn theory_ber_cdma(
 ///     \bar\eta_k = \frac{1}{G_{kk} (G^{-1})_{kk}},
 ///
 /// the asymptotic efficiency of the decorrelator, and of the optimum detector against
-/// interferers of the worst amplitudes (Lupas and Verdú 1989).
+/// interferers of the worst amplitudes [1]_.
 ///
 /// Args:
 ///     signatures (array_like): :math:`H = S A`, :math:`(N, K)`.
@@ -492,6 +518,11 @@ fn theory_ber_cdma(
 ///
 /// Raises:
 ///     ValueError: for an invalid parameter or linearly dependent signatures.
+///
+/// References:
+///     .. [1] R. Lupas and S. Verdú, "Linear multiuser detectors for synchronous
+///        code-division multiple-access channels," *IEEE Trans. Inf. Theory*, 35(1),
+///        123–136, 1989.
 #[pyfunction]
 #[pyo3(signature = (signatures, *, user=0))]
 fn cdma_near_far_resistance(signatures: &Bound<'_, PyAny>, user: usize) -> PyResult<f64> {
@@ -501,8 +532,8 @@ fn cdma_near_far_resistance(signatures: &Bound<'_, PyAny>, user: usize) -> PyRes
 /// The large-system SINR (dB) of a linear receiver for random signatures and users of
 /// equal power.
 ///
-/// At the load :math:`\beta = K/N` and :math:`\mathrm{SNR} = A^2/\sigma^2` (Verdú and
-/// Shamai 1999, eqs. (10)–(12); Tse and Hanly 1999, eq. (9)),
+/// At the load :math:`\beta = K/N` and :math:`\mathrm{SNR} = A^2/\sigma^2` ([1]_,
+/// eqs. (10)–(12); [2]_, eq. (9)),
 ///
 /// .. math::
 ///
@@ -527,6 +558,13 @@ fn cdma_near_far_resistance(signatures: &Bound<'_, PyAny>, user: usize) -> PyRes
 /// Raises:
 ///     ValueError: for an invalid parameter (the message names it).
 ///
+/// References:
+///     .. [1] S. Verdú and S. Shamai (Shitz), "Spectral efficiency of CDMA with random
+///        spreading," *IEEE Trans. Inf. Theory*, 45(2), 622–640, 1999.
+///     .. [2] D. N. C. Tse and S. V. Hanly, "Linear multiuser receivers: effective
+///        interference, effective bandwidth and user capacity," *IEEE Trans. Inf. Theory*,
+///        45(2), 641–657, 1999.
+///
 /// Examples:
 ///     >>> import comnum
 ///     >>> round(comnum.cdma_sinr_large_system(80 / 128, 20.0), 2)
@@ -544,7 +582,7 @@ fn cdma_sinr_large_system(load: f64, snr_db: &Bound<'_, PyAny>, receiver: &str) 
 /// any powers, random signatures of `n` chips.
 ///
 /// The SINR :math:`\gamma` of a user of power :math:`P` is the fixed point of eq. (6) of
-/// Tse and Hanly 1999,
+/// [1]_,
 ///
 /// .. math::
 ///
@@ -564,6 +602,11 @@ fn cdma_sinr_large_system(load: f64, snr_db: &Bound<'_, PyAny>, receiver: &str) 
 ///
 /// Raises:
 ///     ValueError: unless the powers, `n` and the noise variance are positive.
+///
+/// References:
+///     .. [1] D. N. C. Tse and S. V. Hanly, "Linear multiuser receivers: effective
+///        interference, effective bandwidth and user capacity," *IEEE Trans. Inf. Theory*,
+///        45(2), 641–657, 1999.
 #[pyfunction]
 fn cdma_sinr_mmse_large_system(power: f64, interferers: &Bound<'_, PyAny>, n: usize, noise_var: f64) -> PyResult<f64> {
     dsss_theory::sinr_mmse_large_system(power, &fvec(interferers)?, n, noise_var).py()
@@ -573,7 +616,7 @@ fn cdma_sinr_mmse_large_system(power: f64, interferers: &Bound<'_, PyAny>, n: us
 /// with random signatures.
 ///
 /// A linear receiver followed by single-user decoders and the optimum joint decoder
-/// reach (Verdú and Shamai 1999, eqs. (9)–(12))
+/// reach ([1]_, eqs. (9)–(12))
 ///
 /// .. math::
 ///
@@ -601,6 +644,10 @@ fn cdma_sinr_mmse_large_system(power: f64, interferers: &Bound<'_, PyAny>, n: us
 /// Raises:
 ///     ValueError: unless exactly one of `snr_db` and `ebn0_db` is given, and for an
 ///         invalid parameter (the message names it).
+///
+/// References:
+///     .. [1] S. Verdú and S. Shamai (Shitz), "Spectral efficiency of CDMA with random
+///        spreading," *IEEE Trans. Inf. Theory*, 45(2), 622–640, 1999.
 ///
 /// Examples:
 ///     >>> import comnum

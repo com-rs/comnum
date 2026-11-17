@@ -2,13 +2,20 @@
 
 use super::*;
 
-/// A cyclic redundancy check of 5G NR (3GPP TS 38.212, Sec. 5.1).
+/// A cyclic redundancy check of 5G NR.
+///
+/// The CRCs of [1]_ (Sec. 5.1), the cyclic codes for error detection of [2]_.
 ///
 /// Args:
 ///     name (str): `"crc24a"`, `"crc24b"`, `"crc24c"`, `"crc16"`, `"crc11"` or `"crc6"`.
 ///
 /// Raises:
 ///     ValueError: for an invalid parameter (the message names it).
+///
+/// References:
+///     .. [1] 3GPP TS 38.212, *NR; Multiplexing and channel coding*.
+///     .. [2] W. W. Peterson and D. T. Brown, "Cyclic codes for error detection," *Proc.
+///        IRE*, 49(1), 228–235, 1961.
 ///
 /// Examples:
 ///     >>> import comnum, numpy as np
@@ -81,9 +88,9 @@ impl PyCrc {
     }
 }
 
-/// The Gold scrambler of 3GPP (TS 38.211, Sec. 5.2.1).
+/// The Gold scrambler of 3GPP.
 ///
-/// The pseudo-random sequence is
+/// The pseudo-random sequence of [1]_ (Sec. 5.2.1) is
 ///
 /// .. math::
 ///
@@ -99,6 +106,9 @@ impl PyCrc {
 ///
 /// Args:
 ///     c_init (int): the initial value of the second register.
+///
+/// References:
+///     .. [1] 3GPP TS 38.211, *NR; Physical channels and modulation*.
 ///
 /// Examples:
 ///     >>> import comnum, numpy as np
@@ -168,6 +178,13 @@ impl PyScrambler {
 /// A permutation of the positions of a block: `Interleaver.random(n, seed=…)`,
 /// `Interleaver.block(rows, cols)` or `Interleaver.qpp(k, f1, f2)`. It permutes any
 /// array and keeps its dtype (bits, LLRs, symbols).
+///
+/// `Interleaver.qpp` is the quadratic permutation polynomial of [1]_.
+///
+/// References:
+///     .. [1] J. Sun and O. Y. Takeshita, "Interleavers for turbo codes using permutation
+///        polynomials over integer rings," *IEEE Trans. Inf. Theory*, 51(1), 101–119,
+///        2005.
 ///
 /// Examples:
 ///     >>> import comnum, numpy as np

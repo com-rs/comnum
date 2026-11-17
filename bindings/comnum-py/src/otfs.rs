@@ -10,13 +10,12 @@ use num_complex::Complex64 as C64;
 use numpy::{IntoPyArray, PyArray2};
 use pyo3::prelude::*;
 
-/// Orthogonal time frequency space (Raviteja et al. 2019) with rectangular pulses: the
-/// symbols of the :math:`M \times N` delay–Doppler grid (`x[n * M + m]`, delay :math:`m`,
-/// Doppler :math:`n`) through the ISFFT and the Heisenberg transform, one cyclic prefix per
-/// frame.
+/// Orthogonal time frequency space with rectangular pulses: the symbols of the
+/// :math:`M \times N` delay–Doppler grid (`x[n * M + m]`, delay :math:`m`, Doppler
+/// :math:`n`) through the ISFFT and the Heisenberg transform, one cyclic prefix per frame.
 ///
-/// Both transforms together reduce to an IDFT along the Doppler axis (Raviteja et al.
-/// 2019, eqs. (1)–(2)):
+/// Both transforms together reduce to an IDFT along the Doppler axis ([1]_,
+/// eqs. (1)–(2)):
 ///
 /// .. math::
 ///
@@ -33,6 +32,11 @@ use pyo3::prelude::*;
 ///
 /// Raises:
 ///     ValueError: for an invalid parameter (the message names it).
+///
+/// References:
+///     .. [1] P. Raviteja, Y. Hong, E. Viterbo and E. Biglieri, "Practical pulse-shaping
+///        waveforms for reduced-cyclic-prefix OTFS," *IEEE Trans. Veh. Technol.*, 68(1),
+///        957–961, 2019.
 ///
 /// Examples:
 ///     >>> import comnum, numpy as np
@@ -156,6 +160,8 @@ impl PyOtfs {
 /// :math:`\theta` uniform on :math:`[-\pi, \pi)` (`DelayDopplerModel` of
 /// `comnum_channel::multipath`).
 ///
+/// The angle :math:`\theta` is Jakes' angle of arrival, as in [1]_ (Sec. III-A).
+///
 /// Args:
 ///     profile (str | array_like): a profile name (as `power_delay_profile`) or taps
 ///         `(n_taps, 2)`, `(delay in s, power in dB)`.
@@ -169,6 +175,11 @@ impl PyOtfs {
 ///
 /// Raises:
 ///     ValueError: for an invalid parameter or input (the message names it).
+///
+/// References:
+///     .. [1] P. Raviteja, Y. Hong, E. Viterbo and E. Biglieri, "Practical pulse-shaping
+///        waveforms for reduced-cyclic-prefix OTFS," *IEEE Trans. Veh. Technol.*, 68(1),
+///        957–961, 2019.
 #[pyfunction]
 fn delay_doppler_paths(
     profile: &Bound<'_, PyAny>,

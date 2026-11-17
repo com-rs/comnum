@@ -27,7 +27,9 @@ fn table(name: &str) -> PyResult<McsTable> {
     })
 }
 
-/// An MCS of the PDSCH (TS 38.214 Tables 5.1.3.1-1 to 5.1.3.1-4).
+/// An MCS of the PDSCH.
+///
+/// The MCS tables are those of [1]_ (Tables 5.1.3.1-1 to 5.1.3.1-4).
 ///
 /// Args:
 ///     table (str): ``"qam64"``, ``"qam256"``, ``"qam64lowse"`` or ``"qam1024"``.
@@ -39,6 +41,9 @@ fn table(name: &str) -> PyResult<McsTable> {
 /// Raises:
 ///     ValueError: for an unknown table or a reserved index.
 ///
+/// References:
+///     .. [1] 3GPP TS 38.214 V19.5.0, *NR; Physical layer procedures for data*.
+///
 /// Examples:
 ///     >>> import comnum
 ///     >>> comnum.nr_mcs("qam64", 4)
@@ -49,9 +54,9 @@ fn nr_mcs(table: &str, index: usize) -> PyResult<(usize, f64)> {
     Ok((m.qm, m.rate_x1024))
 }
 
-/// The transport block size of a PDSCH (TS 38.214 Sec. 5.1.3.2).
+/// The transport block size of a PDSCH.
 ///
-/// The resource elements and the information bits are
+/// The resource elements and the information bits are ([1]_, Sec. 5.1.3.2)
 ///
 /// .. math::
 ///
@@ -84,6 +89,9 @@ fn nr_mcs(table: &str, index: usize) -> PyResult<(usize, f64)> {
 /// Raises:
 ///     ValueError: for an invalid parameter.
 ///
+/// References:
+///     .. [1] 3GPP TS 38.214 V19.5.0, *NR; Physical layer procedures for data*.
+///
 /// Examples:
 ///     >>> import comnum
 ///     >>> comnum.nr_tbs(6, 12, 12, "qam64", 4)    # R.PDSCH.1-1.2 of TS 38.101-4
@@ -103,7 +111,9 @@ fn nr_tbs(
     mcs::transport_block_size(n_prb, n_symb, n_dmrs, n_oh, m, layers).py()
 }
 
-/// The constellation of the modulation mapper of NR (TS 38.211 Sec. 5.1).
+/// The constellation of the modulation mapper of NR.
+///
+/// The mapping is that of [1]_ (Sec. 5.1).
 ///
 /// Args:
 ///     qm (int): the bits per symbol, 2 (QPSK) to 10 (1024-QAM).
@@ -113,13 +123,18 @@ fn nr_tbs(
 ///
 /// Raises:
 ///     ValueError: for another ``qm``.
+///
+/// References:
+///     .. [1] 3GPP TS 38.211 V18.10.0, *NR; Physical channels and modulation*.
 #[pyfunction]
 fn nr_constellation(qm: usize) -> PyResult<PyConstellation> {
     Ok(PyConstellation { inner: modulation::constellation(qm).py()? })
 }
 
-/// A transport block of the PDSCH and its segmentation (TS 38.212 Sec. 7.2): TB CRC,
-/// code blocks with their CRC24B, LDPC and rate matching.
+/// A transport block of the PDSCH and its segmentation: TB CRC, code blocks with their
+/// CRC24B, LDPC and rate matching.
+///
+/// The processing is that of [1]_ (Sec. 7.2).
 ///
 /// Args:
 ///     tbs (int): the transport block size (bits).
@@ -127,6 +142,9 @@ fn nr_constellation(qm: usize) -> PyResult<PyConstellation> {
 ///
 /// Raises:
 ///     ValueError: for an empty block or a rate outside (0, 1).
+///
+/// References:
+///     .. [1] 3GPP TS 38.212 V18.5.0, *NR; Multiplexing and channel coding*.
 ///
 /// Examples:
 ///     >>> import comnum, numpy as np
@@ -301,10 +319,13 @@ impl PyNrHarqProcess {
     }
 }
 
-/// One slot of a single-layer PDSCH (TS 38.211 Sec. 7.3.1): scrambling, modulation,
-/// resource mapping around the DM-RS of port 1000 (configuration type 1, one CDM group
-/// without data), a precoder per PRG, and a receiver that estimates the precoded channel
-/// on the DM-RS by robust 2-D Wiener filtering.
+/// One slot of a single-layer PDSCH: scrambling, modulation, resource mapping around the
+/// DM-RS of port 1000 (configuration type 1, one CDM group without data), a precoder per
+/// PRG, and a receiver that estimates the precoded channel on the DM-RS by robust 2-D
+/// Wiener filtering.
+///
+/// The slot is that of [1]_ (Sec. 7.3.1), the precoding resource block groups those of
+/// [2]_ (Sec. 5.1.2.3), and the channel estimator the 2-D Wiener filter of [3]_.
 ///
 /// Args:
 ///     n_rb_grid (int): the resource blocks of the carrier.
@@ -329,6 +350,12 @@ impl PyNrHarqProcess {
 /// Raises:
 ///     ValueError: for an allocation outside the grid or the slot, a number of ports
 ///         other than 1 or 2, or a PRG without PRB.
+///
+/// References:
+///     .. [1] 3GPP TS 38.211 V18.10.0, *NR; Physical channels and modulation*.
+///     .. [2] 3GPP TS 38.214 V19.5.0, *NR; Physical layer procedures for data*.
+///     .. [3] P. Hoeher, S. Kaiser and P. Robertson, "Two-dimensional pilot-symbol-aided
+///        channel estimation by Wiener filtering," *Proc. IEEE ICASSP*, 1997.
 ///
 /// Examples:
 ///     >>> import comnum

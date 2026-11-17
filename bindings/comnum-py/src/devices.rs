@@ -10,7 +10,9 @@ use pyo3::prelude::*;
 use pyo3::types::PyDict;
 
 /// Add circular complex Gaussian noise for an SNR of `snr_db` within the bandwidth
-/// `bandwidth` of a signal sampled at `fs` (OptiCommPy `awgn`):
+/// `bandwidth` of a signal sampled at `fs` (OptiCommPy `awgn`).
+///
+/// The model [1]_ is
 ///
 /// .. math::
 ///
@@ -33,6 +35,10 @@ use pyo3::types::PyDict;
 /// Raises:
 ///     ValueError: for an input that is not an array of numbers of the expected shape.
 ///
+/// References:
+///     .. [1] J. G. Proakis and M. Salehi, *Digital Communications*, 5th ed.,
+///        McGraw-Hill, 2008.
+///
 /// Examples:
 ///     >>> import comnum, numpy as np
 ///     >>> x = np.ones(100_000, dtype=complex)
@@ -53,7 +59,9 @@ fn awgn<'py>(
 }
 
 /// Add noise for an :math:`E_b/N_0` of `ebn0_db`, for :math:`b` bits per symbol at
-/// :math:`\mathrm{sps}` samples per symbol:
+/// :math:`\mathrm{sps}` samples per symbol.
+///
+/// The model [1]_ is
 ///
 /// .. math::
 ///
@@ -75,6 +83,10 @@ fn awgn<'py>(
 ///
 /// Raises:
 ///     ValueError: for an input that is not an array of numbers of the expected shape.
+///
+/// References:
+///     .. [1] J. G. Proakis and M. Salehi, *Digital Communications*, 5th ed.,
+///        McGraw-Hill, 2008.
 ///
 /// Examples:
 ///     >>> import comnum
@@ -98,8 +110,8 @@ fn awgn_ebn0<'py>(
 
 /// The samples of a receiver whose sampling clock is off by ``ppm`` parts per million.
 ///
-/// Sample :math:`m` is taken at the instant :math:`m (1 + \zeta)` of ``x`` (Speth et al.
-/// 1999, eqs. (12)-(13)):
+/// Sample :math:`m` is taken at the instant :math:`m (1 + \zeta)` of ``x`` ([1]_,
+/// eqs. (12)-(13)):
 ///
 /// .. math::
 ///
@@ -116,6 +128,11 @@ fn awgn_ebn0<'py>(
 ///
 /// Raises:
 ///     ValueError: for an input that is not an array of numbers.
+///
+/// References:
+///     .. [1] M. Speth, S. A. Fechtel, G. Fock and H. Meyr, "Optimum receiver design for
+///        wireless broad-band systems using OFDM — Part I," *IEEE Trans. Commun.*,
+///        47(11), 1668–1677, 1999.
 #[pyfunction]
 fn clock_offset<'py>(py: Python<'py>, x: &Bound<'py, PyAny>, ppm: f64) -> PyResult<CArr<'py>> {
     Ok(carr(py, comnum::hardware::oscillator::sampling_offset(&cvec(x)?, ppm * 1e-6)))

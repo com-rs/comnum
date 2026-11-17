@@ -214,7 +214,7 @@ fn bessel_j0(x: &Bound<'_, PyAny>) -> PyResult<Py<PyAny>> {
 /// amplitude, zero periodic autocorrelation at every nonzero lag; the PSS of LTE is the
 /// one of length 63, its middle element punctured).
 ///
-/// Its values are
+/// Its values are ([1]_; [2]_, Sec. 6.11.1.1)
 ///
 /// .. math::
 ///
@@ -229,6 +229,11 @@ fn bessel_j0(x: &Bound<'_, PyAny>) -> PyResult<Py<PyAny>> {
 ///
 /// Raises:
 ///     ValueError: for an even length or a root that is not prime to it.
+///
+/// References:
+///     .. [1] D. Chu, "Polyphase codes with good periodic correlation properties," *IEEE
+///        Trans. Inf. Theory*, 18(4), 531–532, 1972.
+///     .. [2] 3GPP TS 36.211 V18.0.2, *E-UTRA; Physical channels and modulation*.
 ///
 /// Examples:
 ///     >>> import comnum, numpy as np

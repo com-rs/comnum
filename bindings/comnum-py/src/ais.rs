@@ -110,9 +110,11 @@ fn message_dict<'py>(py: Python<'py>, m: &Message) -> PyResult<Bound<'py, PyDict
     Ok(d)
 }
 
-/// Decode the bits of an AIS message (ITU-R M.1371-5, Annex 8): the position reports
-/// (messages 1, 2, 3, 18), the base station report (4), the static and voyage data (5)
-/// and the class B static data (24); any other message gives its type and MMSI.
+/// Decode the bits of an AIS message: the position reports (messages 1, 2, 3, 18), the
+/// base station report (4), the static and voyage data (5) and the class B static data
+/// (24); any other message gives its type and MMSI.
+///
+/// The messages are those of [1]_ (Annex 8).
 ///
 /// Args:
 ///     bits (array_like): the message bits, most significant first (the payload of a
@@ -131,6 +133,11 @@ fn message_dict<'py>(py: Python<'py>, m: &Message) -> PyResult<Bound<'py, PyDict
 /// Raises:
 ///     ValueError: for fewer than 38 bits, a type outside 1 to 27 or a message shorter
 ///         than its table.
+///
+/// References:
+///     .. [1] Recommendation ITU-R M.1371-5, *Technical characteristics for an automatic
+///        identification system using time division multiple access in the VHF maritime
+///        mobile band*, 2014.
 ///
 /// Examples:
 ///     >>> import comnum
@@ -181,6 +188,8 @@ fn ais_position_report<'py>(
 /// The ``!AIVDM`` sentences of NMEA 0183 (IEC 61162-1) of a message: the six-bit
 /// armouring of its bits, the fill bits and the checksum; one or several fragments.
 ///
+/// The ``VDM`` sentence and its six-bit field are those of [1]_ (Secs. 8.3.93 and 7.3.3).
+///
 /// Args:
 ///     bits (array_like): the message bits.
 ///     channel (str): the channel, ``'A'`` or ``'B'``.
@@ -191,6 +200,10 @@ fn ais_position_report<'py>(
 ///
 /// Raises:
 ///     ValueError: for bits that are not 0 and 1.
+///
+/// References:
+///     .. [1] IEC 61162-1:2016, *Maritime navigation and radiocommunication equipment and
+///        systems — Digital interfaces — Part 1*.
 #[pyfunction]
 #[pyo3(signature = (bits, *, channel = "A", sequence = 0))]
 fn ais_aivdm(bits: &Bound<'_, PyAny>, channel: &str, sequence: u8) -> PyResult<Vec<String>> {
@@ -199,6 +212,8 @@ fn ais_aivdm(bits: &Bound<'_, PyAny>, channel: &str, sequence: u8) -> PyResult<V
 
 /// The messages of ``!AIVDM`` sentences: the checksums checked, the fragments of a
 /// message assembled, the payload de-armoured.
+///
+/// The ``VDM`` sentence and its six-bit field are those of [1]_ (Secs. 8.3.93 and 7.3.3).
 ///
 /// Args:
 ///     sentences (list[str]): the sentences, in order.
@@ -209,6 +224,10 @@ fn ais_aivdm(bits: &Bound<'_, PyAny>, channel: &str, sequence: u8) -> PyResult<V
 /// Raises:
 ///     ValueError: for a sentence that is not ``!AIVDM``/``!AIVDO``, a wrong checksum
 ///         or a character outside the six-bit alphabet.
+///
+/// References:
+///     .. [1] IEC 61162-1:2016, *Maritime navigation and radiocommunication equipment and
+///        systems — Digital interfaces — Part 1*.
 #[pyfunction]
 fn ais_messages<'py>(py: Python<'py>, sentences: Vec<String>) -> PyResult<Bound<'py, PyList>> {
     let refs: Vec<&str> = sentences.iter().map(String::as_str).collect();
@@ -222,9 +241,11 @@ fn ais_messages<'py>(py: Python<'py>, sentences: Vec<String>) -> PyResult<Bound<
     Ok(out)
 }
 
-/// The GMSK signal of the packets of messages (ITU-R M.1371-5, Annex 2: the training
-/// sequence, the HDLC frame with its frame check sequence and bit stuffing, NRZI, GMSK
-/// with ``BT = 0.4`` at 9600 bit/s), a silence of 32 bits before each, unit envelope.
+/// The GMSK signal of the packets of messages, a silence of 32 bits before each, unit
+/// envelope.
+///
+/// The packet is that of [1]_ (Annex 2): the training sequence, the HDLC frame with its
+/// frame check sequence and bit stuffing, NRZI, GMSK with ``BT = 0.4`` at 9600 bit/s.
 ///
 /// Args:
 ///     messages (list[array_like]): the bits of every message.
@@ -237,6 +258,11 @@ fn ais_messages<'py>(py: Python<'py>, sentences: Vec<String>) -> PyResult<Bound<
 /// Raises:
 ///     ValueError: for a sampling rate that is not an even multiple of 9600 Hz of 4
 ///         samples per bit at least.
+///
+/// References:
+///     .. [1] Recommendation ITU-R M.1371-5, *Technical characteristics for an automatic
+///        identification system using time division multiple access in the VHF maritime
+///        mobile band*, 2014.
 #[pyfunction]
 fn ais_transmit<'py>(py: Python<'py>, messages: Vec<Bound<'py, PyAny>>, fs: f64) -> PyResult<CArr<'py>> {
     let m: Vec<Vec<u8>> = messages.iter().map(bvec).collect::<PyResult<_>>()?;

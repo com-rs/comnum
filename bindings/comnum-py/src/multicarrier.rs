@@ -10,9 +10,8 @@ use pyo3::prelude::*;
 ///
 /// `n_fft` subcarriers carry real symbols every half symbol on pulses of unit
 /// energy, orthogonal in the real sense; `oqam_stagger` splits complex symbols into
-/// them. With the real symbols :math:`a_{m,n}` and the prototype :math:`h` of
-/// :math:`L = KM - 1` taps (Bouhadda et al. 2014, eqs. (3)–(4); Nissel & Rupp 2017,
-/// eq. (2)),
+/// them. With the real symbols :math:`a_{m,n}` and the prototype :math:`h` [1]_ of
+/// :math:`L = KM - 1` taps ([2]_, eqs. (3)–(4); [3]_, eq. (2)),
 ///
 /// .. math::
 ///
@@ -28,6 +27,16 @@ use pyo3::prelude::*;
 ///
 /// Raises:
 ///     ValueError: for an invalid parameter (the message names it).
+///
+/// References:
+///     .. [1] M. Bellanger, "FBMC physical layer: a primer," PHYDYAS project (FP7-ICT
+///        211887), 2010.
+///     .. [2] H. Bouhadda, H. Shaiek, D. Roviras, R. Zayani, Y. Medjahdi and R. Bouallegue,
+///        "Theoretical analysis of BER performance of nonlinearly amplified FBMC/OQAM and
+///        OFDM signals," *EURASIP J. Adv. Signal Process.*, 2014:60.
+///     .. [3] R. Nissel and M. Rupp, "OFDM and FBMC-OQAM in doubly-selective channels:
+///        calculating the bit error probability," *IEEE Commun. Lett.*, 21(6), 1297–1300,
+///        2017.
 ///
 /// Examples:
 ///     >>> import comnum, numpy as np
@@ -161,11 +170,10 @@ fn oqam_destagger<'py>(py: Python<'py>, a: &Bound<'py, PyAny>, m: usize) -> PyRe
     Ok(carr(py, fbmc::oqam_destagger(&fvec(a)?, m).py()?))
 }
 
-/// Universal filtered multicarrier (Schaich & Wild 2014): OFDM filtered per sub-band by
-/// Dolph–Chebyshev filters, no cyclic prefix, `n_fft + filter_len - 1` samples per
-/// symbol.
+/// Universal filtered multicarrier: OFDM filtered per sub-band by Dolph–Chebyshev
+/// filters, no cyclic prefix, `n_fft + filter_len - 1` samples per symbol.
 ///
-/// A symbol is the sum of the :math:`B` filtered sub-bands (Schaich & Wild 2014, Sec. 3):
+/// A symbol is the sum of the :math:`B` filtered sub-bands ([1]_, Sec. 3):
 ///
 /// .. math::
 ///
@@ -174,8 +182,8 @@ fn oqam_destagger<'py>(py: Python<'py>, a: &Bound<'py, PyAny>, m: usize) -> PyRe
 /// with :math:`\mathbf{V}_{i}` the columns of the IDFT of size :math:`N` of the sub-band,
 /// scaled by :math:`1/\sqrt{K}` for unit-energy symbols (:math:`K = BQ`), and
 /// :math:`\mathbf{F}_{i}` the Toeplitz matrix of the filter
-/// :math:`f_{i}[l] = w[l]\, e^{j 2\pi c_{i} l / N}`, :math:`w` a Dolph–Chebyshev window of
-/// unit energy and :math:`c_{i}` the centre of the sub-band.
+/// :math:`f_{i}[l] = w[l]\, e^{j 2\pi c_{i} l / N}`, :math:`w` a Dolph–Chebyshev window
+/// [2]_ of unit energy and :math:`c_{i}` the centre of the sub-band.
 ///
 /// Args:
 ///     n_fft (int): grid size `N`.
@@ -186,6 +194,13 @@ fn oqam_destagger<'py>(py: Python<'py>, a: &Bound<'py, PyAny>, m: usize) -> PyRe
 ///
 /// Raises:
 ///     ValueError: for an invalid parameter (the message names it).
+///
+/// References:
+///     .. [1] F. Schaich and T. Wild, "Waveform contenders for 5G — OFDM vs. FBMC vs.
+///        UFMC," *Proc. 6th Int. Symp. Communications, Control and Signal Processing
+///        (ISCCSP)*, 2014.
+///     .. [2] F. J. Harris, "On the use of windows for harmonic analysis with the discrete
+///        Fourier transform," *Proc. IEEE*, 66(1), 51–83, 1978.
 ///
 /// Examples:
 ///     >>> import comnum, numpy as np

@@ -70,7 +70,7 @@ fn fm_discriminator<'py>(py: Python<'py>, x: &Bound<'py, PyAny>, fs: f64) -> PyR
 ///
 ///     y[n] = a\, y[n-1] + (1 - a)\, x[n], \qquad a = \exp(-1/(\tau f_s))
 ///
-/// (ITU-R BS.450-4 Sec. 1.2: 50 µs in Europe, 75 µs in the United States).
+/// ([1]_, Sec. 1.2: 50 µs in Europe, 75 µs in the United States).
 ///
 /// Args:
 ///     x (array_like): the real message.
@@ -82,6 +82,10 @@ fn fm_discriminator<'py>(py: Python<'py>, x: &Bound<'py, PyAny>, fs: f64) -> PyR
 ///
 /// Raises:
 ///     ValueError: for a time constant or a rate that is not positive.
+///
+/// References:
+///     .. [1] Recommendation ITU-R BS.450-4, *Transmission standards for FM sound
+///        broadcasting at VHF*, 2019.
 #[pyfunction]
 #[pyo3(signature = (x, fs, *, tau_s = 50e-6))]
 fn fm_deemphasis<'py>(py: Python<'py>, x: &Bound<'py, PyAny>, fs: f64, tau_s: f64) -> PyResult<FArr<'py>> {
@@ -111,8 +115,9 @@ fn fm_preemphasis<'py>(py: Python<'py>, x: &Bound<'py, PyAny>, fs: f64, tau_s: f
     Ok(farr(py, Emphasis { tau_s }.preemphasize(&fvec(x)?, fs).py()?))
 }
 
-/// The stereophonic multiplex of FM broadcasting (ITU-R BS.450-4 Sec. 2.2, pilot-tone
-/// system), in hertz of deviation:
+/// The stereophonic multiplex of FM broadcasting, in hertz of deviation.
+///
+/// The multiplex of the pilot-tone system ([1]_, Sec. 2.2) is
 ///
 /// .. math::
 ///
@@ -120,7 +125,7 @@ fn fm_preemphasis<'py>(py: Python<'py>, x: &Bound<'py, PyAny>, fs: f64, tau_s: f
 ///     \qquad \theta = 2\pi \cdot 19\,\mathrm{kHz} \cdot t,
 ///
 /// :math:`M = (A + B)/2`, :math:`S = (A - B)/2` after pre-emphasis, :math:`r` the biphase
-/// RDS baseband of the transmitted bits (NRSC-4 Sec. 1).
+/// RDS baseband of the transmitted bits ([2]_, Sec. 1).
 ///
 /// Args:
 ///     left (array_like): the left audio :math:`A` at `fs`, at most 1 in magnitude.
@@ -139,6 +144,13 @@ fn fm_preemphasis<'py>(py: Python<'py>, x: &Bound<'py, PyAny>, fs: f64, tau_s: f
 ///
 /// Raises:
 ///     ValueError: for channels of different lengths or an invalid rate.
+///
+/// References:
+///     .. [1] Recommendation ITU-R BS.450-4, *Transmission standards for FM sound
+///        broadcasting at VHF*, 2019.
+///     .. [2] NRSC-4, *United States RBDS Standard: Specification of the radio broadcast
+///        data system (RBDS)*, National Radio Systems Committee, April 1998 (with EN
+///        50067).
 #[pyfunction]
 #[pyo3(signature = (left, right, fs, *, rds_bits = None, audio_hz = 67.5e3, pilot_hz = 6.75e3, rds_hz = 2e3, tau_s = 50e-6))]
 #[allow(clippy::too_many_arguments)]
@@ -159,10 +171,10 @@ fn fm_multiplex<'py>(
     Ok(farr(py, m))
 }
 
-/// The left and right channels of a multiplex (ITU-R BS.450-4 Sec. 2.2).
+/// The left and right channels of a multiplex.
 ///
-/// The pilot is found by mixing it down (10 ms average); with its phase :math:`\theta` and
-/// low-pass filters at 15 kHz,
+/// The pilot of the multiplex ([1]_, Sec. 2.2) is found by mixing it down (10 ms
+/// average); with its phase :math:`\theta` and low-pass filters at 15 kHz,
 ///
 /// .. math::
 ///
@@ -186,6 +198,10 @@ fn fm_multiplex<'py>(
 ///
 /// Raises:
 ///     ValueError: for invalid rates.
+///
+/// References:
+///     .. [1] Recommendation ITU-R BS.450-4, *Transmission standards for FM sound
+///        broadcasting at VHF*, 2019.
 #[pyfunction]
 #[pyo3(signature = (mpx, fs, *, tau_s = 50e-6, fs_audio = 48e3))]
 fn fm_stereo_decode<'py>(
@@ -206,8 +222,10 @@ fn fm_stereo_decode<'py>(
     Ok(d)
 }
 
-/// The 104 bits of an RDS group of the four information words `blocks` (each with its
-/// checkword and its offset word A, B, C or C', D; NRSC-4 Sec. 2.3, Table A.1).
+/// The 104 bits of an RDS group of the four information words `blocks`.
+///
+/// Each block carries its checkword and its offset word A, B, C or C', D ([1]_, Sec. 2.3,
+/// Table A.1).
 ///
 /// Args:
 ///     blocks (list[int]): the four 16-bit information words.
@@ -218,13 +236,20 @@ fn fm_stereo_decode<'py>(
 ///
 /// Raises:
 ///     ValueError: for another number of blocks.
+///
+/// References:
+///     .. [1] NRSC-4, *United States RBDS Standard: Specification of the radio broadcast
+///        data system (RBDS)*, National Radio Systems Committee, April 1998 (with EN
+///        50067).
 #[pyfunction]
 #[pyo3(signature = (blocks, *, version_b = false))]
 fn rds_group_bits<'py>(py: Python<'py>, blocks: [u16; 4], version_b: bool) -> BArr<'py> {
     rds::group_bits(blocks, version_b).into_pyarray(py)
 }
 
-/// The differential encoding of RDS (NRSC-4 Table 1):
+/// The differential encoding of RDS.
+///
+/// The encoding ([1]_, Table 1) is
 ///
 /// .. math::
 ///
@@ -238,15 +263,22 @@ fn rds_group_bits<'py>(py: Python<'py>, blocks: [u16; 4], version_b: bool) -> BA
 ///
 /// Raises:
 ///     ValueError: for values other than 0 and 1.
+///
+/// References:
+///     .. [1] NRSC-4, *United States RBDS Standard: Specification of the radio broadcast
+///        data system (RBDS)*, National Radio Systems Committee, April 1998 (with EN
+///        50067).
 #[pyfunction]
 fn rds_differential_encode<'py>(py: Python<'py>, bits: &Bound<'py, PyAny>) -> PyResult<BArr<'py>> {
     Ok(rds::differential_encode(&bvec(bits)?).into_pyarray(py))
 }
 
-/// The RDS of a multiplex: the biphase symbols demodulated from 57 kHz (Gardner clock
-/// recovery, Viterbi-Viterbi phase of the BPSK), differentially decoded, synchronised on
-/// the offset words, and the groups assembled into the station's name, radiotext and
-/// clock (NRSC-4 / EN 50067 Sec. 1-3, the characters of Annex E, the date of Annex G).
+/// The RDS of a multiplex: the station's name, radiotext and clock.
+///
+/// The biphase symbols are demodulated from 57 kHz (Gardner clock recovery,
+/// Viterbi-Viterbi phase of the BPSK), differentially decoded, synchronised on the offset
+/// words, and the groups assembled into the station's name, radiotext and clock ([1]_,
+/// Sec. 1-3, the characters of Annex E, the date of Annex G).
 ///
 /// Args:
 ///     mpx (array_like): the multiplex in hertz of deviation (:func:`fm_discriminator`),
@@ -264,6 +296,11 @@ fn rds_differential_encode<'py>(py: Python<'py>, bits: &Bound<'py, PyAny>) -> Py
 ///
 /// Raises:
 ///     ValueError: for an invalid rate or less than 0.1 s of multiplex.
+///
+/// References:
+///     .. [1] NRSC-4, *United States RBDS Standard: Specification of the radio broadcast
+///        data system (RBDS)*, National Radio Systems Committee, April 1998 (with EN
+///        50067).
 ///
 /// Examples:
 ///     >>> import comnum, numpy as np

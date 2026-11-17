@@ -34,11 +34,11 @@ fn theory_biawgn_capacity(ebn0_db: &Bound<'_, PyAny>, rate: f64) -> PyResult<Py<
 }
 
 /// The normal approximation of the smallest block error probability of an :math:`(n, k)`
-/// binary code over BPSK and AWGN (Polyanskiy, Poor & Verdú 2010).
+/// binary code over BPSK and AWGN.
 ///
 /// With the capacity :math:`C` (:func:`theory_biawgn_capacity`) and the dispersion
 /// :math:`V = \operatorname{Var}\left[1 - \log_2(1 + e^{-L})\right]` of the binary-input
-/// AWGN channel at the rate :math:`R = k/n`:
+/// AWGN channel at the rate :math:`R = k/n` [1]_:
 ///
 /// .. math::
 ///
@@ -55,6 +55,10 @@ fn theory_biawgn_capacity(ebn0_db: &Bound<'_, PyAny>, rate: f64) -> PyResult<Py<
 /// Raises:
 ///     ValueError: for values that are not real numbers.
 ///
+/// References:
+///     .. [1] Y. Polyanskiy, H. V. Poor and S. Verdú, "Channel coding rate in the finite
+///        blocklength regime," *IEEE Trans. Inf. Theory*, 56(5), 2307–2359, 2010.
+///
 /// Examples:
 ///     >>> import comnum
 ///     >>> p = comnum.theory_normal_approximation(256, 128, [1.0, 3.0])
@@ -67,7 +71,7 @@ fn theory_normal_approximation(n: usize, k: usize, ebn0_db: &Bound<'_, PyAny>) -
 
 /// The smallest :math:`E_b/N_0` at which BPSK supports a code rate.
 ///
-/// The limit (:math:`n \to \infty`) is the solution of
+/// The limit (:math:`n \to \infty`) [1]_ is the solution of
 ///
 /// .. math::
 ///
@@ -84,6 +88,10 @@ fn theory_normal_approximation(n: usize, k: usize, ebn0_db: &Bound<'_, PyAny>) -
 ///
 /// Raises:
 ///     ValueError: for values that are not real numbers.
+///
+/// References:
+///     .. [1] C. E. Shannon, "A mathematical theory of communication," *Bell Syst. Tech.
+///        J.*, 27, 379–423 and 623–656, 1948.
 ///
 /// Examples:
 ///     >>> import comnum

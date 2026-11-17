@@ -90,8 +90,7 @@ fn rrc_spectrum(py: Python<'_>, n_symbols: i64, sps: usize, rolloff: f64) -> PyR
 ///     h(t) = \frac{1}{T_s} \frac{\sin(\pi t'(1-\beta)) + 4\beta t' \cos(\pi t'(1+\beta))}{\pi t'(1 - (4\beta t')^2)},
 ///
 /// with :math:`t' = t/T_s`, and its limits at :math:`t = 0` and
-/// :math:`|t| = T_s/(4\beta)` (Proakis & Salehi, *Digital Communications*, 5th ed.,
-/// Sec. 9.2-1).
+/// :math:`|t| = T_s/(4\beta)` ([1]_, Sec. 9.2-1).
 ///
 /// Args:
 ///     t (array_like): the times (in units of `ts`'s time base).
@@ -104,6 +103,10 @@ fn rrc_spectrum(py: Python<'_>, n_symbols: i64, sps: usize, rolloff: f64) -> PyR
 ///
 /// Raises:
 ///     ValueError: for an input that is not an array of numbers of the expected shape.
+///
+/// References:
+///     .. [1] J. G. Proakis and M. Salehi, *Digital Communications*, 5th ed., McGraw-Hill,
+///        2008.
 ///
 /// Examples:
 ///     >>> import comnum, math
@@ -299,9 +302,10 @@ fn select_channel<'py>(
 
 /// A Butterworth low-pass IIR filter of order `order` and 3-dB cut-off `fc_hz` at the
 /// sampling rate `fs_hz` (bilinear transform with the cut-off prewarped, a cascade of
-/// second-order sections of unit DC gain), run forward from rest: the anti-aliasing
-/// filter of a receiver, such as the fifth-order filter at 40 % of the sampling rate of
-/// Ip & Kahn (J. Lightw. Technol. 26(20), 2008).
+/// second-order sections of unit DC gain), run forward from rest.
+///
+/// It is the anti-aliasing filter of a receiver, such as the fifth-order filter at 40 % of
+/// the sampling rate of [1]_.
 ///
 /// Args:
 ///     x (array_like): the samples (real or complex).
@@ -314,6 +318,10 @@ fn select_channel<'py>(
 ///
 /// Raises:
 ///     ValueError: for an order outside 1 to 32 or a cut-off outside :math:`(0, f_s/2)`.
+///
+/// References:
+///     .. [1] E. Ip and J. M. Kahn, "Compensation of dispersion and nonlinear impairments
+///        using digital backpropagation," *J. Lightw. Technol.*, 26(20), 2008.
 ///
 /// Examples:
 ///     >>> import comnum, numpy as np
@@ -525,7 +533,9 @@ fn cd_fir_taps<'py>(py: Python<'py>, fiber: &PyFiber, length_km: f64, fs: f64, n
     Ok(carr(py, cd::cd_fir_taps(fiber.inner.beta2_s2_km(), length_km, fs, count(n_taps, "n_taps")?)))
 }
 
-/// The dispersion factor of the digital compensation (Savory 2008, Eghbali et al. 2014):
+/// The dispersion factor of the digital compensation.
+///
+/// The factor and the desired response are ([1]_, [2]_)
 ///
 /// .. math::
 ///
@@ -540,6 +550,14 @@ fn cd_fir_taps<'py>(py: Python<'py>, fiber: &PyFiber, length_km: f64, fs: f64, n
 ///
 /// Returns:
 ///     float: :math:`K`.
+///
+/// References:
+///     .. [1] S. J. Savory, "Digital filters for coherent optical receivers,"
+///        *Opt. Express*, 16(2), 804–817, 2008.
+///     .. [2] A. Eghbali, H. Johansson, O. Gustafsson and S. J. Savory, "Optimal
+///        least-squares FIR digital filters for compensation of chromatic dispersion in
+///        digital coherent optical receivers," *J. Lightw. Technol.*, 32(8), 1449–1456,
+///        2014.
 #[pyfunction]
 fn cd_dispersion_factor(fiber: &PyFiber, length_km: f64, fs: f64) -> f64 {
     cd::cd_dispersion_factor(fiber.inner.beta2_s2_km(), length_km, fs)
@@ -553,7 +571,7 @@ fn cd_dispersion_factor(fiber: &PyFiber, length_km: f64, fs: f64) -> f64 {
 ///
 /// with :math:`K` the dispersion factor (`cd_dispersion_factor`).
 ///
-/// After S. J. Savory, *Opt. Express* 16(2), 2008 (eqs. 9–10).
+/// After [1]_ (eqs. 9–10).
 ///
 /// Args:
 ///     fiber (FiberParams): the fibre.
@@ -567,6 +585,10 @@ fn cd_dispersion_factor(fiber: &PyFiber, length_km: f64, fs: f64) -> f64 {
 ///
 /// Raises:
 ///     ValueError: for an invalid parameter (the message names it).
+///
+/// References:
+///     .. [1] S. J. Savory, "Digital filters for coherent optical receivers,"
+///        *Opt. Express*, 16(2), 804–817, 2008.
 #[pyfunction]
 #[pyo3(signature = (fiber, length_km, fs, *, n_taps = None))]
 fn cd_savory_taps<'py>(
@@ -584,7 +606,7 @@ fn cd_savory_taps<'py>(
 /// Centred taps of the least-squares dispersion-compensating FIR over the band
 /// :math:`|f| \le f_{\mathrm{band}}` (`band_hz`).
 ///
-/// After Eghbali, Johansson, Gustafsson & Savory, *J. Lightw. Technol.* 32(8), 2014.
+/// After [1]_.
 /// The taps minimise the energy of the error over :math:`[-\Omega, \Omega]` (see
 /// `cd_ls_error`), with :math:`\Omega` the band in radians per sample:
 ///
@@ -617,6 +639,12 @@ fn cd_savory_taps<'py>(
 ///
 /// Raises:
 ///     ValueError: for an invalid parameter (the message names it).
+///
+/// References:
+///     .. [1] A. Eghbali, H. Johansson, O. Gustafsson and S. J. Savory, "Optimal
+///        least-squares FIR digital filters for compensation of chromatic dispersion in
+///        digital coherent optical receivers," *J. Lightw. Technol.*, 32(8), 1449–1456,
+///        2014.
 #[pyfunction]
 #[pyo3(signature = (fiber, length_km, fs, n_taps, *, band_hz = None, epsilon = 0.0))]
 fn cd_ls_taps<'py>(
@@ -633,7 +661,9 @@ fn cd_ls_taps<'py>(
 }
 
 /// The energy of the error of centred dispersion-compensating taps over the band
-/// :math:`|f| \le f_{\mathrm{band}}` (`band_hz`; Eghbali et al. 2014, eq. 6):
+/// :math:`|f| \le f_{\mathrm{band}}` (`band_hz`).
+///
+/// The energy is ([1]_, eq. 6)
 ///
 /// .. math::
 ///
@@ -651,6 +681,12 @@ fn cd_ls_taps<'py>(
 ///
 /// Raises:
 ///     ValueError: for an invalid parameter or input (the message names it).
+///
+/// References:
+///     .. [1] A. Eghbali, H. Johansson, O. Gustafsson and S. J. Savory, "Optimal
+///        least-squares FIR digital filters for compensation of chromatic dispersion in
+///        digital coherent optical receivers," *J. Lightw. Technol.*, 32(8), 1449–1456,
+///        2014.
 #[pyfunction]
 #[pyo3(signature = (taps, fiber, length_km, fs, *, band_hz = None))]
 fn cd_ls_error(
@@ -938,9 +974,10 @@ fn frame_sync(
     Ok((sync.delay, sync.rotation, sync.quality))
 }
 
-/// Blind phase search (Pfau, Hoffmann and Noé 2009; OptiCommPy `bps`).
+/// Blind phase search (OptiCommPy `bps`).
 ///
-/// Every test phase :math:`b (\pi/2)/B` rotates the samples; the squared distances to the
+/// The search of [1]_: every test phase :math:`b (\pi/2)/B` rotates the samples; the
+/// squared distances to the
 /// nearest points are summed over :math:`2n + 1` samples and the phase of the smallest sum
 /// is kept:
 ///
@@ -964,6 +1001,11 @@ fn frame_sync(
 ///
 /// Raises:
 ///     ValueError: for an invalid parameter or input (the message names it).
+///
+/// References:
+///     .. [1] T. Pfau, S. Hoffmann and R. Noé, "Hardware-efficient coherent digital
+///        receiver concept with feedforward carrier recovery for M-QAM constellations,"
+///        *J. Lightw. Technol.*, 27(8), 2009.
 #[pyfunction]
 #[pyo3(signature = (x, constellation, *, n = 35, b = 64))]
 fn bps<'py>(
@@ -1052,7 +1094,7 @@ fn array<const N: usize>(x: &Bound<'_, PyAny>) -> PyResult<[C64; N]> {
 
 /// Gardner timing error of three samples at 2 sps.
 ///
-/// The error is
+/// The error of the detector of [1]_ is
 ///
 /// .. math::
 ///
@@ -1066,6 +1108,10 @@ fn array<const N: usize>(x: &Bound<'_, PyAny>) -> PyResult<[C64; N]> {
 ///
 /// Raises:
 ///     ValueError: for an input that is not an array of numbers of the expected shape.
+///
+/// References:
+///     .. [1] F. M. Gardner, "A BPSK/QPSK timing-error detector for sampled receivers,"
+///        *IEEE Trans. Commun.*, 34(5), 423–429, 1986.
 #[pyfunction]
 fn gardner_ted(x: &Bound<'_, PyAny>) -> PyResult<f64> {
     Ok(clock::gardner_ted(&array::<3>(x)?))
@@ -1141,7 +1187,7 @@ fn gardner_clock_recovery<'py>(
 
 /// The Dolph–Chebyshev window (as `scipy.signal.windows.chebwin`).
 ///
-/// The window is the inverse DFT of the samples of the Chebyshev polynomial
+/// The window [1]_ is the inverse DFT of the samples of the Chebyshev polynomial
 /// :math:`T_{n-1}`, normalised to a maximum of 1:
 ///
 /// .. math::
@@ -1160,6 +1206,10 @@ fn gardner_clock_recovery<'py>(
 ///
 /// Raises:
 ///     ValueError: for a negative count.
+///
+/// References:
+///     .. [1] F. J. Harris, "On the use of windows for harmonic analysis with the discrete
+///        Fourier transform," *Proc. IEEE*, 66(1), 51–83, 1978.
 #[pyfunction]
 fn chebyshev_window(py: Python<'_>, n: i64, attenuation_db: f64) -> PyResult<FArr<'_>> {
     Ok(farr(py, comnum::dsp::window::chebyshev(count(n, "n")?, attenuation_db)))

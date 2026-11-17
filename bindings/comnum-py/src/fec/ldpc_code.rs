@@ -2,14 +2,15 @@
 
 use super::*;
 
-/// An LDPC code: `LdpcCode.peg(n, k, var_degree=…, seed=…)` (progressive edge growth,
-/// Hu, Eleftheriou & Arnold 2005) or `LdpcCode(n, rows)` from the rows of a
-/// parity-check matrix. Decoded by belief propagation (see `set_decoder`): `rule` is
-/// `"sum_product"` (the default, as in the specifications), `"min_sum"`,
-/// `"normalized_min_sum"` (scaled by `alpha`, 0.8 by default) or `"offset_min_sum"`
-/// (offset `alpha`); `layered` selects the layered schedule (Hocevar 2004, the
-/// default); 50 iterations at most by default. The PEG construction uses the variable
-/// degree 3 and the seed 1 by default.
+/// An LDPC code: `LdpcCode.peg(n, k, var_degree=…, seed=…)` (progressive edge growth)
+/// or `LdpcCode(n, rows)` from the rows of a parity-check matrix.
+///
+/// The codes of [1]_, built by the progressive edge growth of [2]_ or from a matrix.
+/// Decoded by belief propagation (see `set_decoder`): `rule` is `"sum_product"` (the
+/// default, as in the specifications), `"min_sum"`, `"normalized_min_sum"` (scaled by
+/// `alpha`, 0.8 by default, [3]_) or `"offset_min_sum"` (offset `alpha`); `layered`
+/// selects the layered schedule ([4]_, the default); 50 iterations at most by default.
+/// The PEG construction uses the variable degree 3 and the seed 1 by default.
 ///
 /// Args:
 ///     n (int): coded bits per block.
@@ -18,6 +19,18 @@ use super::*;
 ///
 /// Raises:
 ///     ValueError: for an invalid parameter (the message names it).
+///
+/// References:
+///     .. [1] R. G. Gallager, "Low-density parity-check codes," *IRE Trans. Inf. Theory*,
+///        8(1), 21–28, 1962.
+///     .. [2] X.-Y. Hu, E. Eleftheriou and D. M. Arnold, "Regular and irregular
+///        progressive edge-growth Tanner graphs," *IEEE Trans. Inf. Theory*, 51(1),
+///        386–398, 2005.
+///     .. [3] J. Chen and M. P. C. Fossorier, "Near optimum universal belief propagation
+///        based decoding of low-density parity check codes," *IEEE Trans. Commun.*,
+///        50(3), 406–414, 2002.
+///     .. [4] D. E. Hocevar, "A reduced complexity decoder architecture via layered
+///        decoding of LDPC codes," *Proc. IEEE SiPS*, 107–112, 2004.
 #[pyclass(name = "LdpcCode", module = "comnum")]
 pub struct PyLdpc {
     pub(crate) inner: LdpcCode,

@@ -14,7 +14,7 @@ use comnum::waveform::fsk::Fsk;
 ///
 /// The receiver correlates every symbol with the :math:`M` tones and needs neither the
 /// phase nor the exact frequency of the carrier; its error rate over white noise is
-/// `theory_ber_fsk_noncoherent`.
+/// `theory_ber_fsk_noncoherent` ([1]_, Sec. 4.5).
 ///
 /// Args:
 ///     m (int): the number of tones.
@@ -24,6 +24,10 @@ use comnum::waveform::fsk::Fsk;
 ///
 /// Raises:
 ///     ValueError: for an invalid parameter (the message names it).
+///
+/// References:
+///     .. [1] J. G. Proakis and M. Salehi, *Digital Communications*, 5th ed., McGraw-Hill,
+///        2008.
 ///
 /// Examples:
 ///     >>> import comnum
@@ -127,11 +131,11 @@ impl PyFsk {
 }
 
 /// The bit error rate of :math:`M` orthogonal signals detected noncoherently over white
-/// noise (noncoherent :math:`M`-FSK; Proakis & Salehi, Sec. 4.5).
+/// noise (noncoherent :math:`M`-FSK).
 ///
 /// The magnitude of the matched filter of the sent signal is Rice of location
 /// :math:`v = \sqrt{2 E_s/N_0}`, :math:`E_s = E_b \log_2 M`, the :math:`M - 1` others
-/// Rayleigh, and the largest wins:
+/// Rayleigh, and the largest wins ([1]_, Sec. 4.5):
 ///
 /// .. math::
 ///
@@ -153,6 +157,10 @@ impl PyFsk {
 ///
 /// Raises:
 ///     ValueError: for fewer than two tones.
+///
+/// References:
+///     .. [1] J. G. Proakis and M. Salehi, *Digital Communications*, 5th ed., McGraw-Hill,
+///        2008.
 ///
 /// Examples:
 ///     >>> import comnum, math

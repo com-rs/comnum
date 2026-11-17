@@ -58,7 +58,7 @@ fn emitters(
 
 /// The Lambertian mode of a source of semi-angle at half power :math:`\Phi_{1/2}` (rad).
 ///
-/// The mode is
+/// The mode [1]_ is
 ///
 /// .. math::
 ///
@@ -74,6 +74,11 @@ fn emitters(
 ///
 /// Raises:
 ///     ValueError: for an invalid parameter (the message names it).
+///
+/// References:
+///     .. [1] J. R. Barry, J. M. Kahn, W. J. Krause, E. A. Lee and D. G. Messerschmitt,
+///        "Simulation of multipath impulse response for indoor wireless optical
+///        channels," *IEEE J. Sel. Areas Commun.*, 11(3), 367–379, 1993.
 #[pyfunction]
 fn lambertian_mode(semi_angle_rad: f64) -> PyResult<f64> {
     indoor::lambertian_mode(semi_angle_rad).py()
@@ -99,7 +104,9 @@ fn owc_direction(py: Python<'_>, elevation_rad: f64, azimuth_rad: f64) -> FArr<'
 }
 
 /// The illuminance (lx) at `point`, on a surface of normal `normal`, of LED chips of
-/// centre luminous intensity `intensity_cd` (Komine & Nakagawa 2004, eq. (5)):
+/// centre luminous intensity `intensity_cd`.
+///
+/// The illuminance is ([1]_, eq. (5))
 ///
 /// .. math::
 ///
@@ -121,6 +128,11 @@ fn owc_direction(py: Python<'_>, elevation_rad: f64, azimuth_rad: f64) -> FArr<'
 ///
 /// Raises:
 ///     ValueError: for an invalid parameter or input (the message names it).
+///
+/// References:
+///     .. [1] T. Komine and M. Nakagawa, "Fundamental analysis for visible-light
+///        communication system using LED lights," *IEEE Trans. Consum. Electron.*,
+///        50(1), 100–107, 2004.
 #[pyfunction]
 fn owc_illuminance(
     positions: &Bound<'_, PyAny>,
@@ -241,14 +253,14 @@ impl PyImpulseResponse {
     }
 }
 
-/// An empty rectangular room :math:`[0, L] \times [0, W] \times [0, H]` with Lambertian walls
-/// (Barry et al. 1993): north and south are the walls :math:`x = L` and :math:`x = 0`,
+/// An empty rectangular room :math:`[0, L] \times [0, W] \times [0, H]` with Lambertian
+/// walls: north and south are the walls :math:`x = L` and :math:`x = 0`,
 /// west and east :math:`y = W` and :math:`y = 0`.
 ///
 /// An emitter of power :math:`P` and mode :math:`n` gives a detector of area :math:`A`,
 /// field of view :math:`\Psi`, optical filter gain :math:`T_s` and concentrator gain
 /// :math:`g(\psi)` at the distance :math:`R`, along the line of sight, the power
-/// (Barry et al. 1993, eqs. (4)–(9); Komine & Nakagawa 2004, eqs. (6)–(8))
+/// ([1]_, eqs. (4)–(9); [2]_, eqs. (6)–(8))
 ///
 /// .. math::
 ///
@@ -257,7 +269,7 @@ impl PyImpulseResponse {
 ///
 /// A reflecting element is a detector with a field of view of 90° and then a source of
 /// mode 1, so that the light reflected :math:`k` times follows from the light reflected
-/// :math:`k - 1` times (Barry et al. 1993, eqs. (10)–(13)):
+/// :math:`k - 1` times ([1]_, eqs. (10)–(13)):
 ///
 /// .. math::
 ///
@@ -273,6 +285,14 @@ impl PyImpulseResponse {
 ///
 /// Raises:
 ///     ValueError: for an invalid parameter or input (the message names it).
+///
+/// References:
+///     .. [1] J. R. Barry, J. M. Kahn, W. J. Krause, E. A. Lee and D. G. Messerschmitt,
+///        "Simulation of multipath impulse response for indoor wireless optical
+///        channels," *IEEE J. Sel. Areas Commun.*, 11(3), 367–379, 1993.
+///     .. [2] T. Komine and M. Nakagawa, "Fundamental analysis for visible-light
+///        communication system using LED lights," *IEEE Trans. Consum. Electron.*,
+///        50(1), 100–107, 2004.
 ///
 /// Examples:
 ///     >>> import comnum, numpy as np
@@ -411,7 +431,7 @@ impl PyIllumination {
 
 /// The Rytov variance of a plane wave.
 ///
-/// The variance is
+/// The variance [1]_ is
 ///
 /// .. math::
 ///
@@ -426,15 +446,19 @@ impl PyIllumination {
 ///
 /// Returns:
 ///     float: :math:`\sigma_1^2`.
+///
+/// References:
+///     .. [1] M. A. Khalighi and M. Uysal, "Survey on free space optical communication:
+///        a communication theory perspective," *IEEE Commun. Surveys Tuts.*, 16(4),
+///        2231–2258, 2014.
 #[pyfunction]
 fn rytov_variance(cn2: f64, wavelength_m: f64, length_m: f64) -> f64 {
     fso::rytov_variance(cn2, wavelength_m, length_m)
 }
 
-/// The attenuation (dB/km) of haze and fog for a visibility `visibility_km` (Kim et al.
-/// 2001).
+/// The attenuation (dB/km) of haze and fog for a visibility `visibility_km`.
 ///
-/// The attenuation is
+/// The attenuation [1]_ is
 ///
 /// .. math::
 ///
@@ -453,15 +477,19 @@ fn rytov_variance(cn2: f64, wavelength_m: f64, length_m: f64) -> f64 {
 ///
 /// Raises:
 ///     ValueError: for an invalid parameter (the message names it).
+///
+/// References:
+///     .. [1] I. I. Kim, B. McArthur and E. Korevaar, "Comparison of laser beam
+///        propagation at 785 nm and 1550 nm in fog and haze for optical wireless
+///        communications," *Proc. SPIE* 4214, 26–37, 2001.
 #[pyfunction]
 fn fog_attenuation_db_per_km(visibility_km: f64, wavelength_nm: f64) -> PyResult<f64> {
     fso::attenuation_db_per_km(visibility_km, wavelength_nm).py()
 }
 
-/// The gamma–gamma distribution of the intensity, of unit mean (Al-Habash, Andrews &
-/// Phillips 2001).
+/// The gamma–gamma distribution of the intensity, of unit mean.
 ///
-/// The density and the scintillation index are (their eqs. (10)–(15))
+/// The density and the scintillation index are ([1]_, eqs. (10)–(15))
 ///
 /// .. math::
 ///
@@ -475,6 +503,11 @@ fn fog_attenuation_db_per_km(visibility_km: f64, wavelength_nm: f64) -> PyResult
 ///
 /// Raises:
 ///     ValueError: for an invalid parameter (the message names it).
+///
+/// References:
+///     .. [1] M. A. Al-Habash, L. C. Andrews and R. L. Phillips, "Mathematical model for
+///        the irradiance probability density function of a laser beam propagating
+///        through turbulent media," *Opt. Eng.*, 40(8), 1554–1562, 2001.
 ///
 /// Examples:
 ///     >>> import comnum
@@ -574,10 +607,10 @@ impl PyGammaGamma {
 }
 
 /// The misalignment of a Gaussian beam on a circular aperture, a Rayleigh radial
-/// displacement (Farid & Hranilovic 2007).
+/// displacement.
 ///
 /// A beam of radius :math:`w_z` at the receiver, an aperture of radius :math:`a` and a
-/// radial displacement :math:`r` collect the fraction
+/// radial displacement :math:`r` collect the fraction [1]_
 ///
 /// .. math::
 ///
@@ -598,6 +631,11 @@ impl PyGammaGamma {
 ///
 /// Raises:
 ///     ValueError: for an invalid parameter (the message names it).
+///
+/// References:
+///     .. [1] A. A. Farid and S. Hranilovic, "Outage capacity optimization for free-space
+///        optical links with pointing errors," *J. Lightw. Technol.*, 25(7), 1702–1710,
+///        2007.
 #[pyclass(name = "PointingError", module = "comnum")]
 #[derive(Clone, Copy)]
 pub struct PyPointingError {
@@ -700,7 +738,7 @@ impl PyPointingError {
 
 /// A free-space optical link: a deterministic loss, turbulence and pointing errors.
 ///
-/// The gain of the intensity is
+/// The gain of the intensity is [1]_
 ///
 /// .. math::
 ///
@@ -719,6 +757,11 @@ impl PyPointingError {
 ///
 /// Raises:
 ///     ValueError: for an invalid parameter or input (the message names it).
+///
+/// References:
+///     .. [1] M. A. Khalighi and M. Uysal, "Survey on free space optical communication:
+///        a communication theory perspective," *IEEE Commun. Surveys Tuts.*, 16(4),
+///        2231–2258, 2014.
 ///
 /// Examples:
 ///     >>> import comnum
@@ -788,10 +831,9 @@ impl PyFso {
     }
 }
 
-/// A PIN photodiode with a FET preamplifier: shot and thermal noise (Komine & Nakagawa
-/// 2004, eqs. (18)–(21)).
+/// A PIN photodiode with a FET preamplifier: shot and thermal noise.
 ///
-/// The variances of the shot and thermal noise and the SNR of on–off keying are (their
+/// The variances of the shot and thermal noise and the SNR of on–off keying are ([1]_,
 /// eqs. (16)–(18), (20)–(21))
 ///
 /// .. math::
@@ -821,6 +863,11 @@ impl PyFso {
 ///     temperature_k (float): the absolute temperature (K).
 ///     i2 (float): the noise bandwidth factor :math:`I_2`.
 ///     i3 (float): the noise bandwidth factor :math:`I_3`.
+///
+/// References:
+///     .. [1] T. Komine and M. Nakagawa, "Fundamental analysis for visible-light
+///        communication system using LED lights," *IEEE Trans. Consum. Electron.*,
+///        50(1), 100–107, 2004.
 ///
 /// Examples:
 ///     >>> import comnum

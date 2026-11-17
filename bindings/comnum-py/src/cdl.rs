@@ -17,7 +17,7 @@ fn profile(name: &str) -> PyResult<Profile> {
 /// The power-delay profile of a CDL profile of 3GPP TR 38.901 for a desired RMS delay
 /// spread: one tap per cluster.
 ///
-/// The five profiles are the Tables 7.7.1-1 to 7.7.1-5 of TR 38.901 V17.0.0: CDL-A,
+/// The five profiles are the Tables 7.7.1-1 to 7.7.1-5 of [1]_: CDL-A,
 /// CDL-B and CDL-C without line of sight (23, 23 and 24 clusters), CDL-D and CDL-E
 /// with a specular component in the first cluster (13 and 14 clusters). The delays of
 /// the tables are normalised to a unit RMS delay spread and scaled by the desired one
@@ -43,6 +43,10 @@ fn profile(name: &str) -> PyResult<Profile> {
 /// Raises:
 ///     ValueError: for an invalid parameter (the message names it).
 ///
+/// References:
+///     .. [1] 3GPP TR 38.901 V17.0.0 (2022-03), *Study on channel model for frequencies
+///        from 0.5 to 100 GHz*.
+///
 /// Examples:
 ///     >>> import comnum
 ///     >>> taps = comnum.cdl_profile("CDL-C", 100e-9)
@@ -58,7 +62,7 @@ fn cdl_profile<'py>(py: Python<'py>, name: &str, delay_spread_s: f64) -> PyResul
 
 /// The Rician K-factor (dB) of the first cluster of a CDL profile.
 ///
-/// Tables 7.7.1-4 and 7.7.1-5 of 3GPP TR 38.901 V17.0.0 give cluster 1 of CDL-D and
+/// Tables 7.7.1-4 and 7.7.1-5 of [1]_ give cluster 1 of CDL-D and
 /// CDL-E as two rows, a specular (LOS) path and a Laplacian cluster; the K-factor is
 /// their power difference, 13.3 dB for CDL-D (−0.2 against −13.5 dB) and 22 dB for
 /// CDL-E (−0.03 against −22.03 dB). CDL-A, B and C have no line of sight.
@@ -72,6 +76,10 @@ fn cdl_profile<'py>(py: Python<'py>, name: &str, delay_spread_s: f64) -> PyResul
 /// Raises:
 ///     ValueError: for an invalid parameter (the message names it).
 ///
+/// References:
+///     .. [1] 3GPP TR 38.901 V17.0.0 (2022-03), *Study on channel model for frequencies
+///        from 0.5 to 100 GHz*.
+///
 /// Examples:
 ///     >>> import comnum
 ///     >>> round(comnum.cdl_k_factor_db("CDL-D"), 6), comnum.cdl_k_factor_db("CDL-A")
@@ -84,8 +92,9 @@ fn cdl_k_factor_db(name: &str) -> PyResult<Option<f64>> {
 /// A clustered delay line channel of 3GPP TR 38.901 (CDL-A to CDL-E) between two
 /// uniform linear arrays, with the Doppler of a moving receiver.
 ///
-/// Every cluster of the table is a tap of 20 rays (Table 7.5-3 gives the ray offsets
-/// `alpha_m` scaled by the per-cluster angular spreads of the last rows of the table),
+/// Every cluster of the table is a tap of 20 rays (Table 7.5-3 of [1]_ gives the ray
+/// offsets `alpha_m` scaled by the per-cluster angular spreads of the last rows of the
+/// table),
 /// each ray with its departure and arrival angles, its random initial phases, the
 /// cross-polarisation ratio of the table and the phase it accumulates across the
 /// elements of the arrays, so the spatial correlation follows from the geometry
@@ -133,6 +142,10 @@ fn cdl_k_factor_db(name: &str) -> PyResult<Option<f64>> {
 ///
 /// Raises:
 ///     ValueError: for an invalid parameter (the message names it).
+///
+/// References:
+///     .. [1] 3GPP TR 38.901 V17.0.0 (2022-03), *Study on channel model for frequencies
+///        from 0.5 to 100 GHz*.
 ///
 /// Examples:
 ///     >>> import comnum, numpy as np

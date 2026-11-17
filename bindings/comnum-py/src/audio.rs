@@ -46,9 +46,11 @@ fn bits_to_text(bits: &Bound<'_, PyAny>) -> PyResult<String> {
     Ok(comnum::math::bits::bits_to_text(&bvec(bits)?))
 }
 
-/// The bits of one HDLC frame (ISO/IEC 13239) of a payload: the flag `01111110`, the
-/// payload and its frame check sequence (CRC-16/X-25), least significant bit first and
-/// bit-stuffed, and the closing flag. A receiver finds the frame in a stream of bits
+/// The bits of one HDLC frame of a payload.
+///
+/// The frame [1]_ is the flag `01111110`, the payload and its frame check sequence
+/// (CRC-16/X-25), least significant bit first and bit-stuffed, and the closing flag. A
+/// receiver finds the frame in a stream of bits
 /// by its flags and knows by the check sequence whether it is intact.
 ///
 /// Args:
@@ -59,6 +61,9 @@ fn bits_to_text(bits: &Bound<'_, PyAny>) -> PyResult<String> {
 ///
 /// Raises:
 ///     TypeError: for a payload that is neither bytes nor a text.
+///
+/// References:
+///     .. [1] ISO/IEC 13239:2002, *High-level data link control (HDLC) procedures*.
 ///
 /// Examples:
 ///     >>> import comnum

@@ -577,7 +577,13 @@ first; the doctests the last.
   autosummary) in `docs/python`, with tutorials and a gallery of classical results run
   when the documentation is built (`sphinx-gallery`). Python docstrings are written for
   Python users, not copied from rustdoc. The stub `python/comnum/_comnum.pyi` is
-  generated from them (`tools/gen_stubs.py`).
+  generated from them (`tools/gen_stubs.py`). A class or a function states its model
+  as a displayed equation (`.. math::`, never inside `Args:` or `Returns:`) and cites
+  its sources as NumPy does: a marker `[1]_` where the source is used (never in the
+  summary line; the locator next to it, `([1]_, eq. (3))`), and a `References:`
+  section, between `Raises:` and `Examples:`, of `.. [1] ...` entries numbered in the
+  order of first citation, copied from the `# References` of the rustdoc. Methods cite
+  nothing: they are rendered on the page of their class.
 
 ```toml
 # .cargo/config.toml (local builds)

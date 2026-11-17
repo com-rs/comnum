@@ -157,6 +157,8 @@ fn llr_streams(py: Python<'_>, rows: Rows<f64>, bits: usize, single: bool) -> Py
 /// Flat MIMO channel matrices: Rayleigh or Rician fading, with exponential antenna
 /// correlation (Kronecker model).
 ///
+/// The channel of the Kronecker model [1]_ is
+///
 /// .. math::
 ///
 ///     \mathbf{H} = \sqrt{\tfrac{K}{K+1}}\, \mathbf{H}_{\mathrm{LOS}}
@@ -164,7 +166,7 @@ fn llr_streams(py: Python<'_>, rows: Rows<f64>, bits: usize, single: bool) -> Py
 ///
 /// with :math:`\mathbf{G}` of independent :math:`\mathcal{CN}(0, 1)` entries,
 /// :math:`\mathbf{L}\mathbf{L}^{\mathsf{H}}` the exponential correlation
-/// :math:`[\mathbf{R}]_{ij} = \rho^{j-i}`, and :math:`\mathbf{H}_{\mathrm{LOS}}` all
+/// :math:`[\mathbf{R}]_{ij} = \rho^{j-i}` [2]_, and :math:`\mathbf{H}_{\mathrm{LOS}}` all
 /// ones; every entry has unit mean power.
 ///
 /// Args:
@@ -181,6 +183,12 @@ fn llr_streams(py: Python<'_>, rows: Rows<f64>, bits: usize, single: bool) -> Py
 ///
 /// Raises:
 ///     ValueError: for an invalid parameter or input (the message names it).
+///
+/// References:
+///     .. [1] J. P. Kermoal et al., "A stochastic MIMO radio channel model with
+///        experimental validation," *IEEE J. Sel. Areas Commun.*, 20(6), 2002.
+///     .. [2] S. L. Loyka, "Channel capacity of MIMO architecture using the exponential
+///        correlation matrix," *IEEE Commun. Lett.*, 5(9), 2001.
 ///
 /// Examples:
 ///     >>> import comnum
@@ -260,6 +268,8 @@ fn flat_mimo(n_rx: usize, n_tx: usize, k_factor: f64, rx_correlation: C64, tx_co
 ///
 ///     [\mathbf{R}]_{ij} = \rho^{j-i}.
 ///
+/// It is the one-parameter model of a uniform linear array [1]_.
+///
 /// Args:
 ///     n (int): number of antennas.
 ///     rho (complex): correlation :math:`\rho` of adjacent antennas, :math:`|\rho| \le 1`.
@@ -269,6 +279,10 @@ fn flat_mimo(n_rx: usize, n_tx: usize, k_factor: f64, rx_correlation: C64, tx_co
 ///
 /// Raises:
 ///     ValueError: for a negative count.
+///
+/// References:
+///     .. [1] S. L. Loyka, "Channel capacity of MIMO architecture using the exponential
+///        correlation matrix," *IEEE Commun. Lett.*, 5(9), 2001.
 ///
 /// Examples:
 ///     >>> import comnum
@@ -292,10 +306,10 @@ fn exponential_correlation<'py>(py: Python<'py>, n: i64, rho: C64) -> PyResult<B
 /// variance :math:`\mathbb{E}|w_i|^2` per receive antenna.
 ///
 /// Methods: `"mr"` (matched filter), `"zf"`, `"mmse"` (linear, unbiased), `"zf_sic"`, `"mmse_sic"` (ordered
-/// successive interference cancellation, V-BLAST), `"ml"` (exhaustive search),
-/// `"sphere"` (exact ML by the Schnorr–Euchner sphere decoder), `"kbest"` (K-best tree
-/// search keeping `k` paths), `"amp"` (LAMA, the complex Bayesian AMP of Jeon et al.)
-/// and `"oamp"` (OAMP-LMMSE of Ma & Ping), both for large systems.
+/// successive interference cancellation, V-BLAST [1]_), `"ml"` (exhaustive search),
+/// `"sphere"` (exact ML by the Schnorr–Euchner sphere decoder [2]_), `"kbest"` (K-best
+/// tree search keeping `k` paths [3]_), `"amp"` (LAMA, the complex Bayesian AMP of [4]_)
+/// and `"oamp"` (OAMP-LMMSE of [5]_), both for large systems.
 ///
 /// Args:
 ///     h (array_like): the channel, `(n_rx, n_tx)` for every vector or `(n, n_rx, n_tx)`.
@@ -311,6 +325,19 @@ fn exponential_correlation<'py>(py: Python<'py>, n: i64, rho: C64) -> PyResult<B
 ///
 /// Raises:
 ///     ValueError: for an invalid parameter or input (the message names it).
+///
+/// References:
+///     .. [1] P. W. Wolniansky, G. J. Foschini, G. D. Golden and R. A. Valenzuela,
+///        "V-BLAST: an architecture for realizing very high data rates over the
+///        rich-scattering wireless channel," *Proc. ISSSE*, 1998.
+///     .. [2] E. Agrell, T. Eriksson, A. Vardy and K. Zeger, "Closest point search in
+///        lattices," *IEEE Trans. Inf. Theory*, 48(8), 2002.
+///     .. [3] Z. Guo and P. Nilsson, "Algorithm and implementation of the K-best sphere
+///        decoding for MIMO detection," *IEEE J. Sel. Areas Commun.*, 24(3), 2006.
+///     .. [4] C. Jeon, R. Ghods, A. Maleki and C. Studer, "Optimal data detection in large
+///        MIMO," arXiv:1811.01917, 2018.
+///     .. [5] J. Ma and L. Ping, "Orthogonal AMP," *IEEE Access*, 5, 2020–2033, 2017
+///        (arXiv:1602.06509).
 ///
 /// Examples:
 ///     >>> import comnum, numpy as np
@@ -401,7 +428,7 @@ fn mimo_llr(
 ///
 /// with the dispersion matrices :math:`A_{k} = X(e_{k})` and :math:`B_{k} = X(j e_{k})`
 /// and the scale :math:`c` of the unit energy. Decoding turns the block
-/// :math:`Y = H X^{T} + W` into one scalar channel per symbol,
+/// :math:`Y = H X^{T} + W` into one scalar channel per symbol [1]_,
 ///
 /// .. math::
 ///
@@ -409,7 +436,13 @@ fn mimo_llr(
 ///     \mathbb{E}|n_k|^2 = \sigma^2 / (c^2 \lVert \mathbf{H} \rVert_F^2),
 ///
 /// a diversity of :math:`n_{\mathrm{tx}} \cdot n_{\mathrm{rx}}`. Build it with
-/// `Ostbc.alamouti()` or `Ostbc.rate_3_4(n_tx)`.
+/// `Ostbc.alamouti()` [2]_ or `Ostbc.rate_3_4(n_tx)`.
+///
+/// References:
+///     .. [1] V. Tarokh, H. Jafarkhani and A. R. Calderbank, "Space-time block codes from
+///        orthogonal designs," *IEEE Trans. Inf. Theory*, 45(5), 1999.
+///     .. [2] S. M. Alamouti, "A simple transmit diversity technique for wireless
+///        communications," *IEEE J. Sel. Areas Commun.*, 16(8), 1998.
 ///
 /// Examples:
 ///     >>> import comnum, numpy as np
@@ -535,7 +568,7 @@ impl PyOstbc {
 
 /// Water-filling powers of parallel channels.
 ///
-/// The powers that maximise :math:`\sum_i \log_2(1 + p_i g_i)` are
+/// The powers that maximise :math:`\sum_i \log_2(1 + p_i g_i)` are [1]_
 ///
 /// .. math::
 ///
@@ -552,6 +585,10 @@ impl PyOstbc {
 ///
 /// Raises:
 ///     ValueError: for an invalid parameter or input (the message names it).
+///
+/// References:
+///     .. [1] E. Telatar, "Capacity of multi-antenna Gaussian channels,"
+///        *Eur. Trans. Telecommun.*, 10(6), 1999.
 ///
 /// Examples:
 ///     >>> import comnum
@@ -575,7 +612,7 @@ fn water_filling_powers<'py>(
 ///     \mathbf{H}\mathbf{H}^{\mathsf{H}}\right)
 ///
 /// with equal power, or :math:`C = \sum_{i} \log_{2}(1 + p_{i} \sigma_{i}^{2})` with
-/// water-filling on the eigenmodes.
+/// water-filling on the eigenmodes [1]_.
 ///
 /// Args:
 ///     h (array_like): `(n, n_rx, n_tx)`, one matrix per realisation (one matrix
@@ -589,6 +626,10 @@ fn water_filling_powers<'py>(
 ///
 /// Raises:
 ///     ValueError: for an invalid parameter or input (the message names it).
+///
+/// References:
+///     .. [1] E. Telatar, "Capacity of multi-antenna Gaussian channels,"
+///        *Eur. Trans. Telecommun.*, 10(6), 1999.
 ///
 /// Examples:
 ///     >>> import comnum, numpy as np
@@ -615,8 +656,7 @@ fn mimo_capacity<'py>(py: Python<'py>, h: &Bound<'py, PyAny>, snr_db: f64, water
 /// over the realisations.
 ///
 /// With :math:`m = \min(n_{r}, n_{t})`, :math:`n = \max(n_{r}, n_{t})` and the
-/// associated Laguerre polynomials :math:`L_{k}^{n-m}` (Telatar 1999, Theorem 2,
-/// eq. (8)),
+/// associated Laguerre polynomials :math:`L_{k}^{n-m}` ([1]_, Theorem 2, eq. (8)),
 ///
 /// .. math::
 ///
@@ -636,6 +676,10 @@ fn mimo_capacity<'py>(py: Python<'py>, h: &Bound<'py, PyAny>, snr_db: f64, water
 /// Raises:
 ///     ValueError: for an invalid parameter or input (the message names it).
 ///
+/// References:
+///     .. [1] E. Telatar, "Capacity of multi-antenna Gaussian channels,"
+///        *Eur. Trans. Telecommun.*, 10(6), 1999.
+///
 /// Examples:
 ///     >>> import comnum
 ///     >>> round(comnum.theory_ergodic_capacity(1, 1, 10.0), 4)   # log2(e) e^0.1 E1(0.1)
@@ -646,8 +690,7 @@ fn theory_ergodic_capacity(n_rx: usize, n_tx: usize, snr_db: &Bound<'_, PyAny>) 
 }
 
 /// The probability that a Rayleigh channel drawn once cannot carry `rate` bits per
-/// channel use with equal power, one antenna on one side (Telatar 1999, eq. (16) and
-/// Example 7).
+/// channel use with equal power, one antenna on one side.
 ///
 /// :math:`\lVert h \rVert^{2}` is a gamma variable of shape
 /// :math:`k = \max(n_{r}, n_{t})`, so that
@@ -657,7 +700,8 @@ fn theory_ergodic_capacity(n_rx: usize, n_tx: usize, snr_db: &Bound<'_, PyAny>) 
 ///     P_{\mathrm{out}} = P\left(\log_{2} \det\left(I + \frac{\rho}{n_{t}} H H^{H}\right) < R\right)
 ///     = P\left(k, \frac{n_{t} (2^{R} - 1)}{\rho}\right),
 ///
-/// with the regularized incomplete gamma function :math:`P(k, x)`.
+/// with the regularized incomplete gamma function :math:`P(k, x)` ([1]_, eq. (16) and
+/// Example 7).
 ///
 /// Args:
 ///     n_rx (int): receive antennas.
@@ -670,14 +714,19 @@ fn theory_ergodic_capacity(n_rx: usize, n_tx: usize, snr_db: &Bound<'_, PyAny>) 
 ///
 /// Raises:
 ///     ValueError: for an invalid parameter or input (the message names it).
+///
+/// References:
+///     .. [1] E. Telatar, "Capacity of multi-antenna Gaussian channels,"
+///        *Eur. Trans. Telecommun.*, 10(6), 1999.
 #[pyfunction]
 fn theory_outage_probability(n_rx: usize, n_tx: usize, snr_db: &Bound<'_, PyAny>, rate: f64) -> PyResult<Py<PyAny>> {
     crate::map_real(snr_db, |s| capacity::outage_rayleigh(n_rx, n_tx, comnum::math::db2lin(s), rate).py())
 }
 
 /// The :math:`\epsilon`-capacity (bits per channel use): the rate of outage probability `eps`
-/// over a Rayleigh channel drawn once, one antenna on one side (Telatar 1999, eqs. (17),
-/// (18)):
+/// over a Rayleigh channel drawn once, one antenna on one side.
+///
+/// The rate is ([1]_, eqs. (17), (18))
 ///
 /// .. math::
 ///
@@ -697,6 +746,10 @@ fn theory_outage_probability(n_rx: usize, n_tx: usize, snr_db: &Bound<'_, PyAny>
 ///
 /// Raises:
 ///     ValueError: for an invalid parameter or input (the message names it).
+///
+/// References:
+///     .. [1] E. Telatar, "Capacity of multi-antenna Gaussian channels,"
+///        *Eur. Trans. Telecommun.*, 10(6), 1999.
 #[pyfunction]
 fn theory_outage_capacity(n_rx: usize, n_tx: usize, snr_db: &Bound<'_, PyAny>, eps: f64) -> PyResult<Py<PyAny>> {
     crate::map_real(snr_db, |s| capacity::outage_capacity_rayleigh(n_rx, n_tx, comnum::math::db2lin(s), eps).py())
@@ -707,7 +760,7 @@ fn theory_outage_capacity(n_rx: usize, n_tx: usize, snr_db: &Bound<'_, PyAny>, e
 ///
 /// With the SVD :math:`\mathbf{H} = \mathbf{U} \boldsymbol{\Sigma} \mathbf{V}^{\mathsf{H}}`,
 /// sending :math:`\mathbf{x} = \mathbf{V}\mathbf{P}^{1/2} \mathbf{s}` and filtering with
-/// :math:`\mathbf{U}^{\mathsf{H}}` gives parallel scalar channels:
+/// :math:`\mathbf{U}^{\mathsf{H}}` gives parallel scalar channels [1]_:
 ///
 /// .. math::
 ///
@@ -725,6 +778,10 @@ fn theory_outage_capacity(n_rx: usize, n_tx: usize, snr_db: &Bound<'_, PyAny>, e
 ///
 /// Raises:
 ///     ValueError: for an invalid parameter or input (the message names it).
+///
+/// References:
+///     .. [1] E. Telatar, "Capacity of multi-antenna Gaussian channels,"
+///        *Eur. Trans. Telecommun.*, 10(6), 1999.
 #[pyfunction]
 #[pyo3(signature = (h, total_power, noise_var, *, water_filling=true))]
 fn eigenmode<'py>(
@@ -755,7 +812,7 @@ fn eigenmode<'py>(
 ///     \qquad \lVert \mathbf{W} \rVert_{F}^{2} = P,
 ///
 /// with :math:`\alpha = 0` for zero forcing, :math:`K \sigma^2 / P` for the regularised
-/// version.
+/// version [1]_.
 ///
 /// Args:
 ///     h (array_like): the channel `(n_users, n_tx)`.
@@ -767,6 +824,11 @@ fn eigenmode<'py>(
 ///
 /// Raises:
 ///     ValueError: for an invalid parameter or input (the message names it).
+///
+/// References:
+///     .. [1] C. B. Peel, B. M. Hochwald and A. L. Swindlehurst, "A vector-perturbation
+///        technique for near-capacity multiantenna multiuser communication — Part I:
+///        channel inversion and regularization," *IEEE Trans. Commun.*, 53(1), 2005.
 #[pyfunction]
 #[pyo3(signature = (h, *, total_power=1.0, alpha=0.0))]
 fn zf_precoder<'py>(
