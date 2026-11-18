@@ -565,7 +565,9 @@ def test_power_maps_of_the_bidirectional_designs_of_soltani_2022(design):
     raw = np.abs(power - np.asarray(ref["power_dbm_comnum_fine"])).max()
 
     # the readings of Fig. 5 (card soltani2022_fig5) against the three couplings
-    with open(Path(__file__).parents[2] / "validation/cards/soltani2022_fig5.yaml") as f:
+    with open(
+        Path(__file__).parents[2] / "validation/cards/soltani2022_fig5.yaml", encoding="utf-8"
+    ) as f:
         cases = [c for c in yaml.safe_load(f)["cases"] if c["inputs"]["design"] == design]
 
     def gap(m):
