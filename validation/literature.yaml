@@ -903,11 +903,13 @@
   tested: "Fig. 5 with the pumps of Table III (80 km, four co- and four counter-pumps at 1366 to 1475 nm, two of second order, 40 channels at 0 dBm; the gain of standard silica at the peak of the paper, 0.4125 1/(W km), not scaled with the pump frequency as in GNPy up to 2.4): the four designs within 0.39 dB of the figure along the span, 0.17 to 0.33 dB above it on average at 80 km (0.91 dB at most); scaled with the pump frequency (the default) 0.70 to 0.88 dB above it"
   tests:
     - validation/tests/fiber/soltani2022.rs::soltani_2022_fig_5_power_maps_of_table_iii
+    - tests/oracle/test_gnpy_oracle.py::test_power_maps_of_the_bidirectional_designs_of_soltani_2022
   badge: orange
   not_covered: "the symmetric designs of Table V and Fig. 8; the neural networks and the differential evolution (out of scope)"
   remarks:
     - "the gain table, the version of GNPy and the coupler losses are not given; the excursions of Table IV are not all reproduced (J0 3.18 against 2.81 dB for m(1), J1 1.67 against 0.88 for m(2)), not explained"
     - "some powers of Table V lie outside the ranges of Table I (p5 = 1480 mW above the 1.2 W of the data set and the 1.4 W of the text)"
+    - "the maps of Fig. 5 were computed with GNPy, but GNPy 3.0.1 does not give them: as shipped (effective area against frequency, gain scaled with the pump frequency, the pump losing the power the signal gains) it is 1.87 to 2.18 dB above the readings on average; with its gain table, a constant 80 um^2 and no pump scaling, 0.55 to 0.70 dB, and 0.22 to 0.36 dB with the photon conservation, where comnum and GNPy then agree within 9e-7 dB on the whole map (recorded)"
 - id: yankov2023
   area: Optical
   ref: "M. P. Yankov, F. Da Ros, U. C. de Moura, A. Carena, D. Zibar, Flexible Raman amplifier optimization based on machine learning-aided physical stimulated Raman scattering model, JLT 41(2), 508-514, 2023"

@@ -29,6 +29,7 @@ Re-recording is a deliberate act: the commit that changes the fixtures says why 
 names the version of GNPy (the ``version`` field of the files).
 """
 
+from pathlib import Path
 from types import SimpleNamespace as NS
 
 import numpy as np
@@ -42,14 +43,17 @@ C0 = 299_792_458.0
 FC = 193.1e12
 
 
-def coupling(freqs, aeff=80e-12):
-    """The Raman coefficients of comnum (1/(W m)): the gain efficiency of the lower wave,
-    the loss of the higher one scaled by the ratio of the frequencies."""
+def coupling(freqs, aeff=80e-12, pump_scaling=True, photons=True):
+    """The Raman coefficients of comnum (1/(W m)) with the gain spectrum of GNPy: the gain
+    efficiency of the lower wave (scaled with the frequency of the higher one, unless
+    ``pump_scaling`` is False), the loss of the higher one scaled by the ratio of the
+    frequencies (the photon conservation; without ``photons``, the higher wave loses the
+    power the lower one gains)."""
     from gnpy.core.parameters import DEFAULT_RAMAN_COEFFICIENT as d
 
     def eff(fs, fp):
         g = np.interp(fp - fs, d["frequency_offset"], d["gamma_raman"], right=0.0)
-        return g * fp / d["reference_frequency"] / aeff
+        return g * (fp / d["reference_frequency"] if pump_scaling else 1.0) / aeff
 
     n = len(freqs)
     cr = np.zeros((n, n))
@@ -58,8 +62,24 @@ def coupling(freqs, aeff=80e-12):
             if freqs[j] > freqs[k]:
                 cr[k, j] = eff(freqs[k], freqs[j])
             elif freqs[j] < freqs[k]:
-                cr[k, j] = -(freqs[k] / freqs[j]) * eff(freqs[j], freqs[k])
+                ratio = freqs[k] / freqs[j] if photons else 1.0
+                cr[k, j] = -ratio * eff(freqs[j], freqs[k])
     return cr
+
+
+def gnpy_gain(pump_scaling=True):
+    """The gain spectrum of GNPy (its positive offsets) as the ``gain`` of comnum, to be
+    recorded with the outputs of GNPy (the tests run without it)."""
+    from gnpy.core.parameters import DEFAULT_RAMAN_COEFFICIENT as d
+
+    off = np.asarray(d["frequency_offset"])
+    keep = off > 0
+    return {
+        "offsets_thz": [0.0, *(off[keep] / 1e12)],
+        "gain_m_w": [0.0, *np.asarray(d["gamma_raman"])[keep]],
+        "reference_thz": d["reference_frequency"] / 1e12,
+        "pump_scaling": pump_scaling,
+    }
 
 
 def pump_frequency(p):
@@ -423,6 +443,154 @@ def test_on_off_gain_of_four_counter_pumps_against_the_load():
         # 0.120 dB, the load depleting the pumps more
         assert err < 3e-6, (total_dbm, err)
         assert 0.03 < native < 0.15, (total_dbm, native)
+
+
+SOLTANI_DESIGNS = {
+    "a": [330, 33, 145, 12, 1030, 12, 19, 43],
+    "b": [430, 45, 98, 12, 1150, 8, 12, 24],
+    "c": [440, 49, 90, 13, 1060, 6, 18, 63],
+    "d": [450, 47, 76, 14, 990, 6, 21, 63],
+}
+"""The pump powers (mW) of Table III of Soltani et al. 2022: co-pumps at 1366, 1425, 1455
+and 1475 nm, then counter-pumps at the same wavelengths."""
+
+SOLTANI_STEPS_M = {"coarse": 1.0, "fine": 0.5}
+"""The two Euler steps of GNPy whose results are extrapolated to a zero step."""
+
+
+@pytest.mark.parametrize("design", sorted(SOLTANI_DESIGNS))
+def test_power_maps_of_the_bidirectional_designs_of_soltani_2022(design):
+    """The power of every wave along the span, every kilometre, for the four designs of
+    Table III of Soltani, Da Ros, Carena and Zibar (J. Lightw. Technol. 40(12), 2022),
+    whose Fig. 5 was computed with GNPy: 80 km, 40 channels at 192.05 + 0.1 k THz
+    launched at 0 dBm, four co-pumps and four counter-pumps, 0.2 dB/km for the signals,
+    0.25 and 0.32 dB/km for the first- and second-order pumps, a constant effective area
+    of 80 um^2 and the gain spectrum of GNPy without the scaling with the pump frequency
+    (the coupling of the card ``soltani2022_fig5``). GNPy's attenuation and solver; its
+    coupling replaced by that of comnum. GNPy as shipped (its effective areas against
+    frequency, the gain scaled with the pump frequency, the pump losing the power the
+    signal gains), and the coupling of comnum without the photon conservation, are also
+    recorded and compared with the readings of Fig. 5 of the card: the map of the paper
+    is not that of GNPy 3.0.1."""
+    yaml = pytest.importorskip("yaml")
+    length, nch = 80.0, 40
+    wavelengths = [1366, 1425, 1455, 1475]
+    sig = 192.05e12 + 0.1e12 * np.arange(nch)
+    pumps = [
+        {
+            "wavelength_nm": wavelengths[i % 4],
+            "power_mw": p,
+            "direction": "co" if i < 4 else "counter",
+            "alpha_db_km": 0.32 if wavelengths[i % 4] < 1400 else 0.25,
+        }
+        for i, p in enumerate(SOLTANI_DESIGNS[design])
+    ]
+    freqs = np.concatenate([sig, [pump_frequency(p) for p in pumps]])
+    # the attenuation that GNPy interpolates: flat over the signals and over each group
+    # of pumps (no wave between the points)
+    loss_f = [191e12, 197e12, C0 / 1475e-9, C0 / 1425e-9, C0 / 1366e-9 - 1e12, C0 / 1366e-9, 225e12]
+    loss_db_km = [0.2, 0.2, 0.25, 0.25, 0.25, 0.32, 0.32]
+
+    def compute():
+        from gnpy.core.elements import RamanFiber
+        from gnpy.core.parameters import SimParams
+        from gnpy.core.science_utils import RamanSolver
+
+        params = {
+            "length": length,
+            "length_units": "km",
+            "loss_coef": {"value": loss_db_km, "frequency": loss_f},
+            "dispersion": 16.7e-6,
+            "effective_area": 80e-12,
+            "pmd_coef": 0.0,
+            "con_in": 0,
+            "con_out": 0,
+            "att_in": 0,
+            "ref_frequency": C0 / 1550e-9,
+        }
+        span = RamanFiber(
+            uid="span",
+            params=params,
+            operational={"temperature": 300, "raman_pumps": gnpy_pumps(pumps)},
+        )
+        native = span.cr
+        out = {"gain": gnpy_gain(pump_scaling=False)}
+        runs = {
+            **{f"comnum_{name}": (False, True, step) for name, step in SOLTANI_STEPS_M.items()},
+            "power_conserving": (False, False, SOLTANI_STEPS_M["fine"]),
+            "native": (None, None, SOLTANI_STEPS_M["fine"]),
+        }
+        for key, (scaling, photons, step_m) in runs.items():
+            span.cr = (
+                native
+                if scaling is None
+                else (lambda f, s=scaling, ph=photons: coupling(f, pump_scaling=s, photons=ph))
+            )
+            SimParams.set_params(
+                {
+                    "raman_params": {
+                        "flag": True,
+                        "method": "numerical",
+                        "result_spatial_resolution": 1e3,
+                        "solver_spatial_resolution": step_m,
+                    }
+                }
+            )
+            si = NS(
+                pch=np.full(nch, 1e-3),
+                frequency=sig,
+                baud_rate=np.ones(nch),
+                number_of_channels=nch,
+            )
+            srs = RamanSolver.calculate_stimulated_raman_scattering(si, span)
+            out[f"power_dbm_{key}"] = 10 * np.log10(srs.power_profile) + 30
+        return out
+
+    ref = oracle(f"raman_soltani2022_design_{design}", compute, tool=TOOL)
+    gain = dict(ref["gain"], pump_scaling=False)
+    fiber = comnum.FiberParams(span_km=length, alpha_db_km=0.2, fc_hz=FC)
+    ours = comnum.raman_profile(
+        fiber,
+        list(sig - FC),
+        0.0,
+        {"pumps": pumps, "gain": gain, "aeff_um2": 80.0, "step_km": 0.01},
+    )
+    np.testing.assert_allclose(ours["freqs_hz"], freqs, rtol=1e-12)
+    z = np.asarray(ours["z_km"])
+    every_km = [int(np.argmin(np.abs(z - k))) for k in range(int(length) + 1)]
+    power = np.asarray(ours["power_dbm"])[:, every_km]
+    # GNPy's Euler steps converge at first order: 2 x(h/2) - x(h) removes the term in h
+    gnpy = 2 * np.asarray(ref["power_dbm_comnum_fine"]) - np.asarray(ref["power_dbm_comnum_coarse"])
+    err = np.abs(power - gnpy).max()
+    raw = np.abs(power - np.asarray(ref["power_dbm_comnum_fine"])).max()
+
+    # the readings of Fig. 5 (card soltani2022_fig5) against the three couplings
+    with open(Path(__file__).parents[2] / "validation/cards/soltani2022_fig5.yaml") as f:
+        cases = [c for c in yaml.safe_load(f)["cases"] if c["inputs"]["design"] == design]
+
+    def gap(m):
+        m = np.asarray(m)
+        return np.array(
+            [
+                m[round((c["inputs"]["f_thz"] - 192.05) * 10), c["inputs"]["z_km"]] - c["expected"]
+                for c in cases
+            ]
+        ).mean()
+
+    gaps = {k: gap(ref[f"power_dbm_{k}"]) for k in ("native", "power_conserving")}
+    gaps["comnum"] = gap(power)
+    print(
+        f"design {design}: comnum against GNPy {err:.1e} dB on the map (GNPy at 0.5 m: {raw:.1e}); "
+        + ", ".join(f"{k} {v:+.2f} dB" for k, v in gaps.items())
+        + " from Fig. 5 on average"
+    )
+    # measured: 7.0e-7, 4.9e-7, 8.7e-7 and 7.4e-7 dB on the maps of a, b, c, d (GNPy alone
+    # at 0.5 m: 1.3e-3 dB, on the pumps); from Fig. 5, +0.22 to +0.36 dB with the coupling of comnum,
+    # +0.55 to +0.70 without the photon conservation, +1.87 to +2.18 for GNPy as shipped
+    assert err < 2e-6, (design, err)
+    assert 0.1 < gaps["comnum"] < 0.45, gaps
+    assert gaps["comnum"] + 0.2 < gaps["power_conserving"] < 0.8, gaps
+    assert 1.6 < gaps["native"] < 2.4, gaps
 
 
 @pytest.mark.parametrize("with_pumps", [False, True])

@@ -8,6 +8,12 @@ and follow [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- The power maps of the four bidirectional designs of Soltani et al. (*J. Lightw.
+  Technol.* 40(12), 2022, Table III) against GNPy 3.0.1, recorded: the 48 waves every
+  kilometre of the 80 km within 9e-7 dB of GNPy's Euler steps extrapolated to a zero
+  step, with the coupling of comnum in GNPy. GNPy as shipped is 1.9 to 2.2 dB above the
+  readings of Fig. 5 on average, comnum 0.2 to 0.4 dB: the remaining gap to the figure is
+  the coupling the paper used, not the solver.
 - The ISRS power profiles of `Raman::solve` against the closed form of Semrau & Bayvel
   (*J. Lightw. Technol.* 36(14), 2018, eq. (8), after Zirngibl 1998) at every node of a
   100 km span and every channel of a 10 THz band: equal to 1.3e-8 dB when the depletion
