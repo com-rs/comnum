@@ -1093,4 +1093,59 @@ mod literature {
             );
         }
     }
+
+    /// The closed form of the ISRS power profile, Semrau & Bayvel 2018, Eq. (8) (after
+    /// Zirngibl 1998): with a gain linear in the offset, $g_{R}(\Delta f)/A_{\mathrm{eff}}
+    /// = C_{r} \Delta f$, and a common attenuation, channel $i$ follows
+    /// $P_{i}(z) = P_{i}(0)\, e^{-\alpha z} P_{\mathrm{tot}} e^{-P_{\mathrm{tot}} C_{r}
+    /// L_{\mathrm{eff}}(z) f_{i}} / \sum_{j} P_{j}(0) e^{-P_{\mathrm{tot}} C_{r}
+    /// L_{\mathrm{eff}}(z) f_{j}}$, exact when the ratio $f_{j}/f_{i}$ of the depletion
+    /// term of the power equations is 1. Returns the largest gap (dB) between the solver
+    /// and the closed form over every node and channel, for a band of 10 THz centred on
+    /// `fc_hz`.
+    fn semrau_2018_eq_8_gap_db(fc_hz: f64, p_tot_dbm: f64) -> f64 {
+        let fiber = FiberParams { span_km: 100.0, alpha_db_km: 0.2, fc_hz, ..FiberParams::default() };
+        let (c_r, aeff_um2) = (0.028, 80.0); // 1/(W km THz), the fibre of the paper's Sec. IV
+        let gain = RamanGain::new(vec![0.0, 14e12], vec![0.0, c_r * 14.0 * aeff_um2 * 1e-12 / 1e3], fc_hz)
+            .unwrap()
+            .with_pump_scaling(false);
+        let raman = Raman { gain, aeff_um2, isrs: true, ..Raman::default() };
+        let (n, spacing) = (101usize, 100e9);
+        let p_tot = comnum_math::dbm2w(p_tot_dbm);
+        // a tilted launch, so that the denominator is not that of a flat spectrum
+        let launch: Vec<f64> = (0..n).map(|i| 0.5 + i as f64 / (n - 1) as f64).collect();
+        let norm: f64 = launch.iter().sum();
+        let signals: Vec<(f64, f64)> =
+            (0..n).map(|i| (fc_hz + (i as f64 - 50.0) * spacing, p_tot * launch[i] / norm)).collect();
+        let profile = raman.solve(&fiber, &signals).unwrap();
+        let alpha = fiber.alpha_np_km();
+        let mut gap: f64 = 0.0;
+        for (m, &z) in profile.z_km.iter().enumerate() {
+            let l_eff = (1.0 - (-alpha * z).exp()) / alpha;
+            let tilt = |f_hz: f64| (-p_tot * c_r * l_eff * (f_hz - fc_hz) * 1e-12).exp();
+            let denominator: f64 = signals.iter().map(|&(f, p)| p * tilt(f)).sum();
+            for (i, &(f, p)) in signals.iter().enumerate() {
+                let closed = p * (-alpha * z).exp() * p_tot * tilt(f) / denominator;
+                gap = gap.max((profile.log_power[i][m] - closed.ln()).abs() * 10.0 / std::f64::consts::LN_10);
+            }
+        }
+        gap
+    }
+
+    #[test]
+    fn semrau_2018_eq_8_isrs_power_profile_along_the_span() {
+        for (p_tot_dbm, c_band_db) in [(19.0, 0.0286), (25.0, 0.1299)] {
+            // the ratio f_j/f_i of the depletion term tends to 1 as the carrier rises
+            // above the band of 10 THz: the gap falls as 1/f_c and the closed form is
+            // exact at 1e7 times 193.4 THz (2.8e-9 and 1.3e-8 dB)
+            let exact = semrau_2018_eq_8_gap_db(1e7 * 193.4e12, p_tot_dbm);
+            assert!(exact < 2e-8, "{p_tot_dbm} dBm: {exact:e} dB");
+            let ratio =
+                semrau_2018_eq_8_gap_db(1e3 * 193.4e12, p_tot_dbm) / semrau_2018_eq_8_gap_db(1e5 * 193.4e12, p_tot_dbm);
+            assert!((ratio / 100.0 - 1.0).abs() < 1e-3, "{p_tot_dbm} dBm: the gap does not fall as 1/f_c ({ratio})");
+            // in the C band the photon-number term that Eq. (8) leaves out is what remains
+            let c_band = semrau_2018_eq_8_gap_db(193.4e12, p_tot_dbm);
+            assert!((c_band - c_band_db).abs() < 1e-3, "{p_tot_dbm} dBm at 193.4 THz: {c_band} dB");
+        }
+    }
 }

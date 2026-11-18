@@ -937,11 +937,13 @@
   area: Optical
   ref: "D. Semrau, P. Bayvel, The GN model in the presence of inter-channel stimulated Raman scattering, JLT 36(14), 2018"
   module: comnum_channel::optical::{raman, gn}
-  tested: "the ISRS power transfer of eq. (10) within 5 %"
+  tested: "the ISRS power transfer of eq. (10) within 5 %; eq. (8), the power profile of every channel along the span with a gain linear in the offset (after Zirngibl 1998), 101 channels over 10 THz with a tilted launch at 19 and 25 dBm, 100 km: the solver reaches the closed form at every node and channel, the gap falling as 1/f_c to 2.8e-9 and 1.3e-8 dB once the ratio f_j/f_i of the depletion term is made 1 (a carrier 1e7 times higher); at 193.4 THz that ratio, left out by eq. (8), accounts for 0.029 and 0.130 dB"
   tests:
     - crates/comnum-channel/src/optical/raman/mod.rs::semrau_2018_eq_10_isrs_power_transfer
+    - crates/comnum-channel/src/optical/raman/mod.rs::semrau_2018_eq_8_isrs_power_profile_along_the_span
   badge: orange
-  not_covered: "the ISRS GN model against Fig. 2"
+  not_covered: "the ISRS GN model against Fig. 2; the curves of Fig. 1 (eq. (8) against the ODE with the measured gain spectrum, whose table is given only by reference)"
+  remarks: "eq. (8) is exact only without the ratio f_j/f_i of eq. (6): in the C band it leaves out 0.03 dB at 19 dBm and 0.13 dB at 25 dBm over 10 THz and 100 km"
 - id: semrau2019
   area: Optical
   ref: "D. Semrau, R. I. Killey, P. Bayvel, A closed-form approximation of the Gaussian noise model in the presence of inter-channel stimulated Raman scattering, JLT 37(9), 2019 (arXiv 1808.07940)"

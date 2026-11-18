@@ -8,6 +8,11 @@ and follow [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- The ISRS power profiles of `Raman::solve` against the closed form of Semrau & Bayvel
+  (*J. Lightw. Technol.* 36(14), 2018, eq. (8), after Zirngibl 1998) at every node of a
+  100 km span and every channel of a 10 THz band: equal to 1.3e-8 dB when the depletion
+  ratio f_j/f_i is 1, the gap falling as 1/f_c; in the C band the ratio, which eq. (8)
+  leaves out, accounts for 0.03 dB at 19 dBm and 0.13 dB at 25 dBm.
 - Differential comparisons with Sionna 2.2 and OptiCommPy 0.11 on recorded inputs, 4
   new validation cards:
   - the exact and max-log LLRs of `Constellation.llr` against Sionna's `Demapper`
