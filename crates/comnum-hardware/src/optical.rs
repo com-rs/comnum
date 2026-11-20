@@ -63,6 +63,8 @@ use comnum_math::{BOLTZMANN, C64, ELEMENTARY_CHARGE, ZERO_CELSIUS, cis, db2lin, 
 use std::f64::consts::PI;
 
 pub mod direct_detection;
+pub mod dml;
+pub use dml::DirectlyModulatedLaser;
 
 /// A continuous-wave laser.
 #[derive(Clone, Debug, PartialEq)]
@@ -268,8 +270,14 @@ impl Iqm {
 #[derive(Clone, Debug, PartialEq)]
 #[allow(clippy::struct_excessive_bools, reason = "the switches of OptiCommPy's photodiode parameters")]
 pub struct Photodiode {
-    /// Responsivity (A/W).
+    /// Responsivity (A/W) before the avalanche gain.
     pub responsivity: f64,
+    /// Avalanche gain $M$ (1 for a p-i-n photodiode): the current is $M R P$ and the
+    /// shot noise $2 q M^{2} F_{A}(M) (R P + I_{d}) \Delta f$ with the excess noise
+    /// factor [`direct_detection::excess_noise_factor`] (Agrawal 2002, eq. (4.4.17)).
+    pub apd_gain: f64,
+    /// Ionisation-coefficient ratio $k_{A}$ of the avalanche photodiode (unused for $M = 1$).
+    pub ionization_ratio: f64,
     /// Temperature (K).
     pub temperature_k: f64,
     /// Dark current (A).
@@ -297,6 +305,8 @@ impl Default for Photodiode {
     fn default() -> Self {
         Photodiode {
             responsivity: 1.0,
+            apd_gain: 1.0,
+            ionization_ratio: 0.0,
             temperature_k: 25.0 + ZERO_CELSIUS,
             dark_current_a: 5e-9,
             load_ohm: 50.0,
@@ -352,15 +362,18 @@ impl Photodiode {
     /// [`comnum_core::Error::Config`] for a non-positive responsivity or a sampling rate below twice the bandwidth.
     pub fn detect_power(&self, p: &[f64], fs: f64, rng: &mut Rng) -> Result<Vec<f64>> {
         ensure(self.responsivity > 0.0, || "the responsivity must be positive".into())?;
-        let mut i: Vec<f64> = p.iter().map(|v| self.responsivity * v).collect();
+        let m = self.apd_gain;
+        let excess = direct_detection::excess_noise_factor(m, self.ionization_ratio)?;
+        let mut i: Vec<f64> = p.iter().map(|v| m * self.responsivity * v).collect();
         if self.ideal {
             return Ok(i);
         }
         let b = self.bandwidth_hz;
         ensure(fs >= 2.0 * b, || format!("the sampling rate {fs} Hz is below twice the bandwidth {b} Hz"))?;
         if self.shot_noise {
+            // the primary current R P + I_d, multiplied by M with the excess noise F_A
             for v in &mut i {
-                let s2 = shot_noise_variance(*v + self.dark_current_a, b);
+                let s2 = m * m * excess * shot_noise_variance(*v / m + self.dark_current_a, b);
                 *v += (fs * s2 / (2.0 * b)).max(0.0).sqrt() * rng.gaussian();
             }
         }
