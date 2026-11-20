@@ -17,12 +17,10 @@
 //!
 //! with $\kappa$ (Hz/W) the adiabatic chirp coefficient (gain compression; 0 for the
 //! transient chirp alone). The field is $E(t) = \sqrt{P(t)}\, e^{j\phi(t)}$ with
-//! $\phi(t) = -2\pi \int \delta\nu\, dt$: the convention of the fibre models of comnum
-//! ([`comnum_math::nlse::Medium::linear_response`], $e^{+j\beta_{2}\omega^{2}L/2}$, the
-//! form of Agrawal's eq. (2.4.15) with his carrier $e^{-i\omega_{0} t}$), in which a
-//! frequency increase is a phase that decreases (eq. (2.4.12)). The leading edge of a
-//! pulse is thus shifted to higher frequencies and the trailing edge to lower ones, and
-//! for a Gaussian pulse the transient chirp alone gives the chirped Gaussian of
+//! $\phi(t) = -2\pi \int \delta\nu\, dt$, the sign convention of the fibre models
+//! ([`comnum_math::nlse`], "Convention"): the leading edge of a pulse is shifted to
+//! higher frequencies and the trailing edge to lower ones, and for a Gaussian pulse the
+//! transient chirp alone gives the chirped Gaussian of
 //! [`direct_detection::gaussian_broadening_factor`](super::direct_detection::gaussian_broadening_factor)
 //! with the chirp parameter $C = -\beta_{c}$ (Agrawal, Sec. 3.5.3, the sentence after
 //! Fig. 3.22), which broadens from the start on standard fibre ($\beta_{2} C > 0$). The
@@ -56,7 +54,7 @@
 //!    semiconductor lasers," *Electron. Lett.* 20(25–26), 1038–1040, 1984.
 
 use comnum_core::{Result, ensure};
-use comnum_dsp::filter::{LowPass, fir_filter, low_pass_fir};
+use comnum_dsp::filter::{LowPass, fir_filter_real, low_pass_fir};
 use comnum_math::{C64, cis};
 use std::f64::consts::PI;
 
@@ -110,9 +108,7 @@ impl DirectlyModulatedLaser {
         ensure(fs >= 2.0 * self.bandwidth_hz, || {
             format!("the sampling rate {fs} Hz is below twice the bandwidth {} Hz", self.bandwidth_hz)
         })?;
-        let h = low_pass_fir(self.bandwidth_hz, fs, self.n_taps | 1, LowPass::Gauss);
-        let c: Vec<C64> = power_w.iter().map(|&v| C64::new(v, 0.0)).collect();
-        Ok(fir_filter(&h, &c).into_iter().map(|v| v.re).collect())
+        Ok(fir_filter_real(&low_pass_fir(self.bandwidth_hz, fs, self.n_taps | 1, LowPass::Gauss), power_w))
     }
 
     /// The frequency chirp $\delta\nu$ (Hz) of every sample of the emitted power
@@ -134,26 +130,19 @@ impl DirectlyModulatedLaser {
         let n = p.len();
         let lnp: Vec<f64> = p.iter().map(|v| v.ln()).collect();
         let k = self.linewidth_enhancement / (4.0 * PI);
+        // the derivative of ln P by the difference of the neighbours (one-sided at the ends)
         Ok((0..n)
             .map(|i| {
-                let d = if n < 2 {
-                    0.0
-                } else if i == 0 {
-                    (lnp[1] - lnp[0]) * fs
-                } else if i == n - 1 {
-                    (lnp[n - 1] - lnp[n - 2]) * fs
-                } else {
-                    (lnp[i + 1] - lnp[i - 1]) * fs / 2.0
-                };
+                let (lo, hi) = (i.saturating_sub(1), (i + 1).min(n - 1));
+                let d = if hi > lo { (lnp[hi] - lnp[lo]) * fs / (hi - lo) as f64 } else { 0.0 };
                 k * (d + self.adiabatic_chirp_hz_w * p[i])
             })
             .collect())
     }
 
     /// The field $\sqrt{P}\, e^{j\phi}$ (√W per sample) of the drive `power_w` at `fs`:
-    /// the emitted power with the phase of its chirp, $\phi_{k} = \phi_{k-1} - \pi
-    /// (\delta\nu_{k-1} + \delta\nu_{k}) / f_{s}$, $\phi_{0} = 0$ (see the module for
-    /// the sign).
+    /// the emitted power with the phase of its chirp integrated by the trapezoidal rule,
+    /// $\phi_{0} = 0$.
     ///
     /// # Errors
     /// As [`DirectlyModulatedLaser::chirp_hz`].

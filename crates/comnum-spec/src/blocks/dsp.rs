@@ -1,5 +1,6 @@
 //! Receiver DSP: shaping and matched filtering, resampling and decimation, clock recovery, adaptive equalisation, carrier recovery, frame synchronisation.
 
+use super::channel::{ComplexNumber, complex};
 use super::schema::ParamType;
 use super::{Block, Extension, Frame, NumberOrList, part, per_pol};
 use comnum_core::Error;
@@ -78,7 +79,7 @@ pub(super) fn blocks() -> Vec<Extension> {
             DfeSpec,
             needs [Samples, Constellation],
             gives [],
-            |q, label, _| Ok(Box::new(DfeBlock::new(q, label)?)),
+            |q, label, _| Ok(Box::new(DfeBlock::new(&q, label)?)),
         ),
         builtin!(
             Receiver, per_polarization "mlse",
@@ -402,38 +403,36 @@ block_params! {
         n_feedforward: usize [7] >= 1, "taps of the feedforward filter";
         n_feedback: usize [2], "taps of the feedback filter (0: a linear equaliser)";
         mu: f64 [1e-3] > 0, "step size";
-        training: usize [0] "symbols", "symbols decided from the transmitted ones before the decisions drive the adaptation";
+        training: usize [0] "symbols", "symbols decided from the transmitted ones before the decisions drive the adaptation (capped at the symbols of the frame)";
         update_rule: String ["lms"] one_of ["lms", "nlms", "sign"], "the update rule of both filters";
     }
 }
 
 struct DfeBlock {
-    p: DfeSpec,
-    rule: UpdateRule,
+    /// The equaliser, its `sps` and `training` set per frame.
+    eq: Dfe,
     label: String,
 }
 
 impl DfeBlock {
-    fn new(p: DfeSpec, label: String) -> Result<DfeBlock> {
-        let rule = p.update_rule.parse()?;
-        Ok(DfeBlock { p, rule, label })
+    fn new(p: &DfeSpec, label: String) -> Result<DfeBlock> {
+        let eq = Dfe {
+            n_feedforward: p.n_feedforward,
+            n_feedback: p.n_feedback,
+            sps: 1,
+            mu: p.mu,
+            rule: p.update_rule.parse()?,
+            training: p.training,
+        };
+        Ok(DfeBlock { eq, label })
     }
 }
 
 impl Block for DfeBlock {
     fn apply(&self, s: &mut Frame, _: &mut Rng) -> Result<()> {
-        let sps = s.int_sps("dfe")?;
-        let c = s.constellation("dfe")?.clone();
-        let eq = Dfe {
-            n_feedforward: self.p.n_feedforward,
-            n_feedback: self.p.n_feedback,
-            sps,
-            mu: self.p.mu,
-            rule: self.rule,
-            training: self.p.training.min(s.symbols.len()),
-        };
+        let eq = Dfe { sps: s.int_sps("dfe")?, training: self.eq.training.min(s.symbols.len()), ..self.eq.clone() };
         let x = signal::pnorm(&s.samples);
-        let out = eq.run(&x, Some(&s.symbols), c.points())?;
+        let out = eq.run(&x, Some(&s.symbols), s.constellation("dfe")?.points())?;
         let half = out.error.len() / 2;
         let mse = out.error[half..].iter().sum::<f64>() / (out.error.len() - half).max(1) as f64;
         s.record(&self.label, "mse", mse);
@@ -445,7 +444,7 @@ impl Block for DfeBlock {
 
 block_params! {
     struct MlseSpec {
-        taps: Vec<f64> [vec![1.0]], "the symbol-spaced channel taps (real, at least one) the detector assumes";
+        taps: Vec<ComplexNumber> [required], "the symbol-spaced channel taps the detector assumes, [[re, im], …] or real numbers";
     }
 }
 
@@ -455,8 +454,7 @@ struct MlseBlock {
 
 impl MlseBlock {
     fn new(p: &MlseSpec) -> Result<MlseBlock> {
-        ensure(!p.taps.is_empty(), || "mlse: the channel needs a tap".into())?;
-        Ok(MlseBlock { taps: p.taps.iter().map(|&h| C64::new(h, 0.0)).collect() })
+        Ok(MlseBlock { taps: p.taps.iter().map(|v| complex(&v.0)).collect::<Result<_>>()? })
     }
 }
 

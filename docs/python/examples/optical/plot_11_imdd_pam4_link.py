@@ -109,7 +109,7 @@ for name, v in results.items():
 #
 # On–off keying over the same fibre with the (133, 171) convolutional code: the
 # MLSE returns the reliability of every symbol (the soft-output Viterbi algorithm of
-# Hagenauer & Hoeher 1989, :func:`comnum.mlse` with ``noise_var``), which the decoder
+# Hagenauer & Hoeher 1989, :func:`comnum.mlse_soft`), which the decoder
 # takes as LLRs; the hard decisions of the MLSE are decoded for comparison.
 
 code = comnum.ConvolutionalCode(2000)
@@ -128,8 +128,8 @@ for d in [10.0, 20.0]:
     fit, *_ = np.linalg.lstsq(a, x[200:1200], rcond=None)
     taps, dc = fit[:3], fit[3]
     r = (x - dc)[:-1]  # r_j = x_{j-1} = Σ_m taps[m] s_{j-m}
-    noise_var = float(np.var(x[200:1200] - a @ fit))
-    hard, rel = comnum.mlse(r, taps, ook, noise_var=noise_var)
+    noise_var = 2 * float(np.var(x[200:1200] - a @ fit))  # real noise: twice its variance
+    hard, rel = comnum.mlse_soft(r, taps, ook, noise_var)
     llr = np.where(hard == 0, rel, -rel)  # positive for a 0, as the decoder takes them
     uncoded = float(np.mean(hard != idx[1:]))
     # decision j is the symbol j + 1: the first coded bit gets no information

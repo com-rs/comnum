@@ -12,7 +12,7 @@
 //! measured Q of a simulated receiver is compared with the closed forms of
 //! `comnum_hardware::optical::direct_detection`.
 
-use comnum_core::{Result, ensure, same_len};
+use comnum_core::{Result, ensure, ensure_shape, same_len};
 
 /// The mean and standard deviation of the samples of every level (`levels[k]` the index
 /// of the level transmitted at sample `k`, below `m`); a level without a sample has
@@ -24,7 +24,7 @@ use comnum_core::{Result, ensure, same_len};
 pub fn level_statistics(samples: &[f64], levels: &[usize], m: usize) -> Result<Vec<(f64, f64)>> {
     ensure(m >= 2, || format!("{m} levels have no eye"))?;
     same_len(samples.len(), levels.len(), "samples and levels")?;
-    comnum_core::ensure_shape(levels.iter().all(|&l| l < m), || format!("a level index is not below {m}"))?;
+    ensure_shape(levels.iter().all(|&l| l < m), || format!("a level index is not below {m}"))?;
     let mut sum = vec![0.0; m];
     let mut sum2 = vec![0.0; m];
     let mut count = vec![0usize; m];

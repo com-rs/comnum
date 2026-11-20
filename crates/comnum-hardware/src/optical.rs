@@ -33,8 +33,10 @@
 //!   keying with intersymbol interference (Komine & Nakagawa 2004, eqs. (16)–(21));
 //! - [`direct_detection`]: the closed forms of on–off keying receivers (Q factor,
 //!   sensitivity of p-i-n and avalanche photodiodes, quantum limit, power penalties of
-//!   the extinction ratio, the intensity noise and the dispersion), after Agrawal,
-//!   *Fiber-Optic Communication Systems*, 4th ed.
+//!   the extinction ratio, the intensity noise, the jitter, the dispersion and the
+//!   chirp), after Agrawal, *Fiber-Optic Communication Systems*, 3rd ed., 2002;
+//! - [`DirectlyModulatedLaser`]: the field of a power waveform with the transient and
+//!   adiabatic chirp of a directly modulated laser.
 //!
 //! # Examples
 //! ```
@@ -58,7 +60,7 @@ use crate::oscillator::{PhaseOrigin, increment_sd, wiener_phase};
 use comnum_core::rng::Rng;
 use comnum_core::signal::Signal;
 use comnum_core::{Result, ensure, ensure_shape, same_len};
-use comnum_dsp::filter::{LowPass, fir_filter, low_pass_fir};
+use comnum_dsp::filter::{LowPass, fir_filter_real, low_pass_fir};
 use comnum_math::{BOLTZMANN, C64, ELEMENTARY_CHARGE, ZERO_CELSIUS, cis, db2lin, dbm2w};
 use std::f64::consts::PI;
 
@@ -76,7 +78,9 @@ pub struct Laser {
     /// Relative intensity noise: variance of the relative power fluctuation per sample
     /// (`P (1 + r[n])`, `r ~ N(0, rin_var)`, clipped at -1).
     pub rin_var: f64,
-    /// Frequency offset from the simulation centre frequency (Hz).
+    /// Frequency offset from the simulation centre frequency (Hz), as the DSP sees it:
+    /// $e^{+j 2\pi \Delta f t}$, the sign of [`comnum_dsp::sync::carrier`]; the fibre
+    /// models count frequency the other way (the convention of [`comnum_math::nlse`]).
     pub freq_shift_hz: f64,
 }
 
@@ -385,10 +389,7 @@ impl Photodiode {
             }
         }
         if self.bandwidth_limitation {
-            let n = self.n_taps | 1;
-            let h = low_pass_fir(b, fs, n, self.filter);
-            let c: Vec<C64> = i.iter().map(|&v| C64::new(v, 0.0)).collect();
-            i = fir_filter(&h, &c).into_iter().map(|v| v.re).collect();
+            i = fir_filter_real(&low_pass_fir(b, fs, self.n_taps | 1, self.filter), &i);
         }
         Ok(i)
     }

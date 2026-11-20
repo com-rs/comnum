@@ -18,10 +18,11 @@
 //! Euclidean-distance form of Forney's detector, his whitened matched filter being the
 //! sampled channel here). The past before the block is unknown: every state starts
 //! with the same metric; the end is free. The log-likelihood difference between the
-//! decided symbol and its best competitor is $\Delta_{k}/(2\sigma^{2})$, $\sigma^{2}$
-//! the variance of the complex noise ($\Delta_{k}$ the metric difference of
-//! [`comnum_math::viterbi::sova`]): for two points it is the magnitude of the
-//! log-likelihood ratio of the symbol.
+//! decided symbol and its best competitor is $\Delta_{k}/\sigma^{2}$ with $\Delta_{k}$
+//! the metric difference of [`comnum_math::viterbi::sova`] and $\sigma^{2} = E|n_{k}|^{2}$
+//! the variance of the complex noise, the convention of the demappers of comnum (a real
+//! channel passes twice the variance of its real noise); for two points it is the
+//! magnitude of the log-likelihood ratio of the symbol.
 //!
 //! # Examples
 //! ```
@@ -54,8 +55,6 @@ use comnum_math::viterbi::{self as vit, StateMachine};
 /// The maximum-likelihood sequence detector of a known channel (see the module).
 #[derive(Clone, Debug, PartialEq)]
 pub struct Mlse {
-    taps: Vec<C64>,
-    points: Vec<C64>,
     machine: StateMachine,
     /// The noiseless sample of every branch, `s * M + u`.
     expected: Vec<C64>,
@@ -81,17 +80,7 @@ impl Mlse {
                 })
             })
             .collect();
-        Ok(Mlse { taps: taps.to_vec(), points: points.to_vec(), machine, expected })
-    }
-
-    /// The channel taps.
-    pub fn taps(&self) -> &[C64] {
-        &self.taps
-    }
-
-    /// The constellation.
-    pub fn points(&self) -> &[C64] {
-        &self.points
+        Ok(Mlse { machine, expected })
     }
 
     /// Number of states $M^{L-1}$ of the trellis.
@@ -118,8 +107,8 @@ impl Mlse {
     }
 
     /// The sequence of [`Mlse::detect`] and the reliability of every symbol, the
-    /// log-likelihood difference $\Delta_{k}/(2\sigma^{2})$ with its best competitor
-    /// (see the module), for the noise variance `noise_var` $\sigma^{2}$ of the samples.
+    /// log-likelihood difference $\Delta_{k}/\sigma^{2}$ with its best competitor (see the
+    /// module), for the variance `noise_var` $\sigma^{2} = E|n|^{2}$ of the complex noise.
     ///
     /// # Errors
     /// [`comnum_core::Error::Config`] for a non-positive noise variance.
@@ -127,34 +116,33 @@ impl Mlse {
         ensure(noise_var > 0.0, || format!("the noise variance {noise_var} must be positive"))?;
         let start = vec![0.0; self.machine.n_states()];
         let (path, delta) = vit::sova(&self.machine, r.len(), &start, self.gammas(r), None)?;
-        Ok((path, delta.iter().map(|d| d / (2.0 * noise_var)).collect()))
+        Ok((path, delta.iter().map(|d| d / noise_var).collect()))
     }
 
     /// The log-likelihood ratios $\ln[P(s_{k} = a_{0}) / P(s_{k} = a_{1})]$ of a binary
-    /// constellation from [`Mlse::detect_soft`]: positive for the first point.
+    /// constellation from [`Mlse::detect_soft`] ([`comnum_math::viterbi::binary_llr`]).
     ///
     /// # Errors
     /// [`comnum_core::Error::Config`] if the constellation has not two points, or as
     /// [`Mlse::detect_soft`].
     pub fn llr(&self, r: &[C64], noise_var: f64) -> Result<Vec<f64>> {
-        ensure(self.points.len() == 2, || format!("LLRs need two points, not {}", self.points.len()))?;
+        let m = self.machine.n_inputs();
+        ensure(m == 2, || format!("LLRs need two points, not {m}"))?;
         let (path, rel) = self.detect_soft(r, noise_var)?;
-        Ok(path.iter().zip(&rel).map(|(&u, &d)| if u == 0 { d } else { -d }).collect())
+        Ok(vit::binary_llr(&path, &rel))
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::equalizer::pam;
     use comnum_core::rng::Rng;
     use comnum_math::qfunc;
 
-    fn pam(m: usize) -> Vec<C64> {
-        (0..m).map(|i| C64::new(2.0 * i as f64 - (m as f64 - 1.0), 0.0)).collect()
-    }
-
+    /// `s` through the causal channel `h`, the tail of the convolution dropped.
     fn channel(s: &[C64], h: &[C64]) -> Vec<C64> {
-        (0..s.len()).map(|k| h.iter().enumerate().filter(|(l, _)| *l <= k).map(|(l, hv)| hv * s[k - l]).sum()).collect()
+        crate::filter::convolve_full(h, s)[..s.len()].to_vec()
     }
 
     #[test]
@@ -212,10 +200,11 @@ mod tests {
         let s: Vec<C64> = idx.iter().map(|&i| pts[i]).collect();
         let r: Vec<C64> = channel(&s, &h).iter().map(|v| v + C64::new(0.3 * rng.gaussian(), 0.0)).collect();
         let hard = mlse.detect(&r).unwrap();
-        let (path, rel) = mlse.detect_soft(&r, 0.09).unwrap();
+        // real noise of variance 0.09: the complex variance E|n|² passed is 0.18
+        let (path, rel) = mlse.detect_soft(&r, 0.18).unwrap();
         assert_eq!(path, hard);
         assert!(rel.iter().all(|v| *v >= 0.0));
-        let llr = mlse.llr(&r, 0.09).unwrap();
+        let llr = mlse.llr(&r, 0.18).unwrap();
         assert!(llr.iter().zip(&path).all(|(l, &u)| (*l >= 0.0) == (u == 0)));
         // a wrong decision is less reliable on average than a right one
         let (mut wrong, mut right) = ((0.0, 0usize), (0.0, 0usize));
@@ -229,7 +218,7 @@ mod tests {
         let (mean_wrong, mean_right) = (wrong.0 / wrong.1 as f64, right.0 / right.1 as f64);
         assert!(wrong.1 > 0 && mean_wrong < 0.3 * mean_right);
         // twice the noise variance halves the log-likelihood differences
-        let (_, half) = mlse.detect_soft(&r, 0.18).unwrap();
+        let (_, half) = mlse.detect_soft(&r, 0.36).unwrap();
         assert!(rel.iter().zip(&half).all(|(a, b)| (a - 2.0 * b).abs() < 1e-9 * a.max(1.0)));
         assert!(mlse.detect_soft(&r, 0.0).is_err());
         assert!(Mlse::new(&h, &pam(4)).unwrap().llr(&r, 1.0).is_err());

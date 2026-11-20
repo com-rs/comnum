@@ -130,6 +130,30 @@ pub enum Singularity {
 /// of the block, and every pass of the block restarts the sequence.
 pub type Schedule = Vec<(Algorithm, usize)>;
 
+/// A block padded with `⌊n_taps/2⌋` zeros at both ends, as every equaliser of the module
+/// aligns its centre tap on the first sample, and its number of output symbols
+/// `(len + 2⌊n_taps/2⌋ - n_taps)/sps + 1`.
+///
+/// # Errors
+/// [`comnum_core::Error::Shape`] for a block shorter than the filter.
+pub(crate) fn pad_block(x: &[C64], n_taps: usize, sps: usize) -> Result<(Vec<C64>, usize)> {
+    let pad = n_taps / 2;
+    let mut p = vec![C64::new(0.0, 0.0); pad];
+    p.extend_from_slice(x);
+    p.extend(std::iter::repeat_n(C64::new(0.0, 0.0), pad));
+    ensure_shape(p.len() >= n_taps, || {
+        format!("a block of {} samples is shorter than the {n_taps} taps of the equaliser", x.len())
+    })?;
+    let n_out = (p.len() - n_taps) / sps + 1;
+    Ok((p, n_out))
+}
+
+/// The points of `m`-PAM, for the tests of the equalisers.
+#[cfg(test)]
+pub(crate) fn pam(m: usize) -> Vec<C64> {
+    (0..m).map(|i| C64::new(2.0 * i as f64 - (m as f64 - 1.0), 0.0)).collect()
+}
+
 /// The `n×n` butterfly adaptive equaliser (see the module documentation).
 #[derive(Clone, Debug, PartialEq)]
 pub struct AdaptiveEqualizer {
@@ -285,21 +309,16 @@ impl AdaptiveEqualizer {
         ensure_shape(x.iter().all(|m| m.as_ref().len() == len), || {
             format!("the modes have different lengths: {:?}", x.iter().map(|m| m.as_ref().len()).collect::<Vec<_>>())
         })?;
-        let pad = self.n_taps / 2;
-        let padded: Vec<Vec<C64>> = x
+        let mut n_out = 0;
+        let padded = x
             .iter()
             .map(|m| {
-                let mut p = vec![C64::new(0.0, 0.0); pad];
-                p.extend_from_slice(m.as_ref());
-                p.extend(std::iter::repeat_n(C64::new(0.0, 0.0), pad));
-                p
+                let (p, n) = pad_block(m.as_ref(), self.n_taps, self.sps)?;
+                n_out = n;
+                Ok(p)
             })
-            .collect();
-        let plen = padded[0].len();
-        ensure_shape(plen >= self.n_taps, || {
-            format!("a block of {len} samples is shorter than the {} taps of the equaliser", self.n_taps)
-        })?;
-        Ok((padded, (plen - self.n_taps) / self.sps + 1))
+            .collect::<Result<Vec<_>>>()?;
+        Ok((padded, n_out))
     }
 
     /// The adaptation over the stages `(law, rule, number of outputs)` (the last one to

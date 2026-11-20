@@ -6,6 +6,17 @@
 //! and back-propagates it at the receiver (`comnum_dsp::compensation::dbp`, with the
 //! coefficients negated), so it lives here, below both.
 //!
+//! # Convention
+//!
+//! The field $A$ is the envelope of Agrawal's $E = A\, e^{-i\omega_{0} t}$ (*Nonlinear
+//! Fiber Optics*, *Fiber-Optic Communication Systems*): the linear response of a length
+//! $L$ is $e^{+j(\beta_{2}\omega^{2}/2 + \beta_{3}\omega^{3}/6)L}$ on the angular
+//! frequencies of [`crate::fft::angular_frequencies`], and a frequency increase of the
+//! carrier is a phase that *decreases* with time (his eq. (2.4.12), $\delta\omega =
+//! -\partial\phi/\partial t$). The receiver DSP of comnum counts frequency the other
+//! way ($e^{+j 2\pi \Delta f t}$ for a positive offset); a source that chirps the
+//! field for the fibre follows this module (`comnum_hardware::optical::DirectlyModulatedLaser`).
+//!
 //! # Model
 //!
 //! $$

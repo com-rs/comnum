@@ -19,7 +19,7 @@ and follow [Semantic Versioning](https://semver.org/).
     known symbol-spaced channel (Forney 1972) with its soft outputs; the bounds
     `comnum_dsp::equalizer::theory` (the linear MMSE floor and the MMSE-DFE SNR of
     Proakis & Salehi Secs. 9.4–9.5 and Salz 1973, the matched-filter bound); the blocks
-    `dfe` and `mlse`; in Python `dfe`, `mlse`, `linear_mmse_mse`, `dfe_mmse_snr`,
+    `dfe` and `mlse`; in Python `dfe`, `mlse`, `mlse_soft`, `linear_mmse_mse`, `dfe_mmse_snr`,
     `matched_filter_bound_snr`;
   - `comnum_hardware::optical::DirectlyModulatedLaser`, the field of a power waveform
     with its transient and adiabatic chirp (Agrawal 2002, eqs. (3.5.16), (3.5.25); Koch

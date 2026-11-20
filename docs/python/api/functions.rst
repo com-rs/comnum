@@ -576,6 +576,7 @@ Equalisation and compensation
    adaptive_equalizer
    dfe
    mlse
+   mlse_soft
    linear_mmse_mse
    dfe_mmse_snr
    matched_filter_bound_snr

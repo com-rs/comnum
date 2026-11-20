@@ -888,28 +888,21 @@ fn dfe<'py>(
 }
 
 /// Maximum-likelihood sequence estimation over a known channel of symbol-spaced taps:
-/// the Viterbi algorithm on the trellis of the channel memory ([1]_), with the soft
-/// outputs of [2]_.
+/// the Viterbi algorithm on the trellis of the channel memory ([1]_).
 ///
 /// For :math:`r_k = \sum_{l=0}^{L-1} h_l s_{k-l} + n_k`, the branch of the symbol
 /// :math:`s_k` in the state of the :math:`L - 1` previous symbols has the metric
 /// :math:`-|r_k - \sum_l h_l s_{k-l}|^2`, and the path of largest metric is the
 /// maximum-likelihood sequence (:math:`M^{L-1}` states; the past before the block is
-/// unknown, the end free). With ``noise_var``, every symbol also gets its reliability,
-/// the log-likelihood difference :math:`\Delta_k / (2\sigma^2)` with its best competitor
-/// (the soft-output Viterbi algorithm): for two points, the magnitude of the LLR of the
-/// symbol, whose sign is positive for the first point.
+/// unknown, the end free). :func:`mlse_soft` adds the reliability of every symbol.
 ///
 /// Args:
 ///     r (array_like): the samples, one per symbol (complex or real).
 ///     taps (array_like): the channel :math:`h_0, \dots, h_{L-1}` (complex or real).
 ///     constellation (Constellation): the points of the symbols.
-///     noise_var (float, optional): the variance :math:`\sigma^2` of the complex noise
-///         of the samples; given, the reliabilities are returned too.
 ///
 /// Returns:
-///     numpy.ndarray | tuple[numpy.ndarray, numpy.ndarray]: the decided indices, or the
-///     indices and the reliabilities.
+///     numpy.ndarray: the decided indices of the constellation.
 ///
 /// Raises:
 ///     ValueError: for an invalid parameter or input (the message names it).
@@ -918,8 +911,6 @@ fn dfe<'py>(
 ///     .. [1] G. D. Forney, "Maximum-likelihood sequence estimation of digital sequences in
 ///        the presence of intersymbol interference," *IEEE Trans. Inf. Theory* 18(3),
 ///        363–378, 1972.
-///     .. [2] J. Hagenauer, P. Hoeher, "A Viterbi algorithm with soft-decision outputs and
-///        its applications," *Proc. IEEE GLOBECOM*, 1680–1686, 1989.
 ///
 /// Examples:
 ///     >>> import comnum, numpy as np
@@ -929,23 +920,58 @@ fn dfe<'py>(
 ///     >>> bool(np.array_equal(comnum.mlse(r, [1.0, 0.5], c), idx))
 ///     True
 #[pyfunction]
-#[pyo3(signature = (r, taps, constellation, *, noise_var = None))]
 fn mlse<'py>(
     py: Python<'py>,
     r: &Bound<'py, PyAny>,
     taps: &Bound<'py, PyAny>,
     constellation: &PyConstellation,
-    noise_var: Option<f64>,
-) -> PyResult<Py<PyAny>> {
+) -> PyResult<IArr<'py>> {
     let (r, h) = (cvec(r)?, cvec(taps)?);
     let det = Mlse::new(&h, constellation.inner.points()).py()?;
-    match noise_var {
-        None => Ok(iarr(py, py.detach(|| det.detect(&r)).py()?).into_any().unbind()),
-        Some(v) => {
-            let (idx, rel) = py.detach(|| det.detect_soft(&r, v)).py()?;
-            Ok((iarr(py, idx), farr(py, rel)).into_pyobject(py)?.into_any().unbind())
-        }
-    }
+    Ok(iarr(py, py.detach(|| det.detect(&r)).py()?))
+}
+
+/// :func:`mlse` with the reliability of every decided symbol: the log-likelihood
+/// difference :math:`\Delta_k/\sigma^2` with its best competitor, by the soft-output
+/// Viterbi algorithm of [1]_; for two points, the magnitude of the LLR of the symbol
+/// (positive for the first point).
+///
+/// Args:
+///     r (array_like): the samples, one per symbol (complex or real).
+///     taps (array_like): the channel :math:`h_0, \dots, h_{L-1}` (complex or real).
+///     constellation (Constellation): the points of the symbols.
+///     noise_var (float): the variance :math:`\sigma^2 = E|n|^2` of the complex noise of
+///         the samples (twice the variance of a real noise, as :meth:`Constellation.llr`).
+///
+/// Returns:
+///     tuple[numpy.ndarray, numpy.ndarray]: the decided indices and their reliabilities.
+///
+/// Raises:
+///     ValueError: for an invalid parameter or input (the message names it).
+///
+/// References:
+///     .. [1] J. Hagenauer, P. Hoeher, "A Viterbi algorithm with soft-decision outputs and
+///        its applications," *Proc. IEEE GLOBECOM*, 1680–1686, 1989.
+///
+/// Examples:
+///     >>> import comnum, numpy as np
+///     >>> c = comnum.Constellation("pam", 2)
+///     >>> idx, s = comnum.symbols(c, 100, comnum.Rng(2))
+///     >>> hard, rel = comnum.mlse_soft(s + 0.5 * np.concatenate(([0], s[:-1])), [1.0, 0.5], c, 0.1)
+///     >>> bool(np.array_equal(hard, idx)), bool(np.all(rel > 0))
+///     (True, True)
+#[pyfunction]
+fn mlse_soft<'py>(
+    py: Python<'py>,
+    r: &Bound<'py, PyAny>,
+    taps: &Bound<'py, PyAny>,
+    constellation: &PyConstellation,
+    noise_var: f64,
+) -> PyResult<(IArr<'py>, FArr<'py>)> {
+    let (r, h) = (cvec(r)?, cvec(taps)?);
+    let det = Mlse::new(&h, constellation.inner.points()).py()?;
+    let (idx, rel) = py.detach(|| det.detect_soft(&r, noise_var)).py()?;
+    Ok((iarr(py, idx), farr(py, rel)))
 }
 
 /// The floor of the infinite-length linear MMSE equaliser of a symbol-spaced channel
@@ -1477,6 +1503,7 @@ pub(crate) fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(adaptive_equalizer, m)?)?;
     m.add_function(wrap_pyfunction!(dfe, m)?)?;
     m.add_function(wrap_pyfunction!(mlse, m)?)?;
+    m.add_function(wrap_pyfunction!(mlse_soft, m)?)?;
     m.add_function(wrap_pyfunction!(linear_mmse_mse, m)?)?;
     m.add_function(wrap_pyfunction!(dfe_mmse_snr, m)?)?;
     m.add_function(wrap_pyfunction!(matched_filter_bound_snr, m)?)?;

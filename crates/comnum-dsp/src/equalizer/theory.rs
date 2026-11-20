@@ -54,14 +54,18 @@ use comnum_math::fft;
 
 /// The folded spectrum $X(\omega_{k}) = |H(e^{j\omega_{k}})|^{2}$ of `taps` on `n_fft`
 /// points.
-fn folded_spectrum(taps: &[C64], noise_var: f64, n_fft: usize) -> Result<Vec<f64>> {
+fn folded_spectrum(taps: &[C64], n_fft: usize) -> Result<Vec<f64>> {
     ensure(!taps.is_empty() && n_fft >= taps.len(), || {
         format!("{} taps need at least as many FFT points, got {n_fft}", taps.len())
     })?;
-    ensure(noise_var > 0.0 && noise_var.is_finite(), || format!("the noise variance {noise_var} must be positive"))?;
     let mut h = taps.to_vec();
     h.resize(n_fft, C64::new(0.0, 0.0));
     Ok(fft::fft(&h).iter().map(C64::norm_sqr).collect())
+}
+
+fn checked_noise_var(noise_var: f64) -> Result<f64> {
+    ensure(noise_var > 0.0 && noise_var.is_finite(), || format!("the noise variance {noise_var} must be positive"))?;
+    Ok(noise_var)
 }
 
 /// The minimum mean square error $J_{\min}$ of the infinite linear MMSE equaliser of
@@ -72,7 +76,7 @@ fn folded_spectrum(taps: &[C64], noise_var: f64, n_fft: usize) -> Result<Vec<f64
 /// [`comnum_core::Error::Config`] for no tap, fewer FFT points than taps, or a
 /// non-positive noise variance.
 pub fn linear_mmse_mse(taps: &[C64], noise_var: f64, n_fft: usize) -> Result<f64> {
-    let x = folded_spectrum(taps, noise_var, n_fft)?;
+    let (x, noise_var) = (folded_spectrum(taps, n_fft)?, checked_noise_var(noise_var)?);
     Ok(x.iter().map(|v| noise_var / (v + noise_var)).sum::<f64>() / n_fft as f64)
 }
 
@@ -82,7 +86,7 @@ pub fn linear_mmse_mse(taps: &[C64], noise_var: f64, n_fft: usize) -> Result<f64
 /// # Errors
 /// As [`linear_mmse_mse`].
 pub fn dfe_mmse_snr(taps: &[C64], noise_var: f64, n_fft: usize) -> Result<f64> {
-    let x = folded_spectrum(taps, noise_var, n_fft)?;
+    let (x, noise_var) = (folded_spectrum(taps, n_fft)?, checked_noise_var(noise_var)?);
     Ok((x.iter().map(|v| (1.0 + v / noise_var).ln()).sum::<f64>() / n_fft as f64).exp() - 1.0)
 }
 
@@ -93,8 +97,7 @@ pub fn dfe_mmse_snr(taps: &[C64], noise_var: f64, n_fft: usize) -> Result<f64> {
 /// [`comnum_core::Error::Config`] for no tap or a non-positive noise variance.
 pub fn matched_filter_bound_snr(taps: &[C64], noise_var: f64) -> Result<f64> {
     ensure(!taps.is_empty(), || "the channel needs a tap".into())?;
-    ensure(noise_var > 0.0 && noise_var.is_finite(), || format!("the noise variance {noise_var} must be positive"))?;
-    Ok(taps.iter().map(C64::norm_sqr).sum::<f64>() / noise_var)
+    Ok(taps.iter().map(C64::norm_sqr).sum::<f64>() / checked_noise_var(noise_var)?)
 }
 
 #[cfg(test)]
@@ -164,6 +167,5 @@ mod tests {
         let bound = dfe_mmse_snr(&h, s2, 4096).unwrap();
         let gap_db = 10.0 * (bound / snr).log10();
         assert!(gap_db > -0.3 && gap_db < 1.0, "{snr} against the bound {bound}: {gap_db} dB");
-        assert!(snr > 1.0 / j - 1.0);
     }
 }

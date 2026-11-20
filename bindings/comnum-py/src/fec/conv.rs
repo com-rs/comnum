@@ -187,23 +187,7 @@ impl PyConv {
     ///     True
     fn soft_decode<'py>(&self, py: Python<'py>, llr: &Bound<'py, PyAny>) -> PyResult<FArr<'py>> {
         let l = fvec(llr)?;
-        let (code, punct) = (self.inner.code(), self.inner.puncturer());
-        let n_tx = self.inner.n();
-        if n_tx == 0 || l.len() % n_tx != 0 {
-            return Err(PyValueError::new_err(format!("{} LLRs is not a multiple of the {n_tx} of a block", l.len())));
-        }
-        let n_coded = code.n();
-        let (trellis, k) = (code.trellis(), code.k());
-        let out = py.detach(|| -> comnum::Result<Vec<f64>> {
-            let mut out = Vec::with_capacity(l.len() / n_tx * k);
-            for block in l.chunks_exact(n_tx) {
-                let full = punct.depuncture(block, n_coded)?;
-                let soft = comnum::fec::conv::sova(trellis, &full, true)?;
-                out.extend_from_slice(&soft[..k]);
-            }
-            Ok(out)
-        });
-        Ok(farr(py, out.py()?))
+        Ok(farr(py, py.detach(|| self.inner.sova_stream(&l)).py()?))
     }
 }
 

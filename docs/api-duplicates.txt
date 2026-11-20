@@ -86,7 +86,7 @@ run                     11  # the run of different objects (a runner, a specific
 run_with_gain           2  # SplitStep::run_with_gain (one polarisation) / ManakovSplitStep::run_with_gain (two), the same distributed gain on the two solvers of nlse
 sampling_check          3  # Ssfm::sampling_check and ManakovSsfm::sampling_check are the thin wrappers of nlse::sampling_check on their fields
 scaled                  2  # Constellation::scaled and RamanGain::scaled: the same verb (multiply by a factor) on two types
-steps                   2  # SplitStep::steps (the steps of a solver) and StepDistribution::steps (the steps of a span of a distribution): two types of one module tree
+steps                   3  # SplitStep::steps (the steps of a solver) and StepDistribution::steps (the steps of a span of a distribution): two types of one module tree
 sequence                2  # Scrambler::sequence (the sequence of a configured scrambler) / ccsds::Randomizer::sequence (the two sequences of CCSDS)
 ser                     2  # the closed forms of two modulations, mapping::theory and css::theory
 ser_esn0                2  # comnum_mapping::theory (a constellation) / ce_ofdm::theory (the waveform at the SNR of its linear regime, on the former)
@@ -161,7 +161,7 @@ period                  4
 phase                   2
 phase_response          2
 position                2  # ais::message::Message::position (the position of a report) / fm::rds::Offset::position (the position of a block in a group)
-points                  4
+points                  3
 powers                  4  # DoublySelective::powers: the tap powers of the SIR model
 propagate               3
 random                  3
@@ -173,7 +173,7 @@ sample_rate             8
 set_streams             2
 subcarrier              2
 t                       2
-taps                    7
+taps                    6
 trellis                 3
 trial                   2
 uniform                 5

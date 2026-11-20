@@ -42,7 +42,7 @@
 //! ([`crate::nr`]).
 //!
 //! [`Punctured`] wraps a [`BlockCode`] whose coded bits are in step-major order (the
-//! [`ConvolutionalCode`](crate::conv::ConvolutionalCode), tail included), and
+//! [`ConvolutionalCode`], tail included), and
 //! [`PuncturedTurbo`] a [`TurboCode`] whose codeword is the
 //! systematic, first-parity and second-parity streams (the pattern is applied across
 //! the three streams at every information index; the tail bits are kept). The
@@ -84,7 +84,8 @@
 //! 5. C. Berrou, A. Glavieux and P. Thitimajshima, "Near Shannon limit error-correcting
 //!    coding and decoding: turbo-codes," *Proc. IEEE ICC*, 1064–1070, 1993, Sec. II.
 
-use crate::block::{BlockCode, SoftDecode, container_traits, expect_len};
+use crate::block::{BlockCode, SoftDecode, container_traits, expect_len, whole_blocks};
+use crate::conv::ConvolutionalCode;
 use crate::conv::Trellis;
 use crate::turbo::{TurboCode, TurboDecoder};
 use comnum_core::{Error, Result, ensure, ensure_shape};
@@ -371,7 +372,7 @@ impl Puncturer {
 }
 
 /// A block code whose coded bits (in step-major order) are punctured: the
-/// [`ConvolutionalCode`](crate::conv::ConvolutionalCode).
+/// [`ConvolutionalCode`].
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Punctured<C> {
     /// The mother code.
@@ -424,6 +425,23 @@ impl<C: BlockCode> BlockCode for Punctured<C> {
 
     fn decode_block(&self, llr: &[f64]) -> Result<Vec<u8>> {
         self.code.decode_block(&self.selection.word_llr(llr)?)
+    }
+}
+
+impl Punctured<ConvolutionalCode> {
+    /// [`ConvolutionalCode::sova_block`] of every block of `llr` (a zero at the
+    /// punctured positions): $k$ LLRs per block.
+    ///
+    /// # Errors
+    /// [`comnum_core::Error::Shape`] if the number of LLRs is not a multiple of $n$.
+    pub fn sova_stream(&self, llr: &[f64]) -> Result<Vec<f64>> {
+        let n = self.n();
+        whole_blocks(llr.len(), n, "LLRs")?;
+        let mut out = Vec::with_capacity(llr.len() / n * self.k());
+        for b in llr.chunks(n) {
+            out.extend(self.code.sova_block(&self.selection.word_llr(b)?)?);
+        }
+        Ok(out)
     }
 }
 
@@ -538,7 +556,7 @@ pub fn free_distance(trellis: &Trellis, puncturer: &Puncturer) -> Result<u32> {
     for start in 0..p {
         // the diverging branch: input 1 from state 0 at phase `start`
         let mut dist = vec![u32::MAX; ns * p];
-        let s1 = trellis.next[0][1];
+        let s1 = trellis.next(0, 1);
         let w1 = weight(trellis.out[0][1], start);
         let ph1 = (start + 1) % p;
         dist[s1 * p + ph1] = dist[s1 * p + ph1].min(w1);
@@ -555,7 +573,7 @@ pub fn free_distance(trellis: &Trellis, puncturer: &Puncturer) -> Result<u32> {
                         continue;
                     }
                     for u in 0..2 {
-                        let s2 = trellis.next[s][u];
+                        let s2 = trellis.next(s, u);
                         let d2 = d + weight(trellis.out[s][u], ph);
                         let ph2 = (ph + 1) % p;
                         if s2 == 0 {

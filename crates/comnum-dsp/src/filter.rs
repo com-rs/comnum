@@ -354,6 +354,13 @@ pub fn fir_filter(h: &[f64], x: &[C64]) -> Vec<C64> {
     fir_filter_complex(&hc, x)
 }
 
+/// [`fir_filter`] of a real signal: the same centred filtering, real in and out (the
+/// power of a photodiode or of a laser drive).
+pub fn fir_filter_real(h: &[f64], x: &[f64]) -> Vec<f64> {
+    let c: Vec<C64> = x.iter().map(|&v| C64::new(v, 0.0)).collect();
+    fir_filter(h, &c).into_iter().map(|v| v.re).collect()
+}
+
 /// An FIR filter built once for many blocks: [`fir_filter_complex`] (the `same`
 /// alignment, the same results bit for bit) with the taps converted once and, for a
 /// filter of more than 32 taps, the spectrum of the overlap-add of long signals computed

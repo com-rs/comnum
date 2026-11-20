@@ -127,6 +127,11 @@ pub struct Dispersion {
 }
 
 impl Dispersion {
+    /// The dispersion `beta2_s2_km` alone (no third order) of `length_km` at `fs`.
+    pub fn new(beta2_s2_km: f64, length_km: f64, fs: f64) -> Dispersion {
+        Dispersion { beta2_s2_km, beta3_s3_km: 0.0, length_km, fs }
+    }
+
     /// Compensate the dispersion of a periodic block exactly, `X(ω) e^{-j(β₂ω²/2 + β₃ω³/6)L}`.
     pub fn compensate(&self, x: &[C64]) -> Vec<C64> {
         fft::filter(x, self.inverse_response(x.len()))
@@ -257,31 +262,31 @@ impl Dispersion {
 /// [`Dispersion::compensate`] of the dispersion `beta2_s2_km` of `length_km` on a block
 /// sampled at `fs` (kept for one release: prefer [`Dispersion`]).
 pub fn cdc(x: &[C64], beta2_s2_km: f64, length_km: f64, fs: f64) -> Vec<C64> {
-    Dispersion { beta2_s2_km, beta3_s3_km: 0.0, length_km, fs }.compensate(x)
+    Dispersion::new(beta2_s2_km, length_km, fs).compensate(x)
 }
 
 /// [`Dispersion::edc_length`]: the number of taps of the dispersion-compensating FIR
 /// (OptiCommPy `edc` rule; kept for one release).
 pub fn cd_taps_needed(beta2_s2_km: f64, length_km: f64, symbol_rate: f64, fs: f64) -> usize {
-    Dispersion { beta2_s2_km, beta3_s3_km: 0.0, length_km, fs }.edc_length(symbol_rate)
+    Dispersion::new(beta2_s2_km, length_km, fs).edc_length(symbol_rate)
 }
 
 /// [`Dispersion::fir_taps`]: `n` centred taps of the compensation of `length_km` by
 /// frequency sampling (kept for one release).
 pub fn cd_fir_taps(beta2_s2_km: f64, length_km: f64, fs: f64, n: usize) -> Vec<C64> {
-    Dispersion { beta2_s2_km, beta3_s3_km: 0.0, length_km, fs }.fir_taps(n)
+    Dispersion::new(beta2_s2_km, length_km, fs).fir_taps(n)
 }
 
 /// [`Dispersion::factor`]: the dispersion factor $K = -\beta_{2} L f_{s}^{2}/2$ (kept for
 /// one release).
 pub fn cd_dispersion_factor(beta2_s2_km: f64, length_km: f64, fs: f64) -> f64 {
-    Dispersion { beta2_s2_km, beta3_s3_km: 0.0, length_km, fs }.factor()
+    Dispersion::new(beta2_s2_km, length_km, fs).factor()
 }
 
 /// [`Dispersion::savory_length`]: the length $N = 2\lfloor 2\pi |K| \rfloor + 1$ of
 /// Savory's filter (kept for one release).
 pub fn cd_savory_length(beta2_s2_km: f64, length_km: f64, fs: f64) -> usize {
-    Dispersion { beta2_s2_km, beta3_s3_km: 0.0, length_km, fs }.savory_length()
+    Dispersion::new(beta2_s2_km, length_km, fs).savory_length()
 }
 
 /// [`Dispersion::savory_taps`]: the `n` centred taps of Savory's filter (kept for one
@@ -290,7 +295,7 @@ pub fn cd_savory_length(beta2_s2_km: f64, length_km: f64, fs: f64) -> usize {
 /// # Errors
 /// As [`Dispersion::savory_taps`].
 pub fn cd_savory_taps(beta2_s2_km: f64, length_km: f64, fs: f64, n: usize) -> Result<Vec<C64>> {
-    Dispersion { beta2_s2_km, beta3_s3_km: 0.0, length_km, fs }.savory_taps(n)
+    Dispersion::new(beta2_s2_km, length_km, fs).savory_taps(n)
 }
 
 /// [`Dispersion::ls_taps`]: the `n` centred taps of the least-squares compensation over
@@ -299,7 +304,7 @@ pub fn cd_savory_taps(beta2_s2_km: f64, length_km: f64, fs: f64, n: usize) -> Re
 /// # Errors
 /// As [`Dispersion::ls_taps`].
 pub fn cd_ls_taps(beta2_s2_km: f64, length_km: f64, fs: f64, n: usize, band_hz: f64, epsilon: f64) -> Result<Vec<C64>> {
-    Dispersion { beta2_s2_km, beta3_s3_km: 0.0, length_km, fs }.ls_taps(n, band_hz, epsilon)
+    Dispersion::new(beta2_s2_km, length_km, fs).ls_taps(n, band_hz, epsilon)
 }
 
 /// [`Dispersion::ls_error`]: the energy of the error of the centred `taps` over the band
@@ -308,7 +313,7 @@ pub fn cd_ls_taps(beta2_s2_km: f64, length_km: f64, fs: f64, n: usize, band_hz: 
 /// # Errors
 /// As [`Dispersion::ls_error`].
 pub fn cd_ls_error(taps: &[C64], beta2_s2_km: f64, length_km: f64, fs: f64, band_hz: f64) -> Result<f64> {
-    Dispersion { beta2_s2_km, beta3_s3_km: 0.0, length_km, fs }.ls_error(taps, band_hz)
+    Dispersion::new(beta2_s2_km, length_km, fs).ls_error(taps, band_hz)
 }
 
 fn conj_if(v: C64, c: bool) -> C64 {

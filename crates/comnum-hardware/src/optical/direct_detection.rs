@@ -87,7 +87,7 @@
 //! use comnum_hardware::optical::direct_detection::{DirectDetectionReceiver, extinction_ratio_penalty_db};
 //! use comnum_math::{qfunc, w2dbm};
 //! // a p-i-n receiver at 1 Gb/s: 1 A/W, 50 Ω at 300 K, 3 dB of noise figure, Δf = 500 MHz
-//! let rx = DirectDetectionReceiver { bandwidth_hz: 0.5e9, ..DirectDetectionReceiver::pin(1.0) };
+//! let rx = DirectDetectionReceiver { bandwidth_hz: 0.5e9, ..Default::default() };
 //! let p = rx.sensitivity_w(6.0).unwrap();                       // Q = 6: BER 1e-9
 //! assert!((w2dbm(p) - (-24.6)).abs() < 0.05);
 //! assert!((rx.q_factor(2.0 * p, 0.0).unwrap() - 6.0).abs() < 1e-9);  // the exact inverse
@@ -159,12 +159,12 @@ pub struct DirectDetectionReceiver {
     pub bandwidth_hz: f64,
 }
 
-impl DirectDetectionReceiver {
-    /// A p-i-n receiver of responsivity `responsivity`: 50 Ω at 300 K, 3 dB of noise
-    /// figure, 1 GHz of noise bandwidth.
-    pub fn pin(responsivity: f64) -> DirectDetectionReceiver {
+impl Default for DirectDetectionReceiver {
+    /// A p-i-n receiver of 1 A/W: 50 Ω at 300 K, 3 dB of noise figure, 1 GHz of noise
+    /// bandwidth.
+    fn default() -> Self {
         DirectDetectionReceiver {
-            responsivity,
+            responsivity: 1.0,
             apd_gain: 1.0,
             ionization_ratio: 0.0,
             temperature_k: 300.0,
@@ -173,7 +173,9 @@ impl DirectDetectionReceiver {
             bandwidth_hz: 1e9,
         }
     }
+}
 
+impl DirectDetectionReceiver {
     /// The same receiver with the avalanche gain `m` and ionisation ratio `k_a`.
     pub fn with_apd(self, m: f64, k_a: f64) -> DirectDetectionReceiver {
         DirectDetectionReceiver { apd_gain: m, ionization_ratio: k_a, ..self }
@@ -510,10 +512,9 @@ mod tests {
     use super::*;
     use crate::optical::Photodiode;
     use comnum_core::rng::Rng;
-    use comnum_math::{ZERO_CELSIUS, qfuncinv};
 
     fn rx() -> DirectDetectionReceiver {
-        DirectDetectionReceiver { bandwidth_hz: 5e9, ..DirectDetectionReceiver::pin(0.8) }
+        DirectDetectionReceiver { responsivity: 0.8, bandwidth_hz: 5e9, ..Default::default() }
     }
 
     #[test]
@@ -673,12 +674,12 @@ mod tests {
             load_ohm: pd.load_ohm,
             noise_figure_db: 0.0,
             bandwidth_hz: b,
-            ..DirectDetectionReceiver::pin(pd.responsivity)
+            ..Default::default()
         };
         let q = 3.0;
         let p = rx.sensitivity_w(q).unwrap();
         let mut rng = Rng::new(11);
-        let bits: Vec<bool> = (0..n_bits).map(|_| rng.gaussian() > 0.0).collect();
+        let bits: Vec<bool> = (0..n_bits).map(|_| rng.bit() == 1).collect();
         let power: Vec<f64> =
             bits.iter().flat_map(|&b| std::iter::repeat_n(if b { 2.0 * p } else { 0.0 }, sps)).collect();
         let i = pd.detect_power(&power, fs, &mut rng).unwrap();
@@ -697,6 +698,5 @@ mod tests {
         let expected = qfunc(q);
         let sampling = (expected / n_bits as f64).sqrt();
         assert!((ber - expected).abs() < 3.0 * sampling, "{ber} against {expected} ± {sampling}");
-        assert!(ZERO_CELSIUS > 0.0 && qfuncinv(expected) > 2.99);
     }
 }

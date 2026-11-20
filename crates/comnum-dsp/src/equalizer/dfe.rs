@@ -15,13 +15,12 @@
 //! $$
 //!
 //! with $\hat{s}_{k}$ the decision on $y_{k}$ (the point of the constellation nearest to
-//! it), or the known symbol $s_{k}$ during the first `training` symbols. Both filters
-//! follow the error $e_{k} = \hat{s}_{k} - y_{k}$ by the [`UpdateRule`] of the
-//! equaliser, $f \leftarrow f + \mu e_{k} x^{*}$, $b \leftarrow b - \mu e_{k}
-//! \hat{s}^{*}$ (the feedback input being $-\hat{s}$). The input is padded with $\lfloor
-//! N_{f}/2 \rfloor$ zeros at both ends and the centre tap of $f$ starts at 1, as the
-//! linear equaliser does. The decisions and the symbols are on the scale of the points
-//! given (no normalisation).
+//! it), or the known symbol $s_{k}$ during the first `training` symbols. The two filters
+//! are one tap vector $[f;\, -b]$ on the regressor $[x;\, \hat{s}]$ and follow the error
+//! $e_{k} = \hat{s}_{k} - y_{k}$ by the [`UpdateRule`] of the equaliser (a stochastic
+//! gradient). The input is padded with $\lfloor N_{f}/2 \rfloor$ zeros at both ends and
+//! the centre tap of $f$ starts at 1, as the linear equaliser does. The decisions and the
+//! symbols are on the scale of the points given (no normalisation).
 //!
 //! # Examples
 //! ```
@@ -33,7 +32,7 @@
 //! let mut rng = Rng::new(2);
 //! let idx: Vec<usize> = (0..3000).map(|_| rng.below(2)).collect();
 //! let s: Vec<C64> = idx.iter().map(|&i| pts[i]).collect();
-//! let x: Vec<C64> = (0..s.len()).map(|n| s[n] + if n > 0 { s[n - 1] * 0.9 } else { C64::new(0.0, 0.0) }).collect();
+//! let x = comnum_dsp::filter::convolve_full(&[C64::new(1.0, 0.0), C64::new(0.9, 0.0)], &s)[..s.len()].to_vec();
 //! let dfe = Dfe { mu: 5e-3, training: 500, ..Dfe::new(7, 2) };
 //! let out = dfe.run(&x, Some(&s), &pts)?;
 //! let errors = out.decisions[1000..].iter().zip(&idx[1000..]).filter(|(a, b)| a != b).count();
@@ -48,7 +47,8 @@
 //!    dispersive channels," MIT Research Laboratory of Electronics, Tech. Rep. 437, 1967.
 
 use crate::adaptive::UpdateRule;
-use comnum_core::{Result, ensure, ensure_shape};
+use crate::equalizer::pad_block;
+use comnum_core::{Result, ensure};
 use comnum_math::C64;
 use comnum_math::nearest::Slicer;
 
@@ -110,65 +110,51 @@ impl Dfe {
         ensure(self.training <= n_ref, || {
             format!("a training of {} symbols with a reference of {n_ref}", self.training)
         })?;
-        let pad = self.n_feedforward / 2;
-        let mut padded = vec![C64::new(0.0, 0.0); pad];
-        padded.extend_from_slice(x);
-        padded.extend(std::iter::repeat_n(C64::new(0.0, 0.0), pad));
-        ensure_shape(padded.len() >= self.n_feedforward, || {
-            format!("a block of {} samples is shorter than the {} taps of the equaliser", x.len(), self.n_feedforward)
-        })?;
-        let n_out = (padded.len() - self.n_feedforward) / self.sps + 1;
+        let (padded, n_out) = pad_block(x, self.n_feedforward, self.sps)?;
+        let (nf, nb) = (self.n_feedforward, self.n_feedback);
         let slicer = Slicer::new(points);
-        let mut f = vec![C64::new(0.0, 0.0); self.n_feedforward];
-        f[pad] = C64::new(1.0, 0.0);
-        let mut b = vec![C64::new(0.0, 0.0); self.n_feedback];
-        // the feedback input: minus the past decisions, the most recent first
-        let mut past = vec![C64::new(0.0, 0.0); self.n_feedback];
-        let mut out = DfeOutput {
-            symbols: Vec::with_capacity(n_out),
-            decisions: Vec::with_capacity(n_out),
-            feedforward: vec![],
-            feedback: vec![],
-            error: Vec::with_capacity(n_out),
-        };
+        // the regressor [x window ; past decisions, the most recent first] and its taps
+        // [f ; -b], the centre tap of f at 1
+        let mut regressor = vec![C64::new(0.0, 0.0); nf + nb];
+        let mut taps = vec![C64::new(0.0, 0.0); nf + nb];
+        taps[nf / 2] = C64::new(1.0, 0.0);
+        let (mut symbols, mut decisions, mut error) =
+            (Vec::with_capacity(n_out), Vec::with_capacity(n_out), Vec::with_capacity(n_out));
         for k in 0..n_out {
-            let xs = &padded[k * self.sps..k * self.sps + self.n_feedforward];
-            let y: C64 = f.iter().zip(xs).map(|(a, v)| a * v).sum::<C64>()
-                + b.iter().zip(&past).map(|(a, v)| a * v).sum::<C64>();
-            let target = match reference {
-                Some(r) if k < self.training => r[k],
-                _ => points[slicer.nearest(y)],
+            regressor[..nf].copy_from_slice(&padded[k * self.sps..k * self.sps + nf]);
+            let y: C64 = taps.iter().zip(&regressor).map(|(a, v)| a * v).sum();
+            let index = match reference {
+                Some(r) if k < self.training => slicer.nearest(r[k]),
+                _ => slicer.nearest(y),
             };
+            let target = points[index];
             let e = target - y;
-            let energy = if self.rule.needs_energy() {
-                xs.iter().map(C64::norm_sqr).sum::<f64>() + past.iter().map(C64::norm_sqr).sum::<f64>()
-            } else {
-                0.0
-            };
-            let step = self.rule.step_size(self.mu, energy);
-            self.rule.update(&mut f, xs, e, step);
-            self.rule.update(&mut b, &past, e, step);
-            out.symbols.push(y);
-            out.decisions.push(slicer.nearest(target));
-            out.error.push(e.norm_sqr());
-            if self.n_feedback > 0 {
-                past.rotate_right(1);
-                past[0] = -target;
+            let energy = if self.rule.needs_energy() { regressor.iter().map(C64::norm_sqr).sum() } else { 0.0 };
+            self.rule.update(&mut taps, &regressor, e, self.rule.step_size(self.mu, energy));
+            symbols.push(y);
+            decisions.push(index);
+            error.push(e.norm_sqr());
+            if nb > 0 {
+                regressor[nf..].rotate_right(1);
+                regressor[nf] = target;
             }
         }
-        out.feedforward = f;
-        out.feedback = b;
-        Ok(out)
+        let feedback = taps[nf..].iter().map(|v| -v).collect();
+        taps.truncate(nf);
+        Ok(DfeOutput { symbols, decisions, feedforward: taps, feedback, error })
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::equalizer::pam;
+    use crate::filter::convolve_full;
     use comnum_core::rng::Rng;
 
-    fn pam(m: usize) -> Vec<C64> {
-        (0..m).map(|i| C64::new(2.0 * i as f64 - (m as f64 - 1.0), 0.0)).collect()
+    /// `s` through the causal channel `h`, the tail of the convolution dropped.
+    fn through(s: &[C64], h: &[C64]) -> Vec<C64> {
+        convolve_full(h, s)[..s.len()].to_vec()
     }
 
     #[test]
@@ -176,8 +162,7 @@ mod tests {
         let pts = pam(4);
         let mut rng = Rng::new(1);
         let s: Vec<C64> = (0..400).map(|_| pts[rng.below(4)]).collect();
-        let x: Vec<C64> =
-            (0..s.len()).map(|n| s[n] + if n > 0 { s[n - 1] * 0.2 } else { C64::new(0.0, 0.0) }).collect();
+        let x = through(&s, &[C64::new(1.0, 0.0), C64::new(0.2, 0.0)]);
         let dfe = Dfe { mu: 2e-3, training: 400, ..Dfe::new(5, 0) };
         let out = dfe.run(&x, Some(&s), &pts).unwrap();
         let eq = crate::equalizer::AdaptiveEqualizer {
@@ -202,7 +187,7 @@ mod tests {
         let mut rng = Rng::new(4);
         let idx: Vec<usize> = (0..4000).map(|_| rng.below(2)).collect();
         let s: Vec<C64> = idx.iter().map(|&i| pts[i]).collect();
-        let x: Vec<C64> = (0..s.len()).map(|n| s[n] + if n > 0 { s[n - 1] } else { C64::new(0.0, 0.0) }).collect();
+        let x = through(&s, &[C64::new(1.0, 0.0), C64::new(1.0, 0.0)]);
         // one feedforward tap: the only solution is f = 1, b = [1, 0]
         let one = Dfe { mu: 3e-3, training: 1000, ..Dfe::new(1, 2) };
         let out = one.run(&x, Some(&s), &pts).unwrap();
@@ -215,12 +200,9 @@ mod tests {
         assert_eq!(errors, 0);
         let tail = out.error[3000..].iter().sum::<f64>() / 1000.0;
         assert!(tail < 1e-2, "{tail}");
-        // normalised and sign-error updates converge too
-        for rule in [UpdateRule::Normalized, UpdateRule::SignError] {
-            let d = Dfe { rule, mu: if rule == UpdateRule::Normalized { 0.05 } else { 1e-3 }, ..dfe.clone() };
-            let o = d.run(&x, Some(&s), &pts).unwrap();
-            assert_eq!(o.decisions[3000..], idx[3000..], "{rule:?}");
-        }
+        // the normalised step converges too (the rules themselves are tested in `adaptive`)
+        let o = Dfe { rule: UpdateRule::Normalized, mu: 0.05, ..dfe }.run(&x, Some(&s), &pts).unwrap();
+        assert_eq!(o.decisions[3000..], idx[3000..]);
     }
 
     #[test]

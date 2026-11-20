@@ -70,8 +70,8 @@ pub struct Trellis {
     pub(crate) constraint: u32,
     /// Coded bits per input bit $n$.
     pub(crate) n_out: usize,
-    /// `next[s][u]`: the state after input `u` in state `s`.
-    pub(crate) next: Vec<[usize; 2]>,
+    /// The transitions: the state after input `u` in state `s` is `machine.next(s, u)`.
+    pub(crate) machine: StateMachine,
     /// `out[s][u]`: the coded bits, first output in the most significant position.
     pub(crate) out: Vec<[u32; 2]>,
     /// `tail[s]`: the input that drives state `s` towards zero (0 for feed-forward codes).
@@ -81,7 +81,7 @@ pub struct Trellis {
 impl Trellis {
     /// Number of states $2^{K-1}$.
     pub fn n_states(&self) -> usize {
-        self.next.len()
+        self.machine.n_states()
     }
 
     /// Constraint length $K$ (memory $K - 1$).
@@ -94,9 +94,14 @@ impl Trellis {
         self.n_out
     }
 
-    /// `next()[s][u]`: the state after input `u` in state `s`.
-    pub fn next(&self) -> &[[usize; 2]] {
-        &self.next
+    /// The state after input `u` in state `s`.
+    pub fn next(&self, s: usize, u: usize) -> usize {
+        self.machine.next(s, u)
+    }
+
+    /// The state machine of the trellis, for [`comnum_math::viterbi`].
+    pub fn machine(&self) -> &StateMachine {
+        &self.machine
     }
 
     /// `out()[s][u]`: the coded bits of the branch, the first output in the most
@@ -123,20 +128,19 @@ impl Trellis {
             format!("a convolutional code needs 1 to 30 generators, got {}", generators.len())
         })?;
         let states = 1usize << m;
-        let mut next = Vec::with_capacity(states);
+        let mut next = Vec::with_capacity(2 * states);
         let mut out = Vec::with_capacity(states);
         for s in 0..states as u32 {
-            let mut nx = [0usize; 2];
             let mut o = [0u32; 2];
             for u in 0..2u32 {
                 let reg = (u << m) | s;
-                nx[u as usize] = (reg >> 1) as usize;
+                next.push((reg >> 1) as usize);
                 o[u as usize] = generators.iter().fold(0, |acc, g| (acc << 1) | u32::from(parity(reg & g)));
             }
-            next.push(nx);
             out.push(o);
         }
-        Ok(Trellis { constraint, n_out: generators.len(), next, out, tail: vec![0; states] })
+        let machine = StateMachine::new(states, 2, next)?;
+        Ok(Trellis { constraint, n_out: generators.len(), machine, out, tail: vec![0; states] })
     }
 
     /// The memory `constraint - 1` of a code, checked.
@@ -182,23 +186,22 @@ impl Trellis {
         })?;
         let states = 1usize << m;
         let fb = feedback & ((1 << m) - 1);
-        let mut next = Vec::with_capacity(states);
+        let mut next = Vec::with_capacity(2 * states);
         let mut out = Vec::with_capacity(states);
         let mut tail = Vec::with_capacity(states);
         for s in 0..states as u32 {
-            let mut nx = [0usize; 2];
             let mut o = [0u32; 2];
             for u in 0..2u32 {
                 let w = u ^ u32::from(parity(s & fb));
                 let reg = (w << m) | s;
-                nx[u as usize] = (reg >> 1) as usize;
+                next.push((reg >> 1) as usize);
                 o[u as usize] = forwards.iter().fold(u, |acc, &g| (acc << 1) | u32::from(parity(reg & g)));
             }
-            next.push(nx);
             out.push(o);
             tail.push(parity(s & fb));
         }
-        Ok(Trellis { constraint, n_out: forwards.len() + 1, next, out, tail })
+        let machine = StateMachine::new(states, 2, next)?;
+        Ok(Trellis { constraint, n_out: forwards.len() + 1, machine, out, tail })
     }
 
     /// Encode `bits` from state 0; with `terminate`, append the $K - 1$ tail inputs that
@@ -238,7 +241,7 @@ impl Trellis {
         self.check_feedforward()?;
         let m = self.constraint as usize - 1;
         ensure_shape(bits.len() >= m, || format!("tail biting needs at least K - 1 = {m} bits, got {}", bits.len()))?;
-        let start = bits[bits.len() - m..].iter().fold(0, |s, &b| self.next[s][usize::from(b & 1)]);
+        let start = bits[bits.len() - m..].iter().fold(0, |s, &b| self.next(s, usize::from(b & 1)));
         let mut out = Vec::with_capacity(bits.len() * self.n_out);
         self.encode_from(start, bits, &mut out);
         Ok(out)
@@ -252,7 +255,7 @@ impl Trellis {
             for i in (0..self.n_out).rev() {
                 out.push(((o >> i) & 1) as u8);
             }
-            s = self.next[s][u];
+            s = self.next(s, u);
         }
         s
     }
@@ -260,7 +263,7 @@ impl Trellis {
     /// Whether the next state is the register shifted by the input (a feed-forward code).
     fn check_feedforward(&self) -> Result<()> {
         let m = self.constraint - 1;
-        let ff = self.next.iter().enumerate().all(|(s, nx)| (0..2).all(|u| nx[u] == ((u << m) | s) >> 1));
+        let ff = (0..self.n_states()).all(|s| (0..2).all(|u| self.next(s, u) == ((u << m) | s) >> 1));
         ensure(ff, || "tail biting is defined here for feed-forward codes only".into())
     }
 
@@ -289,12 +292,6 @@ impl Trellis {
 }
 
 impl Trellis {
-    /// The state machine of the trellis for [`comnum_math::viterbi`].
-    pub(crate) fn machine(&self) -> Result<StateMachine> {
-        let next = self.next.iter().flat_map(|row| row.iter().copied()).collect();
-        StateMachine::new(self.n_states(), 2, next)
-    }
-
     /// The branch metrics of every step of `llr` for [`comnum_math::viterbi::forward`].
     fn gammas<'a>(&'a self, llr: &'a [f64]) -> impl FnMut(usize, &mut [f64]) + 'a {
         let n = self.n_out;
@@ -311,13 +308,13 @@ impl Trellis {
 /// [`comnum_core::Error::Shape`] if the number of LLRs is not a multiple of $n$.
 pub fn viterbi(trellis: &Trellis, llr: &[f64], terminated: bool) -> Result<Vec<u8>> {
     let steps = steps_of(trellis, llr)?;
-    let (sm, ns) = (trellis.machine()?, trellis.n_states());
+    let (sm, ns) = (trellis.machine(), trellis.n_states());
     let mut metric = vec![f64::NEG_INFINITY; ns];
     metric[0] = 0.0;
-    let mut from = vec![0u32; steps * ns];
-    vit::forward(&sm, &mut metric, trellis.gammas(llr), &mut from, None);
+    let mut surv = vit::Survivors::new(sm, steps);
+    vit::forward(sm, &mut metric, trellis.gammas(llr), &mut surv);
     let end = if terminated { 0 } else { vit::best_state(&metric) };
-    let mut bits = inputs_to_bits(vit::traceback(&sm, &from, end).0);
+    let mut bits = inputs_to_bits(surv.traceback(end).inputs);
     if terminated {
         bits.truncate(steps.saturating_sub(trellis.constraint as usize - 1));
     }
@@ -343,12 +340,11 @@ pub fn viterbi(trellis: &Trellis, llr: &[f64], terminated: bool) -> Result<Vec<u
 /// applications," *Proc. IEEE GLOBECOM*, 1680–1686, 1989.
 pub fn sova(trellis: &Trellis, llr: &[f64], terminated: bool) -> Result<Vec<f64>> {
     let steps = steps_of(trellis, llr)?;
-    let (sm, ns) = (trellis.machine()?, trellis.n_states());
-    let mut start = vec![f64::NEG_INFINITY; ns];
+    let mut start = vec![f64::NEG_INFINITY; trellis.n_states()];
     start[0] = 0.0;
     let end = if terminated { Some(0) } else { None };
-    let (path, reliability) = vit::sova(&sm, steps, &start, trellis.gammas(llr), end)?;
-    let mut out: Vec<f64> = path.iter().zip(&reliability).map(|(&u, &d)| if u == 0 { d } else { -d }).collect();
+    let (path, reliability) = vit::sova(trellis.machine(), steps, &start, trellis.gammas(llr), end)?;
+    let mut out = vit::binary_llr(&path, &reliability);
     if terminated {
         out.truncate(steps.saturating_sub(trellis.constraint as usize - 1));
     }
@@ -374,15 +370,15 @@ pub fn sova(trellis: &Trellis, llr: &[f64], terminated: bool) -> Result<Vec<f64>
 pub fn viterbi_tail_biting(trellis: &Trellis, llr: &[f64], passes: usize) -> Result<Vec<u8>> {
     ensure(passes > 0, || "the wrap-around Viterbi algorithm needs at least one pass".into())?;
     let steps = steps_of(trellis, llr)?;
-    let (sm, ns) = (trellis.machine()?, trellis.n_states());
+    let (sm, ns) = (trellis.machine(), trellis.n_states());
     let mut metric = vec![0.0; ns];
-    let mut from = vec![0u32; steps * ns];
+    let mut surv = vit::Survivors::new(sm, steps);
     for _ in 1..passes {
-        vit::forward(&sm, &mut metric, trellis.gammas(llr), &mut from, None);
+        vit::forward(sm, &mut metric, trellis.gammas(llr), &mut surv);
         let end = vit::best_state(&metric);
-        let (bits, first) = vit::traceback(&sm, &from, end);
-        if first == end {
-            return Ok(inputs_to_bits(bits));
+        let path = surv.traceback(end);
+        if path.states[0] == end {
+            return Ok(inputs_to_bits(path.inputs));
         }
         let top = metric[end];
         for m in &mut metric {
@@ -390,18 +386,17 @@ pub fn viterbi_tail_biting(trellis: &Trellis, llr: &[f64], passes: usize) -> Res
         }
     }
     let start = metric.clone();
-    vit::forward(&sm, &mut metric, trellis.gammas(llr), &mut from, None);
+    vit::forward(sm, &mut metric, trellis.gammas(llr), &mut surv);
     let end = vit::best_state(&metric);
-    let (bits, first) = vit::traceback(&sm, &from, end);
-    if first == end {
-        return Ok(inputs_to_bits(bits));
+    let path = surv.traceback(end);
+    if path.states[0] == end {
+        return Ok(inputs_to_bits(path.inputs));
     }
     // the best tail-biting survivor of the last pass: the metric it gained in the pass
-    let best = (0..ns)
-        .map(|s| (s, vit::traceback(&sm, &from, s)))
-        .filter(|(s, (_, first))| first == s)
-        .max_by(|(a, (_, fa)), (b, (_, fb))| (metric[*a] - start[*fa]).total_cmp(&(metric[*b] - start[*fb])));
-    Ok(inputs_to_bits(best.map_or(bits, |(_, (b, _))| b)))
+    let best = (0..ns).map(|s| surv.traceback(s)).filter(|p| p.states[0] == p.states[steps]).max_by(|a, b| {
+        (metric[a.states[steps]] - start[a.states[0]]).total_cmp(&(metric[b.states[steps]] - start[b.states[0]]))
+    });
+    Ok(inputs_to_bits(best.map_or(path.inputs, |p| p.inputs)))
 }
 
 /// The inputs of a path as bits.
@@ -478,7 +473,7 @@ pub(crate) fn bcjr_into(
                 continue;
             }
             for u in 0..2 {
-                let s2 = trellis.next[s][u];
+                let s2 = trellis.next(s, u);
                 later[s2] = max_star(later[s2], now[s] + gamma[(t * ns + s) * 2 + u], jacobian);
             }
         }
@@ -496,7 +491,7 @@ pub(crate) fn bcjr_into(
         for s in 0..ns {
             let mut b = ninf;
             for u in 0..2 {
-                b = max_star(b, gamma[(t * ns + s) * 2 + u] + later[trellis.next[s][u]], jacobian);
+                b = max_star(b, gamma[(t * ns + s) * 2 + u] + later[trellis.next(s, u)], jacobian);
             }
             now[s] = b;
         }
@@ -511,7 +506,7 @@ pub(crate) fn bcjr_into(
             }
             for u in 0..2 {
                 l[u] =
-                    max_star(l[u], a + gamma[(t * ns + s) * 2 + u] + beta[(t + 1) * ns + trellis.next[s][u]], jacobian);
+                    max_star(l[u], a + gamma[(t * ns + s) * 2 + u] + beta[(t + 1) * ns + trellis.next(s, u)], jacobian);
             }
         }
         app.push(l[0] - l[1]);
@@ -591,6 +586,20 @@ impl BlockCode for ConvolutionalCode {
         } else {
             viterbi(&self.trellis, llr, true)
         }
+    }
+}
+
+impl ConvolutionalCode {
+    /// The LLRs of the $k$ information bits of one block by the soft-output Viterbi
+    /// algorithm ([`sova`], the tail forced to state zero).
+    ///
+    /// # Errors
+    /// [`comnum_core::Error::Shape`] if `llr` has not $n$ values.
+    pub fn sova_block(&self, llr: &[f64]) -> Result<Vec<f64>> {
+        expect_len(llr.len(), self.n(), "LLRs")?;
+        let mut out = sova(&self.trellis, llr, true)?;
+        out.truncate(self.k);
+        Ok(out)
     }
 }
 
@@ -735,13 +744,13 @@ mod tests {
 
     fn tail_biting_ml(t: &Trellis, llr: &[f64]) -> Vec<u8> {
         // maximum likelihood: the best of the Viterbi paths forced to start and end in s
-        let (sm, ns) = (t.machine().unwrap(), t.n_states());
+        let ns = t.n_states();
         let steps = llr.len() / t.n_out();
         let mut best = (f64::NEG_INFINITY, Vec::new());
         for s0 in 0..ns {
             let mut start = vec![f64::NEG_INFINITY; ns];
             start[s0] = 0.0;
-            let (path, metric) = vit::viterbi(&sm, steps, &start, t.gammas(llr), Some(s0)).unwrap();
+            let (path, metric) = vit::viterbi(t.machine(), steps, &start, t.gammas(llr), Some(s0)).unwrap();
             if metric[s0] > best.0 {
                 best = (metric[s0], inputs_to_bits(path));
             }
@@ -800,10 +809,10 @@ mod tests {
         // the tail returns to state 0
         let mut s = 0;
         for &b in &bits {
-            s = t.next[s][usize::from(b)];
+            s = t.next(s, usize::from(b));
         }
         for _ in 0..3 {
-            s = t.next[s][usize::from(t.tail[s])];
+            s = t.next(s, usize::from(t.tail[s]));
         }
         assert_eq!(s, 0);
     }

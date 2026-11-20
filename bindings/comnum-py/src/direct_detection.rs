@@ -90,13 +90,13 @@ wrapper_methods! {
     #[new]
     #[pyo3(signature = (
         *,
-        responsivity = 1.0,
-        apd_gain = 1.0,
-        ionization_ratio = 0.0,
-        temperature_k = 300.0,
-        load_ohm = 50.0,
-        noise_figure_db = 3.0,
-        bandwidth_hz = 1e9,
+        responsivity = DirectDetectionReceiver::default().responsivity,
+        apd_gain = DirectDetectionReceiver::default().apd_gain,
+        ionization_ratio = DirectDetectionReceiver::default().ionization_ratio,
+        temperature_k = DirectDetectionReceiver::default().temperature_k,
+        load_ohm = DirectDetectionReceiver::default().load_ohm,
+        noise_figure_db = DirectDetectionReceiver::default().noise_figure_db,
+        bandwidth_hz = DirectDetectionReceiver::default().bandwidth_hz,
     ))]
     #[allow(clippy::too_many_arguments, reason = "one keyword argument per field of the receiver")]
     fn new(

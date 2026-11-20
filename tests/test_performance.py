@@ -894,9 +894,9 @@ def test_dfe_mlse_and_their_bounds_on_a_two_tap_channel():
     )
     assert ser_mlse < np.mean(dec[n // 2 :] != idx[n // 2 :])
     # the soft outputs: the LLR signs are the decisions, 2× noise halves the magnitudes
-    hard, rel = comnum.mlse(r, [1.0, 0.6], c, noise_var=s2)
+    hard, rel = comnum.mlse_soft(r, [1.0, 0.6], c, s2)
     assert np.array_equal(hard, comnum.mlse(r, [1.0, 0.6], c))
-    _, half = comnum.mlse(r, [1.0, 0.6], c, noise_var=2 * s2)
+    _, half = comnum.mlse_soft(r, [1.0, 0.6], c, 2 * s2)
     assert np.allclose(rel, 2 * half)
     # the SOVA of the convolutional code: the decisions of Viterbi, magnitudes at least
     # those of max-log-MAP (Fossorier et al. 1998)

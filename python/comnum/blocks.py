@@ -766,7 +766,7 @@ class Dfe(Native):
         n_feedforward (int): taps of the feedforward filter; default 7
         n_feedback (int): taps of the feedback filter (0: a linear equaliser); default 2
         mu (float): step size; default 1e-3
-        training (int): symbols decided from the transmitted ones before the decisions drive the adaptation [symbols]; default 0
+        training (int): symbols decided from the transmitted ones before the decisions drive the adaptation (capped at the symbols of the frame) [symbols]; default 0
         update_rule (str): the update rule of both filters; one of lms, nlms, sign; default lms
     """
 
@@ -801,7 +801,7 @@ class Mlse(Native):
     Needs: samples, constellation. Gives: nothing.
 
     Args:
-        taps (list): the symbol-spaced channel taps (real, at least one) the detector assumes; default vec![1.0]
+        taps (list): the symbol-spaced channel taps the detector assumes, [[re, im], …] or real numbers; required
     """
 
     needs = ("samples", "constellation")
@@ -809,7 +809,7 @@ class Mlse(Native):
     role = "receiver"
     param_names = ("taps",)
 
-    def __init__(self, *, taps: list | Var | None = None) -> None:
+    def __init__(self, *, taps: list | Var) -> None:
         _init(self, "mlse", taps=taps)
 
 
