@@ -9,6 +9,8 @@ use comnum_core::rng::Rng;
 use comnum_dsp::adaptive::UpdateRule;
 use comnum_dsp::equalizer::Algorithm;
 use comnum_dsp::equalizer::Singularity;
+use comnum_dsp::equalizer::dfe::Dfe;
+use comnum_dsp::equalizer::mlse::Mlse;
 use comnum_dsp::equalizer::{AdaptiveEqualizer, EqualizerOutput};
 use comnum_dsp::filter;
 use comnum_dsp::filter::PulseShape;
@@ -69,6 +71,22 @@ pub(super) fn blocks() -> Vec<Extension> {
             needs [Samples, Constellation],
             gives [],
             |q, label, _| Ok(Box::new(Equalizer::new(&q, label)?)),
+        ),
+        builtin!(
+            Receiver, per_polarization "dfe",
+            "Decision-feedback equaliser (a feedforward FIR on the samples, a feedback FIR on the decisions), output at 1 sample per symbol; records mse (the mean squared error of the last half of the block).",
+            DfeSpec,
+            needs [Samples, Constellation],
+            gives [],
+            |q, label, _| Ok(Box::new(DfeBlock::new(q, label)?)),
+        ),
+        builtin!(
+            Receiver, per_polarization "mlse",
+            "Maximum-likelihood sequence detection over the given symbol-spaced channel taps (Viterbi on the trellis of the channel memory), at 1 sample per symbol: the output is the decided constellation points.",
+            MlseSpec,
+            needs [Samples, Constellation],
+            gives [],
+            |q, _, _| Ok(Box::new(MlseBlock::new(&q)?)),
         ),
         builtin!(
             Receiver, per_polarization "foe",
@@ -375,6 +393,80 @@ impl Block for Equalizer {
         }
         s.set_streams(out.symbols);
         s.sps = 1.0;
+        Ok(())
+    }
+}
+
+block_params! {
+    struct DfeSpec {
+        n_feedforward: usize [7] >= 1, "taps of the feedforward filter";
+        n_feedback: usize [2], "taps of the feedback filter (0: a linear equaliser)";
+        mu: f64 [1e-3] > 0, "step size";
+        training: usize [0] "symbols", "symbols decided from the transmitted ones before the decisions drive the adaptation";
+        update_rule: String ["lms"] one_of ["lms", "nlms", "sign"], "the update rule of both filters";
+    }
+}
+
+struct DfeBlock {
+    p: DfeSpec,
+    rule: UpdateRule,
+    label: String,
+}
+
+impl DfeBlock {
+    fn new(p: DfeSpec, label: String) -> Result<DfeBlock> {
+        let rule = p.update_rule.parse()?;
+        Ok(DfeBlock { p, rule, label })
+    }
+}
+
+impl Block for DfeBlock {
+    fn apply(&self, s: &mut Frame, _: &mut Rng) -> Result<()> {
+        let sps = s.int_sps("dfe")?;
+        let c = s.constellation("dfe")?.clone();
+        let eq = Dfe {
+            n_feedforward: self.p.n_feedforward,
+            n_feedback: self.p.n_feedback,
+            sps,
+            mu: self.p.mu,
+            rule: self.rule,
+            training: self.p.training.min(s.symbols.len()),
+        };
+        let x = signal::pnorm(&s.samples);
+        let out = eq.run(&x, Some(&s.symbols), c.points())?;
+        let half = out.error.len() / 2;
+        let mse = out.error[half..].iter().sum::<f64>() / (out.error.len() - half).max(1) as f64;
+        s.record(&self.label, "mse", mse);
+        s.samples = out.symbols;
+        s.sps = 1.0;
+        Ok(())
+    }
+}
+
+block_params! {
+    struct MlseSpec {
+        taps: Vec<f64> [vec![1.0]], "the symbol-spaced channel taps (real, at least one) the detector assumes";
+    }
+}
+
+struct MlseBlock {
+    taps: Vec<C64>,
+}
+
+impl MlseBlock {
+    fn new(p: &MlseSpec) -> Result<MlseBlock> {
+        ensure(!p.taps.is_empty(), || "mlse: the channel needs a tap".into())?;
+        Ok(MlseBlock { taps: p.taps.iter().map(|&h| C64::new(h, 0.0)).collect() })
+    }
+}
+
+impl Block for MlseBlock {
+    fn apply(&self, s: &mut Frame, _: &mut Rng) -> Result<()> {
+        ensure(s.sps == 1.0, || format!("mlse needs 1 sample per symbol, got {}", s.sps))?;
+        let c = s.constellation("mlse")?.clone();
+        let det = Mlse::new(&self.taps, c.points())?;
+        let idx = det.detect(&signal::pnorm(&s.samples))?;
+        s.samples = idx.iter().map(|&i| c.points()[i]).collect();
         Ok(())
     }
 }

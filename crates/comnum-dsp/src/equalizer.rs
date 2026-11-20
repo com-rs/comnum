@@ -1,7 +1,10 @@
 //! Adaptive equalisation (OptiCommPy `optic.dsp.equalization`).
 //!
 //! Polarisation demultiplexing is the `2×2` case: there is no optical-specific
-//! equaliser.
+//! equaliser. The feedforward equaliser (FFE) of an intensity-modulated PAM receiver is
+//! the `1×1` case with a real constellation; the decision-feedback equaliser is [`dfe`],
+//! the maximum-likelihood sequence detector of a known channel [`mlse`], and the
+//! infinite-length bounds they are compared with [`theory`].
 //!
 //! # Adaptive MIMO equaliser
 //!
@@ -72,6 +75,10 @@
 //! let spread = tail.iter().map(|v| (v.norm_sqr() - 1.0).abs()).sum::<f64>() / tail.len() as f64;
 //! assert!(spread < 0.05);                     // constant modulus restored
 //! ```
+
+pub mod dfe;
+pub mod mlse;
+pub mod theory;
 
 use crate::adaptive::{ConstantModulus, Decision, ErrorLaw, RadiusDirected, Reference, UpdateRule};
 use comnum_core::{Error, Result, ensure, ensure_shape};

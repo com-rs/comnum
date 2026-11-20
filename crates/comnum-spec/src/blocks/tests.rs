@@ -94,6 +94,8 @@ fn example(b: &str, p: &str) -> Option<Json> {
         ("dbp", "step_factor") => json!(0.4),
         ("dbp", "nonlinear_length") => json!("step"),
         ("adaptive_equalizer", "update_rule") => json!("sign"),
+        ("dfe", "update_rule") => json!("nlms"),
+        ("mlse", "taps") => json!([1.0, 0.5]),
         ("dump", "trials") => json!(2),
         ("cpm_tx" | "cpm_rx", "h") => json!("1/2"),
         ("cpm_tx" | "cpm_rx", "pulse") => json!("gmsk"),
@@ -162,7 +164,8 @@ fn example(b: &str, p: &str) -> Option<Json> {
             "n_symbols" | "sps" | "n_taps" | "sps_out" | "offset" | "passes" | "n" | "b" | "m" | "steps_per_span"
             | "steps_per_link" | "start" | "length" | "max_delay" | "symmetry" | "window" | "n_subcarriers"
             | "oversampling" | "n_cp" | "n_tx" | "n_rx" | "coherence_samples" | "k" | "seed" | "blocks" | "skip_start"
-            | "skip_end" | "n_channels" | "max_iterations" | "iterations" | "pols" | "kikuchi" | "sections" | "bits",
+            | "skip_end" | "n_channels" | "max_iterations" | "iterations" | "pols" | "kikuchi" | "sections" | "bits"
+            | "n_feedforward" | "n_feedback" | "training",
         ) => json!(2),
         _ => json!(1.0),
     })
@@ -389,6 +392,8 @@ fn the_single_polarisation_blocks_are_declared_so() {
         "ddpll",
         "adc",
         "dac",
+        "dfe",
+        "mlse",
     ];
     expected.sort_unstable();
     assert_eq!(per_pol, expected);
