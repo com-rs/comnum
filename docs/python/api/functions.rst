@@ -421,6 +421,7 @@ Optical devices
    :toctree: generated
 
    laser
+   DirectlyModulatedLaser
    phase_noise
    clock_offset
    phase_modulator
@@ -573,6 +574,11 @@ Equalisation and compensation
    :toctree: generated
 
    adaptive_equalizer
+   dfe
+   mlse
+   linear_mmse_mse
+   dfe_mmse_snr
+   matched_filter_bound_snr
    cdc
    cd_taps_needed
    cd_fir_taps
@@ -628,6 +634,7 @@ Estimates from received and transmitted sequences.
    fast_ber_calc
    evm
    ber_to_q_db
+   level_q_factors
    monte_carlo_gmi
    monte_carlo_mi
    information_rates

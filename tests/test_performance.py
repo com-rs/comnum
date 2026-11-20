@@ -863,3 +863,89 @@ def test_direct_detection_closed_forms_and_a_simulated_photodiode():
     ber = np.mean((i > s0 * 0.8 * p1 / (s0 + s1)) != bits.astype(bool))
     expected = comnum.qfunc(3.0)
     assert abs(ber - expected) < 3 * np.sqrt(expected / n_bits), (ber, expected)
+
+
+def test_dfe_mlse_and_their_bounds_on_a_two_tap_channel():
+    # 2-PAM through 1 + 0.6 z⁻¹ at σ² = 0.04: the DFE reaches its infinite-length bound
+    # (Proakis & Salehi, Sec. 9.5-2; Salz 1973) within 1 dB, the MLSE sits at the
+    # matched-filter bound (Forney 1972), the linear floor is the Proakis Sec. 9.4-2 one
+    c = comnum.Constellation("pam", 2)
+    rng = comnum.Rng(3)
+    n, s2 = 40_000, 0.04
+    idx, s = comnum.symbols(c, n, rng)
+    r = s + 0.6 * np.concatenate(([0], s[:-1])) + np.sqrt(s2) * rng.gaussian(n)
+    y, dec, _, _, _ = comnum.dfe(
+        r, c, n_feedforward=21, n_feedback=2, mu=2e-3, reference=s, training=n
+    )
+    g = np.vdot(s[n // 2 :], y[n // 2 :]) / np.vdot(s[n // 2 :], s[n // 2 :])
+    snr = abs(g) ** 2 / np.mean(np.abs(y[n // 2 :] - g * s[n // 2 :]) ** 2)
+    bound = comnum.dfe_mmse_snr([1.0, 0.6], s2)
+    assert -0.3 < 10 * np.log10(bound / snr) < 1.0, (snr, bound)
+    assert snr > 1 / comnum.linear_mmse_mse([1.0, 0.6], s2) - 1
+    assert comnum.matched_filter_bound_snr([1.0, 0.6], s2) == (1 + 0.36) / s2
+    # the MLSE at a noise where errors occur (σ² = 0.16: the bound is 1.8e-3)
+    s2 = 0.16
+    r = s + 0.6 * np.concatenate(([0], s[:-1])) + np.sqrt(s2) * rng.gaussian(n)
+    ser_mlse = np.mean(comnum.mlse(r, [1.0, 0.6], c) != idx)
+    mfb = comnum.qfunc(np.sqrt(1.36 / s2))
+    assert 0.5 * mfb <= ser_mlse <= 3 * mfb, (ser_mlse, mfb)
+    _, dec, _, _, _ = comnum.dfe(
+        r, c, n_feedforward=21, n_feedback=2, mu=2e-3, reference=s, training=n // 2
+    )
+    assert ser_mlse < np.mean(dec[n // 2 :] != idx[n // 2 :])
+    # the soft outputs: the LLR signs are the decisions, 2× noise halves the magnitudes
+    hard, rel = comnum.mlse(r, [1.0, 0.6], c, noise_var=s2)
+    assert np.array_equal(hard, comnum.mlse(r, [1.0, 0.6], c))
+    _, half = comnum.mlse(r, [1.0, 0.6], c, noise_var=2 * s2)
+    assert np.allclose(rel, 2 * half)
+    # the SOVA of the convolutional code: the decisions of Viterbi, magnitudes at least
+    # those of max-log-MAP (Fossorier et al. 1998)
+    code = comnum.ConvolutionalCode(100)
+    b = comnum.bits(100, rng)
+    llr = comnum.awgn(1.0 - 2.0 * code.encode(b).astype(float), 2.0, rng).real * 4
+    soft = code.soft_decode(llr)
+    assert np.array_equal((soft < 0).astype(np.uint8), code.decode(llr))
+    assert soft.shape == (100,)
+
+
+def test_the_apd_photodiode_and_the_chirped_laser_follow_their_closed_forms():
+    # the APD current is M R P and its shot noise carries M² F_A: the measured variance
+    # of a constant power matches the closed form of DirectDetectionReceiver
+    fs, b, p = 40e9, 10e9, 1e-4
+    pd = comnum.Photodiode(responsivity=0.8, apd_gain=10.0, ionization_ratio=0.3, bandwidth_hz=b,
+                           thermal_noise=False, dark_current_a=0.0, bandwidth_limitation=False)  # fmt: skip
+    rx = comnum.DirectDetectionReceiver(
+        responsivity=0.8, apd_gain=10.0, ionization_ratio=0.3, bandwidth_hz=b
+    )
+    i = pd.detect_power(np.full(200_000, p), fs, comnum.Rng(1))
+    assert abs(i.mean() / (10.0 * 0.8 * p) - 1) < 1e-3
+    expected = (
+        rx.shot_variance(p) * fs / (2 * b)
+    )  # the per-sample variance of the simulation bandwidth
+    assert abs(i.var() / expected - 1) < 0.02
+    # the chirped Gaussian pulse of a DML broadens as the closed form with C = -β_c
+    dml = comnum.DirectlyModulatedLaser(linewidth_enhancement=4.0)
+    n, fs_l, t0 = 4096, 2e12, 50e-12
+    t = (np.arange(n) - n / 2) / fs_l
+    power = np.exp(-((t / t0) ** 2)) + 1e-12
+    fiber = comnum.FiberParams(d_ps_nm_km=17.0)
+    out = np.abs(comnum.linear_fiber_channel(dml.field(power, fs_l), fiber, 50.0, fs_l)) ** 2
+
+    def rms(pw):
+        m = np.sum(pw * t) / np.sum(pw)
+        return np.sqrt(np.sum(pw * (t - m) ** 2) / np.sum(pw))
+
+    f_b = rms(out) / rms(power)
+    expected = comnum.gaussian_broadening_factor(t0, -4.0, fiber.beta2_s2_km, 0.0, 50.0)
+    assert abs(f_b / expected - 1) < 0.03, (f_b, expected)
+    # the eye Q factor of a simulated on-off receiver is the Q of its closed form
+    rx = comnum.DirectDetectionReceiver(responsivity=0.8, temperature_k=300.0, load_ohm=50.0,
+                                        noise_figure_db=0.0, bandwidth_hz=5e9)  # fmt: skip
+    pd = comnum.Photodiode(responsivity=0.8, temperature_k=300.0, dark_current_a=0.0, load_ohm=50.0,
+                           bandwidth_hz=5e9, bandwidth_limitation=False)  # fmt: skip
+    rng = comnum.Rng(4)
+    bits = comnum.bits(50_000, rng)
+    p1 = 2 * rx.sensitivity_w(4.0)
+    i = pd.detect_power(np.repeat(bits * p1, 4), 40e9, rng).reshape(-1, 4).mean(axis=1)
+    q = comnum.level_q_factors(i, bits, 2)[0]
+    assert abs(q / rx.q_factor(p1, 0.0) - 1) < 0.03, q

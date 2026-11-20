@@ -757,6 +757,62 @@ class AdaptiveEqualizer(Native):
         )
 
 
+class Dfe(Native):
+    """Decision-feedback equaliser (a feedforward FIR on the samples, a feedback FIR on the decisions), output at 1 sample per symbol; records mse (the mean squared error of the last half of the block).
+
+    Needs: samples, constellation. Gives: nothing.
+
+    Args:
+        n_feedforward (int): taps of the feedforward filter; default 7
+        n_feedback (int): taps of the feedback filter (0: a linear equaliser); default 2
+        mu (float): step size; default 1e-3
+        training (int): symbols decided from the transmitted ones before the decisions drive the adaptation [symbols]; default 0
+        update_rule (str): the update rule of both filters; one of lms, nlms, sign; default lms
+    """
+
+    needs = ("samples", "constellation")
+    gives = ()
+    role = "receiver"
+    param_names = ("n_feedforward", "n_feedback", "mu", "training", "update_rule")
+
+    def __init__(
+        self,
+        *,
+        n_feedforward: int | Var = 7,
+        n_feedback: int | Var = 2,
+        mu: float | Var = 0.001,
+        training: int | Var = 0,
+        update_rule: str | Var = "lms",
+    ) -> None:
+        _init(
+            self,
+            "dfe",
+            n_feedforward=n_feedforward,
+            n_feedback=n_feedback,
+            mu=mu,
+            training=training,
+            update_rule=update_rule,
+        )
+
+
+class Mlse(Native):
+    """Maximum-likelihood sequence detection over the given symbol-spaced channel taps (Viterbi on the trellis of the channel memory), at 1 sample per symbol: the output is the decided constellation points.
+
+    Needs: samples, constellation. Gives: nothing.
+
+    Args:
+        taps (list): the symbol-spaced channel taps (real, at least one) the detector assumes; default vec![1.0]
+    """
+
+    needs = ("samples", "constellation")
+    gives = ()
+    role = "receiver"
+    param_names = ("taps",)
+
+    def __init__(self, *, taps: list | Var | None = None) -> None:
+        _init(self, "mlse", taps=taps)
+
+
 class Foe(Native):
     """Frequency-offset estimation by the M-th power and correction; records foe_hz.
 
@@ -2155,6 +2211,7 @@ __all__ = [
     "Ddpll",
     "Decimate",
     "Demap",
+    "Dfe",
     "Dump",
     "Dvbs2Rx",
     "Dvbs2Tx",
@@ -2175,6 +2232,7 @@ __all__ = [
     "MatchedFilter",
     "MimoRx",
     "MimoTx",
+    "Mlse",
     "NoiseEstimate",
     "Normalize",
     "OfdmRx",

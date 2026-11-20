@@ -59,7 +59,7 @@ Coding and shaping
    * - Module
      - Level
      - Strongest evidence
-   * - Convolutional codes (Viterbi, BCJR)
+   * - Convolutional codes (Viterbi, BCJR, SOVA)
      - A
      - AFF3CT; Yasuda et al. Table I
    * - Puncturing
@@ -284,9 +284,9 @@ Receiver DSP
    * - Frame synchronisation
      - A
      - Massey 1972 Tables I–II (optimum rule)
-   * - Adaptive equalisers
+   * - Equalisers (FFE, DFE, MLSE)
      - A
-     - OptiCommPy outputs; Kikuchi's singularity
+     - OptiCommPy outputs; Kikuchi's singularity; the MMSE bounds of Proakis & Salehi and Salz; Forney's matched-filter bound; Hagenauer's SOVA against max-log-MAP
    * - Chromatic dispersion compensation
      - A
      - Eghbali et al. 2014 Table I, Figs. 5 and 9

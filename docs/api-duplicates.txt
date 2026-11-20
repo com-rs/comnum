@@ -38,7 +38,7 @@ constellation           8  # the constellation of three standards (dvbs2, dvbt, 
 data_res                2  # ofdm::link::OfdmFrame::data_res (the data REs of a generic grid) / nr::pdsch::Pdsch::data_res (those of a PDSCH slot, TS 38.211 Sec. 7.3.1.5): the same notion on two grids
 decode                 13  # the decoder of each code (BCH, RS, OSTBC, differential, the FEC of the standards, the BCH of LTE): one verb, different codes / ais::message::decode (the fields of an AIS message)
 deinterleave            2  # Interleaver::deinterleave (a permutation) / dvbt::InnerInterleaver::deinterleave (the LLRs of a DVB-T symbol): the same verb
-detect                  6  # differential::detect, ofdm::detection::detect (per RE), OfdmFrame::detect (calls the former), Gamp::detect, Photodiode::detect, Dsss::detect (calls a detector of comnum-mimo on the signature matrix)
+detect                  7  # differential::detect, ofdm::detection::detect (per RE), OfdmFrame::detect (calls the former), Gamp::detect, Photodiode::detect, Dsss::detect (calls a detector of comnum-mimo on the signature matrix), Mlse::detect (the Viterbi kernel of comnum-math on the channel trellis)
 encode                 10  # the encoder of each code (BCH, RS, trellis, OSTBC, differential, the FEC of the standards): one verb, different codes
 energies                3  # Css::energies / Fhss::energies: the energies of the candidates of a noncoherent receiver, by two different transforms (dechirp and DFT; the DFT bins of a hop); Fsk::energies (the correlations with the tones at any number of samples per symbol)
 energy                  2  # Constellation::energy calls comnum_math::power on its points
@@ -82,7 +82,7 @@ puncturer               2  # Punctured::puncturer and PuncturedTurbo::puncturer 
 receive                 3  # nr::pdsch::Pdsch::receive (the LLRs of a PDSCH slot) / fm::rds::receive (the groups and the station of an RDS): the receiver of two systems / ais::receive (the packets of an AIS channel)
 rms_delay_spread        2  # multipath::rms_delay_spread (of a list of taps) / Echoes::rms_delay_spread (of the echoes, computed by the former)
 row                     2  # comnum_sim::ConditionResult (the flattened record of a condition) / comnum_waveform::otfs::EffectiveChannel (one row of the sparse channel matrix)
-run                     10 # the run of different objects (a runner, a specification, a solver, an equalizer, a loop, a density evolution): one verb
+run                     11  # the run of different objects (a runner, a specification, a solver, an equalizer, a DFE, a loop, a density evolution): one verb
 run_with_gain           2  # SplitStep::run_with_gain (one polarisation) / ManakovSplitStep::run_with_gain (two), the same distributed gain on the two solvers of nlse
 sampling_check          3  # Ssfm::sampling_check and ManakovSsfm::sampling_check are the thin wrappers of nlse::sampling_check on their fields
 scaled                  2  # Constellation::scaled and RamanGain::scaled: the same verb (multiply by a factor) on two types
@@ -115,7 +115,7 @@ bind                    2
 bit_map                 2
 bits_per_symbol         3
 block_len               4
-check                  25
+check                   26
 code                    5
 conditions              2
 config                  2
@@ -126,7 +126,7 @@ demap_bits              2
 demodulate              13  # ais::demodulate (the line levels of an AIS channel); Dsss::demodulate (the bank of matched filters of a direct-sequence link); Fhss::demodulate (the noncoherent decisions of a hopping link); Fsk::demodulate (the noncoherent decisions of orthogonal FSK)
 describe                2
 draw                    6
-field                   3
+field                   4
 frequency_response      3
 from_json               4
 from_name              17
@@ -137,7 +137,7 @@ indices                 2
 info_positions          2
 k                       5
 list                    2
-llr                     4
+llr                     5
 m                       3
 map_bits                2
 mean                    2
@@ -150,7 +150,7 @@ n_fft                   3
 n_out                   2
 n_rx                    2
 n_samples               2
-n_states                2
+n_states                4
 n_symbols               6
 n_tx                    4
 names                   2
@@ -161,7 +161,7 @@ period                  4
 phase                   2
 phase_response          2
 position                2  # ais::message::Message::position (the position of a report) / fm::rds::Offset::position (the position of a block in a group)
-points                  3
+points                  4
 powers                  4  # DoublySelective::powers: the tap powers of the SIR model
 propagate               3
 random                  3
@@ -173,7 +173,7 @@ sample_rate             8
 set_streams             2
 subcarrier              2
 t                       2
-taps                    6
+taps                    7
 trellis                 3
 trial                   2
 uniform                 5
@@ -181,3 +181,7 @@ value                   3
 values                  3
 variance                2
 with_list               2
+forward                 2  # fft::forward (the transform) and viterbi::forward (the add–compare–select recursion)
+next                    2  # Trellis::next (a table) and StateMachine::next (the transition of the kernel the trellis is built on)
+viterbi                 2  # comnum_fec::conv::viterbi (LLRs of a code) is a thin wrapper of comnum_math::viterbi::viterbi (any branch metrics)
+sova                    2  # comnum_fec::conv::sova (LLRs of a code) is a thin wrapper of comnum_math::viterbi::sova

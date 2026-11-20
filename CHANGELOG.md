@@ -8,6 +8,30 @@ and follow [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- The receivers of an intensity-modulated PAM link, for the short-reach IM-DD chains:
+  - `comnum_math::viterbi`, the Viterbi algorithm over any finite-state machine
+    (add–compare–select, trace-back) and the soft-output Viterbi algorithm of Hagenauer &
+    Hoeher (1989), the kernel that `comnum_fec::conv::viterbi` (unchanged results) and
+    the new `comnum_fec::conv::sova` now call; in Python `ConvolutionalCode.soft_decode`;
+  - `comnum_dsp::equalizer::dfe::Dfe`, the decision-feedback equaliser (LMS, NLMS or
+    sign-error, a training block then decision-directed), and
+    `comnum_dsp::equalizer::mlse::Mlse`, maximum-likelihood sequence estimation over a
+    known symbol-spaced channel (Forney 1972) with its soft outputs; the bounds
+    `comnum_dsp::equalizer::theory` (the linear MMSE floor and the MMSE-DFE SNR of
+    Proakis & Salehi Secs. 9.4–9.5 and Salz 1973, the matched-filter bound); the blocks
+    `dfe` and `mlse`; in Python `dfe`, `mlse`, `linear_mmse_mse`, `dfe_mmse_snr`,
+    `matched_filter_bound_snr`;
+  - `comnum_hardware::optical::DirectlyModulatedLaser`, the field of a power waveform
+    with its transient and adiabatic chirp (Agrawal 2002, eqs. (3.5.16), (3.5.25); Koch
+    & Bowers 1984) in the convention of the fibre models, a Gaussian pulse giving the
+    chirped Gaussian of C = −β_c; the avalanche gain and ionisation ratio of `Photodiode`
+    (eq. (4.4.17); 1 and 0 by default, no existing result changes); `beta3_s3_km` in
+    `comnum_dsp::compensation::cd::Dispersion` (0 in the kept free functions);
+  - `comnum_metrics::eye::{level_statistics, level_q_factors}`, the Q factor of every eye
+    of a sampled multilevel signal; in Python `level_q_factors`;
+  - the gallery example `optical/plot_11_imdd_pam4_link.py` (PAM4 at 25 GBd from a
+    chirped laser over dispersive fibre: FFE, DFE, MLSE; the SOVA reliabilities of on–off
+    keying into the (133, 171) decoder).
 - `comnum_hardware::optical::direct_detection`, the closed forms of on–off keying
   receivers after Agrawal, *Fiber-Optic Communication Systems*, 3rd ed., 2002,
   Secs. 2.4.2–2.4.3, 4.4–4.6 and 5.4: the Q factor, `DirectDetectionReceiver` (p-i-n or

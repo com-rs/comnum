@@ -5,7 +5,7 @@ use crate::rng::PyRng;
 use crate::{CArr, FArr, IntoPy, carr, count, cvec, farr, fvec, py_bool};
 use comnum::channel::awgn as awgn_ch;
 use comnum::dsp::filter::LowPass;
-use comnum::hardware::optical::{self as devices, Iqm, Laser, Mzm, Photodiode};
+use comnum::hardware::optical::{self as devices, DirectlyModulatedLaser, Iqm, Laser, Mzm, Photodiode};
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
 
@@ -356,21 +356,25 @@ fn iqm<'py>(
     Ok(carr(py, m.modulate(&cvec(e)?, &cvec(u)?).py()?))
 }
 
-/// A PIN photodiode (OptiCommPy `photodiode`): responsivity, shot noise, thermal noise,
-/// and a low-pass FIR of bandwidth :math:`B`.
+/// A photodiode (OptiCommPy `photodiode`, with an avalanche gain): responsivity, shot
+/// noise, thermal noise, and a low-pass FIR of bandwidth :math:`B`.
 ///
-/// The photocurrent and the variances of the noises are
+/// The photocurrent and the variances of the noises are, with the avalanche gain
+/// :math:`M` (1 for a p-i-n) and its excess noise factor :math:`F_A(M)`
+/// (:func:`excess_noise_factor`, [1]_, eq. (4.4.17)),
 ///
 /// .. math::
 ///
-///     I = R |E|^2, \qquad \sigma^2_{\mathrm{shot}} = 2q(I + I_d)B, \qquad
+///     I = M R |E|^2, \qquad \sigma^2_{\mathrm{shot}} = 2 q M^2 F_A (R|E|^2 + I_d) B, \qquad
 ///     \sigma^2_{\mathrm{th}} = \frac{4 k_B T B}{R_L}.
 ///
-/// Every attribute is readable and writable; `ideal=True` gives :math:`R|E|^2` without
+/// Every attribute is readable and writable; `ideal=True` gives :math:`M R|E|^2` without
 /// noise nor filter.
 ///
 /// Args:
-///     responsivity (float): responsivity (A/W).
+///     responsivity (float): responsivity (A/W) before the avalanche gain.
+///     apd_gain (float): the avalanche gain :math:`M` (1 for a p-i-n photodiode).
+///     ionization_ratio (float): the ionisation-coefficient ratio :math:`k_A` of the APD.
 ///     temperature_k (float): temperature (K).
 ///     dark_current_a (float): dark current (A).
 ///     load_ohm (float): load resistance (Ω).
@@ -384,6 +388,9 @@ fn iqm<'py>(
 ///
 /// Raises:
 ///     ValueError: for an invalid parameter (the message names it).
+///
+/// References:
+///     .. [1] G. P. Agrawal, *Fiber-Optic Communication Systems*, 3rd ed., Wiley, 2002.
 #[pyclass(name = "Photodiode", module = "comnum")]
 #[derive(Clone)]
 pub struct PyPhotodiode {
@@ -392,8 +399,12 @@ pub struct PyPhotodiode {
 
 wrapper_methods! {
     PyPhotodiode {
-        /// float: Responsivity (A/W) (read and write).
+        /// float: Responsivity (A/W) before the avalanche gain (read and write).
         responsivity / set_responsivity: f64,
+        /// float: Avalanche gain :math:`M` (1 for a p-i-n) (read and write).
+        apd_gain / set_apd_gain: f64,
+        /// float: Ionisation-coefficient ratio :math:`k_A` of the APD (read and write).
+        ionization_ratio / set_ionization_ratio: f64,
         /// float: Temperature (K) (read and write).
         temperature_k / set_temperature_k: f64,
         /// float: Dark current (A) (read and write).
@@ -418,6 +429,8 @@ wrapper_methods! {
     #[pyo3(signature = (
         *,
         responsivity = Photodiode::default().responsivity,
+        apd_gain = Photodiode::default().apd_gain,
+        ionization_ratio = Photodiode::default().ionization_ratio,
         temperature_k = Photodiode::default().temperature_k,
         dark_current_a = Photodiode::default().dark_current_a,
         load_ohm = Photodiode::default().load_ohm,
@@ -432,6 +445,8 @@ wrapper_methods! {
     #[allow(clippy::too_many_arguments, reason = "one keyword argument per field of the photodiode")]
     fn new(
         responsivity: f64,
+        apd_gain: f64,
+        ionization_ratio: f64,
         temperature_k: f64,
         dark_current_a: f64,
         load_ohm: f64,
@@ -446,6 +461,8 @@ wrapper_methods! {
         Ok(PyPhotodiode {
             inner: Photodiode {
                 responsivity,
+                apd_gain,
+                ionization_ratio,
                 temperature_k,
                 dark_current_a,
                 load_ohm,
@@ -520,9 +537,12 @@ wrapper_methods! {
     fn __repr__(&self) -> String {
         let d = &self.inner;
         format!(
-            "comnum.Photodiode(responsivity={}, temperature_k={}, dark_current_a={:e}, load_ohm={}, bandwidth_hz={:e}, \
-             n_taps={}, filter_kind='{}', shot_noise={}, thermal_noise={}, bandwidth_limitation={}, ideal={})",
+            "comnum.Photodiode(responsivity={}, apd_gain={}, ionization_ratio={}, temperature_k={}, dark_current_a={:e}, \
+             load_ohm={}, bandwidth_hz={:e}, n_taps={}, filter_kind='{}', shot_noise={}, thermal_noise={}, \
+             bandwidth_limitation={}, ideal={})",
             d.responsivity,
+            d.apd_gain,
+            d.ionization_ratio,
             d.temperature_k,
             d.dark_current_a,
             d.load_ohm,
@@ -540,6 +560,8 @@ wrapper_methods! {
         let d = &self.inner;
         let kw = PyDict::new(py);
         kw.set_item("responsivity", d.responsivity)?;
+        kw.set_item("apd_gain", d.apd_gain)?;
+        kw.set_item("ionization_ratio", d.ionization_ratio)?;
         kw.set_item("temperature_k", d.temperature_k)?;
         kw.set_item("dark_current_a", d.dark_current_a)?;
         kw.set_item("load_ohm", d.load_ohm)?;
@@ -550,6 +572,144 @@ wrapper_methods! {
         kw.set_item("thermal_noise", d.thermal_noise)?;
         kw.set_item("bandwidth_limitation", d.bandwidth_limitation)?;
         kw.set_item("ideal", d.ideal)?;
+        Ok(((), kw))
+    }
+}
+
+/// A directly modulated semiconductor laser: the field of a power waveform with the
+/// frequency chirp of the carrier-induced index change ([1]_, Sec. 3.5.3, eqs. (3.5.16)
+/// and (3.5.25); the adiabatic term after [2]_).
+///
+/// The chirp is the sum of a transient term, the logarithmic derivative of the power,
+/// and an adiabatic term proportional to it,
+///
+/// .. math::
+///
+///     \delta\nu(t) = \frac{\beta_c}{4\pi}\left[\frac{d}{dt}\ln P(t) + \kappa P(t)\right],
+///
+/// and the field :math:`E = \sqrt{P}\, e^{j\phi}` carries :math:`\phi = -2\pi\int
+/// \delta\nu\, dt`, the convention of the fibre models of comnum (where a frequency
+/// increase is a decreasing phase, as in Agrawal's :math:`e^{-i\omega_0 t}`): a Gaussian
+/// power pulse becomes the chirped Gaussian of chirp parameter :math:`C = -\beta_c`
+/// (:func:`gaussian_broadening_factor`), which broadens from the start on standard
+/// fibre. The modulation bandwidth is a Gaussian low-pass on the power (0 for none);
+/// the relaxation oscillations are not modelled. The power must stay positive (a finite
+/// extinction ratio).
+///
+/// Args:
+///     linewidth_enhancement (float): :math:`\beta_c` (4 to 8 for InGaAsP lasers; 0 for
+///         no chirp).
+///     adiabatic_chirp_hz_w (float): :math:`\kappa` (Hz/W), 0 for the transient chirp alone.
+///     bandwidth_hz (float): the 3 dB modulation bandwidth (Hz), 0 for none.
+///     n_taps (int): taps of the low-pass filter (made odd).
+///
+/// Raises:
+///     ValueError: for an invalid parameter (the message names it), when a method is
+///         called.
+///
+/// References:
+///     .. [1] G. P. Agrawal, *Fiber-Optic Communication Systems*, 3rd ed., Wiley, 2002.
+///     .. [2] T. L. Koch, J. E. Bowers, "Nature of wavelength chirping in directly
+///        modulated semiconductor lasers," *Electron. Lett.* 20(25–26), 1038–1040, 1984.
+///
+/// Examples:
+///     >>> import comnum, numpy as np
+///     >>> dml = comnum.DirectlyModulatedLaser(linewidth_enhancement=5.0)
+///     >>> t = (np.arange(400) - 200) / 1e12
+///     >>> p = 1e-3 * np.exp(-(t / 50e-12) ** 2) + 1e-6
+///     >>> chirp = dml.chirp_hz(p, 1e12)
+///     >>> round(float(chirp[150] / (-5.0 / (2 * np.pi) * t[150] / 50e-12**2)), 2)
+///     1.0
+#[pyclass(name = "DirectlyModulatedLaser", module = "comnum")]
+#[derive(Clone)]
+pub struct PyDml {
+    inner: DirectlyModulatedLaser,
+}
+
+wrapper_methods! {
+    PyDml {
+        /// float: Linewidth enhancement factor :math:`\beta_c` (read and write).
+        linewidth_enhancement / set_linewidth_enhancement: f64,
+        /// float: Adiabatic chirp coefficient :math:`\kappa` (Hz/W) (read and write).
+        adiabatic_chirp_hz_w / set_adiabatic_chirp_hz_w: f64,
+        /// float: 3 dB modulation bandwidth (Hz), 0 for none (read and write).
+        bandwidth_hz / set_bandwidth_hz: f64,
+        /// int: Taps of the low-pass filter (made odd) (read and write).
+        n_taps / set_n_taps: usize,
+    }
+
+    #[new]
+    #[pyo3(signature = (
+        *,
+        linewidth_enhancement = DirectlyModulatedLaser::default().linewidth_enhancement,
+        adiabatic_chirp_hz_w = DirectlyModulatedLaser::default().adiabatic_chirp_hz_w,
+        bandwidth_hz = DirectlyModulatedLaser::default().bandwidth_hz,
+        n_taps = DirectlyModulatedLaser::default().n_taps,
+    ))]
+    fn new(linewidth_enhancement: f64, adiabatic_chirp_hz_w: f64, bandwidth_hz: f64, n_taps: usize) -> Self {
+        PyDml { inner: DirectlyModulatedLaser { linewidth_enhancement, adiabatic_chirp_hz_w, bandwidth_hz, n_taps } }
+    }
+
+    /// The power the laser emits for a drive: the low-pass of its modulation bandwidth.
+    ///
+    /// Args:
+    ///     power_w (array_like): the drive power (W per sample).
+    ///     fs (float): the sampling rate (Hz).
+    ///
+    /// Returns:
+    ///     numpy.ndarray: the emitted power (W).
+    ///
+    /// Raises:
+    ///     ValueError: for an invalid parameter or a sampling rate below twice the bandwidth.
+    fn emitted_power<'py>(&self, py: Python<'py>, power_w: &Bound<'py, PyAny>, fs: f64) -> PyResult<FArr<'py>> {
+        Ok(farr(py, self.inner.emitted_power(&fvec(power_w)?, fs).py()?))
+    }
+
+    /// The frequency chirp :math:`\delta\nu` (Hz) of every sample of the emitted power.
+    ///
+    /// Args:
+    ///     power_w (array_like): the drive power (W per sample), positive everywhere.
+    ///     fs (float): the sampling rate (Hz).
+    ///
+    /// Returns:
+    ///     numpy.ndarray: the chirp (Hz).
+    ///
+    /// Raises:
+    ///     ValueError: as :meth:`emitted_power`, or a power that is not positive everywhere.
+    fn chirp_hz<'py>(&self, py: Python<'py>, power_w: &Bound<'py, PyAny>, fs: f64) -> PyResult<FArr<'py>> {
+        Ok(farr(py, self.inner.chirp_hz(&fvec(power_w)?, fs).py()?))
+    }
+
+    /// The field :math:`\sqrt{P}\, e^{j\phi}` (√W per sample) of a drive.
+    ///
+    /// Args:
+    ///     power_w (array_like): the drive power (W per sample), positive everywhere.
+    ///     fs (float): the sampling rate (Hz).
+    ///
+    /// Returns:
+    ///     numpy.ndarray: the field (complex128).
+    ///
+    /// Raises:
+    ///     ValueError: as :meth:`chirp_hz`.
+    fn field<'py>(&self, py: Python<'py>, power_w: &Bound<'py, PyAny>, fs: f64) -> PyResult<CArr<'py>> {
+        Ok(carr(py, self.inner.field(&fvec(power_w)?, fs).py()?))
+    }
+
+    fn __repr__(&self) -> String {
+        let d = &self.inner;
+        format!(
+            "comnum.DirectlyModulatedLaser(linewidth_enhancement={}, adiabatic_chirp_hz_w={:e}, bandwidth_hz={:e}, n_taps={})",
+            d.linewidth_enhancement, d.adiabatic_chirp_hz_w, d.bandwidth_hz, d.n_taps
+        )
+    }
+
+    fn __getnewargs_ex__<'py>(&self, py: Python<'py>) -> PyResult<((), Bound<'py, PyDict>)> {
+        let d = &self.inner;
+        let kw = PyDict::new(py);
+        kw.set_item("linewidth_enhancement", d.linewidth_enhancement)?;
+        kw.set_item("adiabatic_chirp_hz_w", d.adiabatic_chirp_hz_w)?;
+        kw.set_item("bandwidth_hz", d.bandwidth_hz)?;
+        kw.set_item("n_taps", d.n_taps)?;
         Ok(((), kw))
     }
 }
@@ -655,6 +815,7 @@ fn coherent_receiver<'py>(
 /// Register the bindings of this module.
 pub(crate) fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<PyPhotodiode>()?;
+    m.add_class::<PyDml>()?;
     for f in [
         wrap_pyfunction!(awgn, m)?,
         wrap_pyfunction!(awgn_ebn0, m)?,

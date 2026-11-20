@@ -3,10 +3,12 @@
 
 use crate::comm::PyConstellation;
 use crate::fiber::PyFiber;
-use crate::{CArr, CMat, FArr, FMat, IntoPy, carr, count, cvec, farr, fvec, mat, streams_in, uvec};
+use crate::{CArr, CMat, FArr, FMat, IArr, IntoPy, carr, count, cvec, farr, fvec, iarr, mat, streams_in, uvec};
 use comnum::dsp::adaptive::UpdateRule;
 use comnum::dsp::compensation::cd;
-use comnum::dsp::equalizer::{AdaptiveEqualizer, Algorithm, Singularity};
+use comnum::dsp::equalizer::dfe::Dfe;
+use comnum::dsp::equalizer::mlse::Mlse;
+use comnum::dsp::equalizer::{AdaptiveEqualizer, Algorithm, Singularity, theory};
 use comnum::dsp::filter::{LowPass, PulseShape};
 use comnum::dsp::sync::timing::GardnerLoop;
 use comnum::dsp::sync::{carrier, timing as clock};
@@ -805,6 +807,236 @@ fn adaptive_equalizer<'py>(
     Ok((mat(py, out.symbols)?, mat(py, out.taps)?, mat(py, out.error)?))
 }
 
+/// Decision-feedback equaliser: a feedforward FIR on the samples and a feedback FIR on
+/// the past decisions, adapted by a stochastic gradient ([1]_, Secs. 9.5 and 10.2).
+///
+/// Output symbol :math:`k` is
+///
+/// .. math::
+///
+///     y_k = \sum_{t=0}^{N_f - 1} f_t\, x[k \cdot \mathrm{sps} + t] - \sum_{j=1}^{N_b} b_j\, \hat{s}_{k-j},
+///
+/// with :math:`\hat{s}_k` the point nearest to :math:`y_k`, or the reference symbol
+/// during the first ``training`` symbols; both filters follow the error
+/// :math:`e_k = \hat{s}_k - y_k`. The centre tap of :math:`f` starts at 1 and the input
+/// is padded with :math:`\lfloor N_f/2 \rfloor` zeros at both ends. Without feedback
+/// taps it is the linear equaliser of :func:`adaptive_equalizer` on one stream. The
+/// decisions are on the scale of the constellation given (no normalisation).
+///
+/// Args:
+///     x (array_like): the samples (complex or real), ``sps`` per symbol.
+///     constellation (Constellation): the points decided (its scale is that of the output).
+///     n_feedforward (int): taps :math:`N_f` of the feedforward filter.
+///     n_feedback (int): taps :math:`N_b` of the feedback filter.
+///     sps (int): samples per symbol of ``x``.
+///     mu (float): the step size :math:`\mu`.
+///     reference (array_like, optional): the transmitted symbols of the training.
+///     training (int): symbols decided from the reference before the decisions drive the
+///         adaptation (at most the length of the reference).
+///     update_rule (str): ``"lms"``, ``"nlms"`` (normalised by the energy of the inputs)
+///         or ``"sign"`` (the sign of the error).
+///
+/// Returns:
+///     tuple[numpy.ndarray, numpy.ndarray, numpy.ndarray, numpy.ndarray, numpy.ndarray]: the
+///     equalised symbols :math:`y_k`, the decisions as indices of the constellation, the
+///     feedforward taps, the feedback taps, and the squared errors.
+///
+/// Raises:
+///     ValueError: for an invalid parameter or input (the message names it).
+///
+/// References:
+///     .. [1] J. G. Proakis, M. Salehi, *Digital Communications*, 5th ed., McGraw-Hill, 2008.
+///
+/// Examples:
+///     >>> import comnum, numpy as np
+///     >>> c = comnum.Constellation("pam", 2)
+///     >>> rng = comnum.Rng(1)
+///     >>> idx, s = comnum.symbols(c, 2000, rng)
+///     >>> x = s + 0.9 * np.concatenate(([0], s[:-1]))     # 1 + 0.9 z⁻¹
+///     >>> y, dec, f, b, err = comnum.dfe(x, c, n_feedforward=5, n_feedback=1, mu=5e-3,
+///     ...                                reference=s, training=500)
+///     >>> int(np.sum(dec[1000:] != idx[1000:]))
+///     0
+#[pyfunction]
+#[pyo3(signature = (x, constellation, *, n_feedforward = 7, n_feedback = 2, sps = 1, mu = 1e-3, reference = None, training = 0, update_rule = "lms"))]
+#[allow(clippy::too_many_arguments, reason = "the settings of the equaliser, by keyword")]
+fn dfe<'py>(
+    py: Python<'py>,
+    x: &Bound<'py, PyAny>,
+    constellation: &PyConstellation,
+    n_feedforward: usize,
+    n_feedback: usize,
+    sps: usize,
+    mu: f64,
+    reference: Option<&Bound<'py, PyAny>>,
+    training: usize,
+    update_rule: &str,
+) -> PyResult<(CArr<'py>, IArr<'py>, CArr<'py>, CArr<'py>, FArr<'py>)> {
+    let x = cvec(x)?;
+    let reference = reference.map(cvec).transpose()?;
+    let rule = update_rule.parse::<UpdateRule>().py()?;
+    let eq = Dfe { n_feedforward, n_feedback, sps, mu, rule, training };
+    let pts = constellation.inner.points().to_vec();
+    let out = py.detach(|| eq.run(&x, reference.as_deref(), &pts)).py()?;
+    Ok((
+        carr(py, out.symbols),
+        iarr(py, out.decisions),
+        carr(py, out.feedforward),
+        carr(py, out.feedback),
+        farr(py, out.error),
+    ))
+}
+
+/// Maximum-likelihood sequence estimation over a known channel of symbol-spaced taps:
+/// the Viterbi algorithm on the trellis of the channel memory ([1]_), with the soft
+/// outputs of [2]_.
+///
+/// For :math:`r_k = \sum_{l=0}^{L-1} h_l s_{k-l} + n_k`, the branch of the symbol
+/// :math:`s_k` in the state of the :math:`L - 1` previous symbols has the metric
+/// :math:`-|r_k - \sum_l h_l s_{k-l}|^2`, and the path of largest metric is the
+/// maximum-likelihood sequence (:math:`M^{L-1}` states; the past before the block is
+/// unknown, the end free). With ``noise_var``, every symbol also gets its reliability,
+/// the log-likelihood difference :math:`\Delta_k / (2\sigma^2)` with its best competitor
+/// (the soft-output Viterbi algorithm): for two points, the magnitude of the LLR of the
+/// symbol, whose sign is positive for the first point.
+///
+/// Args:
+///     r (array_like): the samples, one per symbol (complex or real).
+///     taps (array_like): the channel :math:`h_0, \dots, h_{L-1}` (complex or real).
+///     constellation (Constellation): the points of the symbols.
+///     noise_var (float, optional): the variance :math:`\sigma^2` of the complex noise
+///         of the samples; given, the reliabilities are returned too.
+///
+/// Returns:
+///     numpy.ndarray | tuple[numpy.ndarray, numpy.ndarray]: the decided indices, or the
+///     indices and the reliabilities.
+///
+/// Raises:
+///     ValueError: for an invalid parameter or input (the message names it).
+///
+/// References:
+///     .. [1] G. D. Forney, "Maximum-likelihood sequence estimation of digital sequences in
+///        the presence of intersymbol interference," *IEEE Trans. Inf. Theory* 18(3),
+///        363–378, 1972.
+///     .. [2] J. Hagenauer, P. Hoeher, "A Viterbi algorithm with soft-decision outputs and
+///        its applications," *Proc. IEEE GLOBECOM*, 1680–1686, 1989.
+///
+/// Examples:
+///     >>> import comnum, numpy as np
+///     >>> c = comnum.Constellation("pam", 4)
+///     >>> idx, s = comnum.symbols(c, 300, comnum.Rng(2))
+///     >>> r = s + 0.5 * np.concatenate(([0], s[:-1]))
+///     >>> bool(np.array_equal(comnum.mlse(r, [1.0, 0.5], c), idx))
+///     True
+#[pyfunction]
+#[pyo3(signature = (r, taps, constellation, *, noise_var = None))]
+fn mlse<'py>(
+    py: Python<'py>,
+    r: &Bound<'py, PyAny>,
+    taps: &Bound<'py, PyAny>,
+    constellation: &PyConstellation,
+    noise_var: Option<f64>,
+) -> PyResult<Py<PyAny>> {
+    let (r, h) = (cvec(r)?, cvec(taps)?);
+    let det = Mlse::new(&h, constellation.inner.points()).py()?;
+    match noise_var {
+        None => Ok(iarr(py, py.detach(|| det.detect(&r)).py()?).into_any().unbind()),
+        Some(v) => {
+            let (idx, rel) = py.detach(|| det.detect_soft(&r, v)).py()?;
+            Ok((iarr(py, idx), farr(py, rel)).into_pyobject(py)?.into_any().unbind())
+        }
+    }
+}
+
+/// The floor of the infinite-length linear MMSE equaliser of a symbol-spaced channel
+/// ([1]_, Sec. 9.4-2), for unit-variance symbols and the noise variance :math:`\sigma^2`:
+///
+/// .. math::
+///
+///     J_{\min} = \frac{1}{2\pi}\int_{-\pi}^{\pi} \frac{\sigma^2}{|H(e^{j\omega})|^2 + \sigma^2}\, d\omega,
+///
+/// its unbiased output SNR being :math:`1/J_{\min} - 1`.
+///
+/// Args:
+///     taps (array_like): the channel taps (complex or real).
+///     noise_var (float): :math:`\sigma^2`, the variance of the complex noise of a sample.
+///     n_fft (int): points of the unit circle the integral is taken on.
+///
+/// Returns:
+///     float: :math:`J_{\min}`.
+///
+/// Raises:
+///     ValueError: for no tap, fewer FFT points than taps, or a non-positive variance.
+///
+/// References:
+///     .. [1] J. G. Proakis, M. Salehi, *Digital Communications*, 5th ed., McGraw-Hill, 2008.
+///
+/// Examples:
+///     >>> import comnum
+///     >>> round(comnum.linear_mmse_mse([1.0], 0.1), 6)     # one tap: σ²/(1 + σ²)
+///     0.090909
+#[pyfunction]
+#[pyo3(signature = (taps, noise_var, *, n_fft = 4096))]
+fn linear_mmse_mse(taps: &Bound<'_, PyAny>, noise_var: f64, n_fft: usize) -> PyResult<f64> {
+    theory::linear_mmse_mse(&cvec(taps)?, noise_var, n_fft).py()
+}
+
+/// The unbiased output SNR of the infinite-length MMSE decision-feedback equaliser with
+/// correct decisions ([1]_, Sec. 9.5-2; [2]_), linear:
+///
+/// .. math::
+///
+///     \mathrm{SNR}_{\mathrm{DFE}} = \exp\left[\frac{1}{2\pi}\int_{-\pi}^{\pi}
+///     \ln\left(1 + \frac{|H(e^{j\omega})|^2}{\sigma^2}\right) d\omega\right] - 1.
+///
+/// Args:
+///     taps (array_like): the channel taps (complex or real).
+///     noise_var (float): :math:`\sigma^2`, the variance of the complex noise of a sample.
+///     n_fft (int): points of the unit circle the integral is taken on.
+///
+/// Returns:
+///     float: the SNR (linear).
+///
+/// Raises:
+///     ValueError: for no tap, fewer FFT points than taps, or a non-positive variance.
+///
+/// References:
+///     .. [1] J. G. Proakis, M. Salehi, *Digital Communications*, 5th ed., McGraw-Hill, 2008.
+///     .. [2] J. Salz, "Optimum mean-square decision feedback equalization," *Bell Syst.
+///        Tech. J.* 52(8), 1341–1373, 1973.
+///
+/// Examples:
+///     >>> import comnum
+///     >>> round(comnum.dfe_mmse_snr([1.0, 1.0], 0.05), 3)   # 1 + z⁻¹: 24 against 8 for the linear one
+///     24.0
+#[pyfunction]
+#[pyo3(signature = (taps, noise_var, *, n_fft = 4096))]
+fn dfe_mmse_snr(taps: &Bound<'_, PyAny>, noise_var: f64, n_fft: usize) -> PyResult<f64> {
+    theory::dfe_mmse_snr(&cvec(taps)?, noise_var, n_fft).py()
+}
+
+/// The matched-filter bound :math:`\sum_l |h_l|^2 / \sigma^2` on the SNR of any detector of
+/// one symbol over a symbol-spaced channel, linear.
+///
+/// Args:
+///     taps (array_like): the channel taps (complex or real).
+///     noise_var (float): :math:`\sigma^2`, the variance of the complex noise of a sample.
+///
+/// Returns:
+///     float: the SNR (linear).
+///
+/// Raises:
+///     ValueError: for no tap or a non-positive variance.
+///
+/// Examples:
+///     >>> import comnum
+///     >>> comnum.matched_filter_bound_snr([1.0, 0.5], 0.125)
+///     10.0
+#[pyfunction]
+fn matched_filter_bound_snr(taps: &Bound<'_, PyAny>, noise_var: f64) -> PyResult<f64> {
+    theory::matched_filter_bound_snr(&cvec(taps)?, noise_var).py()
+}
+
 /// Rotate every sample by a given phase.
 ///
 /// The output is
@@ -1243,6 +1475,11 @@ pub(crate) fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(cd_ls_taps, m)?)?;
     m.add_function(wrap_pyfunction!(cd_ls_error, m)?)?;
     m.add_function(wrap_pyfunction!(adaptive_equalizer, m)?)?;
+    m.add_function(wrap_pyfunction!(dfe, m)?)?;
+    m.add_function(wrap_pyfunction!(mlse, m)?)?;
+    m.add_function(wrap_pyfunction!(linear_mmse_mse, m)?)?;
+    m.add_function(wrap_pyfunction!(dfe_mmse_snr, m)?)?;
+    m.add_function(wrap_pyfunction!(matched_filter_bound_snr, m)?)?;
     m.add_function(wrap_pyfunction!(derotate, m)?)?;
     m.add_function(wrap_pyfunction!(unwrap, m)?)?;
     m.add_function(wrap_pyfunction!(fourth_power_foe, m)?)?;

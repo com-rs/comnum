@@ -23,6 +23,44 @@ fn ber(rx_bits: &Bound<'_, PyAny>, tx_bits: &Bound<'_, PyAny>) -> PyResult<f64> 
     metrics::ber(&bvec(rx_bits)?, &bvec(tx_bits)?).py()
 }
 
+/// The Q factor of every eye of a sampled intensity-modulated signal, from the means
+/// and standard deviations of the samples of each level (Agrawal, *Fiber-Optic
+/// Communication Systems*, 3rd ed., 2002, eq. (4.5.11)):
+///
+/// .. math::
+///
+///     Q_i = \frac{\mu_{i+1} - \mu_i}{\sigma_{i+1} + \sigma_i}, \qquad i = 0, \dots, M - 2,
+///
+/// the BER of the eye being :math:`\frac{1}{2}\operatorname{erfc}(Q_i/\sqrt{2})`
+/// (:func:`qfunc`) under Gaussian noise; the measured counterpart of
+/// :meth:`DirectDetectionReceiver.q_factor`.
+///
+/// Args:
+///     samples (array_like): one sample per symbol (real).
+///     levels (array_like): the index of the level transmitted at every sample, below `m`.
+///     m (int): the number of levels (2 for on–off keying, 4 for PAM4).
+///
+/// Returns:
+///     numpy.ndarray: the `m - 1` Q factors (NaN where a level has no sample).
+///
+/// Raises:
+///     ValueError: for sequences of different lengths, a level index at or above `m`, or
+///         fewer than two levels.
+///
+/// Examples:
+///     >>> import comnum
+///     >>> comnum.level_q_factors([0.1, -0.1, 0.9, 1.1], [0, 0, 1, 1], 2)
+///     array([5.])
+#[pyfunction]
+fn level_q_factors<'py>(
+    py: Python<'py>,
+    samples: &Bound<'py, PyAny>,
+    levels: &Bound<'py, PyAny>,
+    m: usize,
+) -> PyResult<FArr<'py>> {
+    Ok(farr(py, metrics::level_q_factors(&fvec(samples)?, &uvec(levels)?, m).py()?))
+}
+
 /// SNR (dB) of a received sequence against the transmitted one.
 ///
 /// The ratio of the powers is
@@ -333,6 +371,7 @@ fn information_rates<'py>(
 /// Register the bindings of this module.
 pub(crate) fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(ber, m)?)?;
+    m.add_function(wrap_pyfunction!(level_q_factors, m)?)?;
     m.add_function(wrap_pyfunction!(snr_db, m)?)?;
     m.add_function(wrap_pyfunction!(phase_error_std, m)?)?;
     m.add_function(wrap_pyfunction!(fast_ber_calc, m)?)?;

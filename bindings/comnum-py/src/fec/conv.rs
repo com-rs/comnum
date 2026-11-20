@@ -162,6 +162,49 @@ impl PyConv {
     fn decode<'py>(&self, py: Python<'py>, llr: &Bound<'py, PyAny>) -> PyResult<BArr<'py>> {
         decode(py, &self.inner, llr)
     }
+
+    /// Decode whole blocks of LLRs with the soft-output Viterbi algorithm (Hagenauer &
+    /// Hoeher 1989): the decisions of Viterbi with, as LLR, the metric difference with
+    /// the best competing survivor that decides differently (positive for a 0; at least
+    /// the magnitude of the max-log-MAP LLR).
+    ///
+    /// Args:
+    ///     llr (array_like): a multiple of `n` LLRs (positive for a 0; 0 at the
+    ///         punctured positions is added by the code).
+    ///
+    /// Returns:
+    ///     numpy.ndarray: `k` LLRs of the information bits per block.
+    ///
+    /// Raises:
+    ///     ValueError: for an input that is not an array of numbers of the expected shape.
+    ///
+    /// Examples:
+    ///     >>> import comnum, numpy as np
+    ///     >>> code = comnum.ConvolutionalCode(10)
+    ///     >>> b = comnum.bits(20, comnum.Rng(1))
+    ///     >>> soft = code.soft_decode(1.0 - 2.0 * code.encode(b))
+    ///     >>> bool(np.array_equal((soft < 0).astype(np.uint8), b))
+    ///     True
+    fn soft_decode<'py>(&self, py: Python<'py>, llr: &Bound<'py, PyAny>) -> PyResult<FArr<'py>> {
+        let l = fvec(llr)?;
+        let (code, punct) = (self.inner.code(), self.inner.puncturer());
+        let n_tx = self.inner.n();
+        if n_tx == 0 || l.len() % n_tx != 0 {
+            return Err(PyValueError::new_err(format!("{} LLRs is not a multiple of the {n_tx} of a block", l.len())));
+        }
+        let n_coded = code.n();
+        let (trellis, k) = (code.trellis(), code.k());
+        let out = py.detach(|| -> comnum::Result<Vec<f64>> {
+            let mut out = Vec::with_capacity(l.len() / n_tx * k);
+            for block in l.chunks_exact(n_tx) {
+                let full = punct.depuncture(block, n_coded)?;
+                let soft = comnum::fec::conv::sova(trellis, &full, true)?;
+                out.extend_from_slice(&soft[..k]);
+            }
+            Ok(out)
+        });
+        Ok(farr(py, out.py()?))
+    }
 }
 
 /// The turbo code of LTE: two (13, 15) recursive systematic codes in parallel, rate

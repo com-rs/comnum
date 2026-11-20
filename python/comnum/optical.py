@@ -6,6 +6,7 @@ not edit.
 
 from comnum import (
     DirectDetectionReceiver,
+    DirectlyModulatedLaser,
     Edfa,
     FiberParams,
     Fso,
@@ -57,6 +58,7 @@ from comnum import (
 
 __all__ = [
     "DirectDetectionReceiver",
+    "DirectlyModulatedLaser",
     "Edfa",
     "FiberParams",
     "Fso",

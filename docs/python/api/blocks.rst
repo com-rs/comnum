@@ -172,6 +172,8 @@ Receiver DSP
    Decimate
    Gardner
    AdaptiveEqualizer
+   Dfe
+   Mlse
    Foe
    Bps
    Viterbi
