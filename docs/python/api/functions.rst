@@ -457,6 +457,8 @@ broadening and of the chirp.
    dispersion_penalty_db
    chirp_penalty_db
    dispersion_limited_length_km
+   dispersion_fading_response
+   fading_frequency_hz
 
 Optical wireless
 ~~~~~~~~~~~~~~~~

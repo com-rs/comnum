@@ -9,7 +9,9 @@
 //! $\beta_{c}$ (eq. (3.5.16)); for a power $P(t)$ that follows the drive, the frequency
 //! chirp $\delta\nu = \frac{1}{2\pi}\frac{d\phi}{dt}$ (eq. (3.5.25)) is the sum of a
 //! transient term, which follows the logarithmic derivative of the power, and an
-//! adiabatic term proportional to the power:
+//! adiabatic term proportional to the power (the small-signal response of the dispersive
+//! link that this chirp gives is in
+//! [`direct_detection`](super::direct_detection#small-signal-response-of-the-dispersive-link)):
 //!
 //! $$
 //! \delta\nu(t) = \frac{\beta_{c}}{4\pi}\left[\frac{d}{dt}\ln P(t) + \kappa P(t)\right],
@@ -141,22 +143,27 @@ impl DirectlyModulatedLaser {
     }
 
     /// The field $\sqrt{P}\, e^{j\phi}$ (√W per sample) of the drive `power_w` at `fs`:
-    /// the emitted power with the phase of its chirp integrated by the trapezoidal rule,
-    /// $\phi_{0} = 0$.
+    /// the emitted power with the phase of its chirp, $\phi = -\frac{\beta_{c}}{2}[\ln P +
+    /// \kappa \int P\, dt]$, the transient term exact (the integral of the logarithmic
+    /// derivative), the adiabatic one by the trapezoidal rule, $\phi(0) = -\frac{\beta_{c}}{2}
+    /// \ln P(0)$.
     ///
     /// # Errors
     /// As [`DirectlyModulatedLaser::chirp_hz`].
     pub fn field(&self, power_w: &[f64], fs: f64) -> Result<Vec<C64>> {
         let p = self.emitted_power(power_w, fs)?;
-        let chirp = self.chirp_of(&p, fs)?;
-        let mut phase = 0.0;
+        ensure(p.iter().all(|&v| v > 0.0 && v.is_finite()), || {
+            "the emitted power must be positive everywhere (a finite extinction ratio)".into()
+        })?;
+        let k = -self.linewidth_enhancement / 2.0;
+        let mut integral = 0.0;
         Ok(p.iter()
             .enumerate()
-            .map(|(k, &pw)| {
-                if k > 0 {
-                    phase -= PI * (chirp[k - 1] + chirp[k]) / fs;
+            .map(|(i, &pw)| {
+                if i > 0 {
+                    integral += (p[i - 1] + pw) / (2.0 * fs);
                 }
-                pw.sqrt() * cis(phase)
+                pw.sqrt() * cis(k * (pw.ln() + self.adiabatic_chirp_hz_w * integral))
             })
             .collect())
     }

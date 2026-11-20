@@ -4,6 +4,7 @@
 
 use crate::{IntoPy, map_real};
 use comnum::hardware::optical::direct_detection::{self as dd, DirectDetectionReceiver};
+use num_complex::Complex64 as C64;
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
 
@@ -641,6 +642,97 @@ fn dispersion_limited_length_km(bit_rate_hz: f64, beta2_s2_km: f64) -> PyResult<
     dd::dispersion_limited_length_km(bit_rate_hz, beta2_s2_km).py()
 }
 
+/// The small-signal response :math:`H(f)` of a dispersive IM-DD link, [2]_, [3]_: a
+/// laser of linewidth enhancement :math:`\beta_c` and adiabatic chirp coefficient
+/// :math:`\kappa` at the mean power :math:`P_0`, a fibre of dispersion :math:`\beta_2`
+/// and length :math:`L`, a square-law photodiode; for the power :math:`P_0(1 + m \cos
+/// \Omega t)`, :math:`m \ll 1`, the detected modulation is :math:`m\,\Re(H e^{j\Omega
+/// t})` with
+///
+/// .. math::
+///
+///     H(\Omega) = \cos\theta + \beta_c \sin\theta - j\,\frac{\beta_c \kappa P_0}{\Omega}
+///     \sin\theta, \qquad \theta = \frac{\beta_2 \Omega^2 L}{2},
+///
+/// :math:`H(0) = 1`; on standard fibre (:math:`\beta_2 < 0`) the transient chirp of a
+/// positive :math:`\beta_c` brings the first fading closer and the adiabatic chirp fills
+/// the notches.
+///
+/// Args:
+///     f_hz (float): the modulation frequency (Hz).
+///     chirp (float): the linewidth enhancement factor :math:`\beta_c`.
+///     adiabatic_hz_w (float): the adiabatic chirp coefficient :math:`\kappa` (Hz/W), 0
+///         for the transient chirp alone.
+///     power_w (float): the mean power :math:`P_0` (W).
+///     beta2_s2_km (float): the dispersion :math:`\beta_2` (s²/km), ``FiberParams.beta2_s2_km``.
+///     length_km (float): the length :math:`L` (km).
+///
+/// Returns:
+///     complex: :math:`H(f)`.
+///
+/// Raises:
+///     ValueError: for a negative frequency, power or length, or a zero frequency with
+///         adiabatic chirp.
+///
+/// References:
+///     .. [2] J. Wang, K. Petermann, "Small signal analysis for dispersive optical fiber
+///        communication systems," *J. Lightw. Technol.* 10(1), 96–100, 1992.
+///     .. [3] F. Devaux, Y. Sorel, J. F. Kerdiles, "Simple measurement of fiber dispersion
+///        and of chirp parameter of intensity modulated light emitter," *J. Lightw.
+///        Technol.* 11(12), 1937–1940, 1993.
+///
+/// Examples:
+///     >>> import comnum
+///     >>> f0 = comnum.fading_frequency_hz(0, 3.0, -21.7e-24, 40.0)
+///     >>> round(abs(comnum.dispersion_fading_response(f0, 3.0, 0.0, 1e-3, -21.7e-24, 40.0)), 9)
+///     0.0
+#[pyfunction]
+fn dispersion_fading_response(
+    f_hz: f64,
+    chirp: f64,
+    adiabatic_hz_w: f64,
+    power_w: f64,
+    beta2_s2_km: f64,
+    length_km: f64,
+) -> PyResult<C64> {
+    dd::dispersion_fading_response(f_hz, chirp, adiabatic_hz_w, power_w, beta2_s2_km, length_km).py()
+}
+
+/// The fading frequency :math:`f_u` (Hz) of order :math:`u` of a dispersive IM-DD link
+/// with a transient chirp :math:`\beta_c`, the zeros of :func:`dispersion_fading_response`
+/// without adiabatic chirp, [3]_:
+///
+/// .. math::
+///
+///     f_u^2 = \frac{1 + 2u - \frac{2}{\pi}\arctan\beta_c}{4\pi |\beta_2| L}
+///     = \frac{c}{2 D L \lambda^2}\left(1 + 2u - \frac{2}{\pi}\arctan\beta_c\right).
+///
+/// Args:
+///     u (int): the order, 0 for the first notch.
+///     chirp (float): the linewidth enhancement factor :math:`\beta_c`.
+///     beta2_s2_km (float): the dispersion :math:`\beta_2` (s²/km).
+///     length_km (float): the length :math:`L` (km).
+///
+/// Returns:
+///     float: :math:`f_u` (Hz).
+///
+/// Raises:
+///     ValueError: for a zero dispersion or a non-positive length.
+///
+/// References:
+///     .. [3] F. Devaux, Y. Sorel, J. F. Kerdiles, "Simple measurement of fiber dispersion
+///        and of chirp parameter of intensity modulated light emitter," *J. Lightw.
+///        Technol.* 11(12), 1937–1940, 1993.
+///
+/// Examples:
+///     >>> import comnum
+///     >>> round(comnum.fading_frequency_hz(0, 0.0, -21.7e-24, 40.0) / 1e9, 2)  # 40 km of SSMF
+///     9.56
+#[pyfunction]
+fn fading_frequency_hz(u: usize, chirp: f64, beta2_s2_km: f64, length_km: f64) -> PyResult<f64> {
+    dd::fading_frequency_hz(u, chirp, beta2_s2_km, length_km).py()
+}
+
 pub(crate) fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<PyDirectDetectionReceiver>()?;
     for f in [
@@ -656,6 +748,8 @@ pub(crate) fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
         wrap_pyfunction!(broadening_penalty_db, m)?,
         wrap_pyfunction!(dispersion_penalty_db, m)?,
         wrap_pyfunction!(dispersion_limited_length_km, m)?,
+        wrap_pyfunction!(dispersion_fading_response, m)?,
+        wrap_pyfunction!(fading_frequency_hz, m)?,
     ] {
         m.add_function(f)?;
     }

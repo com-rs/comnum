@@ -7,3 +7,4 @@ mod converters;
 mod ding2004;
 mod eun1997;
 mod ieee1139;
+mod wang1992;

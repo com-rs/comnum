@@ -845,6 +845,17 @@ def test_direct_detection_closed_forms_and_a_simulated_photodiode():
         assert abs(via - comnum.chirp_penalty_db(c, -20e-24, 10e9, 60.0)) < 1e-12
     assert abs(comnum.timing_jitter_penalty_db(0.16, 6.0) - 2.235) < 1e-3
     assert abs(comnum.dispersion_limited_length_km(10e9, -21.7e-24) - 1 / (16e20 * 21.7e-24)) < 1e-9
+    # the fading of the dispersive IM-DD link (Wang & Petermann 1992, Devaux 1993): the
+    # notches of the response, closer for a positive chirp, filled by the adiabatic chirp
+    f0 = comnum.fading_frequency_hz(0, 3.0, -21.7e-24, 40.0)
+    assert (
+        f0
+        < comnum.fading_frequency_hz(0, 0.0, -21.7e-24, 40.0)
+        < comnum.fading_frequency_hz(0, -3.0, -21.7e-24, 40.0)
+    )
+    assert abs(comnum.dispersion_fading_response(f0, 3.0, 0.0, 1e-3, -21.7e-24, 40.0)) < 1e-9
+    assert abs(comnum.dispersion_fading_response(f0, 3.0, 1e13, 1e-3, -21.7e-24, 40.0)) > 0.3
+    assert comnum.dispersion_fading_response(0.0, 3.0, 0.0, 1e-3, -21.7e-24, 40.0) == 1.0
     # the simulated photodiode: NRZ at 10 Gb/s, four samples per bit integrated, Δf = B/2
     bit_rate, sps, n_bits = 10e9, 4, 100_000
     pd = comnum.Photodiode(responsivity=0.8, temperature_k=300.0, dark_current_a=0.0,

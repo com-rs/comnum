@@ -1,0 +1,59 @@
+id: wang1992_small_signal
+title: Small-signal response of a chirped, dispersive IM-DD link
+literature: wang1992
+evidence: [closed_form]
+source:
+  kind: paper
+  reference: "J. Wang, K. Petermann, Small signal analysis for dispersive optical fiber communication systems, J. Lightw. Technol. 10(1), 96-100, 1992; F. Devaux, Y. Sorel, J. F. Kerdiles, Simple measurement of fiber dispersion and of chirp parameter of intensity modulated light emitter, J. Lightw. Technol. 11(12), 1937-1940, 1993"
+  locator: "the small-signal transfer function cos(theta) - alpha sin(theta) of the IM-DD link with a transient chirp alpha, theta = beta_2 omega^2 L / 2, and the fading frequencies f_u^2 = c (1 + 2u - (2/pi) arctan alpha) / (2 D L lambda^2) (Devaux 1993); the adiabatic term as derived in comnum_hardware::optical::direct_detection"
+  file: hardware/1992_wang_small-signal-dispersive-fiber_jlt.pdf
+description: >
+  A directly modulated laser (DirectlyModulatedLaser, 1 mW with a 2 % sinusoidal
+  modulation, no bandwidth limit) through 40 km of lossless standard fibre
+  (linear_fiber_channel, beta_2 = -21.7 ps^2/km, no slope) and square-law detection, 2^14
+  samples at 64 GHz; the detected modulation read on the spectrum, divided by |H(f)| of
+  dispersion_fading_response, at 1 to 12 GHz for beta_c = 0, 3, -3 and for beta_c = 3
+  with the adiabatic coefficient 1e13 Hz/W; the frequency of the first notch (the minimum
+  over a 50 MHz grid between 0.7 and 1.3 f_0) divided by fading_frequency_hz.
+run:
+  test: validation/tests/hardware/wang1992.rs::the_imdd_link_follows_the_small_signal_response_of_wang_1992
+tier: ci
+duration: "0.6 s on an Apple M6 (release)"
+tolerance: {rtol: 0.03}
+why: >
+  the second order of the small-signal expansion (m = 0.02: about 1 % on the adiabatic
+  term, whose phase is integrated by the trapezoidal rule), the grid of 50 MHz on a notch
+  at 4.3 GHz (1.2 %)
+findings:
+  - "the transient chirp follows |H| within 0.1 % from 1 to 12 GHz for beta_c = 0, 3 and -3, through the notch of beta_c = 0 at 9.56 GHz (0.45 of the modulation at 8 GHz) and the second lobe of beta_c = -3 (3.13 at 8 GHz); the first notch sits at 9.55, 4.35 and 12.80 GHz against 9.56, 4.33 and 12.81: the sign of the chirp of DirectlyModulatedLaser is that of the fibre (a positive beta_c brings the fading closer on standard fibre)"
+  - "the adiabatic term (kappa P_0 = 10 GHz) within 1 %: the notch of beta_c = 3 filled from 0 to 0.58 of the modulation at 3 GHz against 0.58"
+  - "found by this card: the phase of the transient chirp integrated from its finite-difference derivative (central difference then trapezoidal rule) lost 8 % at 6 GHz and 20 % at 12 GHz with 64 GHz of sampling; the phase is now the exact -(beta_c / 2) ln P"
+
+cases:
+  - {inputs: {beta_c: "0", f_ghz: 1.0}, expected: 1.0}
+  - {inputs: {beta_c: "0", f_ghz: 2.0}, expected: 1.0}
+  - {inputs: {beta_c: "0", f_ghz: 3.0}, expected: 1.0}
+  - {inputs: {beta_c: "0", f_ghz: 6.0}, expected: 1.0}
+  - {inputs: {beta_c: "0", f_ghz: 8.0}, expected: 1.0}
+  - {inputs: {beta_c: "0", f_ghz: 12.0}, expected: 1.0}
+  - {inputs: {beta_c: "0", notch: 0}, expected: 1.0}
+  - {inputs: {beta_c: "3", f_ghz: 1.0}, expected: 1.0}
+  - {inputs: {beta_c: "3", f_ghz: 2.0}, expected: 1.0}
+  - {inputs: {beta_c: "3", f_ghz: 3.0}, expected: 1.0}
+  - {inputs: {beta_c: "3", f_ghz: 6.0}, expected: 1.0}
+  - {inputs: {beta_c: "3", f_ghz: 8.0}, expected: 1.0}
+  - {inputs: {beta_c: "3", f_ghz: 12.0}, expected: 1.0}
+  - {inputs: {beta_c: "3", notch: 0}, expected: 1.0}
+  - {inputs: {beta_c: "-3", f_ghz: 1.0}, expected: 1.0}
+  - {inputs: {beta_c: "-3", f_ghz: 2.0}, expected: 1.0}
+  - {inputs: {beta_c: "-3", f_ghz: 3.0}, expected: 1.0}
+  - {inputs: {beta_c: "-3", f_ghz: 6.0}, expected: 1.0}
+  - {inputs: {beta_c: "-3", f_ghz: 8.0}, expected: 1.0}
+  - {inputs: {beta_c: "-3", f_ghz: 12.0}, expected: 1.0}
+  - {inputs: {beta_c: "-3", notch: 0}, expected: 1.0}
+  - {inputs: {beta_c: "adiabatic", f_ghz: 1.0}, expected: 1.0}
+  - {inputs: {beta_c: "adiabatic", f_ghz: 2.0}, expected: 1.0}
+  - {inputs: {beta_c: "adiabatic", f_ghz: 3.0}, expected: 1.0}
+  - {inputs: {beta_c: "adiabatic", f_ghz: 6.0}, expected: 1.0}
+  - {inputs: {beta_c: "adiabatic", f_ghz: 8.0}, expected: 1.0}
+  - {inputs: {beta_c: "adiabatic", f_ghz: 12.0}, expected: 1.0}

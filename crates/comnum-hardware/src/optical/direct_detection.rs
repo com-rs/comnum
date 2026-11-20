@@ -82,6 +82,37 @@
 //! are also checked against each other and against a simulation of
 //! [`Photodiode`](super::Photodiode) (the tests of this module).
 //!
+//! # Small-signal response of the dispersive link
+//!
+//! A chirped source, a dispersive fibre and a square-law photodiode make a linear channel
+//! for a small intensity modulation (Wang & Petermann 1992; Devaux, Sorel & Kerdiles 1993).
+//! For the power $P_{0}(1 + m \cos \Omega t)$, $m \ll 1$, of the laser of
+//! [`DirectlyModulatedLaser`](super::DirectlyModulatedLaser) (linewidth enhancement
+//! $\beta_{c}$, adiabatic coefficient $\kappa$), the two sidebands of the field are
+//! $\frac{m}{4}(1 \mp a - j\beta_{c})$ with $a = \beta_{c}\kappa P_{0}/\Omega$, both
+//! turned by $e^{j\theta}$, $\theta = \beta_{2}\Omega^{2}L/2$, by the fibre
+//! ([`comnum_math::nlse`], "Convention"); the detected power is $P_{0}[1 + m\,\Re(H
+//! e^{j\Omega t})]$ with
+//!
+//! $$
+//! H(\Omega) = \cos\theta + \beta_{c}\sin\theta - j\,\frac{\beta_{c}\kappa P_{0}}{\Omega}\sin\theta,
+//! $$
+//!
+//! which, on standard fibre ($\beta_{2} < 0$, $\theta < 0$), is the $\cos|\theta| -
+//! \beta_{c}\sin|\theta|$ of Wang & Petermann: the transient chirp of a positive
+//! $\beta_{c}$ brings the first fading closer and the adiabatic chirp fills the notches.
+//! Without adiabatic chirp the response vanishes at the fading frequencies
+//!
+//! $$
+//! f_{u}^{2} = \frac{1 + 2u - \frac{2}{\pi}\arctan\beta_{c}}{4\pi|\beta_{2}|L}
+//! = \frac{c}{2 D L \lambda^{2}}\left(1 + 2u - \frac{2}{\pi}\arctan\beta_{c}\right),
+//! \qquad u = 0, 1, \dots
+//! $$
+//!
+//! (Devaux et al. 1993, the measurement of $D$ and $\beta_{c}$ from the notches). The
+//! simulated chain, laser, `comnum_channel::optical::fiber::linear_fiber_channel` and
+//! square-law detection, is compared with $H$ in the card `wang1992_small_signal`.
+//!
 //! # Examples
 //! ```
 //! use comnum_hardware::optical::direct_detection::{DirectDetectionReceiver, extinction_ratio_penalty_db};
@@ -98,10 +129,16 @@
 //! # References
 //! 1. G. P. Agrawal, *Fiber-Optic Communication Systems*, 3rd ed., Wiley, 2002,
 //!    Secs. 2.4.2–2.4.3, 4.4–4.6, 5.2.2 and 5.4.
+//! 2. J. Wang, K. Petermann, "Small signal analysis for dispersive optical fiber
+//!    communication systems," *J. Lightw. Technol.* 10(1), 96–100, 1992.
+//! 3. F. Devaux, Y. Sorel, J. F. Kerdiles, "Simple measurement of fiber dispersion and of
+//!    chirp parameter of intensity modulated light emitter," *J. Lightw. Technol.* 11(12),
+//!    1937–1940, 1993.
 
 use super::{shot_noise_variance, thermal_noise_variance};
 use comnum_core::{Result, ensure};
-use comnum_math::{ELEMENTARY_CHARGE, PLANCK, db2lin, lin2db, qfunc, w2dbm};
+use comnum_math::{C64, ELEMENTARY_CHARGE, PLANCK, db2lin, lin2db, qfunc, w2dbm};
+use std::f64::consts::PI;
 
 /// The Q factor $(I_{1} - I_{0})/(\sigma_{1} + \sigma_{0})$ of two Gaussian levels.
 ///
@@ -507,6 +544,69 @@ pub fn dispersion_limited_length_km(bit_rate_hz: f64, beta2_s2_km: f64) -> Resul
     Ok(1.0 / (16.0 * bit_rate_hz * bit_rate_hz * beta2_s2_km.abs()))
 }
 
+/// The small-signal response $H(f)$ of the dispersive IM-DD link (see the module) at the
+/// modulation frequency `f_hz`, for a laser of linewidth enhancement `chirp` $\beta_{c}$,
+/// adiabatic coefficient `adiabatic_hz_w` $\kappa$ (Hz/W) and mean power `power_w`
+/// $P_{0}$, over `length_km` of the dispersion `beta2_s2_km`; $H(0) = 1$.
+///
+/// # Errors
+/// [`comnum_core::Error::Config`] for a negative length, power or frequency, or for a
+/// zero frequency with adiabatic chirp (the response has a pole there).
+///
+/// # Examples
+/// ```
+/// use comnum_hardware::optical::direct_detection::{dispersion_fading_response, fading_frequency_hz};
+/// // standard fibre, β_c = 3: the response vanishes at the first fading frequency
+/// let f0 = fading_frequency_hz(0, 3.0, -21.7e-24, 40.0).unwrap();
+/// assert!((f0 / 1e9 - 4.3).abs() < 0.1);
+/// assert!(dispersion_fading_response(f0, 3.0, 0.0, 1e-3, -21.7e-24, 40.0).unwrap().norm() < 1e-9);
+/// // the adiabatic chirp fills the notch
+/// assert!(dispersion_fading_response(f0, 3.0, 1e13, 1e-3, -21.7e-24, 40.0).unwrap().norm() > 0.3);
+/// ```
+pub fn dispersion_fading_response(
+    f_hz: f64,
+    chirp: f64,
+    adiabatic_hz_w: f64,
+    power_w: f64,
+    beta2_s2_km: f64,
+    length_km: f64,
+) -> Result<C64> {
+    ensure(f_hz >= 0.0 && power_w >= 0.0 && length_km >= 0.0, || {
+        "the frequency, power and length must be non-negative".into()
+    })?;
+    let omega = 2.0 * PI * f_hz;
+    let theta = beta2_s2_km / 2.0 * omega * omega * length_km;
+    let (sin, cos) = theta.sin_cos();
+    if adiabatic_hz_w == 0.0 {
+        return Ok(C64::new(cos + chirp * sin, 0.0));
+    }
+    ensure(f_hz > 0.0, || "the response of an adiabatic chirp needs a positive frequency".into())?;
+    Ok(C64::new(cos + chirp * sin, -chirp * adiabatic_hz_w * power_w / omega * sin))
+}
+
+/// The fading frequency $f_{u}$ (Hz) of order `u` of the dispersive IM-DD link for a
+/// transient chirp `chirp` $\beta_{c}$ over `length_km` of the dispersion `beta2_s2_km`
+/// (see the module; Devaux et al. 1993).
+///
+/// # Errors
+/// [`comnum_core::Error::Config`] for a zero dispersion or a non-positive length.
+///
+/// # Examples
+/// ```
+/// use comnum_hardware::optical::direct_detection::fading_frequency_hz;
+/// // an unchirped source: the first notch at 1/(4 π |β₂| L)^(1/2), 9.6 GHz over 40 km of SSMF
+/// let f0 = fading_frequency_hz(0, 0.0, -21.7e-24, 40.0).unwrap();
+/// assert!((f0 / 1e9 - 9.58).abs() < 0.01);
+/// // the chirp of a positive β_c brings it closer, a negative one pushes it away
+/// assert!(fading_frequency_hz(0, 3.0, -21.7e-24, 40.0).unwrap() < f0);
+/// assert!(fading_frequency_hz(0, -3.0, -21.7e-24, 40.0).unwrap() > f0);
+/// ```
+pub fn fading_frequency_hz(u: usize, chirp: f64, beta2_s2_km: f64, length_km: f64) -> Result<f64> {
+    ensure(beta2_s2_km != 0.0 && length_km > 0.0, || "the fading needs a dispersion and a positive length".into())?;
+    let order = 1.0 + 2.0 * u as f64 - 2.0 / PI * chirp.atan();
+    Ok((order / (4.0 * PI * beta2_s2_km.abs() * length_km)).sqrt())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -649,6 +749,28 @@ mod tests {
         assert!(timing_jitter_penalty_db(0.0, 6.0).unwrap().abs() < 1e-12);
         assert!(timing_jitter_penalty_db(0.1, 6.0).unwrap() < 0.5);
         assert!(timing_jitter_penalty_db(0.21, 6.0).is_err());
+    }
+
+    #[test]
+    fn the_fading_frequencies_are_the_zeros_of_the_small_signal_response() {
+        let (b2, l) = (-21.7e-24, 40.0);
+        for chirp in [0.0, 3.0, -3.0, 6.0] {
+            for u in 0..3 {
+                let f = fading_frequency_hz(u, chirp, b2, l).unwrap();
+                let h = dispersion_fading_response(f, chirp, 0.0, 1e-3, b2, l).unwrap();
+                assert!(h.norm() < 1e-9, "beta_c {chirp}, u {u}: |H| = {}", h.norm());
+                // the next zero is the next root of tan θ = -1/β_c: no other zero between them
+                let bound = (1.0 + chirp * chirp).sqrt();
+                let h_mid = dispersion_fading_response(f * 1.2, chirp, 0.0, 1e-3, b2, l).unwrap().norm();
+                assert!(h_mid > 0.0 && h_mid <= bound + 1e-12);
+            }
+        }
+        // a notch of an unchirped source on anomalous and normal dispersion is the same
+        let f = fading_frequency_hz(0, 0.0, b2, l).unwrap();
+        assert_eq!(f, fading_frequency_hz(0, 0.0, -b2, l).unwrap());
+        assert_eq!(dispersion_fading_response(0.0, 3.0, 0.0, 1e-3, b2, l).unwrap(), C64::new(1.0, 0.0));
+        assert!(dispersion_fading_response(0.0, 3.0, 1e13, 1e-3, b2, l).is_err());
+        assert!(fading_frequency_hz(0, 3.0, 0.0, l).is_err());
     }
 
     #[test]

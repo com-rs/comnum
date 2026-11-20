@@ -27,6 +27,10 @@ and follow [Semantic Versioning](https://semver.org/).
     chirped Gaussian of C = −β_c; the avalanche gain and ionisation ratio of `Photodiode`
     (eq. (4.4.17); 1 and 0 by default, no existing result changes); `beta3_s3_km` in
     `comnum_dsp::compensation::cd::Dispersion` (0 in the kept free functions);
+  - `comnum_hardware::optical::direct_detection::{dispersion_fading_response, fading_frequency_hz}`,
+    the small-signal response of the chirped, dispersive IM-DD link and its fading
+    frequencies (Wang & Petermann 1992; Devaux, Sorel & Kerdiles 1993), in Python too;
+    the simulated chain follows them within 0.1 % (card `wang1992_small_signal`);
   - `comnum_metrics::eye::{level_statistics, level_q_factors}`, the Q factor of every eye
     of a sampled multilevel signal; in Python `level_q_factors`;
   - the gallery example `optical/plot_11_imdd_pam4_link.py` (PAM4 at 25 GBd from a
