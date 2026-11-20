@@ -104,7 +104,7 @@ use std::f64::consts::PI;
 /// ```
 /// use comnum_dsp::compensation::cd::Dispersion;
 /// // 1000 km of SSMF sampled at 21.4 GHz
-/// let d = Dispersion { beta2_s2_km: -2.17e-23, length_km: 1000.0, fs: 21.4e9 };
+/// let d = Dispersion { beta2_s2_km: -2.17e-23, beta3_s3_km: 0.0, length_km: 1000.0, fs: 21.4e9 };
 /// assert!((d.factor() - 4.969).abs() < 1e-3);
 /// let n = d.savory_length();
 /// assert_eq!(n, 63);
@@ -116,6 +116,10 @@ use std::f64::consts::PI;
 pub struct Dispersion {
     /// Group-velocity dispersion `β₂` (s²/km).
     pub beta2_s2_km: f64,
+    /// Third-order dispersion `β₃` (s³/km), 0 for none: compensated by
+    /// [`Dispersion::compensate`] and [`Dispersion::fir_taps`]; the designs of Savory and
+    /// of the least-squares filter take `β₂` alone.
+    pub beta3_s3_km: f64,
     /// Length (km).
     pub length_km: f64,
     /// Sampling rate (Hz).
@@ -123,15 +127,20 @@ pub struct Dispersion {
 }
 
 impl Dispersion {
-    /// Compensate the dispersion of a periodic block exactly, `X(ω) e^{-jβ₂ω²L/2}`.
+    /// Compensate the dispersion of a periodic block exactly, `X(ω) e^{-j(β₂ω²/2 + β₃ω³/6)L}`.
     pub fn compensate(&self, x: &[C64]) -> Vec<C64> {
         fft::filter(x, self.inverse_response(x.len()))
     }
 
-    /// The inverse dispersion `e^{-jβ₂ω²L/2}` on the `n` angular frequencies of a block:
-    /// the linear response of a lossless medium of dispersion `-β₂`.
+    /// The inverse dispersion `e^{-j(β₂ω²/2 + β₃ω³/6)L}` on the `n` angular frequencies
+    /// of a block: the linear response of a lossless medium of dispersion `-β₂`, `-β₃`.
     fn inverse_response(&self, n: usize) -> Vec<C64> {
-        let inverse = Medium { alpha_np_km: 0.0, beta2_s2_km: -self.beta2_s2_km, gamma_w_km: 0.0, beta3_s3_km: 0.0 };
+        let inverse = Medium {
+            alpha_np_km: 0.0,
+            beta2_s2_km: -self.beta2_s2_km,
+            gamma_w_km: 0.0,
+            beta3_s3_km: -self.beta3_s3_km,
+        };
         inverse.linear_response(&fft::angular_frequencies(n, self.fs), self.length_km)
     }
 
@@ -248,31 +257,31 @@ impl Dispersion {
 /// [`Dispersion::compensate`] of the dispersion `beta2_s2_km` of `length_km` on a block
 /// sampled at `fs` (kept for one release: prefer [`Dispersion`]).
 pub fn cdc(x: &[C64], beta2_s2_km: f64, length_km: f64, fs: f64) -> Vec<C64> {
-    Dispersion { beta2_s2_km, length_km, fs }.compensate(x)
+    Dispersion { beta2_s2_km, beta3_s3_km: 0.0, length_km, fs }.compensate(x)
 }
 
 /// [`Dispersion::edc_length`]: the number of taps of the dispersion-compensating FIR
 /// (OptiCommPy `edc` rule; kept for one release).
 pub fn cd_taps_needed(beta2_s2_km: f64, length_km: f64, symbol_rate: f64, fs: f64) -> usize {
-    Dispersion { beta2_s2_km, length_km, fs }.edc_length(symbol_rate)
+    Dispersion { beta2_s2_km, beta3_s3_km: 0.0, length_km, fs }.edc_length(symbol_rate)
 }
 
 /// [`Dispersion::fir_taps`]: `n` centred taps of the compensation of `length_km` by
 /// frequency sampling (kept for one release).
 pub fn cd_fir_taps(beta2_s2_km: f64, length_km: f64, fs: f64, n: usize) -> Vec<C64> {
-    Dispersion { beta2_s2_km, length_km, fs }.fir_taps(n)
+    Dispersion { beta2_s2_km, beta3_s3_km: 0.0, length_km, fs }.fir_taps(n)
 }
 
 /// [`Dispersion::factor`]: the dispersion factor $K = -\beta_{2} L f_{s}^{2}/2$ (kept for
 /// one release).
 pub fn cd_dispersion_factor(beta2_s2_km: f64, length_km: f64, fs: f64) -> f64 {
-    Dispersion { beta2_s2_km, length_km, fs }.factor()
+    Dispersion { beta2_s2_km, beta3_s3_km: 0.0, length_km, fs }.factor()
 }
 
 /// [`Dispersion::savory_length`]: the length $N = 2\lfloor 2\pi |K| \rfloor + 1$ of
 /// Savory's filter (kept for one release).
 pub fn cd_savory_length(beta2_s2_km: f64, length_km: f64, fs: f64) -> usize {
-    Dispersion { beta2_s2_km, length_km, fs }.savory_length()
+    Dispersion { beta2_s2_km, beta3_s3_km: 0.0, length_km, fs }.savory_length()
 }
 
 /// [`Dispersion::savory_taps`]: the `n` centred taps of Savory's filter (kept for one
@@ -281,7 +290,7 @@ pub fn cd_savory_length(beta2_s2_km: f64, length_km: f64, fs: f64) -> usize {
 /// # Errors
 /// As [`Dispersion::savory_taps`].
 pub fn cd_savory_taps(beta2_s2_km: f64, length_km: f64, fs: f64, n: usize) -> Result<Vec<C64>> {
-    Dispersion { beta2_s2_km, length_km, fs }.savory_taps(n)
+    Dispersion { beta2_s2_km, beta3_s3_km: 0.0, length_km, fs }.savory_taps(n)
 }
 
 /// [`Dispersion::ls_taps`]: the `n` centred taps of the least-squares compensation over
@@ -290,7 +299,7 @@ pub fn cd_savory_taps(beta2_s2_km: f64, length_km: f64, fs: f64, n: usize) -> Re
 /// # Errors
 /// As [`Dispersion::ls_taps`].
 pub fn cd_ls_taps(beta2_s2_km: f64, length_km: f64, fs: f64, n: usize, band_hz: f64, epsilon: f64) -> Result<Vec<C64>> {
-    Dispersion { beta2_s2_km, length_km, fs }.ls_taps(n, band_hz, epsilon)
+    Dispersion { beta2_s2_km, beta3_s3_km: 0.0, length_km, fs }.ls_taps(n, band_hz, epsilon)
 }
 
 /// [`Dispersion::ls_error`]: the energy of the error of the centred `taps` over the band
@@ -299,7 +308,7 @@ pub fn cd_ls_taps(beta2_s2_km: f64, length_km: f64, fs: f64, n: usize, band_hz: 
 /// # Errors
 /// As [`Dispersion::ls_error`].
 pub fn cd_ls_error(taps: &[C64], beta2_s2_km: f64, length_km: f64, fs: f64, band_hz: f64) -> Result<f64> {
-    Dispersion { beta2_s2_km, length_km, fs }.ls_error(taps, band_hz)
+    Dispersion { beta2_s2_km, beta3_s3_km: 0.0, length_km, fs }.ls_error(taps, band_hz)
 }
 
 fn conj_if(v: C64, c: bool) -> C64 {
@@ -334,6 +343,28 @@ mod tests {
     use super::*;
     use crate::filter::fir_filter_complex;
     use comnum_core::rng::Rng;
+
+    #[test]
+    fn the_third_order_dispersion_is_compensated_with_the_second() {
+        // the lossless medium of (β₂, β₃) over 50 km, undone by `Dispersion` with both
+        let m = Medium { alpha_np_km: 0.0, beta2_s2_km: -2.17e-23, gamma_w_km: 0.0, beta3_s3_km: 1.3e-37 };
+        let (n, fs) = (1024, 64e9);
+        let mut r = Rng::new(3);
+        let x: Vec<C64> = (0..n).map(|_| r.complex_gaussian()).collect();
+        let y = fft::filter(&x, m.linear_response(&fft::angular_frequencies(n, fs), 50.0));
+        let both = Dispersion { beta2_s2_km: m.beta2_s2_km, beta3_s3_km: m.beta3_s3_km, length_km: 50.0, fs };
+        let z = both.compensate(&y);
+        assert!(x.iter().zip(&z).all(|(a, b)| (a - b).norm() < 1e-9));
+        // β₂ alone leaves the cubic phase: 0.13 ps³/km over 50 km at 32 GHz is 0.17 rad
+        let only = Dispersion { beta3_s3_km: 0.0, ..both };
+        let left = only.compensate(&y);
+        assert!(x.iter().zip(&left).any(|(a, b)| (a - b).norm() > 1e-3));
+        let taps = both.fir_taps(255);
+        let zf = fir_filter_complex(&taps, &y);
+        let err: f64 = zf[300..n - 300].iter().zip(&x[300..n - 300]).map(|(a, b)| (a - b).norm_sqr()).sum::<f64>()
+            / x[300..n - 300].iter().map(C64::norm_sqr).sum::<f64>();
+        assert!(err < 1e-2, "{err}");
+    }
 
     #[test]
     fn cdc_and_its_fir_invert_the_dispersion() {
