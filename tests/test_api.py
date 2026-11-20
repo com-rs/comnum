@@ -551,6 +551,7 @@ def test_every_class_has_a_repr_and_the_values_pickle():
         comnum.Edfa(gain_db=15.0),
         comnum.Photodiode(filter_kind="gauss", ideal=True),
         comnum.PinFetReceiver.komine2004(),
+        comnum.DirectDetectionReceiver(apd_gain=10.0, ionization_ratio=0.3),
         comnum.GammaGamma(2.0, 1.5),
         comnum.PointingError(0.1, 0.05, 0.02),
     )

@@ -60,6 +60,7 @@ mod comm;
 mod converter;
 mod devices;
 mod differential;
+mod direct_detection;
 mod dsp;
 mod fec;
 mod fec_codes;
@@ -393,6 +394,7 @@ fn _comnum(m: &Bound<'_, PyModule>) -> PyResult<()> {
     converter::register(m)?;
     dsp::register(m)?;
     fiber::register(m)?;
+    direct_detection::register(m)?;
     fm::register(m)?;
     ais::register(m)?;
     audio::register(m)?;

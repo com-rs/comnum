@@ -1,0 +1,26 @@
+id: agrawal2002_fig5_11
+title: Chirp-induced power penalty of a linearly chirped Gaussian pulse, Fig. 5.11
+literature: agrawal2002
+evidence: [closed_form, claim]
+source:
+  kind: paper
+  reference: "G. P. Agrawal, Fiber-Optic Communication Systems, 3rd ed., Wiley, 2002"
+  locator: "eq. (5.4.14) and the text of Fig. 5.11 and of Sec. 5.4.4: more than 8 dB at |beta_2| B^2 L = 0.2 for C = -6; the penalty 'can exceed 5 dB' for C = -6; negative for C beta_2 < 0"
+  file: hardware/2002_agrawal_fiber-optic-communication-systems-3ed_wiley.pdf
+description: >
+  The penalty 5 log10[(1 + 8 C beta_2 B^2 L)^2 + (8 beta_2 B^2 L)^2] of the worst-case
+  pulse sigma_0 = 1/(4B): 10 Gb/s over beta_2 = -20 ps^2/km, the length setting |beta_2|
+  B^2 L.
+run:
+  function: comnum.chirp_penalty_db
+tier: ci
+duration: "1 ms"
+tolerance: {atol: 0.01}
+why: "the claims of the text are ranges"
+findings:
+  - "10.3 dB at |beta_2| B^2 L = 0.2 for C = -6 (the text: more than 8 dB); -3.5 dB at 0.05 for C = +2 (the compression of C beta_2 < 0)"
+  - "the thresholds the text gives for C = 0 are not those of eq. (5.4.14): the equation gives 0.32 dB at |beta_2| B^2 L = 0.05 (the text: below 0.1 dB) and 2.76 dB at 0.2 (below 2 dB), and 0.40 dB at 0.002 for C = -6 (below 0.1 dB); these claims are not cases"
+cases:
+  - {inputs: {chirp: -6.0, beta2_s2_km: -2.0e-23, bit_rate_hz: 1.0e+10, length_km: 100.0}, expected: {min: 8.0}}
+  - {inputs: {chirp: -6.0, beta2_s2_km: -2.0e-23, bit_rate_hz: 1.0e+10, length_km: 50.0}, expected: {min: 5.0}}
+  - {inputs: {chirp: 2.0, beta2_s2_km: -2.0e-23, bit_rate_hz: 1.0e+10, length_km: 25.0}, expected: {max: 0.0}}

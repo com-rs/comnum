@@ -1,0 +1,24 @@
+id: agrawal2002_fig5_7
+title: Dispersion power penalty of a wide-spectrum source, Fig. 5.7
+literature: agrawal2002
+evidence: [closed_form, table]
+source:
+  kind: paper
+  reference: "G. P. Agrawal, Fiber-Optic Communication Systems, 3rd ed., Wiley, 2002"
+  locator: "eq. (5.4.4) and the text of Fig. 5.7: 0.38 dB at B L D sigma_lambda = 0.1, 2.2 dB at 0.2, infinite at 0.25"
+  file: hardware/2002_agrawal_fiber-optic-communication-systems-3ed_wiley.pdf
+description: >
+  The penalty -5 log10[1 - (4 B L D sigma_lambda)^2] of a Gaussian pulse that fills the
+  bit (4 B sigma = 1) broadened by a Gaussian source spectrum of r.m.s. width
+  sigma_lambda: 1 Gb/s over 100 km of 1 ps/(nm km), the width 1 and 2 nm.
+run:
+  function: comnum.dispersion_penalty_db
+tier: ci
+duration: "1 ms"
+tolerance: {atol: 0.05}
+why: "the text gives one or two digits; the formula gives 0.379 and 2.218 dB"
+findings:
+  - "0.379 and 2.218 dB against 0.38 and 2.2 dB; refused (infinite) from B L D sigma_lambda = 0.25"
+cases:
+  - {inputs: {bit_rate_hz: 1.0e+9, length_km: 100.0, d_ps_nm_km: 1.0, sigma_lambda_nm: 1.0}, expected: 0.38}
+  - {inputs: {bit_rate_hz: 1.0e+9, length_km: 100.0, d_ps_nm_km: 1.0, sigma_lambda_nm: 2.0}, expected: 2.2}

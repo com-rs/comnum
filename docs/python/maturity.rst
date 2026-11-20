@@ -231,7 +231,7 @@ Optical
      - the Maxwellian DGD of Foschini & Poole 1991 Fig. 3; the accumulated ASE; Optilux outputs
    * - Optical front ends (laser, modulators, photodiodes, coherent receiver)
      - A
-     - OptiCommPy and Optilux outputs
+     - OptiCommPy and Optilux outputs; closed forms of Agrawal (on–off keying receivers)
    * - Indoor optical wireless
      - A
      - Barry et al. 1993 Table II; Komine & Nakagawa 2004 Figs. 3–9

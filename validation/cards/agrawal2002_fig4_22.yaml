@@ -1,0 +1,24 @@
+id: agrawal2002_fig4_22
+title: Power penalty of the timing jitter at Q = 6, Fig. 4.22
+literature: agrawal2002
+evidence: [closed_form, claim]
+source:
+  kind: paper
+  reference: "G. P. Agrawal, Fiber-Optic Communication Systems, 3rd ed., Wiley, 2002"
+  locator: "eqs. (4.6.17), (4.6.20) and the text of Fig. 4.22: negligible below B tau_j = 0.1, 2 dB at 0.16, infinite beyond 0.2"
+  file: hardware/2002_agrawal_fiber-optic-communication-systems-3ed_wiley.pdf
+description: >
+  The penalty 10 log10[(1 - b/2)/((1 - b/2)^2 - b^2 Q^2/2)] with b = (4 pi^2/3 - 8)(B
+  tau_j)^2 of a Gaussian jitter of r.m.s. tau_j on the raised-cosine pulse cos^2(pi B t/2),
+  thermal-noise-limited receiver, Q = 6.
+run:
+  function: comnum.timing_jitter_penalty_db
+tier: ci
+duration: "1 ms"
+tolerance: {rtol: 0.15}
+why: "the text reads the figure to one digit (2 dB); the formula gives 2.23 dB"
+findings:
+  - "0.34 dB at 0.1, 2.23 dB at 0.16; 13.8 dB at 0.2 and no finite power from 0.203 on"
+cases:
+  - {inputs: {b_tau_j: 0.1, q: 6.0}, expected: {max: 0.5}}
+  - {inputs: {b_tau_j: 0.16, q: 6.0}, expected: 2.0}

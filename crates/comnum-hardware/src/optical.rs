@@ -30,7 +30,11 @@
 //! - [`PinFetReceiver`]: the p-i-n photodiode and FET transimpedance amplifier of the
 //!   optical wireless receivers, the variances of its shot noise (signal and ambient
 //!   light) and thermal noise (feedback resistor and FET channel), and the SNR of on–off
-//!   keying with intersymbol interference (Komine & Nakagawa 2004, eqs. (16)–(21)).
+//!   keying with intersymbol interference (Komine & Nakagawa 2004, eqs. (16)–(21));
+//! - [`direct_detection`]: the closed forms of on–off keying receivers (Q factor,
+//!   sensitivity of p-i-n and avalanche photodiodes, quantum limit, power penalties of
+//!   the extinction ratio, the intensity noise and the dispersion), after Agrawal,
+//!   *Fiber-Optic Communication Systems*, 4th ed.
 //!
 //! # Examples
 //! ```
@@ -57,6 +61,8 @@ use comnum_core::{Result, ensure, ensure_shape, same_len};
 use comnum_dsp::filter::{LowPass, fir_filter, low_pass_fir};
 use comnum_math::{BOLTZMANN, C64, ELEMENTARY_CHARGE, ZERO_CELSIUS, cis, db2lin, dbm2w};
 use std::f64::consts::PI;
+
+pub mod direct_detection;
 
 /// A continuous-wave laser.
 #[derive(Clone, Debug, PartialEq)]

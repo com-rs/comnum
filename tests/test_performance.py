@@ -806,3 +806,60 @@ def test_least_squares_cd_filters_of_eghbali_2014():
     band = 0.3125 * fs
     bl = comnum.cd_ls_taps(fib, z, fs, 119, band_hz=band, epsilon=1e-14)
     assert comnum.cd_ls_error(bl, fib, z, fs, band_hz=band) < 1e-3
+
+
+def test_direct_detection_closed_forms_and_a_simulated_photodiode():
+    # Agrawal, Fiber-Optic Communication Systems, 3rd ed., 2002, Secs. 4.4-4.6 and 5.4
+    # (the numbers of the text are the cards agrawal2002_*): the sensitivity is the exact
+    # inverse of the Q factor; 10 photons per bit at 1e-9; the penalties restore Q; a
+    # simulated p-i-n receiver has the BER of its Q factor
+    q = comnum.qfuncinv(1e-9)
+    rx = comnum.DirectDetectionReceiver(responsivity=0.9, bandwidth_hz=5e9)
+    for m, k_a in [(1.0, 0.0), (10.0, 0.3), (30.0, 0.02)]:
+        rx.apd_gain, rx.ionization_ratio = m, k_a
+        p = rx.sensitivity_w(q)
+        assert abs(rx.q_factor(2 * p, 0.0) - q) < 1e-9 * q
+        assert abs(rx.ber(2 * p, 0.0) - 1e-9) < 1e-11
+        assert rx.excess_noise_factor() == comnum.excess_noise_factor(m, k_a)
+    rx.ionization_ratio = 0.3
+    m_opt = rx.optimum_apd_gain(q)
+    rx.apd_gain = m_opt
+    best = rx.sensitivity_w(q)
+    for m in [1.0, 0.7 * m_opt, 1.4 * m_opt]:
+        rx.apd_gain = m
+        assert rx.sensitivity_w(q) >= best
+    assert abs(comnum.quantum_limit_photons_per_bit(1e-9) - 10.0) < 0.02
+    assert abs(comnum.extinction_ratio_penalty_db(0.1) - 0.8715) < 1e-3
+    assert abs(comnum.intensity_noise_penalty_db(0.1, 6.0) - (-10 * np.log10(1 - 0.36))) < 1e-9
+    x = 4 * 2.5e9 * 50 * 17e-12 * 0.05
+    assert (
+        abs(comnum.dispersion_penalty_db(2.5e9, 50.0, 17.0, 0.05) + 5 * np.log10(1 - x * x)) < 1e-12
+    )
+    assert (
+        abs(comnum.gaussian_broadening_factor(10e-12, 0.0, -20e-24, 0.0, 5.0) - np.sqrt(2)) < 1e-12
+    )
+    # eq. (5.4.14) is the broadening of the pulse T0 = sqrt(2) / (4B); eq. (4.6.20) at 0.16
+    t0 = np.sqrt(2) / (4 * 10e9)
+    for c in [-6.0, 0.0, 2.0]:
+        via = comnum.lin2db(comnum.gaussian_broadening_factor(t0, c, -20e-24, 0.0, 60.0))
+        assert abs(via - comnum.chirp_penalty_db(c, -20e-24, 10e9, 60.0)) < 1e-12
+    assert abs(comnum.timing_jitter_penalty_db(0.16, 6.0) - 2.235) < 1e-3
+    assert abs(comnum.dispersion_limited_length_km(10e9, -21.7e-24) - 1 / (16e20 * 21.7e-24)) < 1e-9
+    # the simulated photodiode: NRZ at 10 Gb/s, four samples per bit integrated, Δf = B/2
+    bit_rate, sps, n_bits = 10e9, 4, 100_000
+    pd = comnum.Photodiode(responsivity=0.8, temperature_k=300.0, dark_current_a=0.0,
+                           load_ohm=50.0, bandwidth_hz=bit_rate / 2, bandwidth_limitation=False)  # fmt: skip
+    rx = comnum.DirectDetectionReceiver(responsivity=0.8, temperature_k=300.0, load_ohm=50.0,
+                                        noise_figure_db=0.0, bandwidth_hz=bit_rate / 2)  # fmt: skip
+    rng = comnum.Rng(5)
+    bits = comnum.bits(n_bits, rng)
+    p1 = 2 * rx.sensitivity_w(3.0)
+    i = (
+        pd.detect_power(np.repeat(bits * p1, sps), bit_rate * sps, rng)
+        .reshape(-1, sps)
+        .mean(axis=1)
+    )
+    s1, s0 = np.sqrt(rx.shot_variance(p1) + rx.thermal_variance()), np.sqrt(rx.thermal_variance())
+    ber = np.mean((i > s0 * 0.8 * p1 / (s0 + s1)) != bits.astype(bool))
+    expected = comnum.qfunc(3.0)
+    assert abs(ber - expected) < 3 * np.sqrt(expected / n_bits), (ber, expected)

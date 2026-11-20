@@ -1,0 +1,23 @@
+id: agrawal2002_fig4_20
+title: Power penalty of the extinction ratio, Fig. 4.20
+literature: agrawal2002
+evidence: [closed_form, claim]
+source:
+  kind: paper
+  reference: "G. P. Agrawal, Fiber-Optic Communication Systems, 3rd ed., Wiley, 2002"
+  locator: "eq. (4.6.4) and the text of Fig. 4.20: 1 dB at r_ex = 0.12, 4.8 dB at 0.5"
+  file: hardware/2002_agrawal_fiber-optic-communication-systems-3ed_wiley.pdf
+description: >
+  The penalty 10 log10[(1 + r_ex)/(1 - r_ex)] of a thermal-noise-limited receiver, at the
+  two points the text reads on its figure.
+run:
+  function: comnum.extinction_ratio_penalty_db
+tier: ci
+duration: "1 ms"
+tolerance: {atol: 0.06}
+why: "the text rounds the penalty to one decimal (1 dB, 4.8 dB); the formula gives 1.05 and 4.77 dB"
+findings:
+  - "1.05 dB at 0.12 and 4.77 dB at 0.5 against 1 and 4.8 dB"
+cases:
+  - {inputs: {r_ex: 0.12}, expected: 1.0}
+  - {inputs: {r_ex: 0.5}, expected: 4.8}

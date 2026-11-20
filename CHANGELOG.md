@@ -8,6 +8,24 @@ and follow [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- `comnum_hardware::optical::direct_detection`, the closed forms of on–off keying
+  receivers after Agrawal, *Fiber-Optic Communication Systems*, 3rd ed., 2002,
+  Secs. 2.4.2–2.4.3, 4.4–4.6 and 5.4: the Q factor, `DirectDetectionReceiver` (p-i-n or
+  avalanche photodiode: shot and thermal noise, the sensitivity as the exact inverse of
+  the Q factor, eq. (4.5.17), the optimum avalanche gain, eq. (4.5.19)), the quantum
+  limit, the penalties of the extinction ratio, of the intensity noise, of the timing
+  jitter, of the dispersive broadening and of the chirp (eqs. (4.6.4), (4.6.11),
+  (4.6.20), (5.4.4), (5.4.14)), the r.m.s. broadening factor of a chirped Gaussian pulse
+  with its β₃ term (eq. (2.4.22)) and the dispersion-limited length; in Python
+  `DirectDetectionReceiver`, `q_factor`, `excess_noise_factor`,
+  `quantum_limit_photons_per_bit`, `quantum_limit_w`, `extinction_ratio_penalty_db`,
+  `intensity_noise_penalty_db`, `timing_jitter_penalty_db`, `gaussian_broadening_factor`,
+  `broadening_penalty_db`, `dispersion_penalty_db`, `chirp_penalty_db`,
+  `dispersion_limited_length_km` and `qfuncinv`; the gallery example
+  `optical/plot_10_direct_detection.py`. Validated at the numbers of the text (cards
+  `agrawal2002_*`: the sensitivities of Secs. 4.5.2–4.5.3, the penalties of Figs.
+  4.20–4.22, 5.7 and 5.11, within the digits printed); the thresholds the text gives for
+  Fig. 5.11 at C = 0 are not those of its eq. (5.4.14).
 - The power maps of the four bidirectional designs of Soltani et al. (*J. Lightw.
   Technol.* 40(12), 2022, Table III) against GNPy 3.0.1, recorded: the 48 waves every
   kilometre of the 80 km within 9e-7 dB of GNPy's Euler steps extrapolated to a zero

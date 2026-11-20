@@ -1,0 +1,23 @@
+id: agrawal2002_quantum_limit
+title: Quantum limit of the receiver sensitivity at 10 Gb/s and 1.55 um, Sec. 4.5.3
+literature: agrawal2002
+evidence: [table]
+source:
+  kind: paper
+  reference: "G. P. Agrawal, Fiber-Optic Communication Systems, 3rd ed., Wiley, 2002"
+  locator: "Sec. 4.5.3, eq. (4.5.25) and the text after it: 10 photons per bit, h nu = 0.8 eV, B = 10 Gb/s give 13 nW (-48.9 dBm)"
+  file: hardware/2002_agrawal_fiber-optic-communication-systems-3ed_wiley.pdf
+description: >
+  The quantum limit P = N_p h nu B with N_p = -ln(2 BER)/2 = 10.01 photons per bit at
+  BER = 1e-9 (eq. (4.5.24)), at the frequency of a 0.8 eV photon (193.44 THz).
+run:
+  function: comnum.quantum_limit_w
+tier: ci
+duration: "1 ms"
+tolerance: {rtol: 0.02}
+why: "the text gives two digits (13 nW); the exact value is 12.8 nW"
+findings:
+  - "12.84 nW (-48.9 dBm) against 13 nW"
+cases:
+  - inputs: {ber: 1.0e-9, bit_rate_hz: 1.0e+10, frequency_hz: 1.9344e+14}
+    expected: 1.3e-8

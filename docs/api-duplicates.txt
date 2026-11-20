@@ -26,7 +26,9 @@ Receiver                2  # comnum_mimo::receiver (a MIMO detector applied chan
 at                      2  # RamanGain::at (the Raman gain at a frequency offset) / wiener::Correlation2d::at (the channel correlation at a time-frequency lag): the value of a function at a point
 awgn                    2  # comnum_channel::awgn (adds the noise) / NormalApproximation::awgn (the normal approximation of the AWGN channel)
 base_graph              2  # NrLdpc::base_graph (the base graph of one code block) / nr::transport::TransportBlock::base_graph (the one TS 38.212 Sec. 7.2.2 chooses for a transport block): the same accessor
-ber                     3  # comnum_metrics::errors (measured on bits) / mapping::theory and css::theory (the closed forms of two modulations)
+shot_variance           2  # PinFetReceiver::shot_variance (signal, interference and ambient light, Komine 2004) / DirectDetectionReceiver::shot_variance (the APD shot noise of one power, Agrawal): the same accessor on two receivers
+thermal_variance        2  # PinFetReceiver::thermal_variance (feedback resistor and FET channel) / DirectDetectionReceiver::thermal_variance (the load and the amplifier noise figure): the same accessor on two receivers
+ber                     4  # comnum_metrics::errors (measured on bits) / mapping::theory, css::theory and optical::direct_detection::DirectDetectionReceiver::ber (the closed forms of three modulations)
 bits                    4  # source::bits (random bits) / the bits of a sequence, of a BigUint, of a DVB-T cell or TPS frame
 block                   2  # Interleaver::block (the row-column interleaver) / PilotPattern::block (the pilot pattern of whole symbols)
 bussgang                2  # Rapp::bussgang and Saleh::bussgang are thin wrappers of comnum_dsp::nonlinear::bussgang_of, the kernel of nonlinear::bussgang
@@ -113,7 +115,7 @@ bind                    2
 bit_map                 2
 bits_per_symbol         3
 block_len               4
-check                  24
+check                  25
 code                    5
 conditions              2
 config                  2

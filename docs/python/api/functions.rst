@@ -44,6 +44,7 @@ convention (:math:`10 \log_{10}`).
    dbm2w
    w2dbm
    qfunc
+   qfuncinv
    bessel_j0
    entropy
 
@@ -429,6 +430,32 @@ Optical devices
    balanced_photodiode
    hybrid_2x4
    coherent_receiver
+
+Direct detection
+~~~~~~~~~~~~~~~~
+
+The closed forms of on–off keying receivers (Agrawal, *Fiber-Optic Communication
+Systems*, 3rd ed., 2002, Secs. 4.4–4.6 and 5.4): the Q factor, the sensitivity of p-i-n
+and avalanche photodiode receivers, the quantum limit and the power penalties of the
+extinction ratio, of the intensity noise, of the timing jitter, of the dispersive
+broadening and of the chirp.
+
+.. autosummary::
+   :toctree: generated
+
+   DirectDetectionReceiver
+   q_factor
+   excess_noise_factor
+   quantum_limit_photons_per_bit
+   quantum_limit_w
+   extinction_ratio_penalty_db
+   intensity_noise_penalty_db
+   timing_jitter_penalty_db
+   gaussian_broadening_factor
+   broadening_penalty_db
+   dispersion_penalty_db
+   chirp_penalty_db
+   dispersion_limited_length_km
 
 Optical wireless
 ~~~~~~~~~~~~~~~~

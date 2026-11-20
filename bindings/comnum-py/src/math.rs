@@ -169,6 +169,28 @@ fn qfunc(x: &Bound<'_, PyAny>) -> PyResult<Py<PyAny>> {
     map_real(x, |v| Ok(comnum::math::qfunc(v)))
 }
 
+/// The inverse of the Gaussian tail function, :math:`Q^{-1}(p) = \sqrt{2}\,
+/// \operatorname{erfc}^{-1}(2p)` on :math:`(0, 1)`: the Q factor of a bit error rate
+/// (:math:`Q^{-1}(10^{-9}) \approx 6`).
+///
+/// Args:
+///     p (float | array_like): the probability, in :math:`(0, 1)`.
+///
+/// Returns:
+///     float | numpy.ndarray: :math:`Q^{-1}(p)` (:math:`\pm\infty` at the ends).
+///
+/// Raises:
+///     ValueError: for values that are not real numbers.
+///
+/// Examples:
+///     >>> import comnum
+///     >>> round(comnum.qfuncinv(1e-9), 3)
+///     5.998
+#[pyfunction]
+fn qfuncinv(p: &Bound<'_, PyAny>) -> PyResult<Py<PyAny>> {
+    map_real(p, |v| Ok(comnum::math::qfuncinv(v)))
+}
+
 /// The Q factor (dB) of a bit error rate.
 ///
 /// The factor is
@@ -256,6 +278,7 @@ pub(crate) fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(dbm2w, m)?)?;
     m.add_function(wrap_pyfunction!(w2dbm, m)?)?;
     m.add_function(wrap_pyfunction!(qfunc, m)?)?;
+    m.add_function(wrap_pyfunction!(qfuncinv, m)?)?;
     m.add_function(wrap_pyfunction!(ber_to_q_db, m)?)?;
     m.add_function(wrap_pyfunction!(bessel_j0, m)?)?;
     Ok(())

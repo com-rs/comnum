@@ -529,13 +529,15 @@
 - theme: Optical
   name: "Optical front ends (laser, modulators, photodiodes, coherent receiver)"
   modules: "`comnum_hardware::optical`"
-  summary: "OptiCommPy and Optilux outputs"
+  summary: "OptiCommPy and Optilux outputs; closed forms of Agrawal (on–off keying receivers)"
   evidence:
     - recording: "OptiCommPy 0.11, recorded: `tests/oracle/test_oracle.py::test_mzm_and_phase_modulator`, `::test_iq_modulator`, `::test_optical_hybrid_and_coherent_receiver`, `::test_noiseless_photodiode_with_bandwidth_limitation`, `::test_wdm_grid`"
     - recording: "Optilux (Apr 2021, Octave), the card `optilux_dpsk` (`validation/tests/fiber/optilux.rs::the_dpsk_link_of_example_15`: its example 15, binary DPSK through the integrator, `delay_interferometer` and `balanced_photodiode`, the BER within 3.5 % of 0.5 exp(-SNR) from 3 to 8 dB and within 6 % of Optilux's estimates) and `optilux_wdm_b2b` (`::the_wdm_back_to_back_of_example_16`: five channels of PDM 16-QAM at 37.5 GHz, no crosstalk above Optilux's numerical floor of 75.9 dB)"
     - self: "`crates/comnum/tests/links.rs::optical_transmitter_and_coherent_receiver_recover_the_symbols`"
+    - table: "the closed forms of on–off keying receivers of Agrawal, *Fiber-Optic Communication Systems*, 3rd ed., 2002, Secs. 4.4–4.6 and 5.4 (`comnum_hardware::optical::direct_detection`) at the numbers of the text, the cards `agrawal2002_*`: the p-i-n sensitivity of Sec. 4.5.2 (−32.19 against −32.2 dBm), the quantum limit (12.8 against 13 nW), the penalties of Figs. 4.20–4.22, 5.7 and 5.11 (extinction ratio, intensity noise, timing jitter, dispersive broadening, chirp) within the digits printed"
+    - closed_form: "the same forms against each other: the sensitivity the exact inverse of the Q factor, eqs. (4.5.19)–(4.5.20) its minimum over the avalanche gain, the β₃ term of eq. (2.4.22), eq. (5.4.14) as the broadening of the pulse that fills the bit, each penalty the power that restores Q; a simulated `Photodiode` (NRZ at 10 Gb/s) has the BER of its Q factor (`crates/comnum-hardware/src/optical/direct_detection.rs`, `tests/test_performance.py::test_direct_detection_closed_forms_and_a_simulated_photodiode`); gallery `optical/plot_10_direct_detection.py`"
     - closed_form: "closed forms (`tests/test_performance.py`): the transfer of the MZM and its extinction ratio (`::test_mzm_extinction_ratio_and_field_transfer`, within 10⁻⁶ dB), the harmonics of a sine drive against the Jacobi–Anger expansion J_k(m) (`::test_mzm_harmonics_follow_the_jacobi_anger_expansion`, within 10⁻¹²), the compression of 16-QAM by the IQ modulator and its arcsine predistortion (`::test_iq_modulator_compression_and_arcsine_predistortion`); gallery `optical/plot_06_mach_zehnder.py`"
-  gaps: "• the shot and thermal noise of the photodiodes and the laser phase noise are not compared with a reference<br>• the modulators are memoryless and chirp-free: no electrode bandwidth, no chirp of an unbalanced drive (Koyama & Oga, *J. Lightw. Technol.* 6(1), 1988, status next)"
+  gaps: "• the shot and thermal noise of the photodiodes are checked against the Gaussian closed forms of Agrawal (the readings of the text, the curves not digitised), the laser phase noise against no reference<br>• the modulators are memoryless and chirp-free: no electrode bandwidth, no chirp of an unbalanced drive (Koyama & Oga, *J. Lightw. Technol.* 6(1), 1988, status next)"
 - theme: Optical
   name: "Indoor optical wireless (visible light, infrared)"
   short: "Indoor optical wireless"

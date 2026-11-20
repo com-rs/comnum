@@ -1,0 +1,25 @@
+id: agrawal2002_sensitivity
+title: Sensitivity of a thermal-noise-limited p-i-n receiver, the example of Sec. 4.5.2
+literature: agrawal2002
+evidence: [table]
+source:
+  kind: paper
+  reference: "G. P. Agrawal, Fiber-Optic Communication Systems, 3rd ed., Wiley, 2002"
+  locator: "Sec. 4.5.2, text after eq. (4.5.18): R = 1 A/W, sigma_T = 100 nA, Q = 6 give 0.6 uW or -32.2 dBm"
+  file: hardware/2002_agrawal_fiber-optic-communication-systems-3ed_wiley.pdf
+description: >
+  The receiver of eq. (4.5.17) with the thermal noise of the example: a 1 kOhm load at
+  300 K without noise figure and the noise bandwidth 603.58 MHz that makes sigma_T =
+  100 nA exactly; the shot-noise term of the exact formula adds 0.6 % to the thermal
+  limit QsigmaT/R of eq. (4.5.18).
+run:
+  function: comnum.DirectDetectionReceiver.sensitivity_dbm
+tier: ci
+duration: "1 ms"
+tolerance: {atol: 0.05}
+why: "the text gives one decimal in dBm"
+findings:
+  - "-32.19 dBm against -32.2 dBm"
+cases:
+  - inputs: {self: {construct: comnum.DirectDetectionReceiver, args: {responsivity: 1.0, temperature_k: 300.0, load_ohm: 1000.0, noise_figure_db: 0.0, bandwidth_hz: 603580876.34}}, q: 6.0}
+    expected: -32.2

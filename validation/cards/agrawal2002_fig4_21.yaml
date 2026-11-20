@@ -1,0 +1,23 @@
+id: agrawal2002_fig4_21
+title: Power penalty of the intensity noise of the source at Q = 6, Fig. 4.21
+literature: agrawal2002
+evidence: [closed_form, claim]
+source:
+  kind: paper
+  reference: "G. P. Agrawal, Fiber-Optic Communication Systems, 3rd ed., Wiley, 2002"
+  locator: "eq. (4.6.11) and the text of Fig. 4.21: below 0.02 dB at r_I = 0.01, almost 2 dB at r_I = 0.1, infinite at r_I = 1/Q = 0.167"
+  file: hardware/2002_agrawal_fiber-optic-communication-systems-3ed_wiley.pdf
+description: >
+  The penalty -10 log10(1 - r_I^2 Q^2) of the relative intensity noise r_I at Q = 6, at
+  the points the text gives.
+run:
+  function: comnum.intensity_noise_penalty_db
+tier: ci
+duration: "1 ms"
+tolerance: {atol: 0.01}
+why: "the claims of the text are ranges; the exact values are 0.0157 and 1.94 dB"
+findings:
+  - "0.016 dB at 0.01 and 1.94 dB at 0.1; the penalty is refused (infinite) from r_I = 1/6"
+cases:
+  - {inputs: {r_i: 0.01, q: 6.0}, expected: {max: 0.02}}
+  - {inputs: {r_i: 0.1, q: 6.0}, expected: {min: 1.8, max: 2.0}}
