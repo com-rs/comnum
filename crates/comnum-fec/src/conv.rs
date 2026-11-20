@@ -20,7 +20,12 @@
 //!   wrap-around Viterbi algorithm of Shao, Lin and Fossorier (2003);
 //! - [`bcjr`]: the a posteriori LLR of every input bit (Bahl, Cocke, Jelinek & Raviv
 //!   1974), in the log domain with the exact Jacobian logarithm (log-MAP) or its
-//!   maximum (max-log-MAP).
+//!   maximum (max-log-MAP);
+//! - [`sova`]: the soft-output Viterbi algorithm (Hagenauer & Hoeher 1989), the decisions
+//!   of [`viterbi`] with the reliability of the best competing survivor as LLR.
+//!
+//! The add–compare–select recursion and its trace-back are the generic kernel
+//! [`comnum_math::viterbi`], shared with the sequence detectors of `comnum-dsp`.
 //!
 //! # Examples
 //! ```
@@ -49,6 +54,7 @@
 
 use crate::block::{BlockCode, Jacobian, SoftDecode, container_traits, expect_len, max_star};
 use comnum_core::{Result, ensure, ensure_shape};
+use comnum_math::viterbi::{self as vit, StateMachine};
 
 fn parity(x: u32) -> u8 {
     (x.count_ones() & 1) as u8
@@ -282,6 +288,21 @@ impl Trellis {
     }
 }
 
+impl Trellis {
+    /// The state machine of the trellis for [`comnum_math::viterbi`].
+    pub(crate) fn machine(&self) -> Result<StateMachine> {
+        let next = self.next.iter().flat_map(|row| row.iter().copied()).collect();
+        StateMachine::new(self.n_states(), 2, next)
+    }
+
+    /// The branch metrics of every step of `llr` for [`comnum_math::viterbi::forward`].
+    fn gammas<'a>(&'a self, llr: &'a [f64]) -> impl FnMut(usize, &mut [f64]) + 'a {
+        let n = self.n_out;
+        let mut words = Vec::new();
+        move |t, g| self.branches(&llr[t * n..(t + 1) * n], &mut words, g)
+    }
+}
+
 /// Viterbi decoding of `steps = llr.len() / n` trellis steps from state 0; with
 /// `terminated`, the path ends in state 0 and the last $K - 1$ inputs (the tail) are
 /// dropped. Returns the decided input bits.
@@ -290,17 +311,48 @@ impl Trellis {
 /// [`comnum_core::Error::Shape`] if the number of LLRs is not a multiple of $n$.
 pub fn viterbi(trellis: &Trellis, llr: &[f64], terminated: bool) -> Result<Vec<u8>> {
     let steps = steps_of(trellis, llr)?;
-    let ns = trellis.n_states();
+    let (sm, ns) = (trellis.machine()?, trellis.n_states());
     let mut metric = vec![f64::NEG_INFINITY; ns];
     metric[0] = 0.0;
     let mut from = vec![0u32; steps * ns];
-    forward(trellis, llr, &mut metric, &mut from);
-    let end = if terminated { 0 } else { best_state(&metric) };
-    let (mut bits, _) = traceback(&from, ns, end);
+    vit::forward(&sm, &mut metric, trellis.gammas(llr), &mut from, None);
+    let end = if terminated { 0 } else { vit::best_state(&metric) };
+    let mut bits = inputs_to_bits(vit::traceback(&sm, &from, end).0);
     if terminated {
         bits.truncate(steps.saturating_sub(trellis.constraint as usize - 1));
     }
     Ok(bits)
+}
+
+/// The soft-output Viterbi algorithm (Hagenauer & Hoeher 1989) on the LLRs of the
+/// coded bits: the log-likelihood ratio $(1 - 2\hat{u}_{t}) \Delta_{t}$ of every input
+/// bit of the maximum-likelihood path, $\Delta_{t}$ the metric difference with the best
+/// competing path that decides it differently ([`comnum_math::viterbi::sova`], the
+/// competitors traced back to their merge, so the reliabilities are those of the whole
+/// block); infinite when no competitor ever disagreed. Its hard decisions are those of
+/// [`viterbi`]; its magnitudes are at least those of the max-log-MAP [`bcjr`], which
+/// takes the best competitor among all paths and not only among the survivors
+/// (Fossorier, Burkert, Lin & Hagenauer, *IEEE Commun. Lett.* 2(5), 1998). With
+/// `terminated`, the path ends in state 0 and the tail is dropped, as in [`viterbi`].
+///
+/// # Errors
+/// [`comnum_core::Error::Shape`] if the number of LLRs is not a multiple of $n$.
+///
+/// # References
+/// J. Hagenauer and P. Hoeher, "A Viterbi algorithm with soft-decision outputs and its
+/// applications," *Proc. IEEE GLOBECOM*, 1680–1686, 1989.
+pub fn sova(trellis: &Trellis, llr: &[f64], terminated: bool) -> Result<Vec<f64>> {
+    let steps = steps_of(trellis, llr)?;
+    let (sm, ns) = (trellis.machine()?, trellis.n_states());
+    let mut start = vec![f64::NEG_INFINITY; ns];
+    start[0] = 0.0;
+    let end = if terminated { Some(0) } else { None };
+    let (path, reliability) = vit::sova(&sm, steps, &start, trellis.gammas(llr), end)?;
+    let mut out: Vec<f64> = path.iter().zip(&reliability).map(|(&u, &d)| if u == 0 { d } else { -d }).collect();
+    if terminated {
+        out.truncate(steps.saturating_sub(trellis.constraint as usize - 1));
+    }
+    Ok(out)
 }
 
 /// Viterbi decoding of a tail-biting code ([`Trellis::encode_tail_biting`]) by the
@@ -322,15 +374,15 @@ pub fn viterbi(trellis: &Trellis, llr: &[f64], terminated: bool) -> Result<Vec<u
 pub fn viterbi_tail_biting(trellis: &Trellis, llr: &[f64], passes: usize) -> Result<Vec<u8>> {
     ensure(passes > 0, || "the wrap-around Viterbi algorithm needs at least one pass".into())?;
     let steps = steps_of(trellis, llr)?;
-    let ns = trellis.n_states();
+    let (sm, ns) = (trellis.machine()?, trellis.n_states());
     let mut metric = vec![0.0; ns];
     let mut from = vec![0u32; steps * ns];
     for _ in 1..passes {
-        forward(trellis, llr, &mut metric, &mut from);
-        let end = best_state(&metric);
-        let (bits, first) = traceback(&from, ns, end);
+        vit::forward(&sm, &mut metric, trellis.gammas(llr), &mut from, None);
+        let end = vit::best_state(&metric);
+        let (bits, first) = vit::traceback(&sm, &from, end);
         if first == end {
-            return Ok(bits);
+            return Ok(inputs_to_bits(bits));
         }
         let top = metric[end];
         for m in &mut metric {
@@ -338,18 +390,23 @@ pub fn viterbi_tail_biting(trellis: &Trellis, llr: &[f64], passes: usize) -> Res
         }
     }
     let start = metric.clone();
-    forward(trellis, llr, &mut metric, &mut from);
-    let end = best_state(&metric);
-    let (bits, first) = traceback(&from, ns, end);
+    vit::forward(&sm, &mut metric, trellis.gammas(llr), &mut from, None);
+    let end = vit::best_state(&metric);
+    let (bits, first) = vit::traceback(&sm, &from, end);
     if first == end {
-        return Ok(bits);
+        return Ok(inputs_to_bits(bits));
     }
     // the best tail-biting survivor of the last pass: the metric it gained in the pass
     let best = (0..ns)
-        .map(|s| (s, traceback(&from, ns, s)))
+        .map(|s| (s, vit::traceback(&sm, &from, s)))
         .filter(|(s, (_, first))| first == s)
         .max_by(|(a, (_, fa)), (b, (_, fb))| (metric[*a] - start[*fa]).total_cmp(&(metric[*b] - start[*fb])));
-    Ok(best.map_or(bits, |(_, (b, _))| b))
+    Ok(inputs_to_bits(best.map_or(bits, |(_, (b, _))| b)))
+}
+
+/// The inputs of a path as bits.
+fn inputs_to_bits(inputs: Vec<usize>) -> Vec<u8> {
+    inputs.into_iter().map(|u| u as u8).collect()
 }
 
 /// The trellis steps of `llr`, checked.
@@ -357,51 +414,6 @@ fn steps_of(trellis: &Trellis, llr: &[f64]) -> Result<usize> {
     let n = trellis.n_out;
     ensure_shape(llr.len() % n == 0, || format!("{} LLRs is not a multiple of {n}", llr.len()))?;
     Ok(llr.len() / n)
-}
-
-/// The add-compare-select recursion over the steps of `llr`, from the path metrics
-/// `metric` (updated in place); `from[t * ns + s]` receives the survivor of every step
-/// and state, its predecessor and input `2 s + u` (the states number at most 2^23).
-fn forward(trellis: &Trellis, llr: &[f64], metric: &mut Vec<f64>, from: &mut [u32]) {
-    let (n, ns) = (trellis.n_out, trellis.n_states());
-    let mut next = vec![f64::NEG_INFINITY; ns];
-    let (mut words, mut gamma) = (Vec::new(), vec![0.0; 2 * ns]);
-    for (t, row) in from.chunks_exact_mut(ns).enumerate() {
-        trellis.branches(&llr[t * n..(t + 1) * n], &mut words, &mut gamma);
-        next.fill(f64::NEG_INFINITY);
-        for s in 0..ns {
-            if metric[s] == f64::NEG_INFINITY {
-                continue;
-            }
-            for u in 0..2 {
-                let ns2 = trellis.next[s][u];
-                let m = metric[s] + gamma[2 * s + u];
-                if m > next[ns2] {
-                    next[ns2] = m;
-                    row[ns2] = (2 * s + u) as u32;
-                }
-            }
-        }
-        std::mem::swap(metric, &mut next);
-    }
-}
-
-/// The state of the largest path metric.
-fn best_state(metric: &[f64]) -> usize {
-    (0..metric.len()).max_by(|a, b| metric[*a].total_cmp(&metric[*b])).unwrap_or(0)
-}
-
-/// The inputs of the survivor that ends in `end`, and the state it starts from.
-fn traceback(from: &[u32], ns: usize, end: usize) -> (Vec<u8>, usize) {
-    let steps = from.len() / ns;
-    let mut s = end;
-    let mut bits = vec![0u8; steps];
-    for t in (0..steps).rev() {
-        let su = from[t * ns + s] as usize;
-        bits[t] = (su & 1) as u8;
-        s = su >> 1;
-    }
-    (bits, s)
 }
 
 /// The BCJR algorithm in the log domain: the a posteriori LLR of every input bit,
@@ -697,18 +709,41 @@ mod tests {
         assert!(ConvolutionalCode::k7(0).is_err());
     }
 
+    #[test]
+    fn the_sova_decides_as_viterbi_and_is_at_least_as_confident_as_max_log_map() {
+        let code = ConvolutionalCode::k7(120).unwrap();
+        let mut r = Rng::new(7);
+        let info: Vec<u8> = (0..120).map(|_| r.bit()).collect();
+        let y = awgn_llr(&code.encode_block(&info).unwrap(), 0.7, &mut r);
+        let soft = sova(&code.trellis, &y, true).unwrap();
+        assert_eq!(soft.len(), 120);
+        assert_eq!(hard_decisions(&soft), viterbi(&code.trellis, &y, true).unwrap());
+        let maxlog = bcjr(&code.trellis, &y, &[], true, Jacobian::MaxLog).unwrap();
+        // the same signs, and reliabilities bounded below by the max-log-MAP ones
+        // (Fossorier et al. 1998): the SOVA compares the path with its competing
+        // survivors only
+        for (t, (s, m)) in soft.iter().zip(&maxlog).enumerate() {
+            assert_eq!(s.is_sign_negative(), m.is_sign_negative(), "step {t}: {s} against {m}");
+            assert!(s.abs() >= m.abs() - 1e-9, "step {t}: {s} against {m}");
+        }
+        // an open end: the last decisions keep a finite reliability
+        let open = sova(&code.trellis, &y, false).unwrap();
+        assert_eq!(open.len(), 126);
+        assert!(open.iter().all(|v| v.is_finite()));
+        assert!(sova(&code.trellis, &y[1..], true).is_err());
+    }
+
     fn tail_biting_ml(t: &Trellis, llr: &[f64]) -> Vec<u8> {
         // maximum likelihood: the best of the Viterbi paths forced to start and end in s
-        let ns = t.n_states();
+        let (sm, ns) = (t.machine().unwrap(), t.n_states());
         let steps = llr.len() / t.n_out();
         let mut best = (f64::NEG_INFINITY, Vec::new());
         for s0 in 0..ns {
-            let mut metric = vec![f64::NEG_INFINITY; ns];
-            metric[s0] = 0.0;
-            let mut from = vec![0u32; steps * ns];
-            forward(t, llr, &mut metric, &mut from);
+            let mut start = vec![f64::NEG_INFINITY; ns];
+            start[s0] = 0.0;
+            let (path, metric) = vit::viterbi(&sm, steps, &start, t.gammas(llr), Some(s0)).unwrap();
             if metric[s0] > best.0 {
-                best = (metric[s0], traceback(&from, ns, s0).0);
+                best = (metric[s0], inputs_to_bits(path));
             }
         }
         best.1

@@ -74,6 +74,7 @@ pub mod search;
 pub mod sequences;
 pub mod special;
 pub mod stats;
+pub mod viterbi;
 
 pub use bits::{bits_to_index, gray, gray_inverse, index_to_bits};
 pub use comnum_core::units::{amp2db, db2amp, db2lin, db2np, dbm2w, lin2db, np2db, w2dbm};
