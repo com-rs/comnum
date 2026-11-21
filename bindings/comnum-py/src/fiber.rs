@@ -122,6 +122,24 @@ wrapper_methods! {
         self.inner.beta2_s2_km()
     }
 
+    /// float: Third-order dispersion :math:`\beta_3` (s³/km) from the slope :math:`S`
+    /// and :math:`D`, 0 without slope:
+    ///
+    /// .. math::
+    ///
+    ///     \beta_3 = \left(\frac{\lambda}{2\pi c}\right)^2 (S \lambda^2 + 2 \lambda D).
+    ///
+    #[getter]
+    fn beta3_s3_km(&self) -> f64 {
+        self.inner.beta3_s3_km()
+    }
+
+    /// float: Dispersion slope :math:`S` (ps/(nm²·km)).
+    #[getter]
+    fn slope_ps_nm2_km(&self) -> f64 {
+        self.inner.slope_ps_nm2_km
+    }
+
     /// float: Group-velocity dispersion :math:`\beta_2` (ps²/km).
     #[getter]
     fn beta2_ps2_km(&self) -> f64 {

@@ -2,6 +2,7 @@
 //! per reference, each loading its cards of `validation/cards/` (`just card <id>` runs
 //! one).
 
+mod agrawal2002;
 mod bromage2004;
 mod carena2014;
 mod chiang1996;

@@ -848,6 +848,9 @@ def test_direct_detection_closed_forms_and_a_simulated_photodiode():
     # the fading of the dispersive IM-DD link (Wang & Petermann 1992, Devaux 1993): the
     # notches of the response, closer for a positive chirp, filled by the adiabatic chirp
     assert comnum.eye_openings([0.1, 0.3, 0.8, 1.0], [0, 0, 1, 1], 2).tolist() == [0.5]
+    fiber = comnum.FiberParams(d_ps_nm_km=17.0, slope_ps_nm2_km=0.057)
+    assert fiber.slope_ps_nm2_km == 0.057 and 0.10e-36 < fiber.beta3_s3_km < 0.16e-36
+    assert comnum.FiberParams(slope_ps_nm2_km=0.0).beta3_s3_km == 0.0
     f0 = comnum.fading_frequency_hz(0, 3.0, -21.7e-24, 40.0)
     assert (
         f0

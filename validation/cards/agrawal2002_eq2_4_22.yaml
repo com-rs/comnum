@@ -1,0 +1,34 @@
+id: agrawal2002_eq2_4_22
+title: Third-order dispersion of the linear fibre, the broadening of a Gaussian pulse
+literature: agrawal2002
+evidence: [closed_form]
+source:
+  kind: paper
+  reference: "G. P. Agrawal, Fiber-Optic Communication Systems, 3rd ed., Wiley, 2002"
+  locator: "eq. (2.4.22), the r.m.s. broadening of a chirp-free Gaussian pulse by beta_2 and beta_3; Fig. 3.6 for the side of the oscillatory tail"
+  file: hardware/2002_agrawal_fiber-optic-communication-systems-3ed_wiley.pdf
+description: >
+  A chirp-free Gaussian pulse of half-width 5 ps sampled at 4 THz through
+  linear_fiber_channel (the response exp(j (beta_2 w^2 / 2 + beta_3 w^3 / 6) L) of
+  comnum_math::nlse, beta_3 from the slope by FiberParams::beta3_s3_km); the r.m.s.
+  width of the propagated power divided by sigma_0 and by the closed form
+  (gaussian_broadening_factor with C = 0), for the third-order dispersion alone (D = 0,
+  S = 0.1 ps/(nm^2 km), 40 and 200 km), standard fibre with its slope (D = 17, S =
+  0.057, 40 km) and normal dispersion without slope; the sign of the skewness of the
+  power for beta_3 > 0 alone (+1: the tail on the trailing edge, Fig. 3.6).
+run:
+  test: validation/tests/fiber/agrawal2002.rs::agrawal_2002_eq_2_4_22_the_third_order_dispersion_of_the_linear_fibre
+tier: ci
+duration: "0.1 s on an Apple M6 (release)"
+tolerance: {rtol: 1.0e-4}
+why: "the moments of a sampled pulse of 2^14 points: the broadened pulse stays well inside the window (34 sigma_0 of 3.5 ps in a window of 4 ns)"
+findings:
+  - "the ratio is 1.00000 in the four cases (the beta_3 term alone broadens by 0.03 % over 40 km and 0.85 % over 200 km for a 5 ps pulse, 35 times with beta_2 over 40 km of standard fibre, where the slope adds nothing visible); beta_3 = 0.129 ps^3/km for D = 17 ps/(nm km) and S = 0.057 ps/(nm^2 km)"
+  - "the skewness is +0.04 at 40 km and +0.17 at 200 km of beta_3 alone: the tail is on the trailing edge, the side of Fig. 3.6 (the convention of comnum_math::nlse)"
+cases:
+  - {inputs: {d_ps_nm_km: 0.0, slope_ps_nm2_km: 0.1, length_km: 40.0}, expected: 1.0}
+  - {inputs: {d_ps_nm_km: 0.0, slope_ps_nm2_km: 0.1, length_km: 200.0}, expected: 1.0}
+  - {inputs: {d_ps_nm_km: 17.0, slope_ps_nm2_km: 0.057, length_km: 40.0}, expected: 1.0}
+  - {inputs: {d_ps_nm_km: -17.0, slope_ps_nm2_km: 0.0, length_km: 40.0}, expected: 1.0}
+  - {inputs: {skewness: sign, length_km: 40.0}, expected: 1.0}
+  - {inputs: {skewness: sign, length_km: 200.0}, expected: 1.0}

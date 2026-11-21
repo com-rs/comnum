@@ -40,6 +40,9 @@ and follow [Semantic Versioning](https://semver.org/).
     Fig. 8 (the eye penalty of the linear equaliser, the DFE and the MLSE against the
     chromatic dispersion of an 8 Gb/s link) reproduced within 0.7 dB up to 200 km with
     the distance axis calibrated on the unequalised curve (card `winters1990_fig8`);
+  - the third-order dispersion of `linear_fiber_channel` validated against Agrawal 2002,
+    eq. (2.4.22) (card `agrawal2002_eq2_4_22`, CI); `FiberParams.beta3_s3_km` and
+    `.slope_ps_nm2_km` readable in Python;
   - `comnum_metrics::eye::{level_statistics, level_q_factors}`, the Q factor of every eye
     of a sampled multilevel signal; in Python `level_q_factors`;
   - the gallery example `optical/plot_11_imdd_pam4_link.py` (PAM4 at 25 GBd from a
