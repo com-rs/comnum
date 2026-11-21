@@ -638,6 +638,7 @@ Estimates from received and transmitted sequences.
    evm
    ber_to_q_db
    level_q_factors
+   eye_openings
    monte_carlo_gmi
    monte_carlo_mi
    information_rates

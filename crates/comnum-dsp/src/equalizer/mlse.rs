@@ -24,6 +24,16 @@
 //! channel passes twice the variance of its real noise); for two points it is the
 //! magnitude of the log-likelihood ratio of the symbol.
 //!
+//! A channel that is not linear in the symbols (the photocurrent of a dispersed
+//! intensity modulation, a square law) has the same trellis: its noiseless sample
+//! depends on the current and the $L - 1$ previous symbols through a table, which
+//! [`Mlse::from_table`] takes and [`Mlse::fit`] measures on a training sequence (the
+//! stored signal vectors of Winters & Gitlin 1990, Sec. III-C). The worst-case eye of
+//! such a detector over a window of $W$ samples is its minimum Euclidean distance
+//! between two paths that leave a state with different symbols (their eq. (17)),
+//! [`Mlse::min_distance`]; for $W = 1$ it is the eye of a slicer that knows the past
+//! symbols (a decision feedback without error).
+//!
 //! # Examples
 //! ```
 //! use comnum_dsp::equalizer::mlse::Mlse;
@@ -47,8 +57,10 @@
 //!    1972.
 //! 2. J. Hagenauer and P. Hoeher, "A Viterbi algorithm with soft-decision outputs and its
 //!    applications," *Proc. IEEE GLOBECOM*, 1680–1686, 1989.
+//! 3. J. H. Winters, R. D. Gitlin, "Electrical signal processing techniques in
+//!    long-haul, fiber-optic systems," *Proc. IEEE ICC*, 397–403, 1990.
 
-use comnum_core::{Result, ensure};
+use comnum_core::{Result, ensure, ensure_shape, same_len};
 use comnum_math::C64;
 use comnum_math::viterbi::{self as vit, StateMachine};
 
@@ -81,6 +93,95 @@ impl Mlse {
             })
             .collect();
         Ok(Mlse { machine, expected })
+    }
+
+    /// The detector of a channel given by its table `expected` of noiseless samples,
+    /// one per branch `s * M + u` of the shift register of `memory` symbols over `m`
+    /// points ([`comnum_math::viterbi::StateMachine::shift_register`]: `s` holds the
+    /// previous symbols, the most recent in the least significant digit, `u` the current
+    /// one).
+    ///
+    /// # Errors
+    /// [`comnum_core::Error::Shape`] if the table has not $M^{L}$ entries;
+    /// [`comnum_core::Error::Config`] as [`Mlse::new`].
+    pub fn from_table(expected: Vec<C64>, m: usize, memory: usize) -> Result<Mlse> {
+        let machine = StateMachine::shift_register(m, memory)?;
+        same_len(expected.len(), machine.n_states() * m, "the table and the branches")?;
+        Ok(Mlse { machine, expected })
+    }
+
+    /// The detector fitted on the samples `r` of the known symbols `indices` (indices of
+    /// `m` points): the table of [`Mlse::from_table`] is the mean of the samples of every
+    /// pattern of `memory + 1` symbols (the least-squares table of a channel that need not
+    /// be linear); the first `memory` samples, whose past is unknown, are skipped.
+    ///
+    /// # Errors
+    /// [`comnum_core::Error::Shape`] for lengths that differ or an index at or above `m`;
+    /// [`comnum_core::Error::Config`] for a pattern that never occurs, or as [`Mlse::new`].
+    pub fn fit(r: &[C64], indices: &[usize], m: usize, memory: usize) -> Result<Mlse> {
+        same_len(r.len(), indices.len(), "samples and symbols")?;
+        ensure_shape(indices.iter().all(|&i| i < m), || format!("a symbol index is not below {m}"))?;
+        let machine = StateMachine::shift_register(m, memory)?;
+        let n_states = machine.n_states();
+        let mut sum = vec![C64::new(0.0, 0.0); n_states * m];
+        let mut count = vec![0usize; n_states * m];
+        let mut state = 0;
+        for (k, (&x, &u)) in r.iter().zip(indices).enumerate() {
+            if k >= memory {
+                sum[state * m + u] += x;
+                count[state * m + u] += 1;
+            }
+            state = machine.next(state, u);
+        }
+        ensure(count.iter().all(|&c| c > 0), || {
+            format!("every pattern of {} symbols must occur in the training", memory + 1)
+        })?;
+        let expected = sum.iter().zip(&count).map(|(s, &c)| s / c as f64).collect();
+        Ok(Mlse { machine, expected })
+    }
+
+    /// The noiseless sample of every branch `s * M + u` (the table of [`Mlse::from_table`]).
+    pub fn expected(&self) -> &[C64] {
+        &self.expected
+    }
+
+    /// The minimum Euclidean distance between the sample vectors of two paths of
+    /// `window` steps that leave the same state with different symbols, whatever follows
+    /// (see the module): the worst-case eye of a detector that decides a symbol from the
+    /// next `window` samples, over every state.
+    ///
+    /// # Errors
+    /// [`comnum_core::Error::Config`] for a window of 0 or of more than $2^{20}$ paths.
+    pub fn min_distance(&self, window: usize) -> Result<f64> {
+        let m = self.machine.n_inputs();
+        let n_paths = m.checked_pow(window as u32).filter(|&n| window >= 1 && n <= 1 << 20);
+        let n_paths =
+            n_paths.ok_or_else(|| comnum_core::Error::Config(format!("a window of {window} steps is not usable")))?;
+        let mut best = f64::INFINITY;
+        let mut vectors = vec![C64::new(0.0, 0.0); window];
+        let mut paths: Vec<(usize, Vec<C64>)> = Vec::with_capacity(n_paths);
+        for s0 in 0..self.machine.n_states() {
+            paths.clear();
+            for p in 0..n_paths {
+                let (mut s, mut code) = (s0, p);
+                for v in &mut vectors {
+                    let u = code % m;
+                    code /= m;
+                    *v = self.expected[s * m + u];
+                    s = self.machine.next(s, u);
+                }
+                paths.push((p % m, vectors.clone()));
+            }
+            for (i, (u, a)) in paths.iter().enumerate() {
+                for (u2, b) in &paths[i + 1..] {
+                    if u != u2 {
+                        let d: f64 = a.iter().zip(b).map(|(x, y)| (x - y).norm_sqr()).sum();
+                        best = best.min(d);
+                    }
+                }
+            }
+        }
+        Ok(best.sqrt())
     }
 
     /// Number of states $M^{L-1}$ of the trellis.
@@ -138,6 +239,28 @@ mod tests {
     use super::*;
     use crate::equalizer::pam;
     use comnum_core::rng::Rng;
+
+    #[test]
+    fn the_fitted_table_is_the_linear_channel_and_the_distance_its_eye() {
+        // 2-PAM through 1 + 0.5 z⁻¹: the table fitted on every pattern is the one of `new`,
+        // the window-1 distance is the level gap of a known past, 2 |h0| = 2, and a long
+        // window reaches Forney's minimum distance of the single error event, 2 sqrt(1.25)
+        let pts = pam(2);
+        let taps = [C64::new(1.0, 0.0), C64::new(0.5, 0.0)];
+        let idx: Vec<usize> = [0, 0, 1, 1, 0, 1, 0, 0, 1, 1].to_vec();
+        let r: Vec<C64> = (0..idx.len())
+            .map(|k| taps[0] * pts[idx[k]] + if k > 0 { taps[1] * pts[idx[k - 1]] } else { C64::new(0.0, 0.0) })
+            .collect();
+        let fitted = Mlse::fit(&r, &idx, 2, 1).unwrap();
+        let exact = Mlse::new(&taps, &pts).unwrap();
+        assert!(fitted.expected().iter().zip(exact.expected()).all(|(a, b)| (a - b).norm() < 1e-12));
+        assert!((exact.min_distance(1).unwrap() - 2.0).abs() < 1e-12);
+        assert!((exact.min_distance(6).unwrap() - 2.0 * 1.25f64.sqrt()).abs() < 1e-12);
+        assert_eq!(Mlse::from_table(exact.expected().to_vec(), 2, 1).unwrap(), exact);
+        assert!(Mlse::from_table(vec![C64::new(0.0, 0.0); 3], 2, 1).is_err());
+        assert!(Mlse::fit(&r[..3], &idx[..3], 2, 1).is_err());
+        assert!(exact.min_distance(0).is_err());
+    }
     use comnum_math::qfunc;
 
     /// `s` through the causal channel `h`, the tail of the convolution dropped.

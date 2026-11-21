@@ -83,7 +83,7 @@ pub use errors::{
     BerSerSnr, ber, ber_to_q_db, bit_errors, block_errors, effective_snr_db, evm, evm_data_aided, fast_ber_calc,
     ls_gain, mse, phase_error_std, snr_db, symbol_errors,
 };
-pub use eye::{level_q_factors, level_statistics};
+pub use eye::{eye_openings, level_q_factors, level_statistics};
 pub use information::{
     Gmi, InformationRates, PosteriorRates, information_rates, monte_carlo_gmi, monte_carlo_mi, posterior_rates,
 };

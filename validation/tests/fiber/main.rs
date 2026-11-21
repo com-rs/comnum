@@ -28,3 +28,4 @@ mod shao2014;
 mod sinkin2003;
 mod soltani2022;
 mod sunnerud2000;
+mod winters1990;

@@ -11,6 +11,23 @@
 //! ([`comnum_math::qfunc`]) under Gaussian noise. For on–off keying there is one eye; the
 //! measured Q of a simulated receiver is compared with the closed forms of
 //! `comnum_hardware::optical::direct_detection`.
+//!
+//! Without noise the eye is a worst case over the patterns: its opening is the gap
+//! between the lowest sample of the upper level and the highest of the lower one
+//! (Winters & Gitlin 1990, eq. (7)),
+//!
+//! $$
+//! \mathrm{eye}_{i} = \min_{k:\, l_{k} = i + 1} y_{k} - \max_{k:\, l_{k} = i} y_{k},
+//! $$
+//!
+//! negative when the eye is closed; the power penalty of an intersymbol interference in
+//! direct detection is $-10 \log_{10}(\mathrm{eye}/Y)$ with $Y$ the opening without it
+//! (eq. (8); $-20 \log_{10}$ for a field).
+//!
+//! # References
+//! 1. G. P. Agrawal, *Fiber-Optic Communication Systems*, 3rd ed., Wiley, 2002, Sec. 4.5.1.
+//! 2. J. H. Winters, R. D. Gitlin, "Electrical signal processing techniques in
+//!    long-haul, fiber-optic systems," *Proc. IEEE ICC*, 397–403, 1990.
 
 use comnum_core::{Result, ensure, ensure_shape, same_len};
 
@@ -22,9 +39,7 @@ use comnum_core::{Result, ensure, ensure_shape, same_len};
 /// [`comnum_core::Error::Shape`] for sequences of different lengths or a level index at
 /// or above `m`; [`comnum_core::Error::Config`] for fewer than two levels.
 pub fn level_statistics(samples: &[f64], levels: &[usize], m: usize) -> Result<Vec<(f64, f64)>> {
-    ensure(m >= 2, || format!("{m} levels have no eye"))?;
-    same_len(samples.len(), levels.len(), "samples and levels")?;
-    ensure_shape(levels.iter().all(|&l| l < m), || format!("a level index is not below {m}"))?;
+    check_levels(samples, levels, m)?;
     let mut sum = vec![0.0; m];
     let mut sum2 = vec![0.0; m];
     let mut count = vec![0usize; m];
@@ -43,6 +58,38 @@ pub fn level_statistics(samples: &[f64], levels: &[usize], m: usize) -> Result<V
             }
         })
         .collect())
+}
+
+fn check_levels(samples: &[f64], levels: &[usize], m: usize) -> Result<()> {
+    ensure(m >= 2, || format!("{m} levels have no eye"))?;
+    same_len(samples.len(), levels.len(), "samples and levels")?;
+    ensure_shape(levels.iter().all(|&l| l < m), || format!("a level index is not below {m}"))
+}
+
+/// The worst-case opening of the $M - 1$ eyes between adjacent levels (see the module):
+/// the lowest sample of the upper level minus the highest of the lower one, negative
+/// for a closed eye, `NaN` when a level has no sample.
+///
+/// # Errors
+/// As [`level_statistics`].
+///
+/// # Examples
+/// ```
+/// use comnum_metrics::eye::eye_openings;
+/// let samples = [0.1, 0.3, 0.8, 1.0];
+/// assert_eq!(eye_openings(&samples, &[0, 0, 1, 1], 2)?, vec![0.5]);
+/// assert!(eye_openings(&samples, &[0, 1, 0, 1], 2)?[0] < 0.0);  // closed
+/// # Ok::<(), comnum_core::Error>(())
+/// ```
+pub fn eye_openings(samples: &[f64], levels: &[usize], m: usize) -> Result<Vec<f64>> {
+    check_levels(samples, levels, m)?;
+    let mut lo = vec![f64::INFINITY; m];
+    let mut hi = vec![f64::NEG_INFINITY; m];
+    for (&s, &l) in samples.iter().zip(levels) {
+        lo[l] = lo[l].min(s);
+        hi[l] = hi[l].max(s);
+    }
+    Ok((1..m).map(|l| if lo[l].is_finite() && hi[l - 1].is_finite() { lo[l] - hi[l - 1] } else { f64::NAN }).collect())
 }
 
 /// The Q factor of the $M - 1$ eyes between adjacent levels (see the module).
@@ -84,5 +131,16 @@ mod tests {
         assert!(level_q_factors(&samples, &levels[1..], 4).is_err());
         assert!(level_q_factors(&samples, &levels, 3).is_err());
         assert!(level_q_factors(&samples, &levels, 1).is_err());
+    }
+
+    #[test]
+    fn the_worst_case_eye_is_the_gap_between_adjacent_levels() {
+        let samples = [0.0, 0.2, 1.0, 1.2, 2.0, 2.2, 3.0, 3.2];
+        let levels = [0, 0, 1, 1, 2, 2, 3, 3];
+        let eyes = eye_openings(&samples, &levels, 4).unwrap();
+        assert!(eyes.iter().all(|e| (e - 0.8).abs() < 1e-12));
+        assert!(eye_openings(&samples, &levels, 5).unwrap()[3].is_nan());
+        assert!(eye_openings(&samples, &[0, 1, 0, 1, 0, 1, 0, 1], 2).unwrap()[0] < 0.0);
+        assert!(eye_openings(&samples, &levels, 3).is_err());
     }
 }

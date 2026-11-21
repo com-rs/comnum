@@ -23,6 +23,42 @@ fn ber(rx_bits: &Bound<'_, PyAny>, tx_bits: &Bound<'_, PyAny>) -> PyResult<f64> 
     metrics::ber(&bvec(rx_bits)?, &bvec(tx_bits)?).py()
 }
 
+/// The worst-case opening of the :math:`M - 1` eyes between adjacent levels of
+/// noiseless samples, [1]_, eq. (7): the lowest sample of the upper level minus the
+/// highest of the lower one, negative for a closed eye (``nan`` for a level without a
+/// sample). The power penalty of an intersymbol interference in direct detection is
+/// :math:`-10 \log_{10}(\mathrm{eye}/Y)` with :math:`Y` the opening without it.
+///
+/// Args:
+///     samples (array_like): the samples, one per symbol.
+///     levels (array_like): the index of the level of every sample, below ``m``.
+///     m (int): the number of levels.
+///
+/// Returns:
+///     ndarray: the :math:`M - 1` openings.
+///
+/// Raises:
+///     ValueError: for lengths that differ, a level index at or above ``m``, or fewer
+///         than two levels.
+///
+/// References:
+///     .. [1] J. H. Winters, R. D. Gitlin, "Electrical signal processing techniques in
+///        long-haul, fiber-optic systems," *Proc. IEEE ICC*, 397–403, 1990.
+///
+/// Examples:
+///     >>> import comnum
+///     >>> comnum.eye_openings([0.1, 0.3, 0.8, 1.0], [0, 0, 1, 1], 2)
+///     array([0.5])
+#[pyfunction]
+fn eye_openings<'py>(
+    py: Python<'py>,
+    samples: &Bound<'py, PyAny>,
+    levels: &Bound<'py, PyAny>,
+    m: usize,
+) -> PyResult<FArr<'py>> {
+    Ok(farr(py, metrics::eye_openings(&fvec(samples)?, &uvec(levels)?, m).py()?))
+}
+
 /// The Q factor of every eye of a sampled intensity-modulated signal, from the means
 /// and standard deviations of the samples of each level (Agrawal, *Fiber-Optic
 /// Communication Systems*, 3rd ed., 2002, eq. (4.5.11)):
@@ -372,6 +408,7 @@ fn information_rates<'py>(
 pub(crate) fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(ber, m)?)?;
     m.add_function(wrap_pyfunction!(level_q_factors, m)?)?;
+    m.add_function(wrap_pyfunction!(eye_openings, m)?)?;
     m.add_function(wrap_pyfunction!(snr_db, m)?)?;
     m.add_function(wrap_pyfunction!(phase_error_std, m)?)?;
     m.add_function(wrap_pyfunction!(fast_ber_calc, m)?)?;

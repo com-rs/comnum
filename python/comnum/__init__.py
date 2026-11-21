@@ -38,7 +38,7 @@ sources                :func:`bits`, :func:`prbs`, :func:`o150_sequence`,
                        :func:`symbols`, :func:`maxwell_boltzmann`
 modulation             :class:`Constellation`, :func:`gray_code`, :class:`Dpsk`
 metrics                :func:`ber`, :func:`snr_db`, :func:`phase_error_std`, :func:`fast_ber_calc`, :func:`evm`,
-                       :func:`level_q_factors`, :func:`monte_carlo_gmi`, :func:`monte_carlo_mi`, :func:`entropy`,
+                       :func:`level_q_factors`, :func:`eye_openings`, :func:`monte_carlo_gmi`, :func:`monte_carlo_mi`, :func:`entropy`,
                        :func:`information_rates`, :func:`posterior_rates`
 closed forms           :func:`theory_ber`, :func:`theory_ser`, :func:`theory_ser_esn0`,
                        :func:`theory_mi`,
@@ -394,6 +394,7 @@ from comnum._comnum import (
     excess_noise_factor,
     exponential_correlation,
     extinction_ratio_penalty_db,
+    eye_openings,
     fading_frequency_hz,
     fast_ber_calc,
     fh_worst_case_partial_band,
@@ -779,6 +780,7 @@ __all__ = [
     "excess_noise_factor",
     "exponential_correlation",
     "extinction_ratio_penalty_db",
+    "eye_openings",
     "fading_frequency_hz",
     "fast_ber_calc",
     "fh_worst_case_partial_band",

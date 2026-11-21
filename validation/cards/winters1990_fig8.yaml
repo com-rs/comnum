@@ -1,0 +1,55 @@
+id: winters1990_fig8
+title: Eye penalty of electrical equalisers against chromatic dispersion, Fig. 8
+literature: winters1990
+evidence: [curve]
+source:
+  kind: paper
+  reference: "J. H. Winters, R. D. Gitlin, Electrical signal processing techniques in long-haul, fiber-optic systems, Proc. IEEE ICC, 397-403, 1990"
+  locator: "Fig. 8 (external modulation, direct detection), read on the grid at 100, 150, 200 and 250 km; the text of Sec. IV-A"
+  file: fiber/1990_winters_electrical-signal-processing-long-haul-fiber_icc.pdf
+description: >
+  8 Gb/s NRZ through a first-order RC transmit filter of 32 GHz, an unchirped field,
+  standard fibre (D = 17 ps/(nm km) at 1552 nm, lossless), a square-law photodiode and
+  a 3-pole Butterworth of the bit rate (the paper gives neither D nor the bandwidth), a
+  64-bit de Bruijn sequence; the worst-case eye opening of eqs. (7), (9), (12), (17),
+  maximised over the sampling phase, as a penalty in dB relative to 0 km. The distance
+  axis is calibrated on the unequalised curve (every receiver measured at the distance
+  whose unequalised penalty is the figure's at 100 to 250 km); the receivers: the
+  6-tap linear equaliser by least squares with its noise enhancement, the nonlinear
+  cancellation (one future tap, a table of 4 previous bits), the maximum-likelihood
+  detector (Mlse::fit over 2 previous bits, Mlse::min_distance over 4 samples), and
+  comnum's Dfe (2 + 4 taps, NLMS) compared with the NLC curve.
+run:
+  test: validation/tests/fiber/winters1990.rs::winters_1990_fig_8_eye_penalties_of_the_equalisers_against_chromatic_dispersion
+tier: ci
+duration: "2 s on an Apple M6 (release)"
+tolerance: {atol: 0.7}
+why: >
+  the figure is read on a 1 dB grid (0.3 dB); the dispersion and the receiver bandwidth
+  are assumed and the distance axis calibrated on the unequalised curve (the shape of
+  the curves then depends on the pulse shape and the filter, which the paper says the
+  LE is "highly dependent" on); the tap splits of the paper's receivers are not given
+findings:
+  - "the unequalised penalties of the figure at 100, 150, 200 and 250 km are reached here at 114, 139, 173 and 194 km: the paper's product D L is about 20 % smaller than 17 ps/(nm km) times its distance, or its receiver narrower"
+  - "at the calibrated distances, LE 1.15, 2.16 dB against 1.2, 2.5; NLC 0.58, 1.25, 2.07, 2.49 against 1.0, 1.5, 2.2, 2.9; MLD 0.96, 1.90, 2.48 against 0.8, 1.5, 2.0: the ordering and the gains of the figure (NLC and MLD about 3 dB better than no equaliser at 200 km) within 0.7 dB up to 200 km"
+  - "the least-squares LE with its noise enhancement is better than the paper's zero-forcing LE by 1.1 dB at 200 km (3.39 against 4.5) and 1.6 dB at 250 km (5.56 against 7.2, the maximum of the paper's curve before the dip its text attributes to the pulse shape): the tap split and the adaptation of the paper are not given; not cases beyond 150 km"
+  - "at 250 km (10 dB unequalised) the paper's MLD (2.0 dB, flat) is 1.1 dB better than here (3.05 dB): the split of its N = 6 between previous bits and window is not given, the three splits tried give 3.05 to 3.4 dB; not a case"
+  - "comnum's Dfe (linear feedback) sits within 0.4 dB of the paper's NLC and of the least-squares table receiver up to 250 km: 0.80, 1.50, 2.41, 3.28 dB"
+cases:
+  - {inputs: {receiver: none, km: 100.0}, expected: 1.5}
+  - {inputs: {receiver: none, km: 150.0}, expected: 3.2}
+  - {inputs: {receiver: none, km: 200.0}, expected: 5.7}
+  - {inputs: {receiver: none, km: 250.0}, expected: 10.0}
+  - {inputs: {receiver: le, km: 100.0}, expected: 1.2}
+  - {inputs: {receiver: le, km: 150.0}, expected: 2.5}
+  - {inputs: {receiver: nlc, km: 100.0}, expected: 1.0}
+  - {inputs: {receiver: nlc, km: 150.0}, expected: 1.5}
+  - {inputs: {receiver: nlc, km: 200.0}, expected: 2.2}
+  - {inputs: {receiver: nlc, km: 250.0}, expected: 2.9}
+  - {inputs: {receiver: mld, km: 100.0}, expected: 0.8}
+  - {inputs: {receiver: mld, km: 150.0}, expected: 1.5}
+  - {inputs: {receiver: mld, km: 200.0}, expected: 2.0}
+  - {inputs: {receiver: dfe, km: 100.0}, expected: 1.0}
+  - {inputs: {receiver: dfe, km: 150.0}, expected: 1.5}
+  - {inputs: {receiver: dfe, km: 200.0}, expected: 2.2}
+  - {inputs: {receiver: dfe, km: 250.0}, expected: 2.9}

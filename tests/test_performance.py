@@ -847,6 +847,7 @@ def test_direct_detection_closed_forms_and_a_simulated_photodiode():
     assert abs(comnum.dispersion_limited_length_km(10e9, -21.7e-24) - 1 / (16e20 * 21.7e-24)) < 1e-9
     # the fading of the dispersive IM-DD link (Wang & Petermann 1992, Devaux 1993): the
     # notches of the response, closer for a positive chirp, filled by the adiabatic chirp
+    assert comnum.eye_openings([0.1, 0.3, 0.8, 1.0], [0, 0, 1, 1], 2).tolist() == [0.5]
     f0 = comnum.fading_frequency_hz(0, 3.0, -21.7e-24, 40.0)
     assert (
         f0

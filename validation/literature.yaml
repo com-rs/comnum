@@ -800,6 +800,17 @@
   badge: orange
   not_covered: "the closed forms are written from the well-known result (the notch formula of Devaux 1993 as the measurement method quotes it) and checked by the derivation of the module and by the simulation, not against the figures of the papers, which are not in references/ (TO_FETCH.md); the Wang & Petermann response with the bandwidth of the laser and the photodiode (both left unlimited)"
   remarks: "the comparison found and fixed a numerical loss of the laser model: the phase of the transient chirp, integrated from its finite-difference derivative, lost 8 % of the chirp at 6 GHz and 20 % at 12 GHz at 64 GHz of sampling; the phase is now the exact -(beta_c / 2) ln P"
+- id: winters1990
+  area: Receiver DSP
+  ref: "J. H. Winters, R. D. Gitlin, Electrical signal processing techniques in long-haul, fiber-optic systems, Proc. IEEE ICC, 397-403, 1990"
+  module: comnum_dsp::equalizer::dfe, comnum_dsp::equalizer::mlse, comnum_metrics::eye
+  tested: "Fig. 8, the eye-opening penalty (eqs. (7)-(8), no noise) of a 6-tap linear equaliser, of the nonlinear cancellation (a DFE with a table of the past bits) and of the maximum-likelihood detector (the minimum distance of the stored signal vectors, eq. (17): Mlse::fit, Mlse::min_distance) against the chromatic dispersion of an 8 Gb/s direct-detection NRZ link, with the distance axis calibrated on the unequalised curve (card winters1990_fig8): LE 1.15, 2.16 dB against 1.2, 2.5 (3.39 and 5.56 against 4.5 and 7.2 at 200 and 250 km: the least-squares equaliser better than the paper's zero-forcing one); NLC 0.58, 1.25, 2.07, 2.49 against 1.0, 1.5, 2.2, 2.9; MLD 0.96, 1.90, 2.48 against 0.8, 1.5, 2.0 (at 100 to 250 km of the figure); comnum's Dfe within 0.4 dB of the NLC curve (0.80, 1.50, 2.41, 3.28 dB)"
+  tests:
+    - validation/tests/fiber/winters1990.rs::winters_1990_fig_8_eye_penalties_of_the_equalisers_against_chromatic_dispersion
+    - crates/comnum-dsp/src/equalizer/mlse.rs::the_fitted_table_is_the_linear_channel_and_the_distance_its_eye
+    - crates/comnum-metrics/src/eye.rs::the_worst_case_eye_is_the_gap_between_adjacent_levels
+  badge: orange
+  not_covered: "the paper gives neither the dispersion, the wavelength nor the receiver bandwidth (D = 17 ps/(nm km), 1552 nm and a 3-pole Butterworth of the bit rate assumed; the unequalised penalties of the figure are reached 20 % earlier in distance here), nor the tap splits of its receivers: the distance axis is calibrated, the curves compared at equal unequalised penalty; beyond 150 km the paper's LE is 1.1 to 1.6 dB worse and at 250 km its MLD 1.1 dB better; Fig. 7 (a measured DFB laser, private communication) and Fig. 9 (polarisation dispersion) are not reproduced; the journal version (IEEE Trans. Commun. 38(9), 1990) is not in references/"
 - id: forney1972
   area: Receiver DSP
   ref: "G. D. Forney, Maximum-likelihood sequence estimation of digital sequences in the presence of intersymbol interference, IEEE Trans. Inf. Theory 18(3), 363-378, 1972"

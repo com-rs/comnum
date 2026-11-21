@@ -38,6 +38,9 @@ constellation           8  # the constellation of three standards (dvbs2, dvbt, 
 data_res                2  # ofdm::link::OfdmFrame::data_res (the data REs of a generic grid) / nr::pdsch::Pdsch::data_res (those of a PDSCH slot, TS 38.211 Sec. 7.3.1.5): the same notion on two grids
 decode                 13  # the decoder of each code (BCH, RS, OSTBC, differential, the FEC of the standards, the BCH of LTE): one verb, different codes / ais::message::decode (the fields of an AIS message)
 deinterleave            2  # Interleaver::deinterleave (a permutation) / dvbt::InnerInterleaver::deinterleave (the LLRs of a DVB-T symbol): the same verb
+fit                     2  # MemoryPolynomial::fit (a least-squares predistorter) and Mlse::fit (the mean sample of every pattern): the same verb on two models
+from_table              2  # ofdm grid tables and Mlse::from_table (the branch samples of a trellis): the same verb on two types
+min_distance            2  # Constellation::min_distance (between points) and Mlse::min_distance (between paths of a window): the same notion on two types
 detect                  7  # differential::detect, ofdm::detection::detect (per RE), OfdmFrame::detect (calls the former), Gamp::detect, Photodiode::detect, Dsss::detect (calls a detector of comnum-mimo on the signature matrix), Mlse::detect (the Viterbi kernel of comnum-math on the channel trellis)
 encode                 10  # the encoder of each code (BCH, RS, trellis, OSTBC, differential, the FEC of the standards): one verb, different codes
 energies                3  # Css::energies / Fhss::energies: the energies of the candidates of a noncoherent receiver, by two different transforms (dechirp and DFT; the DFT bins of a hop); Fsk::energies (the correlations with the tones at any number of samples per symbol)

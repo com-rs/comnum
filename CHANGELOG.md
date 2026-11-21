@@ -31,6 +31,15 @@ and follow [Semantic Versioning](https://semver.org/).
     the small-signal response of the chirped, dispersive IM-DD link and its fading
     frequencies (Wang & Petermann 1992; Devaux, Sorel & Kerdiles 1993), in Python too;
     the simulated chain follows them within 0.1 % (card `wang1992_small_signal`);
+  - `comnum_dsp::equalizer::mlse::Mlse::{from_table, fit, expected, min_distance}`, the
+    detector of a channel given or measured as a table of noiseless samples per pattern
+    (the photocurrent of a dispersed intensity modulation is not linear in the bits) and
+    the minimum distance of its sliding-window decision, the worst-case eye of
+    Winters & Gitlin (1990, eq. (17)); `comnum_metrics::eye::eye_openings`, the
+    worst-case eye opening between adjacent levels (eq. (7)), in Python too; their
+    Fig. 8 (the eye penalty of the linear equaliser, the DFE and the MLSE against the
+    chromatic dispersion of an 8 Gb/s link) reproduced within 0.7 dB up to 200 km with
+    the distance axis calibrated on the unequalised curve (card `winters1990_fig8`);
   - `comnum_metrics::eye::{level_statistics, level_q_factors}`, the Q factor of every eye
     of a sampled multilevel signal; in Python `level_q_factors`;
   - the gallery example `optical/plot_11_imdd_pam4_link.py` (PAM4 at 25 GBd from a
