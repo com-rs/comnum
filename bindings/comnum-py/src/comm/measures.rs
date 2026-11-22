@@ -24,7 +24,7 @@ fn ber(rx_bits: &Bound<'_, PyAny>, tx_bits: &Bound<'_, PyAny>) -> PyResult<f64> 
 }
 
 /// The worst-case opening of the :math:`M - 1` eyes between adjacent levels of
-/// noiseless samples, [1]_, eq. (7): the lowest sample of the upper level minus the
+/// noiseless samples. After [1]_, eq. (7): the lowest sample of the upper level minus the
 /// highest of the lower one, negative for a closed eye (``nan`` for a level without a
 /// sample). The power penalty of an intersymbol interference in direct detection is
 /// :math:`-10 \log_{10}(\mathrm{eye}/Y)` with :math:`Y` the opening without it.

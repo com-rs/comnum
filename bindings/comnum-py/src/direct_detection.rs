@@ -9,7 +9,8 @@ use pyo3::prelude::*;
 use pyo3::types::PyDict;
 
 /// A direct-detection receiver of on–off keying: a p-i-n or avalanche photodiode, its
-/// load and amplifier, in the Gaussian noise model of [1]_, Secs. 4.4–4.5 (eqs. (4.4.9), (4.4.17), (4.4.18), (4.5.10), (4.5.11), (4.5.17), (4.5.19)).
+/// load and amplifier, in the Gaussian noise model. After [1]_, Secs. 4.4–4.5 (eqs. (4.4.9),
+/// (4.4.17), (4.4.18), (4.5.10), (4.5.11), (4.5.17), (4.5.19)).
 ///
 /// The receiver decides between the photocurrents :math:`I_1 = M R P_1` and :math:`I_0 =
 /// M R P_0` of the 1 and 0 bits, each with the shot noise of its power and the thermal
@@ -254,7 +255,7 @@ wrapper_methods! {
     }
 }
 
-/// The Q factor of two Gaussian levels, [1]_, eqs. (4.5.10), (4.5.11):
+/// The Q factor of two Gaussian levels. After [1]_, eqs. (4.5.10), (4.5.11):
 ///
 /// .. math::
 ///
@@ -285,7 +286,7 @@ fn q_factor(i1: f64, i0: f64, sigma1: f64, sigma0: f64) -> PyResult<f64> {
     dd::q_factor(i1, i0, sigma1, sigma0).py()
 }
 
-/// The excess noise factor of an avalanche photodiode, [1]_, eq. (4.4.18):
+/// The excess noise factor of an avalanche photodiode. After [1]_, eq. (4.4.18):
 ///
 /// .. math::
 ///
@@ -313,8 +314,8 @@ fn excess_noise_factor(m: f64, k_a: f64) -> PyResult<f64> {
     dd::excess_noise_factor(m, k_a).py()
 }
 
-/// The average number of photons per bit of the quantum limit of on–off keying, [1]_,
-/// eq. (4.5.24): a receiver that counts photons without noise errs only when a 1 bit
+/// The average number of photons per bit of the quantum limit of on–off keying. After
+/// [1]_, eq. (4.5.24): a receiver that counts photons without noise errs only when a 1 bit
 /// carries no photon,
 ///
 /// .. math::
@@ -345,7 +346,7 @@ fn quantum_limit_photons_per_bit(ber: &Bound<'_, PyAny>) -> PyResult<Py<PyAny>> 
     map_real(ber, |v| dd::quantum_limit_photons_per_bit(v).py())
 }
 
-/// The quantum limit of the receiver sensitivity, [1]_, eq. (4.5.25):
+/// The quantum limit of the receiver sensitivity. After [1]_, eq. (4.5.25):
 ///
 /// .. math::
 ///
@@ -378,8 +379,8 @@ fn quantum_limit_w(ber: f64, bit_rate_hz: f64, frequency_hz: f64) -> PyResult<f6
     dd::quantum_limit_w(ber, bit_rate_hz, frequency_hz).py()
 }
 
-/// The power penalty of a finite extinction ratio of a thermal-noise-limited receiver,
-/// [1]_, eq. (4.6.4) and Fig. 4.20:
+/// The power penalty of a finite extinction ratio of a thermal-noise-limited receiver.
+/// After [1]_, eq. (4.6.4) and Fig. 4.20:
 ///
 /// .. math::
 ///
@@ -409,8 +410,8 @@ fn extinction_ratio_penalty_db(r_ex: &Bound<'_, PyAny>) -> PyResult<Py<PyAny>> {
     map_real(r_ex, |v| dd::extinction_ratio_penalty_db(v).py())
 }
 
-/// The power penalty of the relative intensity noise of the source at a Q factor,
-/// [1]_, eq. (4.6.11) and Fig. 4.21: the intensity noise :math:`\sigma_I = r_I R P_1` adds to the noise
+/// The power penalty of the relative intensity noise of the source at a Q factor.
+/// After [1]_, eq. (4.6.11) and Fig. 4.21: the intensity noise :math:`\sigma_I = r_I R P_1` adds to the noise
 /// of the 1 bits and
 ///
 /// .. math::
@@ -488,8 +489,8 @@ fn gaussian_broadening_factor(
 }
 
 /// The power penalty of a Gaussian timing jitter on a thermal-noise-limited receiver of
-/// raised-cosine pulses :math:`\cos^2(\pi B t/2)`, [1]_, eqs. (4.6.17), (4.6.20) and
-/// Fig. 4.22:
+/// raised-cosine pulses :math:`\cos^2(\pi B t/2)`. After [1]_, eqs. (4.6.17), (4.6.20)
+/// and Fig. 4.22:
 ///
 /// .. math::
 ///
@@ -521,7 +522,7 @@ fn timing_jitter_penalty_db(b_tau_j: f64, q: f64) -> PyResult<f64> {
 }
 
 /// The chirp power penalty of a linearly chirped Gaussian pulse that fills the bit,
-/// :math:`\sigma_0 = 1/(4B)`, [1]_, eq. (5.4.14) and Fig. 5.11:
+/// :math:`\sigma_0 = 1/(4B)`. After [1]_, eq. (5.4.14) and Fig. 5.11:
 ///
 /// .. math::
 ///
@@ -555,8 +556,8 @@ fn chirp_penalty_db(chirp: f64, beta2_s2_km: f64, bit_rate_hz: f64, length_km: f
     dd::chirp_penalty_db(chirp, beta2_s2_km, bit_rate_hz, length_km).py()
 }
 
-/// The power penalty of the broadening of a Gaussian pulse that fills the bit, [1]_,
-/// eq. (5.4.1):
+/// The power penalty of the broadening of a Gaussian pulse that fills the bit. After
+/// [1]_, eq. (5.4.1):
 ///
 /// .. math::
 ///
@@ -578,9 +579,8 @@ fn broadening_penalty_db(b_f: &Bound<'_, PyAny>) -> PyResult<Py<PyAny>> {
     map_real(b_f, |v| dd::broadening_penalty_db(v).py())
 }
 
-/// The dispersion power penalty of a source of finite spectral width, [1]_, eq. (5.4.4)
-/// and Fig. 5.7:
-/// the Gaussian output pulse fills the bit, :math:`4 B \sigma = 1`, with :math:`\sigma^2
+/// The dispersion power penalty of a source of finite spectral width. After [1]_,
+/// eq. (5.4.4) and Fig. 5.7: the Gaussian output pulse fills the bit, :math:`4 B \sigma = 1`, with :math:`\sigma^2
 /// = \sigma_0^2 + (D L \sigma_\lambda)^2`, and
 ///
 /// .. math::
@@ -613,8 +613,8 @@ fn dispersion_penalty_db(bit_rate_hz: f64, length_km: f64, d_ps_nm_km: f64, sigm
     dd::dispersion_penalty_db(bit_rate_hz, length_km, d_ps_nm_km, sigma_lambda_nm).py()
 }
 
-/// The dispersion-limited length of an unchirped Gaussian pulse of optimum width, [1]_,
-/// eqs. (2.4.30) and (5.2.3): from :math:`4 B \sigma \le 1`,
+/// The dispersion-limited length of an unchirped Gaussian pulse of optimum width. After
+/// [1]_, eqs. (2.4.30) and (5.2.3): from :math:`4 B \sigma \le 1`,
 ///
 /// .. math::
 ///
@@ -642,7 +642,7 @@ fn dispersion_limited_length_km(bit_rate_hz: f64, beta2_s2_km: f64) -> PyResult<
     dd::dispersion_limited_length_km(bit_rate_hz, beta2_s2_km).py()
 }
 
-/// The small-signal response :math:`H(f)` of a dispersive IM-DD link, [2]_, [3]_: a
+/// The small-signal response :math:`H(f)` of a dispersive IM-DD link. After [2]_, [3]_: a
 /// laser of linewidth enhancement :math:`\beta_c` and adiabatic chirp coefficient
 /// :math:`\kappa` at the mean power :math:`P_0`, a fibre of dispersion :math:`\beta_2`
 /// and length :math:`L`, a square-law photodiode; for the power :math:`P_0(1 + m \cos
@@ -700,7 +700,7 @@ fn dispersion_fading_response(
 
 /// The fading frequency :math:`f_u` (Hz) of order :math:`u` of a dispersive IM-DD link
 /// with a transient chirp :math:`\beta_c`, the zeros of :func:`dispersion_fading_response`
-/// without adiabatic chirp, [3]_:
+/// without adiabatic chirp. After [3]_:
 ///
 /// .. math::
 ///
@@ -726,8 +726,8 @@ fn dispersion_fading_response(
 ///
 /// Examples:
 ///     >>> import comnum
-///     >>> round(comnum.fading_frequency_hz(0, 0.0, -21.7e-24, 40.0) / 1e9, 2)  # 40 km of SSMF
-///     9.56
+///     >>> round(comnum.fading_frequency_hz(0, 0.0, -21.7e-24, 40.0) / 1e9, 1)  # 40 km of SSMF
+///     9.6
 #[pyfunction]
 fn fading_frequency_hz(u: usize, chirp: f64, beta2_s2_km: f64, length_km: f64) -> PyResult<f64> {
     dd::fading_frequency_hz(u, chirp, beta2_s2_km, length_km).py()

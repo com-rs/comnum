@@ -849,7 +849,7 @@ fn adaptive_equalizer<'py>(
 }
 
 /// Decision-feedback equaliser: a feedforward FIR on the samples and a feedback FIR on
-/// the past decisions, adapted by a stochastic gradient ([1]_, Secs. 9.5 and 10.2).
+/// the past decisions, adapted by a stochastic gradient. After [1]_, Secs. 9.5 and 10.2.
 ///
 /// Output symbol :math:`k` is
 ///
@@ -929,7 +929,7 @@ fn dfe<'py>(
 }
 
 /// Maximum-likelihood sequence estimation over a known channel of symbol-spaced taps:
-/// the Viterbi algorithm on the trellis of the channel memory ([1]_).
+/// the Viterbi algorithm on the trellis of the channel memory. After [1]_.
 ///
 /// For :math:`r_k = \sum_{l=0}^{L-1} h_l s_{k-l} + n_k`, the branch of the symbol
 /// :math:`s_k` in the state of the :math:`L - 1` previous symbols has the metric
@@ -974,7 +974,7 @@ fn mlse<'py>(
 
 /// :func:`mlse` with the reliability of every decided symbol: the log-likelihood
 /// difference :math:`\Delta_k/\sigma^2` with its best competitor, by the soft-output
-/// Viterbi algorithm of [1]_; for two points, the magnitude of the LLR of the symbol
+/// Viterbi algorithm. After [1]_; for two points, the magnitude of the LLR of the symbol
 /// (positive for the first point).
 ///
 /// Args:
@@ -1015,8 +1015,8 @@ fn mlse_soft<'py>(
     Ok((iarr(py, idx), farr(py, rel)))
 }
 
-/// The floor of the infinite-length linear MMSE equaliser of a symbol-spaced channel
-/// ([1]_, Sec. 9.4-2), for unit-variance symbols and the noise variance :math:`\sigma^2`:
+/// The floor of the infinite-length linear MMSE equaliser of a symbol-spaced channel.
+/// After [1]_, Sec. 9.4-2, for unit-variance symbols and the noise variance :math:`\sigma^2`:
 ///
 /// .. math::
 ///
@@ -1049,7 +1049,7 @@ fn linear_mmse_mse(taps: &Bound<'_, PyAny>, noise_var: f64, n_fft: usize) -> PyR
 }
 
 /// The unbiased output SNR of the infinite-length MMSE decision-feedback equaliser with
-/// correct decisions ([1]_, Sec. 9.5-2; [2]_), linear:
+/// correct decisions. After [1]_, Sec. 9.5-2, and [2]_, linear:
 ///
 /// .. math::
 ///

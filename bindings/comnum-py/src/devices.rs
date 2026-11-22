@@ -577,8 +577,8 @@ wrapper_methods! {
 }
 
 /// A directly modulated semiconductor laser: the field of a power waveform with the
-/// frequency chirp of the carrier-induced index change ([1]_, Sec. 3.5.3, eqs. (3.5.16)
-/// and (3.5.25); the adiabatic term after [2]_).
+/// frequency chirp of the carrier-induced index change. After [1]_, Sec. 3.5.3, eqs. (3.5.16)
+/// and (3.5.25); the adiabatic term after [2]_.
 ///
 /// The chirp is the sum of a transient term, the logarithmic derivative of the power,
 /// and an adiabatic term proportional to it,
