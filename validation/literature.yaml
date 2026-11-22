@@ -812,6 +812,17 @@
     - crates/comnum-metrics/src/eye.rs::the_worst_case_eye_is_the_gap_between_adjacent_levels
   badge: orange
   not_covered: "the paper gives neither the dispersion, the wavelength nor the receiver bandwidth (D = 17 ps/(nm km), 1552 nm and a 3-pole Butterworth of the bit rate assumed; the unequalised penalties of the figure are reached 20 % earlier in distance here), nor the tap splits of its receivers: the distance axis is calibrated, the curves compared at equal unequalised penalty; beyond 150 km the paper's LE is 1.1 to 1.6 dB worse and at 250 km its MLD 1.1 dB better; Fig. 7 (a measured DFB laser, private communication) and Fig. 9 (polarisation dispersion) are not reproduced; the journal version (IEEE Trans. Commun. 38(9), 1990) is not in references/"
+- id: foggi2006
+  area: Optical
+  ref: "T. Foggi, E. Forestieri, G. Colavolpe, G. Prati, Maximum-likelihood sequence detection with closed-form metrics in OOK optical systems impaired by GVD and PMD, J. Lightw. Technol. 24(8), 3073-3087, 2006"
+  module: comnum_dsp::equalizer::mlse, comnum_dsp::filter::Iir, comnum_channel::optical::edfa
+  tested: "Fig. 6 at DGD = 0 (card foggi2006_fig6): the optically amplified NRZ OOK receiver of Sec. VI (ASE on two polarisations, a 4th-order Butterworth band-pass of 1.9/T, the square law, a 5th-order Bessel of 0.75/T, 20 dB of extinction ratio) gives 1.33e-2, 1.28e-3 and 8.4e-5 against 1e-2, 1e-3 and 1e-4 at Eb/N0 = 10.4, 12.6 and 14.4 dB; the MLSD with the chi-square metric of eq. (12) (Mlse::chi_square_metric, N_0 and nu from the moments of eqs. (24)-(25)) coincides with the threshold receiver at 12.6 and 14.4 dB, the Euclidean metric costs a factor 2 to 8 (the Gaussian statistics of Fig. 2)"
+  tests:
+    - validation/tests/fiber/foggi2006.rs::foggi_2006_fig_6_the_amplified_ook_receiver_without_dispersion
+    - crates/comnum-dsp/src/equalizer/mlse.rs::the_chi_square_metric_decides_as_the_euclidean_one_at_high_snr_and_checks_its_inputs
+    - crates/comnum-dsp/src/filter.rs::the_bessel_response_is_three_db_at_the_cut_off_and_follows_its_prototype
+  badge: orange
+  not_covered: "the order of the optical filter is read as that of the band-pass (a 2nd-order low-pass on the envelope; the 4th-order low-pass reading costs 0.65 dB, outside the tolerance); the chi-square metric at 10.4 dB is a factor 1.75 above the figure (the asymptote of the Bessel function); Fig. 15 (the OSNR penalty at 1e-12 versus the chromatic dispersion index, from the bounds of Sec. V) is not reproduced: at 1e-4 and gamma up to 0.4 the MLSD gains nothing over the threshold receiver; the PMD figures (5-14, 17), the oversampled receiver (Sec. IV) and the bounds (Sec. V, eqs. (16)-(30)) are not implemented"
 - id: forney1972
   area: Receiver DSP
   ref: "G. D. Forney, Maximum-likelihood sequence estimation of digital sequences in the presence of intersymbol interference, IEEE Trans. Inf. Theory 18(3), 363-378, 1972"

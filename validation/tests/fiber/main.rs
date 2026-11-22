@@ -10,6 +10,7 @@ mod dar2014;
 mod eghbali2014;
 mod faruk2017;
 mod fatadin2009;
+mod foggi2006;
 mod foschini1991;
 mod gordon2000;
 mod hager2021;

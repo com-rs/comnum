@@ -9,7 +9,7 @@
 //! | [`audio`] | a sound card as a channel: a complex baseband signal on an audio carrier and back, the WAV container |
 //! | [`fm`] | analogue frequency modulation: the modulator, the polar discriminator, pre- and de-emphasis |
 //! | [`frontend`] | one channel of a capture to baseband at the rate of its receiver: DC removal, frequency shift, rational resampling |
-//! | [`filter`] | pulse shapes (rectangular, NRZ, raised cosine, root-raised cosine, return-to-zero), FIR filtering (`same` alignment), low-pass FIR design, Butterworth IIR low-pass, moving average |
+//! | [`filter`] | pulse shapes (rectangular, NRZ, raised cosine, root-raised cosine, return-to-zero), FIR filtering (`same` alignment), low-pass FIR design, Butterworth and Bessel IIR low-pass, moving average |
 //! | [`nonlinear`] | a memoryless nonlinearity driven by a Gaussian signal: Bussgang's decomposition, clipping, output series and distortion spectrum (Banelli & Cacopardi 2000) |
 //! | [`resample`] | up- and down-sampling, decimation, band-limited resampling, fractional delay |
 //! | [`signal`] | normalisations, frequency shift and rotation, cyclic prefix |

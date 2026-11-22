@@ -339,7 +339,48 @@ fn butterworth_lowpass<'py>(
     fc_hz: f64,
     order: usize,
 ) -> PyResult<CArr<'py>> {
-    let h = filter::Butterworth::lowpass(order, fc_hz, fs_hz).py()?;
+    let h = filter::Iir::butterworth(order, fc_hz, fs_hz).py()?;
+    Ok(carr(py, h.filter(&cvec(x)?)))
+}
+
+/// A Bessel (Thomson) low-pass IIR filter of order `order` and 3-dB cut-off `fc_hz` at
+/// the sampling rate `fs_hz`: the poles of the reverse Bessel polynomial, maximally flat
+/// group delay, by the bilinear transform with the cut-off prewarped, run forward from
+/// rest. The electrical filter of optical receivers, such as the fifth-order filter at
+/// 0.75 times the bit rate of [1]_.
+///
+/// Args:
+///     x (array_like): the samples (real or complex).
+///     fs_hz (float): the sampling rate (Hz).
+///     fc_hz (float): the 3-dB cut-off (Hz), in :math:`(0, f_s / 2)`.
+///     order (int): the order, 1 to 32.
+///
+/// Returns:
+///     numpy.ndarray: the filtered samples (complex128), as many as `x`.
+///
+/// Raises:
+///     ValueError: for an order outside 1 to 32 or a cut-off outside :math:`(0, f_s/2)`.
+///
+/// References:
+///     .. [1] T. Foggi, E. Forestieri, G. Colavolpe, G. Prati, "Maximum-likelihood
+///        sequence detection with closed-form metrics in OOK optical systems impaired
+///        by GVD and PMD," *J. Lightw. Technol.* 24(8), 3073–3087, 2006.
+///
+/// Examples:
+///     >>> import comnum, numpy as np
+///     >>> y = comnum.bessel_lowpass(np.ones(300), 1e3, 100.0, order=5)
+///     >>> round(float(abs(y[-1])), 6)
+///     1.0
+#[pyfunction]
+#[pyo3(signature = (x, fs_hz, fc_hz, *, order = 5))]
+fn bessel_lowpass<'py>(
+    py: Python<'py>,
+    x: &Bound<'py, PyAny>,
+    fs_hz: f64,
+    fc_hz: f64,
+    order: usize,
+) -> PyResult<CArr<'py>> {
+    let h = filter::Iir::bessel(order, fc_hz, fs_hz).py()?;
     Ok(carr(py, h.filter(&cvec(x)?)))
 }
 
@@ -1487,6 +1528,7 @@ pub(crate) fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(resample_fft, m)?)?;
     m.add_function(wrap_pyfunction!(low_pass_fir, m)?)?;
     m.add_function(wrap_pyfunction!(butterworth_lowpass, m)?)?;
+    m.add_function(wrap_pyfunction!(bessel_lowpass, m)?)?;
     m.add_function(wrap_pyfunction!(select_channel, m)?)?;
     m.add_function(wrap_pyfunction!(pnorm, m)?)?;
     m.add_function(wrap_pyfunction!(anorm, m)?)?;

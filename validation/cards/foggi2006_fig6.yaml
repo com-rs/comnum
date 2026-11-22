@@ -1,0 +1,39 @@
+id: foggi2006_fig6
+title: BER of the amplified OOK receiver without dispersion, Fig. 6 (DGD = 0)
+literature: foggi2006
+evidence: [curve]
+source:
+  kind: paper
+  reference: "T. Foggi, E. Forestieri, G. Colavolpe, G. Prati, Maximum-likelihood sequence detection with closed-form metrics in OOK optical systems impaired by GVD and PMD, J. Lightw. Technol. 24(8), 3073-3087, 2006"
+  locator: "Fig. 6, the DGD = 0 curve (MLSD, optical equaliser and FFE + DFE coincide), read on the grid at BER 1e-2, 1e-3, 1e-4: Eb/N0 = 10.4, 12.6, 14.4 dB; the chain and filters of Sec. VI"
+  file: fiber/2006_foggi_mlsd-closed-form-metrics-ook-gvd-pmd_jlt.pdf
+description: >
+  NRZ OOK at 10 Gb/s with 20 dB of extinction ratio, 16 samples per bit; ASE of
+  density N_0 = E_b / (E_b/N_0) on two polarisations (E_b the mean energy per bit);
+  a 4th-order Butterworth optical filter of 3-dB bandwidth 1.9/T (Iir::butterworth at
+  0.95/T on the envelope), the square law summed over the polarisations, a 5th-order
+  Bessel electrical filter of 0.75/T (Iir::bessel), one sample per bit at the phase of
+  the best threshold receiver; 2^19 bits per point. The threshold receiver with its
+  optimum threshold, and the 8-state MLSD (Mlse::fit on the noiseless samples) with
+  the chi-square metric of eq. (12) (N_0 and nu from the moments of the samples
+  without signal, eqs. (24)-(25) at s = 0), each receiver at its own best sampling
+  phase; the Euclidean MLSD and the dispersed chain (gamma = 0.2 to 0.4 at 14.4 dB)
+  are printed and recorded as findings.
+run:
+  test: validation/tests/fiber/foggi2006.rs::foggi_2006_fig_6_the_amplified_ook_receiver_without_dispersion
+tier: ci
+duration: "6 s on an Apple M6 (release)"
+tolerance: {factor: 1.6}
+why: "the reading of the figure (0.3 dB, a factor 1.5 on the BER where a decade spans 1.8 dB) and the sampling error of 44 errors at 1e-4 (15 %)"
+findings:
+  - "the threshold receiver: 1.33e-2, 1.28e-3, 8.4e-5 against 1e-2, 1e-3, 1e-4 (within 0.3 dB); the chi-square MLSD coincides with it at 12.6 and 14.4 dB (1.59e-3, 9.2e-5), as the paper's receivers do at DGD = 0"
+  - "the optical filter: a 4th-order band-pass is a 2nd-order low-pass on the envelope; a 4th-order low-pass on the envelope costs 0.65 dB more (1.8e-2, 2.4e-3, 2.3e-4), outside the tolerance: the order of the paper's filter is read as that of the band-pass"
+  - "the Euclidean metric of the MLSD, the Gaussian statistics the paper rejects (Fig. 2), costs a factor 1.9 at 12.6 dB and 7.7 at 14.4 dB (2.5e-3, 6.5e-4); the chi-square metric of eq. (12), with the Bessel function replaced by its asymptote, is a factor 1.75 above the figure at 10.4 dB (1.75e-2), where the asymptote is poor: not a case"
+  - "the moments of the samples without signal give nu = 4.1 effective complex degrees of freedom, against 2 B_o / B_e = 5.1 of the filter bandwidths"
+  - "with dispersion (Fig. 15 is at 1e-12): at 14.4 dB and gamma = 0.2, 0.3, 0.4 (14.6, 21.9, 29.3 km at 10 Gb/s), the threshold receiver gives 6.1e-5, 6.1e-5, 9.7e-5 and the chi-square MLSD of 16 states 7.1e-5, 8.0e-5, 1.2e-4, each at its best sampling phase: at 1e-4 the MLSD gains nothing over the threshold receiver, where the figure's bounds give it 1 to 2 dB at 1e-12 and gamma = 0.4; not reproduced (the bounds of Sec. V are not implemented)"
+cases:
+  - {inputs: {receiver: threshold, ebn0_db: 10.4}, expected: 1.0e-2}
+  - {inputs: {receiver: threshold, ebn0_db: 12.6}, expected: 1.0e-3}
+  - {inputs: {receiver: threshold, ebn0_db: 14.4}, expected: 1.0e-4}
+  - {inputs: {receiver: mlsd_chi_square, ebn0_db: 12.6}, expected: 1.0e-3}
+  - {inputs: {receiver: mlsd_chi_square, ebn0_db: 14.4}, expected: 1.0e-4}

@@ -36,7 +36,7 @@ use comnum::channel::optical::fiber::{FiberParams, linear_fiber_channel};
 use comnum::dsp::adaptive::UpdateRule;
 use comnum::dsp::equalizer::dfe::Dfe;
 use comnum::dsp::equalizer::mlse::Mlse;
-use comnum::dsp::filter::Butterworth;
+use comnum::dsp::filter::Iir;
 use comnum::math::linalg::lstsq;
 use comnum::metrics::eye::eye_openings;
 use comnum_validation::card::Card;
@@ -69,7 +69,7 @@ fn de_bruijn() -> Vec<usize> {
 }
 
 /// A filter from rest applied to a periodic signal: three periods, the last kept.
-fn periodic(filter: &Butterworth, x: &[C64]) -> Vec<C64> {
+fn periodic(filter: &Iir, x: &[C64]) -> Vec<C64> {
     let n = x.len();
     let y = filter.filter(&[x, x, x].concat());
     y[2 * n..].to_vec()
@@ -78,7 +78,7 @@ fn periodic(filter: &Butterworth, x: &[C64]) -> Vec<C64> {
 /// The photocurrent of the link over `length_km`, one period of the sequence.
 fn photocurrent(bits: &[usize], length_km: f64) -> Vec<f64> {
     let drive: Vec<C64> = bits.iter().flat_map(|&b| std::iter::repeat_n(C64::new(b as f64, 0.0), SPS)).collect();
-    let tx = Butterworth::lowpass(1, 32e9, FS).unwrap();
+    let tx = Iir::butterworth(1, 32e9, FS).unwrap();
     let field: Vec<C64> = periodic(&tx, &drive).iter().map(|p| C64::new(p.re.max(0.0).sqrt(), 0.0)).collect();
     let fiber = FiberParams {
         n_spans: 1,
@@ -89,7 +89,7 @@ fn photocurrent(bits: &[usize], length_km: f64) -> Vec<f64> {
     };
     let out = if length_km > 0.0 { linear_fiber_channel(&field, &fiber, length_km, FS) } else { field };
     let power: Vec<C64> = out.iter().map(|e| C64::new(e.norm_sqr(), 0.0)).collect();
-    let rx = Butterworth::lowpass(3, RX_BANDWIDTH, FS).unwrap();
+    let rx = Iir::butterworth(3, RX_BANDWIDTH, FS).unwrap();
     periodic(&rx, &power).iter().map(|v| v.re).collect()
 }
 

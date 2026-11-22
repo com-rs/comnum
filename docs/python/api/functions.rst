@@ -536,6 +536,7 @@ Filters and sampling
    resample_fft
    low_pass_fir
    butterworth_lowpass
+   bessel_lowpass
    pnorm
    anorm
    freq_shift

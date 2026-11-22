@@ -69,6 +69,7 @@ pub mod linalg;
 pub mod log_domain;
 pub mod nearest;
 pub mod nlse;
+pub mod polynomial;
 pub mod quadrature;
 pub mod search;
 pub mod sequences;

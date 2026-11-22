@@ -34,6 +34,22 @@
 //! [`Mlse::min_distance`]; for $W = 1$ it is the eye of a slicer that knows the past
 //! symbols (a decision feedback without error).
 //!
+//! The Euclidean metric is the log-likelihood of Gaussian noise. After a square-law
+//! photodiode with optical amplifier noise the sample is a noncentral chi-square
+//! variable, whose log-likelihood Foggi, Forestieri, Colavolpe and Prati (2006) write in
+//! closed form (their eq. (12), the modified Bessel function approximated by its
+//! asymptote): for a noiseless sample $s > 0$, a received sample $z \ge 0$, the noise
+//! variance $N_{0}$ of every complex degree of freedom and $\nu$ such degrees of freedom
+//! (the ratio $2B_{o}/B_{e}$ of the noise bandwidths of the optical and electrical
+//! filters),
+//!
+//! $$
+//! \lambda(z, s) = 2\sqrt{z s} - s - \frac{N_{0}}{2}\left(\nu - \frac{1}{2}\right)\ln s,
+//! $$
+//!
+//! [`Mlse::chi_square_metric`], which [`Mlse::detect_with`] takes in place of the
+//! Euclidean one.
+//!
 //! # Examples
 //! ```
 //! use comnum_dsp::equalizer::mlse::Mlse;
@@ -59,6 +75,9 @@
 //!    applications," *Proc. IEEE GLOBECOM*, 1680–1686, 1989.
 //! 3. J. H. Winters, R. D. Gitlin, "Electrical signal processing techniques in
 //!    long-haul, fiber-optic systems," *Proc. IEEE ICC*, 397–403, 1990.
+//! 4. T. Foggi, E. Forestieri, G. Colavolpe, G. Prati, "Maximum-likelihood sequence
+//!    detection with closed-form metrics in OOK optical systems impaired by GVD and
+//!    PMD," *J. Lightw. Technol.* 24(8), 3073–3087, 2006.
 
 use comnum_core::{Result, ensure, ensure_shape, same_len};
 use comnum_math::C64;
@@ -207,6 +226,42 @@ impl Mlse {
         Ok(vit::viterbi(&self.machine, r.len(), &start, self.gammas(r), None)?.0)
     }
 
+    /// The sequence of largest accumulated branch metric `metric(sample, expected)`
+    /// over the samples `r`, for a noise that is not Gaussian (see the module); with
+    /// the negative squared distance it is [`Mlse::detect`].
+    ///
+    /// # Errors
+    /// None for a non-empty input.
+    pub fn detect_with(&self, r: &[C64], metric: impl Fn(C64, C64) -> f64) -> Result<Vec<usize>> {
+        let start = vec![0.0; self.machine.n_states()];
+        let gammas = |k: usize, g: &mut [f64]| {
+            for (gv, e) in g.iter_mut().zip(&self.expected) {
+                *gv = metric(r[k], *e);
+            }
+        };
+        Ok(vit::viterbi(&self.machine, r.len(), &start, gammas, None)?.0)
+    }
+
+    /// The branch metric of a noncentral chi-square sample (see the module; Foggi et
+    /// al. 2006, eq. (12)) on the real parts, for the noise variance `noise_var` $N_{0}$
+    /// of every complex degree of freedom and `dof` $\nu$ such degrees: a negative sample
+    /// counts as zero, and every expected sample must be positive (a finite extinction
+    /// ratio).
+    ///
+    /// # Errors
+    /// [`comnum_core::Error::Config`] for a non-positive noise variance or number of
+    /// degrees of freedom, or an expected sample that is not positive.
+    pub fn chi_square_metric(&self, noise_var: f64, dof: f64) -> Result<impl Fn(C64, C64) -> f64 + use<>> {
+        ensure(noise_var > 0.0 && dof > 0.0, || {
+            "the noise variance and the degrees of freedom must be positive".into()
+        })?;
+        ensure(self.expected.iter().all(|e| e.re > 0.0), || {
+            "the chi-square metric needs positive expected samples (a finite extinction ratio)".into()
+        })?;
+        let c = noise_var / 2.0 * (dof - 0.5);
+        Ok(move |z: C64, s: C64| 2.0 * (z.re.max(0.0) * s.re).sqrt() - s.re - c * s.re.ln())
+    }
+
     /// The sequence of [`Mlse::detect`] and the reliability of every symbol, the
     /// log-likelihood difference $\Delta_{k}/\sigma^{2}$ with its best competitor (see the
     /// module), for the variance `noise_var` $\sigma^{2} = E|n|^{2}$ of the complex noise.
@@ -239,6 +294,30 @@ mod tests {
     use super::*;
     use crate::equalizer::pam;
     use comnum_core::rng::Rng;
+
+    #[test]
+    fn the_chi_square_metric_decides_as_the_euclidean_one_at_high_snr_and_checks_its_inputs() {
+        // on-off keying through 1 + 0.3 z⁻¹ on powers (a square-law channel of positive
+        // samples), weak noise: both metrics recover the sequence; the chi-square one
+        // refuses a zero expected sample
+        let pts = [C64::new(0.1, 0.0), C64::new(1.0, 0.0)];
+        let taps = [C64::new(1.0, 0.0), C64::new(0.3, 0.0)];
+        let mlse = Mlse::new(&taps, &pts).unwrap();
+        let mut rng = Rng::new(5);
+        let idx: Vec<usize> = (0..300).map(|_| usize::from(rng.bit())).collect();
+        let r: Vec<C64> = (0..idx.len())
+            .map(|k| {
+                let past = if k > 0 { taps[1] * pts[idx[k - 1]] } else { C64::new(0.0, 0.0) };
+                taps[0] * pts[idx[k]] + past + C64::new(0.02 * rng.gaussian(), 0.0)
+            })
+            .collect();
+        let metric = mlse.chi_square_metric(0.01, 2.0).unwrap();
+        assert_eq!(mlse.detect_with(&r, metric).unwrap(), idx);
+        assert_eq!(mlse.detect_with(&r, |z, s| -(z - s).norm_sqr()).unwrap(), mlse.detect(&r).unwrap());
+        assert!(mlse.chi_square_metric(0.0, 2.0).is_err());
+        let zero = Mlse::new(&taps, &[C64::new(0.0, 0.0), C64::new(1.0, 0.0)]).unwrap();
+        assert!(zero.chi_square_metric(0.01, 2.0).is_err());
+    }
 
     #[test]
     fn the_fitted_table_is_the_linear_channel_and_the_distance_its_eye() {

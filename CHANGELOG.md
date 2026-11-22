@@ -43,6 +43,13 @@ and follow [Semantic Versioning](https://semver.org/).
   - the third-order dispersion of `linear_fiber_channel` validated against Agrawal 2002,
     eq. (2.4.22) (card `agrawal2002_eq2_4_22`, CI); `FiberParams.beta3_s3_km` and
     `.slope_ps_nm2_km` readable in Python;
+  - `comnum_dsp::filter::Iir::bessel`, the Bessel (Thomson) low-pass IIR filter (the
+    poles of the reverse Bessel polynomial, `comnum_math::polynomial::roots`, the
+    Durand–Kerner iteration), in Python `bessel_lowpass`; `Mlse::detect_with`, the
+    detector with any branch metric, and `Mlse::chi_square_metric`, the closed-form
+    metric of Foggi et al. (2006, eq. (12)) for the samples of a square-law receiver
+    with optical amplifier noise; their Fig. 6 (the amplified OOK receiver at DGD = 0)
+    reproduced within 0.3 dB (card `foggi2006_fig6`, CI);
   - `comnum_metrics::eye::{level_statistics, level_q_factors}`, the Q factor of every eye
     of a sampled multilevel signal; in Python `level_q_factors`;
   - the gallery example `optical/plot_11_imdd_pam4_link.py` (PAM4 at 25 GBd from a
@@ -568,6 +575,9 @@ and follow [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- `comnum_dsp::filter::Butterworth` is `comnum_dsp::filter::Iir`, with the constructors
+  `Iir::butterworth` (the former `Butterworth::lowpass`, unchanged results) and
+  `Iir::bessel`; the Python `butterworth_lowpass` is unchanged.
 - README.md and the home page of the Python documentation open on the playground, with
   a screenshot of a validation campaign run in the browser
   (`docs/python/_static/readme/playground.png`); the README is shorter (the domains in

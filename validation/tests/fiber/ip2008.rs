@@ -32,7 +32,7 @@ use comnum::channel::optical::edfa::ase_density;
 use comnum::channel::optical::fiber::{FiberParams, Ssfm};
 use comnum::core::rng::Rng;
 use comnum::dsp::equalizer::ls_equalizer;
-use comnum::dsp::filter::{Butterworth, PulseShape, fir_filter, pulse_shape};
+use comnum::dsp::filter::{Iir, PulseShape, fir_filter, pulse_shape};
 use comnum::dsp::resample::{downsample, upsample};
 use comnum::dsp::signal::pnorm;
 use comnum::mapping::constellation::Constellation;
@@ -83,7 +83,7 @@ fn transmit(rng: &mut Rng) -> (Vec<C64>, Vec<C64>) {
 /// known symbols, 4 symbols on each side); returns the decision samples.
 fn receive(y: &[C64], n_spans: usize, gamma_w_km: f64, mk: usize, steps: usize, xi: f64, x: &[C64]) -> Vec<C64> {
     let fs_rx = RS * mk as f64;
-    let aa = Butterworth::lowpass(5, 0.4 * fs_rx, FS).unwrap();
+    let aa = Iir::butterworth(5, 0.4 * fs_rx, FS).unwrap();
     // the steady state of the causal filter on the periodic block: two periods, keep the second
     let twice: Vec<C64> = y.iter().chain(y).copied().collect();
     let filtered = &aa.filter(&twice)[y.len()..];

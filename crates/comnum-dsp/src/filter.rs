@@ -593,29 +593,34 @@ pub fn moving_average(x: &[C64], n: usize) -> Vec<C64> {
         .collect()
 }
 
-/// A Butterworth low-pass IIR filter of order $n$: the analogue prototype $|H(j\Omega)|^{2} =
-/// 1/(1 + (\Omega/\Omega_{c})^{2n})$, maximally flat, mapped to discrete time by the
-/// bilinear transform with the cut-off prewarped ($\Omega_{c} = \tan(\pi f_{c}/f_{s})$), as
-/// a cascade of second-order sections (one first-order section for an odd order), each
-/// of unit gain at DC: the anti-aliasing filter of a receiver, the fifth-order filter at
-/// 40 % of the sampling rate of Ip & Kahn (*J. Lightw. Technol.* 26(20), 2008, Sec. II).
+/// An infinite impulse response low-pass filter designed from an analogue prototype by
+/// the bilinear transform with the cut-off prewarped, a cascade of second-order
+/// sections of unit gain at DC: the Butterworth filter ([`Iir::butterworth`], maximally
+/// flat; the anti-aliasing filter of a receiver, the fifth-order filter at 40 % of the
+/// sampling rate of Ip & Kahn, *J. Lightw. Technol.* 26(20), 2008, Sec. II) and the
+/// Bessel filter ([`Iir::bessel`], maximally flat group delay; the electrical filter of
+/// optical receivers, the fifth-order filter at 0.75 times the bit rate of Foggi et al.,
+/// *J. Lightw. Technol.* 24(8), 2006, Sec. VI).
 ///
 /// The filter runs forward only (a causal filter with its group delay, as in a
-/// receiver); the gain at $f_{c}$ is $-3$ dB exactly for every order.
+/// receiver); the gain at $f_{c}$ is $-3$ dB for every order (exactly for the
+/// Butterworth, to the precision of the bisection on the prototype for the Bessel).
 ///
 /// # Examples
 /// ```
-/// use comnum_dsp::filter::Butterworth;
+/// use comnum_dsp::filter::Iir;
 /// use comnum_math::C64;
-/// let h = Butterworth::lowpass(5, 0.4e9, 1e9)?;
+/// let h = Iir::butterworth(5, 0.4e9, 1e9)?;
 /// let dc: Vec<C64> = vec![C64::new(1.0, 0.0); 200];
 /// let y = h.filter(&dc);
 /// assert!((y[199].re - 1.0).abs() < 1e-9);                 // unit DC gain
 /// assert!((h.gain_at(0.4e9) - 0.5f64.sqrt()).abs() < 1e-9);  // -3 dB at the cut-off
+/// let b = Iir::bessel(5, 0.1e9, 1e9)?;
+/// assert!((b.gain_at(0.1e9) - 0.5f64.sqrt()).abs() < 1e-6);
 /// # Ok::<(), comnum_core::Error>(())
 /// ```
 #[derive(Clone, Debug, PartialEq)]
-pub struct Butterworth {
+pub struct Iir {
     /// The sections `(b0, b1, b2, a1, a2)` of $H(z) = \prod (b_{0} + b_{1}z^{-1} + b_{2}z^{-2}) /
     /// (1 + a_{1}z^{-1} + a_{2}z^{-2})$.
     sections: Vec<[f64; 5]>,
@@ -623,44 +628,79 @@ pub struct Butterworth {
     fs_hz: f64,
 }
 
-impl Butterworth {
-    /// The low-pass of order `order` (1 to 32) and 3-dB cut-off `fc_hz` at the sampling
-    /// rate `fs_hz`.
+impl Iir {
+    /// The Butterworth low-pass of order `order` (1 to 32) and 3-dB cut-off `fc_hz` at
+    /// the sampling rate `fs_hz`: the analogue poles $e^{j\pi(2k + n - 1)/2n}$ on the
+    /// unit circle.
     ///
     /// # Errors
     /// [`comnum_core::Error::Config`] for an order outside 1 to 32, or a cut-off that is
     /// not in $(0, f_{s}/2)$.
-    pub fn lowpass(order: usize, fc_hz: f64, fs_hz: f64) -> Result<Butterworth> {
+    pub fn butterworth(order: usize, fc_hz: f64, fs_hz: f64) -> Result<Iir> {
+        Iir::check(order, fc_hz, fs_hz)?;
+        let n = order as f64;
+        let poles: Vec<C64> =
+            (1..=order).map(|k| C64::from_polar(1.0, PI * (2.0 * k as f64 + n - 1.0) / (2.0 * n))).collect();
+        Ok(Iir::from_prototype(&poles, fc_hz, fs_hz))
+    }
+
+    /// The Bessel (Thomson) low-pass of order `order` (1 to 32) and 3-dB cut-off `fc_hz`
+    /// at the sampling rate `fs_hz`: the analogue poles are the roots of the reverse
+    /// Bessel polynomial $\theta_{n}(s) = \sum_{k=0}^{n} \frac{(2n - k)!}{2^{n-k} k! (n - k)!}
+    /// s^{k}$ ([`comnum_math::polynomial::roots`]), scaled so that the gain at the
+    /// cut-off is $-3$ dB.
+    ///
+    /// # Errors
+    /// As [`Iir::butterworth`].
+    pub fn bessel(order: usize, fc_hz: f64, fs_hz: f64) -> Result<Iir> {
+        Iir::check(order, fc_hz, fs_hz)?;
+        let n = order;
+        let factorial = |k: usize| (1..=k).map(|v| v as f64).product::<f64>();
+        let coeffs: Vec<f64> = (0..=n)
+            .map(|k| factorial(2 * n - k) / (2f64.powi((n - k) as i32) * factorial(k) * factorial(n - k)))
+            .collect();
+        let poles = comnum_math::polynomial::roots(&coeffs)?;
+        // |H(jw)|² = c0² / |θ_n(jw)|²: the 3-dB frequency of the prototype by bisection
+        let gain2 = |w: f64| {
+            let v = coeffs.iter().rev().fold(C64::new(0.0, 0.0), |acc, &c| acc * C64::new(0.0, w) + c);
+            coeffs[0] * coeffs[0] / v.norm_sqr()
+        };
+        let w3 = comnum_math::bisect(|w| gain2(w) > 0.5, 0.0, 2.0 * n as f64, 100);
+        let scaled: Vec<C64> = poles.iter().map(|p| p / w3).collect();
+        Ok(Iir::from_prototype(&scaled, fc_hz, fs_hz))
+    }
+
+    fn check(order: usize, fc_hz: f64, fs_hz: f64) -> Result<()> {
         if !(1..=32).contains(&order) {
-            return Err(Error::Config(format!("the order of a Butterworth filter is 1 to 32, got {order}")));
+            return Err(Error::Config(format!("the order of an IIR filter is 1 to 32, got {order}")));
         }
         if !(fc_hz > 0.0 && fs_hz.is_finite() && fc_hz < fs_hz / 2.0) {
             return Err(Error::Config(format!("the cut-off must be in (0, fs/2) = (0, {}), got {fc_hz}", fs_hz / 2.0)));
         }
+        Ok(())
+    }
+
+    /// The sections of the analogue prototype `poles` (its 3-dB cut-off at 1 rad/s,
+    /// conjugate pairs and real poles) at the cut-off `fc_hz`, by the bilinear
+    /// transform $z = (1 + s)/(1 - s)$ of the poles scaled by the prewarped cut-off.
+    fn from_prototype(poles: &[C64], fc_hz: f64, fs_hz: f64) -> Iir {
         let wc = (PI * fc_hz / fs_hz).tan(); // the prewarped cut-off, in units of 2/T
-        let n = order as f64;
-        // the analogue poles s_k = exp(j pi (2k + n - 1) / 2n), k = 1..n, on the unit circle,
-        // scaled by wc, mapped by z = (1 + s) / (1 - s)
-        let poles: Vec<C64> = (1..=order)
-            .map(|k| {
-                let s = C64::from_polar(wc, PI * (2.0 * k as f64 + n - 1.0) / (2.0 * n));
-                (C64::new(1.0, 0.0) + s) / (C64::new(1.0, 0.0) - s)
-            })
-            .collect();
+        let mapped: Vec<C64> =
+            poles.iter().map(|p| (C64::new(1.0, 0.0) + wc * p) / (C64::new(1.0, 0.0) - wc * p)).collect();
+        // every real pole is a first-order section; every pole of positive imaginary part
+        // stands for its conjugate pair (the roots come in such pairs)
         let mut sections = Vec::new();
-        // conjugate pairs: the k-th and the (n + 1 - k)-th poles
-        for k in 0..order / 2 {
-            let p = poles[k];
-            let (a1, a2) = (-2.0 * p.re, p.norm_sqr());
-            let g = (1.0 + a1 + a2) / 4.0; // unit gain at z = 1 with the zeros (1 + z^-1)^2
-            sections.push([g, 2.0 * g, g, a1, a2]);
+        for p in mapped {
+            if p.im.abs() < 1e-12 {
+                let g = (1.0 - p.re) / 2.0;
+                sections.push([g, g, 0.0, -p.re, 0.0]);
+            } else if p.im > 0.0 {
+                let (a1, a2) = (-2.0 * p.re, p.norm_sqr());
+                let g = (1.0 + a1 + a2) / 4.0; // unit gain at z = 1 with the zeros (1 + z^-1)^2
+                sections.push([g, 2.0 * g, g, a1, a2]);
+            }
         }
-        if order % 2 == 1 {
-            let p = poles[order / 2].re; // the real pole
-            let g = (1.0 - p) / 2.0;
-            sections.push([g, g, 0.0, -p, 0.0]);
-        }
-        Ok(Butterworth { sections, fs_hz })
+        Iir { sections, fs_hz }
     }
 
     /// The order.
@@ -834,7 +874,7 @@ mod tests {
 }
 
 #[cfg(test)]
-mod rz_and_butterworth_tests {
+mod rz_and_iir_tests {
     use super::*;
 
     #[test]
@@ -854,7 +894,7 @@ mod rz_and_butterworth_tests {
     #[test]
     fn the_butterworth_response_is_maximally_flat_and_three_db_at_the_cut_off() {
         for order in [1, 2, 5, 8] {
-            let h = Butterworth::lowpass(order, 2e3, 10e3).unwrap();
+            let h = Iir::butterworth(order, 2e3, 10e3).unwrap();
             assert_eq!(h.order(), order);
             assert!((h.gain_at(0.0) - 1.0).abs() < 1e-12);
             assert!((h.gain_at(2e3) - 0.5f64.sqrt()).abs() < 1e-9, "order {order}");
@@ -871,7 +911,39 @@ mod rz_and_butterworth_tests {
             let amp = y[2000..].iter().map(|v| v.norm()).sum::<f64>() / 2000.0;
             assert!((amp - 0.5f64.sqrt()).abs() < 1e-6, "order {order}: {amp}");
         }
-        assert!(Butterworth::lowpass(0, 1e3, 10e3).is_err());
-        assert!(Butterworth::lowpass(2, 5e3, 10e3).is_err());
+        assert!(Iir::butterworth(0, 1e3, 10e3).is_err());
+        assert!(Iir::butterworth(2, 5e3, 10e3).is_err());
+    }
+
+    #[test]
+    fn the_bessel_response_is_three_db_at_the_cut_off_and_follows_its_prototype() {
+        // order 2: θ₂(s) = s² + 3s + 3, |H(jω)|² = 9 / ((3 - ω²)² + 9ω²), ω₃ = 1.3617
+        let (fc, fs) = (1e3, 20e3);
+        let h = Iir::bessel(2, fc, fs).unwrap();
+        let w3 = ((45f64.sqrt() - 3.0) / 2.0).sqrt();
+        assert!((w3 - 1.3617).abs() < 1e-4);
+        let wc = (PI * fc / fs).tan();
+        for f in [0.25e3, 0.5e3, 1e3, 2e3, 4e3] {
+            let w = (PI * f / fs).tan() / wc * w3; // the prototype frequency of the prewarped design
+            let want = 3.0 / ((3.0 - w * w).powi(2) + 9.0 * w * w).sqrt();
+            assert!((h.gain_at(f) - want).abs() < 1e-9, "at {f}: {} vs {want}", h.gain_at(f));
+        }
+        for order in [1, 3, 5, 8] {
+            let h = Iir::bessel(order, fc, fs).unwrap();
+            assert_eq!(h.order(), order);
+            assert!((h.gain_at(0.0) - 1.0).abs() < 1e-12);
+            assert!((h.gain_at(fc) - 0.5f64.sqrt()).abs() < 1e-6, "order {order}: {}", h.gain_at(fc));
+            // monotonic, and gentler than the Butterworth of the same order in the stop band
+            let g: Vec<f64> = (1..40).map(|k| h.gain_at(k as f64 * 100.0)).collect();
+            assert!(g.windows(2).all(|w| w[1] <= w[0] + 1e-12));
+            let b = Iir::butterworth(order, fc, fs).unwrap();
+            assert!(order == 1 || h.gain_at(3.0 * fc) > b.gain_at(3.0 * fc), "order {order}");
+            // the step response of a Bessel filter barely overshoots (about 1 % at order 5,
+            // against 13 % for the Butterworth)
+            let step: Vec<C64> = vec![C64::new(1.0, 0.0); 400];
+            let peak = h.filter(&step).iter().map(|v| v.re).fold(0.0, f64::max);
+            let peak_b = b.filter(&step).iter().map(|v| v.re).fold(0.0, f64::max);
+            assert!(peak < 1.02 && (order < 3 || peak_b > 1.05), "order {order}: {peak} against {peak_b}");
+        }
     }
 }
