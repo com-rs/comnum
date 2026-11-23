@@ -8,6 +8,13 @@ and follow [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- The Manakov-PMD channel validated on Bütler, Häger, Pfister, Liga & Alvarado, *J.
+  Lightw. Technol.* 39(4), 2021, Fig. 8 (`validation/tests/fiber/butler2021.rs`, the card
+  `butler2021_fig8`): 32 GBd over 10 × 100 km with 1000 PMD sections of 0.1 km per span,
+  the dual-polarisation DBP of the PMD-free link within 0.12 dB of the figure, the DBP
+  followed by the ideal lumped PMD equaliser within 0.16 dB up to 8 dBm (the 2.5 dB the
+  PMD costs an unaware DBP), the exact inverse of the sections within 0.08 dB of the
+  PMD-free DBP. No change of the results.
 - The receivers of an intensity-modulated PAM link, for the short-reach IM-DD chains:
   - `comnum_math::viterbi`, the Viterbi algorithm over any finite-state machine
     (add–compare–select, trace-back) and the soft-output Viterbi algorithm of Hagenauer &

@@ -1,0 +1,51 @@
+id: butler2021_fig8
+title: Effective SNR of dual-polarisation DBP with and without PMD on 10 x 100 km at 32 GBd
+literature: butler2021
+evidence: [curve, closed_form, claim]
+source:
+  kind: paper
+  reference: "R. M. Bütler, C. Häger, H. D. Pfister, G. Liga, A. Alvarado, Model-based machine learning for joint digital backpropagation and PMD compensation, J. Lightw. Technol. 39(4), 949-959, 2021"
+  locator: "Fig. 8 (the markers DBP w/o PMD and DBP w/ PMD, read from the vector paths), Table II, Sec. V-B; the dashed linear transmission as the closed form of eq. (17) with the ASE of Table II"
+  file: fiber/2021_butler_ldbp-pmd-joint-dbp-pmd-compensation_jlt_arxiv.pdf
+description: >
+  The link of Table II (Gaussian symbols, 1 % root-raised cosine, 32 GBd, 6 samples per
+  symbol, 10 x 100 km, beta2 -21.67 ps^2/km, gamma 1.2 /W/km, NF 4.5 dB, PMD 0.2 ps/sqrt(km)
+  in 1000 sections of 0.1 km per span) through ManakovPmd, 4096 symbols per polarisation,
+  4 PMD realisations; at 2 samples per symbol the dual-polarisation DBP with 1000 steps
+  per span (Dbp::run_dual) on the link without PMD, the same DBP followed by the ideal
+  lumped equaliser J(w)^-1 (equalize_pmd) on the link with PMD, and the exact inverse of
+  the sections (backpropagate_with_pmd); matched filter, effective SNR of eq. (17).
+run:
+  test: validation/tests/fiber/butler2021.rs::fig_8_dbp_with_and_without_pmd
+tier: campaign
+duration: "8.5 min on an Apple M6 (release)"
+tolerance: {atol: 0.4}
+why: >
+  the markers are read from the vector paths (0.02 dB); the paper averages 40 PMD
+  realisations where the test averages 4, with a standard deviation of 0.64 dB per
+  realisation at the peak of the lumped receiver (Table IV): 0.3 dB of standard error on
+  its mean; 4096 symbols leave 0.05 dB of estimation error on the SNR; at 9 dBm the
+  spread of the lumped receiver over the realisations is 2.4 dB (1.2 dB of standard
+  error on the mean of 4), hence the wider tolerance of that case
+findings:
+  - "DBP without PMD within 0.12 dB of the markers from 4 to 10 dBm (26.83 against 26.72 at 8 dBm, the peak 27.32 at 9 dBm against 27.36 at 9.5 dBm)"
+  - "DBP with PMD then the ideal lumped equaliser within 0.16 dB from 4 to 8 dBm (24.33 against 24.17 at 8 dBm, the peak 24.46 at 7 dBm against 24.44) and 0.41 dB at 9 dBm; the loss to the PMD-free DBP at 8 dBm, 2.50 dB, against 2.55 dB on the figure; the standard deviation over the realisations grows from 0.2 dB at 4 dBm to 1.7 dB at 8 dBm and 2.9 dB at 10 dBm (the paper's band: 0.64 dB at the peak of its learned receiver)"
+  - "the exact inverse of the sections (the DBP with the PMD known) is within 0.08 dB of the PMD-free DBP at every power: the distributed compensation recovers the whole loss, as the paper's learned model nearly does (0.30 dB below its PMD-free LDBP)"
+  - "without Kerr effect the link gives the closed form of the ASE to 0.03 dB"
+  - "with the dispersion of the test mistakenly 1000 times too large (a unit slip in the conversion of beta2 to D, found by this comparison) the PMD cost the DBP nothing: the comparison is sensitive to the dispersion-PMD-Kerr interplay"
+cases:
+  - {inputs: {receiver: linear_closed_form, power_dbm: 8.0}, expected: 27.4, tolerance: {atol: 0.1}, note: "P/2 per polarisation over 10 EDFAs of 20 dB gain and 4.5 dB NF in 32 GHz"}
+  - {inputs: {receiver: linear, power_dbm: 8.0}, expected: 27.4, tolerance: {atol: 0.15}, note: "the simulated link without Kerr effect against the closed form"}
+  - {inputs: {receiver: dbp_no_pmd, power_dbm: 4.0}, expected: 23.26}
+  - {inputs: {receiver: dbp_no_pmd, power_dbm: 5.0}, expected: 24.21}
+  - {inputs: {receiver: dbp_no_pmd, power_dbm: 6.0}, expected: 25.16}
+  - {inputs: {receiver: dbp_no_pmd, power_dbm: 7.0}, expected: 26.01}
+  - {inputs: {receiver: dbp_no_pmd, power_dbm: 8.0}, expected: 26.72}
+  - {inputs: {receiver: dbp_no_pmd, power_dbm: 9.0}, expected: 27.25}
+  - {inputs: {receiver: dbp_no_pmd, power_dbm: 10.0}, expected: 27.21}
+  - {inputs: {receiver: dbp_pmd_lumped, power_dbm: 4.0}, expected: 23.03}
+  - {inputs: {receiver: dbp_pmd_lumped, power_dbm: 5.0}, expected: 23.75}
+  - {inputs: {receiver: dbp_pmd_lumped, power_dbm: 6.0}, expected: 24.26}
+  - {inputs: {receiver: dbp_pmd_lumped, power_dbm: 7.0}, expected: 24.44}
+  - {inputs: {receiver: dbp_pmd_lumped, power_dbm: 8.0}, expected: 24.17}
+  - {inputs: {receiver: dbp_pmd_lumped, power_dbm: 9.0}, expected: 23.35, tolerance: {atol: 0.8}, note: "1.2 dB of standard error on the mean of 4 realisations"}

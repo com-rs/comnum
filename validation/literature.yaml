@@ -1043,6 +1043,15 @@
     - "the last term of eq. (10) of the preprint, B_i^2/(9 alpha^2), is not dimensionless; left out, the SPM is 0.6 dB below the integral of one channel and the total follows the dashed curves within 0.12 dB without ISRS; placed outside the bracket it lifts the curves by 0.6 dB"
     - "eq. (3) with Table I gives delta rho = 6.5 dB at 0 dBm/ch. and 10.4 dB at 2 dBm/ch.; the text says 6.3 and 10.3 dB"
     - "the dashed and solid curves of Fig. 4a end at -5 THz 0.3 to 0.4 dB above the simulation markers of the edge channel (0.03 at 2 dBm), and drop by 0.5 dB from -4.8 THz where the markers drop by 1.1 dB; in Fig. 5 the closed-form curves start at -4.8 THz"
+- id: butler2021
+  area: Optical
+  ref: "R. M. Bütler, C. Häger, H. D. Pfister, G. Liga, A. Alvarado, Model-based machine learning for joint digital backpropagation and PMD compensation, JLT 39(4), 2021"
+  module: comnum_channel::optical::pmd, comnum_dsp::compensation::dbp
+  tested: "Fig. 8 (Gaussian symbols at 32 GBd over 10 x 100 km, PMD 0.2 ps/sqrt(km) in 1000 sections of 0.1 km per span, Table II): the dual-polarisation DBP with 1000 steps per span on the link without PMD within 0.12 dB of the markers from 4 to 10 dBm; on the link with PMD, the same DBP followed by the ideal lumped PMD equaliser J(w)^-1 within 0.16 dB from 4 to 8 dBm and 0.41 dB at 9 dBm (4 realisations against 40, a spread of 2.4 dB there), the loss to the PMD-free DBP 2.50 against 2.55 dB at 8 dBm; the exact inverse of the sections within 0.08 dB of the PMD-free DBP; the linear transmission as the closed form of the ASE (27.42 against 27.39 dB at 8 dBm)"
+  tests:
+    - validation/tests/fiber/butler2021.rs::fig_8_dbp_with_and_without_pmd
+  badge: green
+  not_covered: "the learned receivers (LDBP, LDBP-PMD: Figs. 5-7, 9-11, Table IV), the contribution of the paper: comnum has no trained blocks; the standard deviation bands of Fig. 8 (4 realisations)"
 - id: marcuse1997
   area: Optical
   ref: "D. Marcuse, C. R. Menyuk, P. K. A. Wai, Application of the Manakov-PMD equation, JLT 15(9), 1997"
@@ -1050,7 +1059,7 @@
   tested: "-"
   tests: []
   badge: red
-  not_covered: "the coarse-step PMD model is checked for unitarity only"
+  not_covered: "the coarse-step PMD model is checked for unitarity only; the interplay of PMD and Kerr effect it describes is compared with Bütler et al. 2021 (butler2021), not with this paper's own figures"
 - id: gordon2000
   area: Optical
   ref: "J. P. Gordon, H. Kogelnik, PMD fundamentals: Polarization mode dispersion in optical fibers, Proc. Natl. Acad. Sci. 97(9), 4541-4550, 2000"
