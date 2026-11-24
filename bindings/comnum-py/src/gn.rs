@@ -8,8 +8,9 @@ use comnum::channel::optical::gn::{
     FormatMoments, GnModel, WdmSpectrum, closed_form_nli_psd, coherence_factor, isrs_closed_form_eta,
     isrs_closed_form_terms,
 };
-use comnum::channel::optical::raman::DesignObjective;
+use comnum::channel::optical::raman::{DesignObjective, RamanGain};
 use comnum::math::dbm2w;
+use comnum::spec::blocks::BuildContext;
 use numpy::IntoPyArray;
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
@@ -447,6 +448,117 @@ fn raman_design<'py>(
     Ok(out)
 }
 
+/// The Raman gain spectrum of a ``gain`` mapping, as :func:`raman_profile`,
+/// :func:`gn_model`, ``Ssfm`` and ``ManakovSsfm`` use it.
+///
+/// **The model.** The power that a wave at :math:`f_s` gains from a wave at
+/// :math:`f_p > f_s` along the fibre is :math:`dP_s/dz = C\, P_p P_s`, with the gain
+/// efficiency (1/(W·km))
+///
+/// .. math::
+///
+///     C(f_s, f_p) = \frac{g_R(f_p - f_s)}{A_{\mathrm{eff}}}\, \frac{f_p}{f_{\mathrm{ref}}},
+///
+/// :math:`g_R(\Delta f)` the Raman gain coefficient of silica (m/W) measured with a pump
+/// at :math:`f_{\mathrm{ref}}`, a function of the frequency offset alone that peaks
+/// near 13 THz, and :math:`A_{\mathrm{eff}}` the effective area [1]_. The library stores
+/// the product :math:`g_R A_{\mathrm{eff}}` (m/W), independent of the fibre, and divides
+/// by the area of the fibre simulated. The factor :math:`f_p/f_{\mathrm{ref}}` is the
+/// growth of the gain coefficient with the pump frequency ([1]_, Sec. 8.1); GNPy up to
+/// version 2.4 left it out (``pump_scaling: False``).
+///
+/// The ``gain`` mapping gives :math:`g_R A_{\mathrm{eff}}` in one of two ways:
+///
+/// - a measured table, ``{"offsets_thz": [...], "gain_m_w": [...], "reference_thz":
+///   f}``, linear between its points and zero beyond the last; absent, the table of
+///   standard single-mode fibre of GNPy (90 points from 0 to 42 THz, a pump at 1454 nm,
+///   peak :math:`3.33 \cdot 10^{-14}` m/W at 13 THz, :math:`C = 0.42` 1/(W·km) at 80 µm²);
+/// - a response-function model of silica, ``{"model": name, "reference_thz": f,
+///   "peak_m_w": p}``. The gain spectrum is the imaginary part of the Fourier
+///   transform of the Raman response function :math:`h_R(t)` of the glass [1]_, and
+///   each model gives :math:`h_R(t)` in closed form, so that the shape of the spectrum
+///   follows from a few parameters; its scale, ``peak_m_w``, comes from a measurement
+///   (the peak of the table above by default). ``"blow_wood"`` is one damped oscillator,
+///   :math:`h_a(t) \propto e^{-t/\tau_2} \sin(t/\tau_1)`, :math:`\tau_1 = 12.2` fs,
+///   :math:`\tau_2 = 32` fs [2]_: a Lorentzian with the peak of silica, but a quarter
+///   of the measured gain at 3 THz. ``"lin_agrawal"`` adds the boson peak of the glass,
+///   :math:`(1 - f_b) h_a(t) + f_b (2\tau_b - t) e^{-t/\tau_b} / \tau_b^2`, :math:`f_b =
+///   0.21`, :math:`\tau_b = 96` fs [3]_: the shoulder below 5 THz is recovered.
+///   ``"hollenbeck_cantrell"`` sums thirteen vibrational modes of the Si–O–Si structure,
+///   :math:`\sum_i A_i e^{-\gamma_i t - \Gamma_i^2 t^2/4} \sin(\omega_i t)` [4]_: the whole
+///   spectrum to 40 THz. Against the table of standard single-mode fibre the rms errors
+///   relative to the peak are 9, 3 and 3 % over 0–10 THz and 13, 13 and 4 % over 0–42 THz.
+///
+/// Args:
+///     offsets_hz (array_like): frequency offsets :math:`f_p - f_s` (Hz, non-negative).
+///     gain (dict, optional): the ``gain`` mapping above; None: standard single-mode fibre.
+///     aeff_um2 (float): effective area for the efficiency (µm², 80 by default).
+///
+/// Returns:
+///     dict: ``gain_m_w`` (:math:`g_R A_{\mathrm{eff}}` at the offsets, m/W),
+///     ``efficiency_w_km`` (:math:`g_R A_{\mathrm{eff}} / A_{\mathrm{eff}}` for ``aeff_um2``,
+///     1/(W·km), at the reference pump), ``peak_hz`` and ``peak_m_w`` (the maximum of the
+///     spectrum) and ``reference_hz``.
+///
+/// Raises:
+///     ValueError: for an invalid mapping (a model with a table, an unknown model, a
+///         negative gain) or a non-positive area.
+///
+/// References:
+///     .. [1] G. P. Agrawal, *Nonlinear Fiber Optics*, 5th ed., Academic Press, 2013,
+///        Sec. 2.3.2 and 8.1.
+///     .. [2] K. J. Blow and D. Wood, "Theoretical description of transient stimulated
+///        Raman scattering in optical fibers," *IEEE J. Quantum Electron.* 25(12),
+///        2665–2673, 1989.
+///     .. [3] Q. Lin and G. P. Agrawal, "Raman response function for silica fibers," *Opt.
+///        Lett.* 31(21), 3086–3088, 2006.
+///     .. [4] D. Hollenbeck and C. D. Cantrell, "Multiple-vibrational-mode model for
+///        fiber-optic Raman gain spectrum and response function," *J. Opt. Soc. Am. B*
+///        19(12), 2886–2892, 2002.
+///
+/// Examples:
+///     >>> import comnum
+///     >>> g = comnum.raman_gain([13.2e12])
+///     >>> round(float(g["efficiency_w_km"][0]), 2)
+///     0.41
+///     >>> h = comnum.raman_gain([13.2e12], {"model": "hollenbeck_cantrell", "reference_thz": 206.18})
+///     >>> abs(float(h["peak_m_w"]) - float(g["peak_m_w"])) < 1e-28
+///     True
+#[pyfunction]
+#[pyo3(signature = (offsets_hz, gain = None, aeff_um2 = 80.0))]
+fn raman_gain<'py>(
+    py: Python<'py>,
+    offsets_hz: &Bound<'py, PyAny>,
+    gain: Option<&Bound<'py, PyAny>>,
+    aeff_um2: f64,
+) -> PyResult<Bound<'py, PyDict>> {
+    if aeff_um2.is_nan() || aeff_um2 <= 0.0 {
+        return Err(PyValueError::new_err(format!("aeff_um2 must be positive, got {aeff_um2}")));
+    }
+    let offsets = fvec(offsets_hz)?;
+    let g = match gain {
+        None => RamanGain::ssmf(),
+        Some(v) if v.is_none() => RamanGain::ssmf(),
+        Some(v) => {
+            let j = json(py, v)?;
+            BuildContext::default()
+                .raman(Some(&serde_json::json!({ "raman": { "gain": j } })))
+                .py()?
+                .ok_or_else(|| PyValueError::new_err("gain must be a mapping"))?
+                .gain
+        }
+    };
+    let values: Vec<f64> = offsets.iter().map(|df| g.at(*df)).collect();
+    let (peak_hz, peak_m_w) = g.peak();
+    let out = PyDict::new(py);
+    out.set_item("efficiency_w_km", farr(py, values.iter().map(|v| v / (aeff_um2 * 1e-12) * 1e3).collect()))?;
+    out.set_item("gain_m_w", farr(py, values))?;
+    out.set_item("peak_hz", peak_hz)?;
+    out.set_item("peak_m_w", peak_m_w)?;
+    out.set_item("reference_hz", g.reference_hz())?;
+    Ok(out)
+}
+
 /// The closed form of the NLI power spectral density at the centre of
 /// ``n_channels`` rectangular channels spaced by ``spacing`` (incoherent accumulation).
 ///
@@ -606,6 +718,7 @@ pub(crate) fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
         wrap_pyfunction!(gn_closed_form, m)?,
         wrap_pyfunction!(gn_isrs_closed_form, m)?,
         wrap_pyfunction!(raman_design, m)?,
+        wrap_pyfunction!(raman_gain, m)?,
         wrap_pyfunction!(raman_profile, m)?,
         wrap_pyfunction!(format_moments, m)?,
         wrap_pyfunction!(wdm_grid, m)?,

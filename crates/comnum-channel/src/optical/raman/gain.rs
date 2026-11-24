@@ -523,6 +523,11 @@ impl RamanGain {
         }
     }
 
+    /// The frequency of the pump of the measurement or of the peak, $f_{\mathrm{ref}}$ (Hz).
+    pub fn reference_hz(&self) -> f64 {
+        self.reference_hz
+    }
+
     /// The offset of the peak of the gain (Hz) and its $g_{R} A_{\mathrm{eff}}$ (m/W).
     pub fn peak(&self) -> (f64, f64) {
         self.offsets_hz

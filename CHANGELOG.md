@@ -16,10 +16,15 @@ and follow [Semantic Versioning](https://semver.org/).
   through `from_response`, the imaginary part of the Fourier transform of any response
   $h_R(t)$ on a grid of 0.1 THz, scaled to a given peak. The `gain` mapping of `raman`
   takes `model` and `peak_m_w` in place of the table (the table and `reference_thz`
-  unchanged), in the specifications and in Python. Checked against the Lorentzian of
-  Blow & Wood in closed form (2e-3 of the peak) and the table of standard single-mode
-  fibre: rms errors relative to the peak of 9, 3 and 3 % over 0–10 THz and 13, 13 and
-  4 % over 0–42 THz. No change of the results.
+  unchanged), in the specifications and in Python, and `comnum.raman_gain` returns the
+  spectrum of any mapping. The user guide ("Setting the Raman gain") and the gallery
+  example `plot_12_raman_gain_models` compare the measurement, the three models and the
+  two straight lines of the closed forms on a pumped span (within 0.5 dB over the C band,
+  up to 3.4 dB at its edge on the fall at 15 THz) and on an unpumped C+L comb (a tilt of
+  2.56 dB measured, 1.91 with one oscillator, 2.39 with the boson peak). Checked against
+  the Lorentzian of Blow & Wood in closed form (2e-3 of the peak) and the table of
+  standard single-mode fibre: rms errors relative to the peak of 9, 3 and 3 % over 0–10
+  THz and 13, 13 and 4 % over 0–42 THz. No change of the results.
 - The closed forms of unipolar M-PAM on the direct-detection receiver of Agrawal's
   Gaussian model (`comnum_hardware::optical::direct_detection`): `pam_levels_w` (the
   levels of an average power and an extinction ratio), `oma_w` (the optical modulation

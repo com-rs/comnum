@@ -408,6 +408,7 @@ Fibre and amplification
    Edfa
    raman_profile
    raman_design
+   raman_gain
    gn_model
    gn_closed_form
    gn_isrs_closed_form

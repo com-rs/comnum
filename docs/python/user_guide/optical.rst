@@ -524,37 +524,67 @@ standard single-mode fibre (``gain`` replaces it), scaled with the pump frequenc
 conserve the number of photons. The spontaneous Raman scattering of the pumps adds a
 noise whose thermal factor grows near the pumps.
 
-The ``gain`` mapping is a measured table (``offsets_thz``, ``gain_m_w``, the gain
-coefficient times the effective area :math:`g_R A_{\mathrm{eff}}` of a pump at
-``reference_thz``) or one of the response-function models of silica, ``model``, scaled to
-``peak_m_w`` (the peak of standard single-mode fibre, :math:`3.33 \cdot 10^{-14}` m/W, by
-default). The gain spectrum is the imaginary part of the Fourier transform of the Raman
-response function :math:`h_R(t)` [#agrawal]_, and each model gives :math:`h_R(t)` in
-closed form: ``blow_wood``, one damped oscillator (:math:`\tau_1 = 12.2` fs,
-:math:`\tau_2 = 32` fs) [#blow]_, a Lorentzian that keeps the peak at 13 THz but misses
-the shoulder below 8 THz; ``lin_agrawal``, the same oscillator plus the boson peak of the
-glass (:math:`f_b = 0.21`, :math:`\tau_b = 96` fs) [#lin]_, which recovers the shoulder
-(the band that drives the inter-channel Raman scattering of a C+L comb); and
-``hollenbeck_cantrell``, thirteen vibrational modes with Gaussian and Lorentzian widths
-[#hollenbeck]_, which follows the whole measured spectrum to 40 THz. Against the table of
-standard single-mode fibre, the rms errors relative to the peak are 9 %, 3 % and 3 % over
-0–10 THz and 13 %, 13 % and 4 % over 0–42 THz.
+Setting the Raman gain
+~~~~~~~~~~~~~~~~~~~~~~
+
+Every Raman computation (:func:`comnum.raman_profile`, :func:`comnum.raman_design`,
+:func:`comnum.gn_model`, the ``raman`` mapping of ``Ssfm`` and ``ManakovSsfm``) rests on
+one function of the fibre, the Raman gain spectrum :math:`g_R(\Delta f)`: the power that
+a wave at :math:`f_s` gains from a wave at :math:`f_p` above it grows as
+:math:`C\, P_p P_s` per kilometre, with the efficiency
+
+.. math::
+
+   C(f_s, f_p) = \frac{g_R(f_p - f_s)}{A_{\mathrm{eff}}}\, \frac{f_p}{f_{\mathrm{ref}}},
+
+:math:`g_R` measured with a pump at :math:`f_{\mathrm{ref}}` and a function of the offset
+alone, :math:`A_{\mathrm{eff}}` the effective area of the fibre (``aeff_um2``, 80 by
+default), and :math:`f_p/f_{\mathrm{ref}}` the growth of the gain coefficient with the
+pump frequency [#agrawal]_. The library stores the product :math:`g_R A_{\mathrm{eff}}`
+(m/W), which does not depend on the fibre, and divides by the area of the fibre
+simulated. The ``gain`` key of the ``raman`` mapping sets it, in three ways:
+
+- **absent**: the measured table of standard single-mode fibre of GNPy, 90 points from 0
+  to 42 THz for a pump at 1454 nm, peak :math:`3.33 \cdot 10^{-14}` m/W near 13 THz
+  (:math:`C = 0.42` 1/(W·km) at 80 µm²);
+- **a table**, ``{"offsets_thz": [...], "gain_m_w": [...], "reference_thz": f}``: your
+  own measurement, or a shape of the literature (the constant slope of the ISRS closed
+  forms, a triangle), linear between the points and zero beyond the last;
+- **a model**, ``{"model": name, "reference_thz": f, "peak_m_w": p}``: the gain spectrum
+  is the imaginary part of the Fourier transform of the Raman response function
+  :math:`h_R(t)` of the glass [#agrawal]_, and each model gives :math:`h_R(t)` in closed
+  form, so that a few parameters fix the shape; the scale ``peak_m_w`` comes from a
+  measurement (the peak of the table above by default). ``blow_wood``, one damped
+  oscillator (:math:`\tau_1 = 12.2` fs, :math:`\tau_2 = 32` fs) [#blow]_, is a
+  Lorentzian that keeps the peak but a quarter of the gain at 3 THz; ``lin_agrawal`` adds
+  the boson peak of the glass (:math:`f_b = 0.21`, :math:`\tau_b = 96` fs) [#lin]_ and
+  recovers the shoulder below 8 THz, the band that drives the inter-channel Raman
+  scattering of a C+L comb; ``hollenbeck_cantrell``, thirteen vibrational modes with
+  Gaussian and Lorentzian widths [#hollenbeck]_, follows the whole measured spectrum,
+  including the steep fall at 15 THz. Against the table of standard single-mode fibre
+  the rms errors relative to the peak are 9, 3 and 3 % over 0–10 THz and 13, 13 and 4 %
+  over 0–42 THz.
+
+``pump_scaling: False`` drops the factor :math:`f_p/f_{\mathrm{ref}}` (the coupling of
+GNPy up to version 2.4, which the papers computed with those versions assume).
+:func:`comnum.raman_gain` returns the spectrum of any mapping, as the simulators see it:
 
 .. code-block:: python
 
+   g = comnum.raman_gain(np.arange(0, 42e12, 1e11),
+                         {"model": "hollenbeck_cantrell", "reference_thz": 206.18})
+   g["efficiency_w_km"], g["peak_hz"]          # C_R at 80 µm², the peak near 13 THz
+
    raman = {"pumps": [{"wavelength_nm": 1450, "power_mw": 400, "direction": "counter"}],
             "gain": {"model": "hollenbeck_cantrell", "reference_thz": 206.18}}
+   comnum.raman_profile(comnum.FiberParams(span_km=100), comnum.wdm_grid(40, 100e9),
+                        -3.0, raman)["on_off_gain_db"]
 
-.. [#agrawal] G. P. Agrawal, *Nonlinear Fiber Optics*, 5th ed., Academic Press, 2013,
-   Sec. 2.3.2 and 8.3.1.
-.. [#blow] K. J. Blow and D. Wood, "Theoretical description of transient stimulated
-   Raman scattering in optical fibers," *IEEE J. Quantum Electron.* 25(12), 2665–2673,
-   1989.
-.. [#lin] Q. Lin and G. P. Agrawal, "Raman response function for silica fibers," *Opt.
-   Lett.* 31(21), 3086–3088, 2006.
-.. [#hollenbeck] D. Hollenbeck and C. D. Cantrell, "Multiple-vibrational-mode model for
-   fiber-optic Raman gain spectrum and response function," *J. Opt. Soc. Am. B* 19(12),
-   2886–2892, 2002.
+:doc:`../auto_examples/optical/plot_12_raman_gain_models` draws the measurement and the
+five shapes, their errors, and what the choice changes: a few tenths of a decibel on the
+on-off gain of a pumped span except at the edge of the band on the fall at 15 THz (up to
+3.4 dB), and 0.2 to 0.7 dB on the tilt of an unpumped C+L comb, where the shoulder, not
+the peak, is what counts.
 
 ``Ssfm`` and ``Manakov`` apply the profile of every span to the field as a gain that
 depends on the position and on the frequency. The profile is solved for slices of the
@@ -568,6 +598,17 @@ the link function of the GN model, the generalised GN model of Semrau, Killey & 
 the Manakov simulation against it, without and with a counter-pump, within 0.21 dB.
 ``tests/oracle/test_gnpy_oracle.py`` checks the profiles, the noise and the NLI against GNPy.
 The digital back-propagation keeps the profile of lumped amplifiers.
+
+.. [#agrawal] G. P. Agrawal, *Nonlinear Fiber Optics*, 5th ed., Academic Press, 2013,
+   Sec. 2.3.2 and 8.3.1.
+.. [#blow] K. J. Blow and D. Wood, "Theoretical description of transient stimulated
+   Raman scattering in optical fibers," *IEEE J. Quantum Electron.* 25(12), 2665–2673,
+   1989.
+.. [#lin] Q. Lin and G. P. Agrawal, "Raman response function for silica fibers," *Opt.
+   Lett.* 31(21), 3086–3088, 2006.
+.. [#hollenbeck] D. Hollenbeck and C. D. Cantrell, "Multiple-vibrational-mode model for
+   fiber-optic Raman gain spectrum and response function," *J. Opt. Soc. Am. B* 19(12),
+   2886–2892, 2002.
 
 Polarisation demultiplexing
 ---------------------------
