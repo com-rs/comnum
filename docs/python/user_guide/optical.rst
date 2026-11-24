@@ -114,9 +114,17 @@ and the back-propagation of :class:`comnum.ManakovSsfm` and ``Ssfm`` undoes it.
 solver: on the same field the two implementations agree to :math:`10^{-8}`
 (``tests/oracle/test_oracle.py``).
 
+:class:`comnum.ManakovPmd` adds the polarisation-mode dispersion to the Manakov
+solver as a concatenation of birefringent sections (the coarse-step model of Marcuse,
+Menyuk & Wai 1997), with the exact inverse of the sections and the lumped ideal PMD
+equaliser as the bounds of a receiver that knows the PMD; it is compared with the DBP
+curves of Bütler et al. (2021), see below.
+
 The solvers are compared with exact soliton solutions, the theory of cross-phase
-modulation, the step accuracy of Musetti et al., the GN and EGN models, a published
-system (Häger & Pfister 2021) and other simulators: :doc:`fibre_validation` gathers
+modulation, the step accuracy of Musetti et al., the GN and EGN models, published
+systems (Häger & Pfister 2021, Bütler et al. 2021), the PMD statistics of Gordon &
+Kogelnik and other simulators: :doc:`fibre_validation` states what each of the three
+models solves and neglects, which one to use for which question, and gathers
 these comparisons, their results, what they changed in the defaults (with the accuracy
 and time of the defaults against OptiCommPy's scheme) and what is not validated.
 

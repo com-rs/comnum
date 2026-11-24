@@ -2,12 +2,14 @@ Fibre propagation: how the split step is validated
 ==================================================
 
 The fibre solvers of comnum, :class:`comnum.Ssfm` (one polarisation),
-:class:`comnum.ManakovSsfm` (two) and the digital back-propagation built on them, are
-compared with about fifteen references. Each one checks something the others cannot,
+:class:`comnum.ManakovSsfm` (two, without birefringence), :class:`comnum.ManakovPmd`
+(two, with polarisation-mode dispersion) and the digital back-propagation built on
+them, are compared with about twenty references. Each one checks something the others cannot,
 and none is enough on its own. An exact solution proves the scheme but has no
 dispersion map or WDM comb; a perturbation model covers a WDM link but neglects the
 higher orders; another simulator shows that two codes agree, not that either is right.
-This page orders them by what they check, from the numerical scheme up to a published
+This page states first what each of the three models solves and neglects, then
+orders the references by what they check, from the numerical scheme up to a published
 system, and states what each found.
 
 .. list-table:: Which reference answers which question
@@ -34,9 +36,18 @@ system, and states what each found.
      - GN model (Poggiolini 2012), EGN model (Carena et al. 2014), the simulations of
        Dar et al. (2014)
      - within 0.08 to 0.25 dB (GN); 9.95 and 5.78 dB against 10 and 6 dB (Dar)
+   * - Is the third-order dispersion right?
+     - Agrawal (2002), eq. (2.4.22)
+     - r.m.s. broadening to :math:`10^{-5}`
    * - Does a published system come out the same?
      - Häger & Pfister (2021), Fig. 5
      - within 0.20 dB
+   * - Are the PMD statistics right?
+     - Gordon & Kogelnik (2000), eqs. (5.18)–(5.31)
+     - PMD vectors to :math:`3 \cdot 10^{-10}`; random walk, ratio 0.996
+   * - Do PMD and the Kerr effect interact as published?
+     - Bütler, Häger, Pfister, Liga & Alvarado (2021), Fig. 8
+     - within 0.16 dB to 8 dBm; the loss to PMD 2.50 against 2.55 dB
    * - Does another simulator give the same field?
      - OptiCommPy 0.11, Sionna, GNPy 3.0
      - to :math:`10^{-8}` (OptiCommPy, its own options); NMSE :math:`5 \cdot 10^{-26}`
@@ -46,6 +57,99 @@ Each result below comes from a validation card of ``validation/cards/``, which h
 the published values, the tolerance and its reason, and the findings; ``just card
 <id>`` reruns one. The :doc:`maturity <../maturity>` page grades the module, and
 ``docs/LITERATURE.md`` lists every reference with its badge.
+
+The three models
+----------------
+
+The same split-step engine (``comnum_math::nlse``, ``docs/adr/0014-one-fibre-propagator.md``)
+solves three equations. In every one :math:`\alpha` is the loss, :math:`\beta_2` and
+:math:`\beta_3` the dispersion, :math:`\gamma` the Kerr coefficient, and the field is
+the envelope of Agrawal's convention (:math:`E = A\,e^{-i\omega_0 t}`). Lumped
+amplifiers with their ASE, or Raman gain, come between or within the spans.
+
+**One polarisation**, :class:`comnum.Ssfm`, the nonlinear Schrödinger equation:
+
+.. math::
+
+   \frac{\partial A}{\partial z} = -\frac{\alpha}{2} A
+   - j \frac{\beta_2}{2} \frac{\partial^2 A}{\partial t^2}
+   + \frac{\beta_3}{6} \frac{\partial^3 A}{\partial t^3}
+   + j \gamma |A|^2 A.
+
+It assumes that the field keeps one state of polarisation along the fibre, or that the
+metric does not see the other one. It neglects the Raman and Brillouin scattering within
+the signal band, self-steepening, and any birefringence.
+
+**Two polarisations without birefringence**, :class:`comnum.ManakovSsfm`, the Manakov
+equation:
+
+.. math::
+
+   \frac{\partial A_{x,y}}{\partial z} = -\frac{\alpha}{2} A_{x,y}
+   - j \frac{\beta_2}{2} \frac{\partial^2 A_{x,y}}{\partial t^2}
+   + \frac{\beta_3}{6} \frac{\partial^3 A_{x,y}}{\partial t^3}
+   + j \frac{8}{9} \gamma \left(|A_x|^2 + |A_y|^2\right) A_{x,y}.
+
+The factor :math:`8/9` is the average of the Kerr effect over a birefringence that
+varies much faster than the nonlinear and dispersion lengths (Wai & Menyuk, *J.
+Lightw. Technol.* 14(2), 1996; Marcuse, Menyuk & Wai, *J. Lightw. Technol.* 15(9),
+1997). The equation keeps the coupling of the two polarisations through their total
+power and neglects what the averaging removed: the differential group delay between
+the principal states (the PMD), its random rotation along the link, and the
+polarisation-dependent loss. The two polarisations therefore stay aligned with the
+launch over the whole link.
+
+**Two polarisations with PMD**, :class:`comnum.ManakovPmd`, the Manakov-PMD equation
+of Marcuse, Menyuk & Wai (1997) in its coarse-step form:
+
+.. math::
+
+   \frac{\partial \mathbf{u}}{\partial z} = \left(-\frac{\alpha}{2}
+   - \beta_1(z) \frac{\partial}{\partial t}
+   - j \frac{\beta_2}{2} \frac{\partial^2}{\partial t^2}\right) \mathbf{u}
+   + j \frac{8}{9} \gamma \|\mathbf{u}\|^2 \mathbf{u},
+   \qquad \mathbf{u} = (u_x, u_y),
+
+where the link is a concatenation of sections of length :math:`L_c`, each a rotation
+drawn uniformly on SU(2) followed by a differential group delay
+:math:`\tau_k \sim \mathcal{N}(\bar\tau, (\bar\tau/5)^2)`, with
+:math:`\bar\tau = \tau \sqrt{3\pi L_c / 8} / \sqrt{1 + 1/25}` so that the mean DGD
+of the link is :math:`\tau \sqrt{L}` for a PMD parameter :math:`\tau` (ps/√km). The
+DGD of a section is spread along its linear half steps and the rotation applied at its
+start; ``coarse_steps=True`` applies the whole section as one asymmetric step instead
+(the original scheme of the paper). The model assumes :math:`L_c` much longer than the
+beat length and much shorter than the nonlinear length, so that the fast birefringence
+is averaged (the :math:`8/9` again) and only its slow residual remains as a random
+walk. It neglects the polarisation-dependent loss and the nonlinear polarisation
+rotation beyond the Manakov average. Its cost is that of the Manakov solver with steps
+cut at the section boundaries: with :math:`L_c = 0.1` km, 1000 sections per 100 km
+span.
+
+.. list-table:: Which model for which question
+   :header-rows: 1
+   :widths: 30 40 30
+
+   * - Question
+     - Model
+     - Checked against
+   * - the Kerr effect of one channel or a WDM comb on one polarisation; the scheme
+       itself; DBP studies with a scalar receiver
+     - :class:`comnum.Ssfm`
+     - sections 1 to 5, 7
+   * - dual-polarisation links, the NLI of the GN and EGN models, DBP with a
+       dual-polarisation receiver that does not see PMD
+     - :class:`comnum.ManakovSsfm`
+     - sections 1, 2, 4, 7
+   * - the interplay of PMD and the Kerr effect, PMD equalisers, DBP under PMD, the
+       penalty of a receiver that ignores the PMD
+     - :class:`comnum.ManakovPmd`
+     - section 6
+
+What the three share is checked once: the scheme on exact solutions (section 1), the
+cross-phase modulation (section 2), the step rule (section 3). What distinguishes them
+is checked where it shows: the :math:`8/9` and the coupling of the polarisations on
+the exact Manakov solitons (section 1) and on the GN model of a dual-polarisation link
+(section 4), the PMD on its statistics and on a published DBP curve (section 6).
 
 1. The scheme: exact solutions
 ------------------------------
@@ -111,7 +215,7 @@ continuous probe and a sinusoidally modulated pump.
        those steps and needs 0.02 km to reach 0.1 % (card ``chiang1996_eq9``)
 
 This comparison is the origin of the default nonlinear step of the Manakov solver
-(section 7).
+(section 8).
 
 3. The step: how small is small enough
 --------------------------------------
@@ -360,7 +464,63 @@ The settings that reproduce this figure, Fig. 8 of the same paper and the other
 published curves, with the commands that run them, are gathered in
 :doc:`optical`, "Reproducing published curves".
 
-6. Other simulators
+6. The polarisations: PMD and the Kerr effect
+---------------------------------------------
+
+The PMD model is checked in two steps: its statistics without the Kerr effect, against
+the closed forms of J. P. Gordon & H. Kogelnik (*Proc. Natl. Acad. Sci.* 97(9), 2000),
+then its interplay with the Kerr effect, against the digital back-propagation curves of
+R. M. Bütler, C. Häger, H. D. Pfister, G. Liga & A. Alvarado (*J. Lightw. Technol.*
+39(4), 2021, Fig. 8), where a receiver that ignores the PMD loses a measured number of
+decibels.
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 30 40
+
+   * - Reference
+     - Setup
+     - Result
+   * - Gordon & Kogelnik (2000), eqs. (5.18)–(5.19), (5.29)–(5.31)
+     - the lumped Jones matrix of a link of sections, its PMD vector and the mean
+       signal delay of a pulse
+     - the PMD vectors to :math:`3 \cdot 10^{-10}`; the mean delay of eq. (5.29) in
+       the time domain to :math:`3 \cdot 10^{-10}` of the DGD, :math:`\pm` DGD/2 at
+       the principal states within 0.015 % (card ``gordon2000_pmd``)
+   * - Gordon & Kogelnik (2000), the random walk of the PMD vectors
+     - uniformly rotated sections
+     - :math:`E|\vec\tau|^2 = \sum_k E\,\tau_k^2`, ratio 0.996 (card
+       ``gordon2000_random_walk``); a :math:`1 + 1/25` of the Gaussian spread of the
+       section DGDs inflated the mean DGD by 2 % until it was divided out
+   * - Bütler et al. (2021), Fig. 8, Table II
+     - Gaussian symbols at 32 GBd, 1 % roll-off, 10 × 100 km (α 0.2 dB/km, β₂ −21.67
+       ps²/km, γ 1.2 /W/km, NF 4.5 dB), PMD 0.2 ps/√km in sections of 0.1 km, DBP
+       with 1000 steps per span, 4 realisations against 40, the effective SNR of eq.
+       (17)
+     - without PMD, the dual-polarisation DBP within 0.12 dB of the markers from 4
+       to 10 dBm (26.83 against 26.72 dB at 8 dBm); with PMD, the same DBP followed
+       by the ideal lumped equaliser :math:`J(\omega)^{-1}` within 0.16 dB to 8 dBm
+       (24.33 against 24.17) and 0.41 dB at 9 dBm, where the four realisations
+       spread over 2.4 dB; the loss to the PMD-free DBP 2.50 against 2.55 dB; the
+       exact inverse of the sections (``backpropagate_with_pmd``) within 0.08 dB of
+       the PMD-free DBP, where the paper's learned LDBP-PMD comes within 0.30 dB; the
+       link without Kerr effect 27.42 dB against the closed form of the ASE, 27.39 dB
+       (card ``butler2021_fig8``, campaign of 8.5 min)
+
+What the comparison with Bütler et al. establishes is bounded by what both sides
+share. Their forward model is the same coarse-step Manakov-PMD equation with the same
+section length and PMD parameter, so the agreement shows that comnum's sections,
+rotations, DGD statistics, ASE and the two back-propagations are those of the paper,
+and that the penalty of a DBP that ignores the PMD is reproduced to a tenth of a
+decibel. It does not show that the coarse-step model is a measured fibre: that
+question belongs to Marcuse, Menyuk & Wai (1997), whose own figures are not
+reproduced. Two lessons came out of the comparison and are recorded in the card: a
+β₂ to D conversion off by :math:`10^3` left the dispersion at 16 990 ps/nm/km and
+removed the whole PMD penalty (the test now asserts the conversion), and a band-limited
+decimation to one sample per symbol drops the excess band of a 1 % raised cosine and
+caps the effective SNR at 31 dB (the test decimates in the time domain).
+
+7. Other simulators
 -------------------
 
 Agreeing with another simulator shows that both solve the same equation the same way;
@@ -419,7 +579,7 @@ outputs are recorded once (``tests/oracle/``), so the tools are not dependencies
        underestimates the NLI of counter-pumped spans by about 1 dB (Euler
        integration)
 
-7. What the comparisons changed
+8. What the comparisons changed
 -------------------------------
 
 The solvers were first a transcription of OptiCommPy, equal to it to :math:`10^{-8}`.
@@ -473,7 +633,7 @@ Times on an Apple M6 for the whole specification, measured with 8 samples per sy
 OptiCommPy's solver remains available with
 ``Manakov(step_rule="nonlinear_phase", nonlinear_step="trapezoidal")``.
 
-8. What is not validated
+9. What is not validated
 ------------------------
 
 - **Fig. 2 of Sinkin et al.**: the error is 1.5 to 2 times the figure's at every point,
@@ -483,12 +643,19 @@ OptiCommPy's solver remains available with
 - **Ultra-wideband links** (P. Serena et al., *J. Lightw. Technol.* 38(5), 2020):
   the accuracy of the split step and the inter-channel Raman scattering at
   C+L-band widths are not compared (badge red).
-- **PMD**: the coarse-step model of D. Marcuse, C. R. Menyuk & P. K. A. Wai (*J.
-  Lightw. Technol.* 15(9), 1997) is checked for unitarity only (badge red).
-- **Third-order dispersion** is checked against its cubic phase and the textbook
-  value of :math:`\beta_3` (``nlse/mod.rs::the_third_order_dispersion_adds_a_cubic_phase``,
+- **PMD against its own paper**: the coarse-step model of D. Marcuse, C. R. Menyuk &
+  P. K. A. Wai (*J. Lightw. Technol.* 15(9), 1997) is compared through Gordon &
+  Kogelnik and Bütler et al. (section 6), not with the figures of that paper (badge
+  red); the DGD distribution of a finite number of sections (Karlsson 2001) and the
+  second-order PMD are not compared; the standard-deviation bands of Bütler's Fig. 8
+  need 40 realisations, the card runs 4; the polarisation-dependent loss is not
+  modelled.
+- **Third-order dispersion** is checked on the linear fibre against the r.m.s.
+  broadening of Agrawal (2002), eq. (2.4.22) (card ``agrawal2002_eq2_4_22``), and on
+  the solvers against its cubic phase and the textbook value of :math:`\beta_3`
+  (``nlse/mod.rs::the_third_order_dispersion_adds_a_cubic_phase``,
   ``fiber.rs::beta3_from_the_slope_is_the_textbook_value``), not against a published
-  propagation.
+  nonlinear propagation.
 - **Lumped amplification in Dar et al.**: only the distributed case is simulated; the
   lumped cases are compared through the EGN model, which lies 0.07 to 0.72 dB below
   the paper.
@@ -503,7 +670,7 @@ Rerunning the comparisons
 -------------------------
 
 Every card reruns from the root of the repository; the campaigns take from a few
-seconds to 8 minutes in release mode:
+seconds to 9 minutes in release mode:
 
 .. code-block:: bash
 
@@ -515,7 +682,11 @@ seconds to 8 minutes in release mode:
    just card dar2014_ssfm
    just card dar2014_manakov
    just card hager2021_fig5
+   just card agrawal2002_eq2_4_22
+   just card gordon2000_pmd
+   just card gordon2000_random_walk
+   just card butler2021_fig8
 
 The comparisons with OptiCommPy and GNPy are part of the Python tests
 (``python -m pytest tests/oracle/test_oracle.py tests/oracle/test_gnpy_oracle.py``), and the
-benchmark of section 6 reruns with ``python benchmarks/libraries/s5_ssfm.py``.
+benchmark of section 7 reruns with ``python benchmarks/libraries/s5_ssfm.py``.
