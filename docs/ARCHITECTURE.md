@@ -551,7 +551,7 @@ code).
 since it tabulates the phase response. The enums that will gain variants are
 `#[non_exhaustive]` (`comnum_core::Error`, `equalizer::Algorithm`, `filter::{PulseShape,
 LowPass}`, `ConstellationKind`, `CheckRule`, `DetectorKind`, `multipath::Profile`,
-`cdl::{Profile, Pattern}`, `fiber::{Amplification, Precision}`, `PhaseOrigin`,
+`cdl::{Profile, Pattern}`, `fiber::{Amplification, Precision}`, `raman::RamanResponse`, `PhaseOrigin`,
 `StepRule`, `PilotPattern`, `FrequencyInterpolation`, `ce_ofdm::{Unwrap, Receiver}`,
 `papr::{Partition, Companding}`, `cpm::FrequencyPulse`, `fbmc::Prototype`,
 `css::Waveform`, `message_passing::Prior`, `atmospheric::Turbulence`, the DVB-S2

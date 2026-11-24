@@ -147,7 +147,7 @@ mod gain;
 mod solver;
 
 pub use design::{DESIGN_MAX_ITERATIONS, DESIGN_TOLERANCE, DesignObjective, PumpDesign};
-pub use gain::RamanGain;
+pub use gain::{RamanGain, RamanResponse};
 
 use super::edfa::ase_density;
 use super::fiber::{Amplification, FiberParams};
@@ -1074,9 +1074,7 @@ mod literature {
         let fiber = FiberParams { span_km: 100.0, alpha_db_km: 0.2, ..FiberParams::default() };
         let c_r = 0.028; // 1/(W km THz), the fibre of the paper's Sec. IV
         let aeff_um2 = 80.0;
-        // g_R A_eff (m/W) = C_r Δf A_eff / 1e3, linear up to 14 THz, zero beyond
-        let gain =
-            RamanGain::new(vec![0.0, 14e12], vec![0.0, c_r * 14.0 * aeff_um2 * 1e-12 / 1e3], fiber.fc_hz).unwrap();
+        let gain = RamanGain::linear(c_r, aeff_um2, fiber.fc_hz).unwrap();
         let raman = Raman { gain, aeff_um2, isrs: true, ..Raman::default() };
         let (n, spacing) = (101usize, 100e9);
         let l_eff = fiber.effective_length_km();
@@ -1106,9 +1104,7 @@ mod literature {
     fn semrau_2018_eq_8_gap_db(fc_hz: f64, p_tot_dbm: f64) -> f64 {
         let fiber = FiberParams { span_km: 100.0, alpha_db_km: 0.2, fc_hz, ..FiberParams::default() };
         let (c_r, aeff_um2) = (0.028, 80.0); // 1/(W km THz), the fibre of the paper's Sec. IV
-        let gain = RamanGain::new(vec![0.0, 14e12], vec![0.0, c_r * 14.0 * aeff_um2 * 1e-12 / 1e3], fc_hz)
-            .unwrap()
-            .with_pump_scaling(false);
+        let gain = RamanGain::linear(c_r, aeff_um2, fc_hz).unwrap().with_pump_scaling(false);
         let raman = Raman { gain, aeff_um2, isrs: true, ..Raman::default() };
         let (n, spacing) = (101usize, 100e9);
         let p_tot = comnum_math::dbm2w(p_tot_dbm);

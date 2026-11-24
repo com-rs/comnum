@@ -10,7 +10,6 @@ use comnum::channel::optical::gn::{
 };
 use comnum::channel::optical::raman::{DesignObjective, RamanGain};
 use comnum::math::dbm2w;
-use comnum::spec::blocks::BuildContext;
 use numpy::IntoPyArray;
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
@@ -272,15 +271,10 @@ fn format_moments(
 ///         own against frequency; that of ``fiber`` by default), ``temperature_k`` (300),
 ///         ``isrs`` (True:
 ///         the channels also exchange power), ``step_km`` (0.1), ``slice_hz`` (25e9, for
-///         the split-step solvers), ``gain`` (the gain spectrum :math:`g_R A_{\mathrm{eff}}`
-///         of a pump at ``reference_thz``: a measured table ``{offsets_thz, gain_m_w}`` or a
-///         response-function model of silica, ``model`` one of ``"blow_wood"`` (one damped
-///         oscillator, the peak only), ``"lin_agrawal"`` (plus the boson peak below 5 THz)
-///         and ``"hollenbeck_cantrell"`` (13 vibrational modes, the whole spectrum to 40
-///         THz), scaled to ``peak_m_w`` (the peak of standard single-mode fibre, 3.33e-14,
-///         by default); the efficiency scales with the frequency of the pump unless
-///         ``pump_scaling`` is False; the measured spectrum of standard single-mode fibre
-///         by default) and ``rayleigh_db_km`` (the Rayleigh
+///         the split-step solvers), ``gain`` (the Raman gain spectrum: a measured table, a
+///         response-function model of silica or the linear gain of the closed forms, see
+///         :func:`raman_gain`; the measured spectrum of standard single-mode fibre
+///         ///         by default) and ``rayleigh_db_km`` (the Rayleigh
 ///         backscatter coupling of the signals, :math:`10 \log_{10}` of its value in 1/km,
 ///         about -40 for transmission fibre;
 ///         absent: no double Rayleigh backscattering).
@@ -449,7 +443,7 @@ fn raman_design<'py>(
 }
 
 /// The Raman gain spectrum of a ``gain`` mapping, as :func:`raman_profile`,
-/// :func:`gn_model`, ``Ssfm`` and ``ManakovSsfm`` use it.
+/// :func:`raman_design`, :func:`gn_model`, ``Ssfm`` and ``ManakovSsfm`` use it.
 ///
 /// **The model.** The power that a wave at :math:`f_s` gains from a wave at
 /// :math:`f_p > f_s` along the fibre is :math:`dP_s/dz = C\, P_p P_s`, with the gain
@@ -463,46 +457,43 @@ fn raman_design<'py>(
 /// at :math:`f_{\mathrm{ref}}`, a function of the frequency offset alone that peaks
 /// near 13 THz, and :math:`A_{\mathrm{eff}}` the effective area [1]_. The library stores
 /// the product :math:`g_R A_{\mathrm{eff}}` (m/W), independent of the fibre, and divides
-/// by the area of the fibre simulated. The factor :math:`f_p/f_{\mathrm{ref}}` is the
-/// growth of the gain coefficient with the pump frequency ([1]_, Sec. 8.1); GNPy up to
-/// version 2.4 left it out (``pump_scaling: False``).
+/// by the area of the fibre simulated; the factor :math:`f_p/f_{\mathrm{ref}}` is the
+/// growth of the gain coefficient with the pump frequency ([1]_, Sec. 8.1; GNPy up to
+/// version 2.4 left it out, ``pump_scaling: False``).
 ///
-/// The ``gain`` mapping gives :math:`g_R A_{\mathrm{eff}}` in one of two ways:
+/// The ``gain`` mapping gives :math:`g_R A_{\mathrm{eff}}` in one of three ways, with
+/// ``reference_thz`` the pump of the measurement or of the peak in every case:
 ///
-/// - a measured table, ``{"offsets_thz": [...], "gain_m_w": [...], "reference_thz":
-///   f}``, linear between its points and zero beyond the last; absent, the table of
-///   standard single-mode fibre of GNPy (90 points from 0 to 42 THz, a pump at 1454 nm,
-///   peak :math:`3.33 \cdot 10^{-14}` m/W at 13 THz, :math:`C = 0.42` 1/(W·km) at 80 µm²);
-/// - a response-function model of silica, ``{"model": name, "reference_thz": f,
-///   "peak_m_w": p}``. The gain spectrum is the imaginary part of the Fourier
-///   transform of the Raman response function :math:`h_R(t)` of the glass [1]_, and
-///   each model gives :math:`h_R(t)` in closed form, so that the shape of the spectrum
-///   follows from a few parameters; its scale, ``peak_m_w``, comes from a measurement
-///   (the peak of the table above by default). ``"blow_wood"`` is one damped oscillator,
-///   :math:`h_a(t) \propto e^{-t/\tau_2} \sin(t/\tau_1)`, :math:`\tau_1 = 12.2` fs,
-///   :math:`\tau_2 = 32` fs [2]_: a Lorentzian with the peak of silica, but a quarter
-///   of the measured gain at 3 THz. ``"lin_agrawal"`` adds the boson peak of the glass,
-///   :math:`(1 - f_b) h_a(t) + f_b (2\tau_b - t) e^{-t/\tau_b} / \tau_b^2`, :math:`f_b =
-///   0.21`, :math:`\tau_b = 96` fs [3]_: the shoulder below 5 THz is recovered.
-///   ``"hollenbeck_cantrell"`` sums thirteen vibrational modes of the Si–O–Si structure,
-///   :math:`\sum_i A_i e^{-\gamma_i t - \Gamma_i^2 t^2/4} \sin(\omega_i t)` [4]_: the whole
-///   spectrum to 40 THz. Against the table of standard single-mode fibre the rms errors
-///   relative to the peak are 9, 3 and 3 % over 0–10 THz and 13, 13 and 4 % over 0–42 THz.
+/// - a measured table, ``{"offsets_thz": [...], "gain_m_w": [...]}``, linear between its
+///   points and zero beyond the last; absent, the table of standard single-mode fibre of
+///   GNPy (90 points from 0 to 42 THz, a pump at 1454 nm, peak :math:`3.33 \cdot
+///   10^{-14}` m/W near 13 THz, :math:`C = 0.42` 1/(W·km) at 80 µm²);
+/// - a response-function model of silica, ``{"model": name, "peak_m_w": p}``: the gain
+///   spectrum is the imaginary part of the Fourier transform of the Raman response
+///   function :math:`h_R(t)` of the glass [1]_, which each model gives in closed form, so
+///   that a few parameters fix the shape and ``peak_m_w`` (the peak of the table above by
+///   default) the scale. ``"blow_wood"`` is one damped oscillator [2]_ (the peak only),
+///   ``"lin_agrawal"`` adds the boson peak of the glass [3]_ (the shoulder below 5 THz),
+///   ``"hollenbeck_cantrell"`` sums thirteen vibrational modes [4]_ (the whole spectrum
+///   to 40 THz); the user guide, "Setting the Raman gain", compares them;
+/// - the linear gain of the ISRS closed forms, ``{"slope_w_km_thz": s}``: :math:`g_R
+///   A_{\mathrm{eff}} = s\, \Delta f\, A_{\mathrm{eff}}` up to 14 THz, zero beyond
+///   (Semrau, Killey & Bayvel 2018; 0.028 for standard fibre), for ``aeff_um2``.
 ///
 /// Args:
 ///     offsets_hz (array_like): frequency offsets :math:`f_p - f_s` (Hz, non-negative).
 ///     gain (dict, optional): the ``gain`` mapping above; None: standard single-mode fibre.
-///     aeff_um2 (float): effective area for the efficiency (µm², 80 by default).
+///     aeff_um2 (float): effective area of the fibre (µm², 80 by default), for the
+///         efficiency and for the slope.
 ///
 /// Returns:
 ///     dict: ``gain_m_w`` (:math:`g_R A_{\mathrm{eff}}` at the offsets, m/W),
-///     ``efficiency_w_km`` (:math:`g_R A_{\mathrm{eff}} / A_{\mathrm{eff}}` for ``aeff_um2``,
-///     1/(W·km), at the reference pump), ``peak_hz`` and ``peak_m_w`` (the maximum of the
-///     spectrum) and ``reference_hz``.
+///     ``efficiency_w_km`` (:math:`C` at the reference pump for ``aeff_um2``, 1/(W·km)),
+///     ``peak_hz`` and ``peak_m_w`` (the maximum of the spectrum) and ``reference_hz``.
 ///
 /// Raises:
-///     ValueError: for an invalid mapping (a model with a table, an unknown model, a
-///         negative gain) or a non-positive area.
+///     ValueError: for an invalid mapping (none or two of the three ways, an unknown
+///         model, a negative gain) or a non-positive area.
 ///
 /// References:
 ///     .. [1] G. P. Agrawal, *Nonlinear Fiber Optics*, 5th ed., Academic Press, 2013,
@@ -536,26 +527,26 @@ fn raman_gain<'py>(
         return Err(PyValueError::new_err(format!("aeff_um2 must be positive, got {aeff_um2}")));
     }
     let offsets = fvec(offsets_hz)?;
-    let g = match gain {
+    let g = match gain.filter(|v| !v.is_none()) {
         None => RamanGain::ssmf(),
-        Some(v) if v.is_none() => RamanGain::ssmf(),
         Some(v) => {
             let j = json(py, v)?;
-            BuildContext::default()
-                .raman(Some(&serde_json::json!({ "raman": { "gain": j } })))
-                .py()?
-                .ok_or_else(|| PyValueError::new_err("gain must be a mapping"))?
-                .gain
+            crate::fiber::raman_json(serde_json::json!({ "aeff_um2": aeff_um2, "gain": j }))?
+                .map_or_else(RamanGain::ssmf, |r| r.gain)
         }
     };
-    let values: Vec<f64> = offsets.iter().map(|df| g.at(*df)).collect();
-    let (peak_hz, peak_m_w) = g.peak();
+    // at the reference pump the scaling of the efficiency with the pump frequency is 1
+    let f_ref = g.reference_hz();
     let out = PyDict::new(py);
-    out.set_item("efficiency_w_km", farr(py, values.iter().map(|v| v / (aeff_um2 * 1e-12) * 1e3).collect()))?;
-    out.set_item("gain_m_w", farr(py, values))?;
+    out.set_item("gain_m_w", farr(py, offsets.iter().map(|df| g.at(*df)).collect()))?;
+    out.set_item(
+        "efficiency_w_km",
+        farr(py, offsets.iter().map(|df| g.efficiency(f_ref - df, f_ref, aeff_um2 * 1e-12)).collect()),
+    )?;
+    let (peak_hz, peak_m_w) = g.peak();
     out.set_item("peak_hz", peak_hz)?;
     out.set_item("peak_m_w", peak_m_w)?;
-    out.set_item("reference_hz", g.reference_hz())?;
+    out.set_item("reference_hz", f_ref)?;
     Ok(out)
 }
 

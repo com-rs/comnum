@@ -26,9 +26,9 @@ add the boson peak, :math:`f_b = 0.21` and :math:`\tau_b = 96` fs: the shoulder 
 recovered, the tail stays. Hollenbeck & Cantrell (2002) sum thirteen vibrational modes
 of the Si–O–Si structure, each with Gaussian and Lorentzian widths: the whole spectrum,
 including the fall at 15 THz and the bands beyond. The closed forms of the literature
-use simpler shapes still, here written as tables of the mapping: the constant slope of
-the ISRS GN model (0.028 1/(W·km·THz), Semrau, Killey & Bayvel 2018), good to 10 THz,
-and the triangle to the peak (Zirngibl 1998). Relative to the peak, the rms errors are
+use simpler shapes still: the constant slope of the ISRS GN model (0.028 1/(W·km·THz),
+Semrau, Killey & Bayvel 2018, ``slope_w_km_thz`` of the mapping), good to 10 THz, and
+the triangle to the peak (Zirngibl 1998), a three-point table. Relative to the peak, the rms errors are
 9.5, 2.7, 3.2, 4.1 and 5.3 % over 0–10 THz and 13.3, 13.1, 3.8, 18.3 and 15.5 % over the
 whole spectrum.
 
@@ -59,61 +59,33 @@ import numpy as np
 import comnum
 from comnum.plot import BLUE, GREEN, GREY, INK, ORANGE
 
-F_REF_THZ = 206.18  # the pump of the measurement of standard single-mode fibre, 1454 nm
 AEFF_UM2 = 80.0
 
 # %%
 # The measured spectrum and the models, as gain efficiencies at 80 µm². The measured
-# table is that of GNPy (standard single-mode fibre, 90 points to 42 THz); every model is
-# scaled to its peak. The two straight lines are the assumptions of the closed forms,
-# written as tables of the ``gain`` mapping: the constant slope of the ISRS GN model
-# (0.028 1/(W·km·THz), Semrau, Killey & Bayvel 2018) to 14 THz, and the triangle that
-# rises to the peak and falls to zero at 15 THz (Zirngibl 1998).
+# table is that of GNPy (standard single-mode fibre, 90 points to 42 THz), for a pump at
+# ``reference_hz``; every model is scaled to its peak. The two straight lines are the
+# assumptions of the closed forms: the constant slope of the ISRS GN model (0.028
+# 1/(W·km·THz), Semrau, Killey & Bayvel 2018) to 14 THz, ``slope_w_km_thz`` of the
+# mapping, and the triangle that rises to the peak and falls to zero at 15 THz (Zirngibl
+# 1998), a three-point table.
 offsets = np.arange(0.0, 42.01, 0.1) * 1e12
 measured = comnum.raman_gain(offsets)
-peak = measured["peak_m_w"]
-slope_m_w = 0.028 * AEFF_UM2 * 1e-12 / 1e3  # 1/(W·km·THz) at 80 µm² -> m/W per THz
+f_ref_thz, peak = measured["reference_hz"] / 1e12, measured["peak_m_w"]
 models = {
-    "blow_wood": (
-        "Blow & Wood 1989: one oscillator",
-        {"model": "blow_wood", "reference_thz": F_REF_THZ},
-        ORANGE,
-        "-",
-    ),
-    "lin_agrawal": (
-        "Lin & Agrawal 2006: + boson peak",
-        {"model": "lin_agrawal", "reference_thz": F_REF_THZ},
-        GREEN,
-        "-",
-    ),
-    "hollenbeck_cantrell": (
-        "Hollenbeck & Cantrell 2002: 13 modes",
-        {"model": "hollenbeck_cantrell", "reference_thz": F_REF_THZ},
-        BLUE,
-        "-",
-    ),
-    "slope": (
-        "constant slope 0.028 /(W·km·THz)",
-        {
-            "offsets_thz": [0.0, 14.0],
-            "gain_m_w": [0.0, 14.0 * slope_m_w],
-            "reference_thz": F_REF_THZ,
-        },
-        GREY,
-        "--",
-    ),
-    "triangle": (
-        "triangle to the peak",
-        {
-            "offsets_thz": [0.0, 13.25, 15.0],
-            "gain_m_w": [0.0, peak, 0.0],
-            "reference_thz": F_REF_THZ,
-        },
+    "Blow & Wood 1989: one oscillator": ({"model": "blow_wood"}, ORANGE, "-"),
+    "Lin & Agrawal 2006: + boson peak": ({"model": "lin_agrawal"}, GREEN, "-"),
+    "Hollenbeck & Cantrell 2002: 13 modes": ({"model": "hollenbeck_cantrell"}, BLUE, "-"),
+    "constant slope 0.028 /(W·km·THz)": ({"slope_w_km_thz": 0.028}, GREY, "--"),
+    "triangle to the peak": (
+        {"offsets_thz": [0.0, 13.25, 15.0], "gain_m_w": [0.0, peak, 0.0]},
         GREY,
         ":",
     ),
 }
-spectra = {k: comnum.raman_gain(offsets, m[1]) for k, m in models.items()}
+for mapping, _, _ in models.values():
+    mapping["reference_thz"] = f_ref_thz
+spectra = {label: comnum.raman_gain(offsets, m) for label, (m, _, _) in models.items()}
 
 fig, ax = plt.subplots(figsize=(7.5, 4.2))
 ax.plot(
@@ -123,8 +95,8 @@ ax.plot(
     linewidth=2.2,
     label="measured, standard single-mode fibre",
 )
-for k, (label, _, color, style) in models.items():
-    ax.plot(offsets / 1e12, spectra[k]["efficiency_w_km"], style, color=color, label=label)
+for label, (_, color, style) in models.items():
+    ax.plot(offsets / 1e12, spectra[label]["efficiency_w_km"], style, color=color, label=label)
 ax.set(xlabel="frequency offset pump − signal (THz)", ylabel="gain efficiency $C_R$ (1/(W·km)) at 80 µm²",
        xlim=(0, 42), ylim=(0, 0.5), title="The Raman gain of silica and its models")  # fmt: skip
 ax.legend(fontsize="small")
@@ -134,52 +106,54 @@ fig.tight_layout()
 # How far each model is from the measurement: the rms and the largest error relative
 # to the peak, over the band of the inter-channel Raman scattering (0–10 THz) and over
 # the whole spectrum.
-rows = []
-for k, (label, _, _, _) in models.items():
-    e = (spectra[k]["gain_m_w"] - measured["gain_m_w"]) / peak
-    low = offsets <= 10e12
-    rows.append(
-        (
-            label,
-            np.sqrt(np.mean(e[low] ** 2)),
-            np.abs(e[low]).max(),
-            np.sqrt(np.mean(e**2)),
-            np.abs(e).max(),
-        )
-    )
+low = offsets <= 10e12
 print(
     f"{'model':36s} {'rms 0-10':>9s} {'max 0-10':>9s} {'rms 0-42':>9s} {'max 0-42':>9s}  (relative to the peak)"
 )
-for label, r10, m10, r42, m42 in rows:
-    print(f"{label:36s} {r10:9.3f} {m10:9.3f} {r42:9.3f} {m42:9.3f}")
+for label, s in spectra.items():
+    e = (s["gain_m_w"] - measured["gain_m_w"]) / peak
+    rms, biggest = (lambda x: (np.sqrt(np.mean(x**2)), np.abs(x).max())), None
+    print(
+        f"{label:36s} {rms(e[low])[0]:9.3f} {rms(e[low])[1]:9.3f} {rms(e)[0]:9.3f} {rms(e)[1]:9.3f}"
+    )
+
+
+def compare(fiber, freqs, power_dbm, pumps, key, reference_label, metric, title, xlabel, ylabel):
+    """The quantity ``key`` of :func:`comnum.raman_profile` with the measured spectrum and
+    with every model, drawn against ``freqs``; the reference is labelled by
+    ``reference_label(curve)``, every model by ``metric(curve, reference)``."""
+    raman = {"pumps": pumps, "step_km": 0.5}
+    ref = comnum.raman_profile(fiber, list(freqs), power_dbm, raman)[key]
+    fig, ax = plt.subplots(figsize=(7.5, 4.2))
+    x = (fiber.fc_hz + np.asarray(freqs)) / 1e12
+    ax.plot(x, ref, color=INK, linewidth=2.2, label=f"measured spectrum: {reference_label(ref)}")
+    for label, (mapping, color, style) in models.items():
+        curve = comnum.raman_profile(fiber, list(freqs), power_dbm, {**raman, "gain": mapping})[key]
+        ax.plot(x, curve, style, color=color, label=f"{label}: {metric(curve, ref)}")
+    ax.set(xlabel=xlabel, ylabel=ylabel, title=title)
+    ax.legend(fontsize="small")
+    fig.tight_layout()
+
 
 # %%
 # What the choice changes in an amplifier: the on-off gain of a 100 km span counter-pumped
-# at 1450 nm (500 mW) over 40 channels of the C band. The signals sit 12 to 16 THz below
-# the pump, on the peak: every model that has the peak gives the amplifier within a few
-# tenths of a decibel, the straight lines do not.
-c_band = comnum.FiberParams(span_km=100, fc_hz=193.5e12)
-rel = list(np.arange(-20, 20) * 100e9 + 50e9)
-wavelengths = 299_792_458.0 / (193.5e12 + np.array(rel)) * 1e9
-pump = [{"wavelength_nm": 1450, "power_mw": 500, "direction": "counter"}]
-fig, ax = plt.subplots(figsize=(7.5, 4.2))
-errors = {}
-ref = comnum.raman_profile(c_band, rel, -3.0, {"pumps": pump, "step_km": 0.5})["on_off_gain_db"]
-ax.plot(wavelengths, ref, color=INK, linewidth=2.2, label=f"measured spectrum: {ref.mean():.1f} dB")
-for k, (label, gain, color, style) in models.items():
-    p = comnum.raman_profile(c_band, rel, -3.0, {"pumps": pump, "step_km": 0.5, "gain": gain})
-    errors[k] = np.abs(p["on_off_gain_db"] - ref).max()
-    ax.plot(
-        wavelengths,
-        p["on_off_gain_db"],
-        style,
-        color=color,
-        label=f"{label}: {errors[k]:.2f} dB off",
-    )
-ax.set(xlabel="wavelength (nm)", ylabel="on-off gain (dB)",
-       title="Counter-pump 1450 nm, 500 mW, 100 km, 40 × 100 GHz at −3 dBm")  # fmt: skip
-ax.legend(fontsize="small", loc="lower left")
-fig.tight_layout()
+# at 1450 nm (500 mW) over 40 channels of the C band. The signals sit 11 to 15 THz below
+# the pump, on the peak and on its steep edge: every model that has the peak gives the
+# amplifier within half a decibel over most of the band, and they diverge on the fall at
+# 15 THz; the straight lines do not have the peak region at all.
+compare(
+    comnum.FiberParams(span_km=100, fc_hz=193.5e12),
+    comnum.wdm_grid(40, 100e9),
+    -3.0,
+    [{"wavelength_nm": 1450, "power_mw": 500, "direction": "counter"}],
+    "on_off_gain_db",
+    lambda curve, ref: (
+        f"{np.abs(curve - ref).max():.2f} dB off" if curve is not ref else f"{ref.mean():.1f} dB"
+    ),
+    "Counter-pump 1450 nm, 500 mW, 100 km, 40 × 100 GHz at −3 dBm",
+    "frequency (THz)",
+    "on-off gain (dB)",
+)
 
 # %%
 # What the choice changes without pump: the tilt that the channels of a C+L comb give
@@ -187,31 +161,15 @@ fig.tight_layout()
 # 0 dBm, 10 THz wide: the offsets are 0 to 10 THz, where the models differ most. A single
 # oscillator has a quarter of the measured gain at 3 THz and underestimates the tilt;
 # the boson peak of Lin & Agrawal restores it.
-cl_band = comnum.FiberParams(span_km=100, fc_hz=190.0e12)
-rel_cl = list((np.arange(100) - 49.5) * 100e9)
-fig, ax = plt.subplots(figsize=(7.5, 4.2))
-ref = comnum.raman_profile(cl_band, rel_cl, 0.0, {"pumps": [], "step_km": 0.5})["net_gain_db"]
-tilts = {"measured": np.ptp(ref)}
-ax.plot(
-    (190e12 + np.array(rel_cl)) / 1e12,
-    ref,
-    color=INK,
-    linewidth=2.2,
-    label=f"measured spectrum: tilt {tilts['measured']:.2f} dB",
+compare(
+    comnum.FiberParams(span_km=100, fc_hz=190.0e12),
+    comnum.wdm_grid(100, 100e9),
+    0.0,
+    [],
+    "net_gain_db",
+    lambda ref: f"tilt {np.ptp(ref):.2f} dB",
+    lambda curve, ref: f"tilt {np.ptp(curve):.2f} dB",
+    "ISRS tilt of 100 × 0 dBm at 100 GHz, no pump",
+    "frequency (THz)",
+    "net gain after 100 km (dB)",
 )
-for k, (label, gain, color, style) in models.items():
-    p = comnum.raman_profile(cl_band, rel_cl, 0.0, {"pumps": [], "step_km": 0.5, "gain": gain})
-    tilts[k] = np.ptp(p["net_gain_db"])
-    ax.plot(
-        (190e12 + np.array(rel_cl)) / 1e12,
-        p["net_gain_db"],
-        style,
-        color=color,
-        label=f"{label}: tilt {tilts[k]:.2f} dB",
-    )
-ax.set(xlabel="frequency (THz)", ylabel="net gain after 100 km (dB)",
-       title="ISRS tilt of 100 × 0 dBm at 100 GHz, no pump")  # fmt: skip
-ax.legend(fontsize="small")
-fig.tight_layout()
-print("on-off gain, largest error (dB):", {k: round(float(v), 2) for k, v in errors.items()})
-print("ISRS tilt (dB):", {k: round(float(v), 2) for k, v in tilts.items()})

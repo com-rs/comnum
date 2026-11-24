@@ -9,14 +9,17 @@ and follow [Semantic Versioning](https://semver.org/).
 ### Added
 
 - The Raman response-function models of silica as gain spectra
-  (`comnum_channel::optical::raman::RamanGain`): `blow_wood` (one damped oscillator,
-  Blow & Wood, *IEEE J. Quantum Electron.* 25(12), 1989), `lin_agrawal` (plus the boson
-  peak, Lin & Agrawal, *Opt. Lett.* 31(21), 2006) and `hollenbeck_cantrell` (thirteen
-  vibrational modes, Hollenbeck & Cantrell, *J. Opt. Soc. Am. B* 19(12), 2002, Table 1),
-  through `from_response`, the imaginary part of the Fourier transform of any response
-  $h_R(t)$ on a grid of 0.1 THz, scaled to a given peak. The `gain` mapping of `raman`
-  takes `model` and `peak_m_w` in place of the table (the table and `reference_thz`
-  unchanged), in the specifications and in Python, and `comnum.raman_gain` returns the
+  (`comnum_channel::optical::raman::RamanResponse`, `RamanGain::model`): `BlowWood` (one
+  damped oscillator, Blow & Wood, *IEEE J. Quantum Electron.* 25(12), 1989), `LinAgrawal`
+  (plus the boson peak, Lin & Agrawal, *Opt. Lett.* 31(21), 2006) and
+  `HollenbeckCantrell` (thirteen vibrational modes, Hollenbeck & Cantrell, *J. Opt. Soc.
+  Am. B* 19(12), 2002, Table 1), through `RamanGain::from_response`, the imaginary part
+  of the Fourier transform of any response $h_R(t)$ on a grid of 0.1 THz, scaled to a
+  given peak (the shape of each model computed once per process); and
+  `RamanGain::linear`, the slope of the ISRS closed forms (Semrau, Killey & Bayvel 2018)
+  up to 14 THz, which the Semrau 2018 tests now call. The `gain` mapping of `raman`
+  takes `model` and `peak_m_w`, or `slope_w_km_thz`, in place of the table (the table and
+  `reference_thz` unchanged), in the specifications and in Python, and `comnum.raman_gain` returns the
   spectrum of any mapping. The user guide ("Setting the Raman gain") and the gallery
   example `plot_12_raman_gain_models` compare the measurement, the three models and the
   two straight lines of the closed forms on a pumped span (within 0.5 dB over the C band,

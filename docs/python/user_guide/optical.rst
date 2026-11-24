@@ -542,7 +542,8 @@ alone, :math:`A_{\mathrm{eff}}` the effective area of the fibre (``aeff_um2``, 8
 default), and :math:`f_p/f_{\mathrm{ref}}` the growth of the gain coefficient with the
 pump frequency [#agrawal]_. The library stores the product :math:`g_R A_{\mathrm{eff}}`
 (m/W), which does not depend on the fibre, and divides by the area of the fibre
-simulated. The ``gain`` key of the ``raman`` mapping sets it, in three ways:
+simulated. The ``gain`` key of the ``raman`` mapping sets it, in four ways, each with
+``reference_thz``, the pump of the measurement or of the peak:
 
 - **absent**: the measured table of standard single-mode fibre of GNPy, 90 points from 0
   to 42 THz for a pump at 1454 nm, peak :math:`3.33 \cdot 10^{-14}` m/W near 13 THz
@@ -563,7 +564,13 @@ simulated. The ``gain`` key of the ``raman`` mapping sets it, in three ways:
   Gaussian and Lorentzian widths [#hollenbeck]_, follows the whole measured spectrum,
   including the steep fall at 15 THz. Against the table of standard single-mode fibre
   the rms errors relative to the peak are 9, 3 and 3 % over 0–10 THz and 13, 13 and 4 %
-  over 0–42 THz.
+  over 0–42 THz;
+- **a slope**, ``{"slope_w_km_thz": 0.028}``: the linear gain of the closed forms of the
+  inter-channel Raman scattering (Semrau, Killey & Bayvel 2018), :math:`g_R
+  A_{\mathrm{eff}} = s\, \Delta f\, A_{\mathrm{eff}}` up to 14 THz and zero beyond, for the
+  ``aeff_um2`` of the mapping: the ``raman_slope_w_km_thz`` of :func:`comnum.gn_isrs_closed_form`
+  as a spectrum the solvers can use, within 4 % of the measurement below 10 THz and
+  nothing of the peak.
 
 ``pump_scaling: False`` drops the factor :math:`f_p/f_{\mathrm{ref}}` (the coupling of
 GNPy up to version 2.4, which the papers computed with those versions assume).
@@ -581,7 +588,7 @@ GNPy up to version 2.4, which the papers computed with those versions assume).
                         -3.0, raman)["on_off_gain_db"]
 
 :doc:`../auto_examples/optical/plot_12_raman_gain_models` draws the measurement and the
-five shapes, their errors, and what the choice changes: a few tenths of a decibel on the
+five shapes (the triangle of Zirngibl 1998 as a three-point table), their errors, and what the choice changes: a few tenths of a decibel on the
 on-off gain of a pumped span except at the edge of the band on the fall at 15 THz (up to
 3.4 dB), and 0.2 to 0.7 dB on the tilt of an unpumped C+L comb, where the shoulder, not
 the peak, is what counts.

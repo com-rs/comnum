@@ -4,8 +4,8 @@
 use super::Params;
 use super::schema::Mapping;
 use comnum_channel::optical::fiber::FiberParams;
-use comnum_channel::optical::raman::{Direction, Raman, RamanGain, RamanPump};
-use comnum_core::{Error, Result};
+use comnum_channel::optical::raman::{Direction, Raman, RamanGain, RamanPump, RamanResponse};
+use comnum_core::{Error, Result, ensure};
 use serde_json::{Map, Value as Json};
 use std::path::PathBuf;
 
@@ -176,48 +176,45 @@ fn spectrum_points(name: &str, frequency_thz: &[f64], values: &[f64]) -> Result<
 }
 
 block_params! {
-    /// The Raman gain curve of the `raman` mapping: a measured table, or a response-function
-    /// model of silica scaled to a peak.
+    /// The Raman gain curve of the `raman` mapping: a measured table, a response-function
+    /// model of silica scaled to a peak, or the linear gain of the ISRS closed forms.
     pub(crate) struct GainSpec {
-        model: Option<String> [absent "the table offsets_thz, gain_m_w"] one_of ["blow_wood", "lin_agrawal", "hollenbeck_cantrell"],
+        model: Option<String> [absent "the table or the slope"] one_of (RamanResponse::NAMES),
             "a Raman response model of silica: blow_wood (one damped oscillator, the peak only), lin_agrawal (plus the boson peak below 5 THz), hollenbeck_cantrell (13 modes, the whole spectrum to 40 THz)";
         peak_m_w: Option<f64> [absent "the peak of standard single-mode fibre, 3.33e-14"] "m/W" > 0,
             "the peak of a model, the gain coefficient times the effective area, g_R A_eff";
-        offsets_thz: Option<Vec<f64>> [absent "model"] "THz", "frequency offsets of a measured curve";
-        gain_m_w: Option<Vec<f64>> [absent "model"] "m/W", "the gain coefficient times the effective area, g_R A_eff, at the offsets";
+        slope_w_km_thz: Option<f64> [absent "the model or the table"] "1/(W·km·THz)" >= 0,
+            "the linear gain of the ISRS closed forms (Semrau, Killey & Bayvel 2018) up to 14 THz, for the aeff_um2 of the mapping: 0.028 for standard fibre";
+        offsets_thz: Option<Vec<f64>> [absent "the model or the slope"] "THz", "frequency offsets of a measured curve";
+        gain_m_w: Option<Vec<f64>> [absent "the model or the slope"] "m/W", "the gain coefficient times the effective area, g_R A_eff, at the offsets";
         reference_thz: f64 [required] "THz", "pump frequency of the measurement or of the peak";
         pump_scaling: bool [true], "scale the efficiency of a pump with its frequency, f_p/f_ref (false: the offset alone, the coupling of GNPy up to version 2.4)";
     }
 }
 
 impl GainSpec {
-    /// The gain curve of the mapping.
+    /// The gain curve of the mapping, for a fibre of `aeff_um2`.
     ///
     /// # Errors
-    /// [`Error::Config`] for a model with a table, a table without a model, or a model
-    /// that is not one of the three.
-    fn gain(self) -> Result<RamanGain> {
+    /// [`Error::Config`] unless exactly one of the model, the slope and the table is
+    /// given, or for a peak without a model.
+    fn gain(self, aeff_um2: f64) -> Result<RamanGain> {
         let reference_hz = self.reference_thz * 1e12;
-        let gain = match (self.model, self.offsets_thz, self.gain_m_w) {
-            (None, Some(offsets), Some(gain)) => {
-                if self.peak_m_w.is_some() {
-                    return Err(Error::Config("raman gain: peak_m_w scales a model, not a table".into()));
-                }
-                RamanGain::new(offsets.iter().map(|f| f * 1e12).collect(), gain, reference_hz)?
-            }
-            (None, _, _) => return Err(Error::Config("raman gain: needs a model or offsets_thz and gain_m_w".into())),
-            (Some(_), Some(_), _) | (Some(_), _, Some(_)) => {
-                return Err(Error::Config("raman gain: a model or a table (offsets_thz, gain_m_w), not both".into()));
-            }
-            (Some(model), None, None) => {
-                let peak = self.peak_m_w.unwrap_or_else(|| RamanGain::ssmf().peak().1);
-                match model.as_str() {
-                    "blow_wood" => RamanGain::blow_wood(peak, reference_hz)?,
-                    "lin_agrawal" => RamanGain::lin_agrawal(peak, reference_hz)?,
-                    "hollenbeck_cantrell" => RamanGain::hollenbeck_cantrell(peak, reference_hz)?,
-                    other => return Err(Error::Config(format!("raman gain: unknown model {other}"))),
-                }
-            }
+        let table = self.offsets_thz.zip(self.gain_m_w);
+        let given = [self.model.is_some(), self.slope_w_km_thz.is_some(), table.is_some()];
+        ensure(given.iter().filter(|g| **g).count() == 1, || {
+            "raman gain: one of model, slope_w_km_thz or the table (offsets_thz, gain_m_w)".into()
+        })?;
+        ensure(self.peak_m_w.is_none() || self.model.is_some(), || "raman gain: peak_m_w scales a model".into())?;
+        let gain = if let Some(model) = &self.model {
+            let peak = self.peak_m_w.unwrap_or_else(|| RamanGain::ssmf().peak().1);
+            RamanGain::model(model.parse()?, peak, reference_hz)?
+        } else if let Some(slope) = self.slope_w_km_thz {
+            RamanGain::linear(slope, aeff_um2, reference_hz)?
+        } else if let Some((offsets, gain)) = table {
+            RamanGain::new(offsets.iter().map(|f| f * 1e12).collect(), gain, reference_hz)?
+        } else {
+            return Err(Error::Config("raman gain: offsets_thz and gain_m_w go together".into()));
         };
         Ok(gain.with_pump_scaling(self.pump_scaling))
     }
@@ -230,7 +227,7 @@ impl RamanSpec {
         let pumps = self.pumps.iter().map(|p| p.parse("raman pump")?.pump()).collect::<Result<_>>()?;
         let gain = match &self.gain {
             None => d.gain.clone(),
-            Some(g) => g.parse("raman gain")?.gain()?,
+            Some(g) => g.parse("raman gain")?.gain(self.aeff_um2)?,
         };
         let aeff_spectrum_um2 = match &self.aeff_spectrum {
             None => Vec::new(),
@@ -327,28 +324,38 @@ mod tests {
     }
 
     #[test]
-    fn the_gain_of_the_raman_mapping_is_a_table_or_a_model() {
+    fn the_gain_of_the_raman_mapping_is_a_table_a_model_or_a_slope() {
         let raman =
             |gain: serde_json::Value| RamanSpec::parse("raman", serde_json::json!({"gain": gain})).unwrap().raman();
         // a model, scaled to the peak of standard single-mode fibre unless peak_m_w
-        let r = raman(serde_json::json!({"model": "hollenbeck_cantrell", "reference_thz": 206.0})).unwrap();
         let ssmf = RamanGain::ssmf();
-        assert!((r.gain.peak().1 - ssmf.peak().1).abs() < 1e-28 && (r.gain.peak().0 - ssmf.peak().0).abs() <= 0.5e12);
-        assert_eq!(r.gain, RamanGain::hollenbeck_cantrell(ssmf.peak().1, 206e12).unwrap());
+        let r = raman(serde_json::json!({"model": "hollenbeck_cantrell", "reference_thz": 206.0})).unwrap();
+        assert_eq!(r.gain, RamanGain::model(RamanResponse::HollenbeckCantrell, ssmf.peak().1, 206e12).unwrap());
         let r = raman(
             serde_json::json!({"model": "blow_wood", "peak_m_w": 2e-14, "reference_thz": 206.0, "pump_scaling": false}),
         )
         .unwrap();
-        assert_eq!(r.gain, RamanGain::blow_wood(2e-14, 206e12).unwrap().with_pump_scaling(false));
+        assert_eq!(r.gain, RamanGain::model(RamanResponse::BlowWood, 2e-14, 206e12).unwrap().with_pump_scaling(false));
+        // the slope, for the area of the mapping
+        let r = RamanSpec::parse(
+            "raman",
+            serde_json::json!({"aeff_um2": 72.0, "gain": {"slope_w_km_thz": 0.028, "reference_thz": 193.0}}),
+        )
+        .unwrap()
+        .raman()
+        .unwrap();
+        assert_eq!(r.gain, RamanGain::linear(0.028, 72.0, 193e12).unwrap());
         // a table
         let r = raman(serde_json::json!({"offsets_thz": [0.0, 13.0, 40.0], "gain_m_w": [0.0, 3e-14, 0.0], "reference_thz": 206.0}))
             .unwrap();
         assert_eq!(r.gain, RamanGain::new(vec![0.0, 13e12, 40e12], vec![0.0, 3e-14, 0.0], 206e12).unwrap());
-        // neither, both, a peak on a table, an unknown model
+        // none, two, half a table, a peak without a model, an unknown model
         for bad in [
             serde_json::json!({"reference_thz": 206.0}),
+            serde_json::json!({"model": "lin_agrawal", "slope_w_km_thz": 0.028, "reference_thz": 206.0}),
             serde_json::json!({"model": "lin_agrawal", "offsets_thz": [0.0, 1.0], "gain_m_w": [0.0, 1e-14], "reference_thz": 206.0}),
-            serde_json::json!({"offsets_thz": [0.0, 1.0], "gain_m_w": [0.0, 1e-14], "peak_m_w": 1e-14, "reference_thz": 206.0}),
+            serde_json::json!({"offsets_thz": [0.0, 1.0], "reference_thz": 206.0}),
+            serde_json::json!({"slope_w_km_thz": 0.028, "peak_m_w": 1e-14, "reference_thz": 206.0}),
             serde_json::json!({"model": "stolen", "reference_thz": 206.0}),
         ] {
             assert!(raman(bad.clone()).is_err(), "{bad}");

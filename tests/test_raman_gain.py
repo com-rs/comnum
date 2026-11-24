@@ -5,7 +5,7 @@ import pytest
 
 import comnum
 
-F_REF_THZ = 206.18
+F_REF_THZ = comnum.raman_gain([0.0])["reference_hz"] / 1e12
 
 
 def test_the_default_is_the_table_of_standard_single_mode_fibre():

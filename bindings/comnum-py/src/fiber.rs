@@ -371,7 +371,11 @@ pub(crate) fn raman(py: Python<'_>, v: Option<&Bound<'_, PyAny>>) -> PyResult<Op
     if v.is_none() {
         return Ok(None);
     }
-    let j = json(py, v)?;
+    raman_json(json(py, v)?)
+}
+
+/// The Raman amplification of a ``raman`` mapping already read as JSON.
+pub(crate) fn raman_json(j: serde_json::Value) -> PyResult<Option<Raman>> {
     BuildContext::default().raman(Some(&serde_json::json!({ "raman": j }))).py()
 }
 

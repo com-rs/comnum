@@ -63,7 +63,7 @@ json_schema             3  # blocks::json_schema is the thin wrapper of schema::
 k_factor_db             2  # cdl::tables (the K-factor of a CDL profile) / multipath::Echoes (of a static channel of echoes)
 ldpc                    2  # Dvbs2Fec::ldpc / ccsds::CcsdsLdpc::ldpc: accessors of the LDPC code of two standards
 ldpc_mut                2  # Dvbs2Fec::ldpc_mut / ccsds::CcsdsLdpc::ldpc_mut: the decoder settings of the LDPC code of two standards
-linear                  2  # interpolation::linear (an interpolator) / Array::linear (a uniform linear antenna array)
+linear                  3  # interpolation::linear (an interpolator) / Array::linear (a uniform linear antenna array) / RamanGain::linear (a gain spectrum of constant slope)
 load                    2  # comnum.spec.load (a specification, by the Rust parser) / Results.load (recorded results)
 max_doppler_hz          2  # Cdl::max_doppler_hz calls the kernel comnum_channel::multipath::max_doppler_hz
 mode                    2  # Dvbt::mode / ofdm::dvbt::DvbtFrame::mode: accessors of the transmission mode
@@ -187,3 +187,4 @@ forward                 2  # fft::forward (the transform) and viterbi::forward (
 next                    2  # Trellis::next (a table) and StateMachine::next (the transition of the kernel the trellis is built on)
 viterbi                 2  # comnum_fec::conv::viterbi (LLRs of a code) is a thin wrapper of comnum_math::viterbi::viterbi (any branch metrics)
 sova                    2  # comnum_fec::conv::sova (LLRs of a code) is a thin wrapper of comnum_math::viterbi::sova
+response                2  # ufmc::response (the frequency response of a filter bank) / RamanResponse::response (the Raman response function h_R(t) of a model)
