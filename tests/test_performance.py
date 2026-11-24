@@ -830,6 +830,17 @@ def test_direct_detection_closed_forms_and_a_simulated_photodiode():
         assert rx.sensitivity_w(q) >= best
     assert abs(comnum.quantum_limit_photons_per_bit(1e-9) - 10.0) < 0.02
     assert abs(comnum.extinction_ratio_penalty_db(0.1) - 0.8715) < 1e-3
+    # unipolar M-PAM: two levels are on-off keying, the thermal limit pays 10 log10(M - 1)
+    rx = comnum.DirectDetectionReceiver(bandwidth_hz=5e9)
+    assert abs(rx.sensitivity_pam_w(2, q) - rx.sensitivity_w(q)) < 1e-9 * rx.sensitivity_w(q)
+    levels = comnum.pam_levels_w(4, rx.sensitivity_pam_w(4, q, 0.1), 0.1)
+    eyes = rx.eye_q_factors(levels)
+    assert eyes[0] > eyes[1] > eyes[2] and abs(eyes[2] - q) < 1e-9
+    assert abs(rx.ber_pam(levels) - rx.ser_pam(levels) / 2) < 1e-18
+    assert abs(comnum.oma_w(levels) - (levels[-1] - levels[0])) < 1e-18
+    noisy = comnum.DirectDetectionReceiver(bandwidth_hz=5e9, noise_figure_db=60.0)
+    ratio = comnum.lin2db(noisy.sensitivity_pam_w(4, q) / noisy.sensitivity_pam_w(2, q))
+    assert abs(ratio - comnum.multilevel_penalty_db(4)) < 1e-3
     assert abs(comnum.intensity_noise_penalty_db(0.1, 6.0) - (-10 * np.log10(1 - 0.36))) < 1e-9
     x = 4 * 2.5e9 * 50 * 17e-12 * 0.05
     assert (

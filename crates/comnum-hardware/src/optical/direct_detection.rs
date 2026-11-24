@@ -82,6 +82,37 @@
 //! are also checked against each other and against a simulation of
 //! [`Photodiode`](super::Photodiode) (the tests of this module).
 //!
+//! # Multilevel signalling
+//!
+//! The same model decides between the $M$ equiprobable, equally spaced power levels
+//! $P_{0} \le \dots \le P_{M-1}$ of unipolar $M$-PAM (on–off keying is $M = 2$). The eye
+//! between the adjacent levels $k$ and $k + 1$ has the Q factor $Q_{k} = (I_{k+1} -
+//! I_{k})/(\sigma_{k+1} + \sigma_{k})$ at its optimum threshold, and the errors to the
+//! adjacent levels give the symbol and, for Gray labels (one bit per adjacent error),
+//! the bit error rates
+//!
+//! $$
+//! \mathrm{SER} = \frac{2}{M} \sum_{k=0}^{M-2} \frac{1}{2}\operatorname{erfc}\!\left(\frac{Q_{k}}{\sqrt{2}}\right),
+//! \qquad \mathrm{BER} = \frac{\mathrm{SER}}{\log_{2} M}.
+//! $$
+//!
+//! For the average power $\bar{P}$ and the extinction ratio $r_{\mathrm{ex}} =
+//! P_{0}/P_{M-1}$ the levels are $P_{M-1} = 2\bar{P}/(1 + r_{\mathrm{ex}})$, $P_{0} =
+//! r_{\mathrm{ex}} P_{M-1}$ and $P_{k} = P_{0} + k\,(P_{M-1} - P_{0})/(M - 1)$; the eye
+//! opening $(P_{M-1} - P_{0})/(M - 1)$ is $M - 1$ times smaller than that of on–off keying
+//! of the same average power, so a thermal-noise-limited receiver pays $10 \log_{10}(M -
+//! 1)$ dB at the same symbol rate (4.8 dB for 4-PAM), less $5 \log_{10} \log_{2} M$ when
+//! the noise bandwidth shrinks with the symbol rate of the same bit rate (3.3 dB), and the
+//! extinction-ratio penalty $\delta_{\mathrm{ex}}$ is that of on–off keying. The
+//! sensitivity of $M$-PAM is the average power at which the smallest eye, the top one
+//! under shot noise, reaches the Q factor: for $M = 2$ it is eq. (4.5.17). The curves of
+//! Walklin & Conradi, *J. Lightw. Technol.* 17(11), 2235–2248, 1999, the reference of the
+//! multilevel sensitivities, are not compared (the paper is not in `references/`): the
+//! formulas are checked against their $M = 2$ case and against a simulated 4-PAM
+//! [`Photodiode`](super::Photodiode) (the tests of this module). The optical modulation
+//! amplitude $P_{M-1} - P_{0}$ and the extinction ratio are the quantities of the IEEE
+//! 802.3 PAM4 specifications (Std 802.3-2022, 121.8.5).
+//!
 //! # Small-signal response of the dispersive link
 //!
 //! A chirped source, a dispersive fibre and a square-law photodiode make a linear channel
@@ -137,7 +168,7 @@
 
 use super::{shot_noise_variance, thermal_noise_variance};
 use comnum_core::{Result, ensure};
-use comnum_math::{C64, ELEMENTARY_CHARGE, PLANCK, db2lin, lin2db, qfunc, w2dbm};
+use comnum_math::{C64, ELEMENTARY_CHARGE, PLANCK, bisect, db2lin, lin2db, qfunc, w2dbm};
 use std::f64::consts::PI;
 
 /// The Q factor $(I_{1} - I_{0})/(\sigma_{1} + \sigma_{0})$ of two Gaussian levels.
@@ -322,6 +353,106 @@ impl DirectDetectionReceiver {
         let ratio = self.thermal_variance().sqrt() / (ELEMENTARY_CHARGE * self.bandwidth_hz * q);
         Ok(((ratio - (1.0 - k)) / k).max(1.0).sqrt())
     }
+
+    /// The Q factor of every eye of the power levels `levels_w` (W, non-decreasing, at
+    /// least two): $M - 1$ values $Q_{k} = (I_{k+1} - I_{k})/(\sigma_{k+1} + \sigma_{k})$
+    /// with $I_{k} = M R P_{k}$ and $\sigma_{k}^{2} = \sigma_{s}^{2}(P_{k}) +
+    /// \sigma_{T}^{2}$ (see the module, "Multilevel signalling").
+    ///
+    /// # Errors
+    /// As [`DirectDetectionReceiver::check`]; [`comnum_core::Error::Config`] for fewer
+    /// than two levels, a negative or a decreasing level.
+    ///
+    /// # Examples
+    /// ```
+    /// use comnum_hardware::optical::direct_detection::{DirectDetectionReceiver, pam_levels_w};
+    /// let rx = DirectDetectionReceiver::default();
+    /// let levels = pam_levels_w(4, 1e-5, 0.0).unwrap();
+    /// let q = rx.eye_q_factors(&levels).unwrap();
+    /// assert_eq!(q.len(), 3);
+    /// assert!(q[0] > q[1] && q[1] > q[2]); // the shot noise grows with the level
+    /// ```
+    pub fn eye_q_factors(&self, levels_w: &[f64]) -> Result<Vec<f64>> {
+        self.check()?;
+        check_levels(levels_w)?;
+        let t = self.thermal_variance();
+        let gain = self.apd_gain * self.responsivity;
+        let sigma =
+            levels_w.iter().map(|&p| self.shot_variance(p).map(|s| (s + t).sqrt())).collect::<Result<Vec<f64>>>()?;
+        (0..levels_w.len() - 1)
+            .map(|k| q_factor(gain * levels_w[k + 1], gain * levels_w[k], sigma[k + 1], sigma[k]))
+            .collect()
+    }
+
+    /// The symbol error rate of the equiprobable power levels `levels_w` at the optimum
+    /// thresholds, counting the errors to the adjacent levels: $\frac{2}{M}
+    /// \sum_{k} \frac{1}{2}\operatorname{erfc}(Q_{k}/\sqrt{2})$ over the eyes of
+    /// [`DirectDetectionReceiver::eye_q_factors`]; [`DirectDetectionReceiver::ber`] for
+    /// two levels.
+    ///
+    /// # Errors
+    /// As [`DirectDetectionReceiver::eye_q_factors`].
+    pub fn ser_pam(&self, levels_w: &[f64]) -> Result<f64> {
+        let q = self.eye_q_factors(levels_w)?;
+        Ok(2.0 / levels_w.len() as f64 * q.iter().map(|&q| qfunc(q)).sum::<f64>())
+    }
+
+    /// The bit error rate of the Gray-labelled equiprobable power levels `levels_w`,
+    /// [`DirectDetectionReceiver::ser_pam`] over $\log_{2} M$ (an error to an adjacent
+    /// level flips one bit).
+    ///
+    /// # Errors
+    /// As [`DirectDetectionReceiver::eye_q_factors`].
+    pub fn ber_pam(&self, levels_w: &[f64]) -> Result<f64> {
+        Ok(self.ser_pam(levels_w)? / (levels_w.len() as f64).log2())
+    }
+
+    /// The sensitivity (W) of unipolar `m`-PAM of extinction ratio `r_ex`: the average
+    /// power of the levels of [`pam_levels_w`] at which the smallest eye reaches the Q
+    /// factor `q`, found by bisection (the Q factor of every eye grows with the power);
+    /// [`DirectDetectionReceiver::sensitivity_w`] for $M = 2$ and $r_{\mathrm{ex}} = 0$.
+    ///
+    /// # Errors
+    /// As [`DirectDetectionReceiver::check`] and [`pam_levels_w`], or a non-positive `q`.
+    ///
+    /// # Examples
+    /// ```
+    /// use comnum_hardware::optical::direct_detection::DirectDetectionReceiver;
+    /// let rx = DirectDetectionReceiver::default();
+    /// let ook = rx.sensitivity_pam_w(2, 6.0, 0.0).unwrap();
+    /// assert!((ook - rx.sensitivity_w(6.0).unwrap()).abs() < 1e-9 * ook);
+    /// // 4-PAM at the same symbol rate: about (M - 1) times the power, more with the shot noise
+    /// let pam4 = rx.sensitivity_pam_w(4, 6.0, 0.0).unwrap();
+    /// assert!(pam4 > 3.0 * ook && pam4 < 3.5 * ook);
+    /// ```
+    pub fn sensitivity_pam_w(&self, m: usize, q: f64, r_ex: f64) -> Result<f64> {
+        self.check()?;
+        ensure(q > 0.0, || format!("the Q factor {q} must be positive"))?;
+        pam_levels_w(m, 1.0, r_ex)?;
+        // the arguments are checked above: the closed forms cannot fail (NaN would stop the
+        // bisection at its lower bound)
+        let smallest_eye = |p_avg: f64| -> f64 {
+            pam_levels_w(m, p_avg, r_ex)
+                .and_then(|levels| self.eye_q_factors(&levels))
+                .map_or(f64::NAN, |q| q.into_iter().fold(f64::INFINITY, f64::min))
+        };
+        // the thermal-noise limit is a lower bound: the shot noise only costs more power
+        let eye_per_watt = 2.0 * (1.0 - r_ex) / ((1.0 + r_ex) * (m - 1) as f64);
+        let lo = q * 2.0 * self.thermal_variance().sqrt() / (self.apd_gain * self.responsivity * eye_per_watt);
+        let mut hi = 2.0 * lo;
+        while smallest_eye(hi) < q {
+            hi *= 2.0;
+        }
+        Ok(bisect(|p| smallest_eye(p) < q, lo, hi, 200))
+    }
+
+    /// [`DirectDetectionReceiver::sensitivity_pam_w`] in dBm.
+    ///
+    /// # Errors
+    /// As [`DirectDetectionReceiver::sensitivity_pam_w`].
+    pub fn sensitivity_pam_dbm(&self, m: usize, q: f64, r_ex: f64) -> Result<f64> {
+        Ok(w2dbm(self.sensitivity_pam_w(m, q, r_ex)?))
+    }
 }
 
 /// The average number of photons per bit $\bar{N}_{p} = -\ln(2\,\mathrm{BER})/2$ of the
@@ -373,6 +504,79 @@ pub fn quantum_limit_w(ber: f64, bit_rate_hz: f64, frequency_hz: f64) -> Result<
 pub fn extinction_ratio_penalty_db(r_ex: f64) -> Result<f64> {
     ensure((0.0..1.0).contains(&r_ex), || format!("the extinction ratio {r_ex} must lie in [0, 1)"))?;
     Ok(lin2db((1.0 + r_ex) / (1.0 - r_ex)))
+}
+
+fn check_levels(levels_w: &[f64]) -> Result<()> {
+    ensure(levels_w.len() >= 2, || format!("{} power level(s): at least two are needed", levels_w.len()))?;
+    ensure(levels_w.iter().all(|&p| p >= 0.0), || "the power levels must be non-negative".into())?;
+    ensure(levels_w.windows(2).all(|w| w[1] >= w[0]), || "the power levels must be non-decreasing".into())
+}
+
+/// The $M$ equally spaced power levels (W) of unipolar `m`-PAM of average power
+/// `p_avg_w` $\bar{P}$ and extinction ratio `r_ex` $= P_{0}/P_{M-1} \in [0, 1)$, in
+/// increasing order: $P_{M-1} = 2\bar{P}/(1 + r_{\mathrm{ex}})$, $P_{0} = r_{\mathrm{ex}}
+/// P_{M-1}$, $P_{k} = P_{0} + k\,(P_{M-1} - P_{0})/(M - 1)$ (see the module, "Multilevel
+/// signalling"). Equiprobable levels have the average $\bar{P}$.
+///
+/// # Errors
+/// [`comnum_core::Error::Config`] for $M < 2$, a negative power or a ratio outside $[0, 1)$.
+///
+/// # Examples
+/// ```
+/// use comnum_hardware::optical::direct_detection::pam_levels_w;
+/// assert_eq!(pam_levels_w(2, 1.0, 0.0).unwrap(), vec![0.0, 2.0]);
+/// let p = pam_levels_w(4, 1.5, 0.5).unwrap(); // P_3 = 2, P_0 = 1
+/// for (got, want) in p.iter().zip([1.0, 4.0 / 3.0, 5.0 / 3.0, 2.0]) {
+///     assert!((got - want).abs() < 1e-15);
+/// }
+/// ```
+pub fn pam_levels_w(m: usize, p_avg_w: f64, r_ex: f64) -> Result<Vec<f64>> {
+    ensure(m >= 2, || format!("{m} level(s): at least two are needed"))?;
+    ensure(p_avg_w >= 0.0, || format!("the average power {p_avg_w} W must be non-negative"))?;
+    ensure((0.0..1.0).contains(&r_ex), || format!("the extinction ratio {r_ex} must lie in [0, 1)"))?;
+    let top = 2.0 * p_avg_w / (1.0 + r_ex);
+    let bottom = r_ex * top;
+    let step = (top - bottom) / (m - 1) as f64;
+    Ok((0..m).map(|k| bottom + k as f64 * step).collect())
+}
+
+/// The optical modulation amplitude (W) of the power levels `levels_w`, $P_{M-1} -
+/// P_{0}$: the `OMA` of on–off keying, the `OMA_outer` of the PAM4 specifications of
+/// IEEE Std 802.3-2022 (121.8.5).
+///
+/// # Errors
+/// [`comnum_core::Error::Config`] for fewer than two levels, a negative or a decreasing
+/// level.
+///
+/// # Examples
+/// ```
+/// use comnum_hardware::optical::direct_detection::{oma_w, pam_levels_w};
+/// let p = pam_levels_w(4, 1.5, 0.5).unwrap();
+/// assert!((oma_w(&p).unwrap() - 1.0).abs() < 1e-15);
+/// ```
+pub fn oma_w(levels_w: &[f64]) -> Result<f64> {
+    check_levels(levels_w)?;
+    Ok(levels_w[levels_w.len() - 1] - levels_w[0])
+}
+
+/// The power penalty (dB) of unipolar `m`-PAM against on–off keying of the same average
+/// power and symbol rate on a thermal-noise-limited receiver, $10 \log_{10}(M - 1)$: the
+/// eye opening is $M - 1$ times smaller (4.77 dB for 4-PAM, 8.45 dB for 8-PAM). At the
+/// same bit rate the noise bandwidth shrinks by $\log_{2} M$ and the penalty by $5
+/// \log_{10} \log_{2} M$ (3.27 dB for 4-PAM).
+///
+/// # Errors
+/// [`comnum_core::Error::Config`] for $M < 2$.
+///
+/// # Examples
+/// ```
+/// use comnum_hardware::optical::direct_detection::multilevel_penalty_db;
+/// assert_eq!(multilevel_penalty_db(2).unwrap(), 0.0);
+/// assert!((multilevel_penalty_db(4).unwrap() - 4.771).abs() < 1e-3);
+/// ```
+pub fn multilevel_penalty_db(m: usize) -> Result<f64> {
+    ensure(m >= 2, || format!("{m} level(s): at least two are needed"))?;
+    Ok(lin2db((m - 1) as f64))
 }
 
 /// The power penalty (dB) of the relative intensity noise `r_i` $= \sigma_{I}/P$ of the
@@ -771,6 +975,98 @@ mod tests {
         assert_eq!(dispersion_fading_response(0.0, 3.0, 0.0, 1e-3, b2, l).unwrap(), C64::new(1.0, 0.0));
         assert!(dispersion_fading_response(0.0, 3.0, 1e13, 1e-3, b2, l).is_err());
         assert!(fading_frequency_hz(0, 3.0, 0.0, l).is_err());
+    }
+
+    #[test]
+    fn two_levels_are_on_off_keying_and_the_thermal_limit_pays_m_minus_one() {
+        let rx = DirectDetectionReceiver { bandwidth_hz: 5e9, ..Default::default() };
+        let q = 6.0;
+        // M = 2, r_ex = 0: the sensitivity of eq. (4.5.17), its eye the Q factor
+        let ook = rx.sensitivity_pam_w(2, q, 0.0).unwrap();
+        assert!((ook - rx.sensitivity_w(q).unwrap()).abs() < 1e-9 * ook);
+        let levels = pam_levels_w(2, ook, 0.0).unwrap();
+        assert!((rx.eye_q_factors(&levels).unwrap()[0] - q).abs() < 1e-9);
+        assert!((rx.ber_pam(&levels).unwrap() - rx.ber(levels[1], levels[0]).unwrap()).abs() < 1e-18);
+        assert!((rx.ser_pam(&levels).unwrap() - qfunc(q)).abs() < 1e-18);
+        // the extinction-ratio penalty of M levels is that of on-off keying (thermal limit)
+        // a noisy amplifier makes the receiver thermal-noise limited
+        let cold = DirectDetectionReceiver { noise_figure_db: 60.0, ..rx.clone() };
+        for m in [2usize, 4, 8] {
+            let ideal = cold.sensitivity_pam_w(m, q, 0.0).unwrap();
+            let penalty = lin2db(cold.sensitivity_pam_w(m, q, 0.3).unwrap() / ideal);
+            assert!((penalty - extinction_ratio_penalty_db(0.3).unwrap()).abs() < 1e-3, "{m}: {penalty}");
+            // and M-PAM pays 10 log10(M - 1) against on-off keying at the same symbol rate
+            let against_ook = lin2db(ideal / cold.sensitivity_pam_w(2, q, 0.0).unwrap());
+            assert!((against_ook - multilevel_penalty_db(m).unwrap()).abs() < 1e-3, "{m}: {against_ook}");
+        }
+        // at the same bit rate the bandwidth shrinks by log2 M: 5 log10(log2 M) less
+        let half = DirectDetectionReceiver { bandwidth_hz: 2.5e9, ..cold.clone() };
+        let same_bit_rate =
+            lin2db(half.sensitivity_pam_w(4, q, 0.0).unwrap() / cold.sensitivity_pam_w(2, q, 0.0).unwrap());
+        assert!((same_bit_rate - (multilevel_penalty_db(4).unwrap() - 5.0 * 2f64.log10())).abs() < 1e-3);
+        // with shot noise the top eye is the smallest and the sensitivity is where it reaches Q
+        let p = rx.sensitivity_pam_w(4, q, 0.1).unwrap();
+        let eyes = rx.eye_q_factors(&pam_levels_w(4, p, 0.1).unwrap()).unwrap();
+        assert!(eyes[0] > eyes[1] && eyes[1] > eyes[2]);
+        assert!((eyes[2] - q).abs() < 1e-9);
+        assert!(p > 3.0 * ook);
+        // the shape errors
+        assert!(rx.eye_q_factors(&[1.0]).is_err());
+        assert!(rx.eye_q_factors(&[1.0, 0.5]).is_err());
+        assert!(oma_w(&[-1.0, 1.0]).is_err());
+        assert!(pam_levels_w(1, 1.0, 0.0).is_err());
+        assert!(pam_levels_w(4, 1.0, 1.0).is_err());
+    }
+
+    #[test]
+    fn the_simulated_photodiode_has_the_symbol_error_rate_of_its_eyes_for_four_levels() {
+        // 4-PAM integrated over the symbol, as the on-off keying test below
+        let (symbol_rate, sps, n_symbols) = (10e9, 4usize, 100_000usize);
+        let fs = symbol_rate * sps as f64;
+        let b = symbol_rate / 2.0;
+        let pd = Photodiode {
+            responsivity: 0.8,
+            temperature_k: 300.0,
+            dark_current_a: 0.0,
+            load_ohm: 50.0,
+            bandwidth_hz: b,
+            bandwidth_limitation: false,
+            ..Photodiode::default()
+        };
+        let rx = DirectDetectionReceiver {
+            responsivity: pd.responsivity,
+            temperature_k: pd.temperature_k,
+            load_ohm: pd.load_ohm,
+            noise_figure_db: 0.0,
+            bandwidth_hz: b,
+            ..Default::default()
+        };
+        let (q, r_ex) = (2.5, 0.1);
+        let levels = pam_levels_w(4, rx.sensitivity_pam_w(4, q, r_ex).unwrap(), r_ex).unwrap();
+        let mut rng = Rng::new(7);
+        let symbols: Vec<usize> = (0..n_symbols).map(|_| (rng.bit() as usize) << 1 | rng.bit() as usize).collect();
+        let power: Vec<f64> = symbols.iter().flat_map(|&k| std::iter::repeat_n(levels[k], sps)).collect();
+        let i = pd.detect_power(&power, fs, &mut rng).unwrap();
+        // the optimum thresholds of adjacent Gaussian levels: (σ_k I_{k+1} + σ_{k+1} I_k)/(σ_k + σ_{k+1})
+        let t = rx.thermal_variance();
+        let sigma: Vec<f64> = levels.iter().map(|&p| (rx.shot_variance(p).unwrap() + t).sqrt()).collect();
+        let thresholds: Vec<f64> = (0..3)
+            .map(|k| {
+                rx.responsivity * (sigma[k] * levels[k + 1] + sigma[k + 1] * levels[k]) / (sigma[k] + sigma[k + 1])
+            })
+            .collect();
+        let errors = symbols
+            .iter()
+            .enumerate()
+            .filter(|&(n, &k)| {
+                let sample = i[n * sps..(n + 1) * sps].iter().sum::<f64>() / sps as f64;
+                thresholds.iter().filter(|&&th| sample > th).count() != k
+            })
+            .count();
+        let ser = errors as f64 / n_symbols as f64;
+        let expected = rx.ser_pam(&levels).unwrap();
+        let sampling = (expected / n_symbols as f64).sqrt();
+        assert!((ser - expected).abs() < 3.0 * sampling, "{ser} against {expected} ± {sampling}");
     }
 
     #[test]

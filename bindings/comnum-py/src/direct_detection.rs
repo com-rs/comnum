@@ -5,12 +5,13 @@
 use crate::{IntoPy, map_real};
 use comnum::hardware::optical::direct_detection::{self as dd, DirectDetectionReceiver};
 use num_complex::Complex64 as C64;
+use numpy::PyArray1;
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
 
-/// A direct-detection receiver of on–off keying: a p-i-n or avalanche photodiode, its
-/// load and amplifier, in the Gaussian noise model. After [1]_, Secs. 4.4–4.5 (eqs. (4.4.9),
-/// (4.4.17), (4.4.18), (4.5.10), (4.5.11), (4.5.17), (4.5.19)).
+/// A direct-detection receiver of on–off keying and of unipolar M-PAM: a p-i-n or avalanche
+/// photodiode, its load and amplifier, in the Gaussian noise model. After [1]_, Secs. 4.4–4.5
+/// (eqs. (4.4.9), (4.4.17), (4.4.18), (4.5.10), (4.5.11), (4.5.17), (4.5.19)).
 ///
 /// The receiver decides between the photocurrents :math:`I_1 = M R P_1` and :math:`I_0 =
 /// M R P_0` of the 1 and 0 bits, each with the shot noise of its power and the thermal
@@ -40,7 +41,19 @@ use pyo3::types::PyDict;
 ///     \bar{P}_{\mathrm{rec}} = \frac{Q}{R}\left(q F_A \Delta f\, Q + \frac{\sigma_T}{M}\right),
 ///
 /// minimised over :math:`M` at :math:`M_{\mathrm{opt}}^2 = [\sigma_T/(q \Delta f Q) -
-/// (1 - k_A)]/k_A`.
+/// (1 - k_A)]/k_A`. The same model decides between the :math:`M` equiprobable power
+/// levels :math:`P_0 \le \dots \le P_{M-1}` of unipolar M-PAM (``eye_q_factors``,
+/// ``ser_pam``, ``ber_pam``, ``sensitivity_pam_w``): the eye between adjacent levels has
+/// the Q factor :math:`Q_k = (I_{k+1} - I_k)/(\sigma_{k+1} + \sigma_k)` and the errors to
+/// the adjacent levels give
+///
+/// .. math::
+///
+///     \mathrm{SER} = \frac{2}{M} \sum_{k=0}^{M-2} \frac{1}{2}\operatorname{erfc}\left(\frac{Q_k}{\sqrt{2}}\right),
+///     \qquad \mathrm{BER} = \frac{\mathrm{SER}}{\log_2 M}
+///
+/// for Gray labels; the levels of an average power and an extinction ratio are
+/// :func:`pam_levels_w`, the penalty of the smaller eyes :func:`multilevel_penalty_db`.
 ///
 /// Args:
 ///     responsivity (float): :math:`R` (A/W), before the avalanche gain.
@@ -232,6 +245,98 @@ wrapper_methods! {
         self.inner.optimum_apd_gain(q).py()
     }
 
+    /// The Q factor of every eye of the power levels, :math:`M - 1` values :math:`Q_k =
+    /// (I_{k+1} - I_k)/(\sigma_{k+1} + \sigma_k)` with the shot noise of each level.
+    ///
+    /// Args:
+    ///     levels_w (array_like): the power levels (W), non-decreasing, at least two
+    ///         (:func:`pam_levels_w`).
+    ///
+    /// Returns:
+    ///     ndarray: the Q factors of the eyes, from the lowest.
+    ///
+    /// Raises:
+    ///     ValueError: for an invalid parameter, fewer than two levels, a negative or a
+    ///         decreasing level.
+    fn eye_q_factors<'py>(&self, py: Python<'py>, levels_w: Vec<f64>) -> PyResult<Bound<'py, PyArray1<f64>>> {
+        Ok(PyArray1::from_vec(py, self.inner.eye_q_factors(&levels_w).py()?))
+    }
+
+    /// The symbol error rate of equiprobable power levels at the optimum thresholds,
+    /// :math:`\frac{2}{M} \sum_k \frac{1}{2}\operatorname{erfc}(Q_k/\sqrt{2})` over the eyes
+    /// of ``eye_q_factors`` (the errors to the adjacent levels).
+    ///
+    /// Args:
+    ///     levels_w (array_like): the power levels (W), non-decreasing, at least two.
+    ///
+    /// Returns:
+    ///     float: the SER.
+    ///
+    /// Raises:
+    ///     ValueError: as ``eye_q_factors``.
+    fn ser_pam(&self, levels_w: Vec<f64>) -> PyResult<f64> {
+        self.inner.ser_pam(&levels_w).py()
+    }
+
+    /// The bit error rate of Gray-labelled equiprobable power levels, ``ser_pam`` over
+    /// :math:`\log_2 M` (an error to an adjacent level flips one bit).
+    ///
+    /// Args:
+    ///     levels_w (array_like): the power levels (W), non-decreasing, at least two.
+    ///
+    /// Returns:
+    ///     float: the BER.
+    ///
+    /// Raises:
+    ///     ValueError: as ``eye_q_factors``.
+    fn ber_pam(&self, levels_w: Vec<f64>) -> PyResult<f64> {
+        self.inner.ber_pam(&levels_w).py()
+    }
+
+    /// The sensitivity of unipolar M-PAM: the average power of the levels of
+    /// :func:`pam_levels_w` at which the smallest eye (the top one under shot noise)
+    /// reaches a Q factor, by bisection; ``sensitivity_w`` for :math:`M = 2` and
+    /// :math:`r_{\mathrm{ex}} = 0`.
+    ///
+    /// Args:
+    ///     m (int): the number of levels :math:`M \ge 2`.
+    ///     q (float): the Q factor.
+    ///     r_ex (float): the extinction ratio :math:`P_0/P_{M-1} \in [0, 1)`.
+    ///
+    /// Returns:
+    ///     float: the average power (W).
+    ///
+    /// Raises:
+    ///     ValueError: for an invalid parameter, :math:`M < 2`, a non-positive Q factor
+    ///         or a ratio outside :math:`[0, 1)`.
+    ///
+    /// Examples:
+    ///     >>> import comnum
+    ///     >>> rx = comnum.DirectDetectionReceiver(bandwidth_hz=5e9)
+    ///     >>> round(comnum.lin2db(rx.sensitivity_pam_w(4, 6.0, 0.0) / rx.sensitivity_w(6.0)), 1)
+    ///     4.8
+    #[pyo3(signature = (m, q, r_ex = 0.0))]
+    fn sensitivity_pam_w(&self, m: usize, q: f64, r_ex: f64) -> PyResult<f64> {
+        self.inner.sensitivity_pam_w(m, q, r_ex).py()
+    }
+
+    /// ``sensitivity_pam_w`` in dBm.
+    ///
+    /// Args:
+    ///     m (int): the number of levels :math:`M \ge 2`.
+    ///     q (float): the Q factor.
+    ///     r_ex (float): the extinction ratio :math:`P_0/P_{M-1} \in [0, 1)`.
+    ///
+    /// Returns:
+    ///     float: the average power (dBm).
+    ///
+    /// Raises:
+    ///     ValueError: as ``sensitivity_pam_w``.
+    #[pyo3(signature = (m, q, r_ex = 0.0))]
+    fn sensitivity_pam_dbm(&self, m: usize, q: f64, r_ex: f64) -> PyResult<f64> {
+        self.inner.sensitivity_pam_dbm(m, q, r_ex).py()
+    }
+
     fn __repr__(&self) -> String {
         let d = &self.inner;
         format!(
@@ -408,6 +513,83 @@ fn quantum_limit_w(ber: f64, bit_rate_hz: f64, frequency_hz: f64) -> PyResult<f6
 #[pyfunction]
 fn extinction_ratio_penalty_db(r_ex: &Bound<'_, PyAny>) -> PyResult<Py<PyAny>> {
     map_real(r_ex, |v| dd::extinction_ratio_penalty_db(v).py())
+}
+
+/// The equally spaced power levels of unipolar M-PAM of an average power and an
+/// extinction ratio, in increasing order,
+///
+/// .. math::
+///
+///     P_{M-1} = \frac{2 \bar{P}}{1 + r_{\mathrm{ex}}}, \qquad P_0 = r_{\mathrm{ex}} P_{M-1},
+///     \qquad P_k = P_0 + k\,\frac{P_{M-1} - P_0}{M - 1};
+///
+/// equiprobable levels have the average :math:`\bar{P}`.
+///
+/// Args:
+///     m (int): the number of levels :math:`M \ge 2`.
+///     p_avg_w (float): the average power :math:`\bar{P}` (W).
+///     r_ex (float): the extinction ratio :math:`P_0/P_{M-1} \in [0, 1)`.
+///
+/// Returns:
+///     ndarray: the :math:`M` levels (W).
+///
+/// Raises:
+///     ValueError: for :math:`M < 2`, a negative power or a ratio outside :math:`[0, 1)`.
+///
+/// Examples:
+///     >>> import comnum
+///     >>> comnum.pam_levels_w(4, 1.5, 0.5).tolist()
+///     [1.0, 1.3333333333333333, 1.6666666666666665, 2.0]
+#[pyfunction]
+#[pyo3(signature = (m, p_avg_w, r_ex = 0.0))]
+fn pam_levels_w(py: Python<'_>, m: usize, p_avg_w: f64, r_ex: f64) -> PyResult<Bound<'_, PyArray1<f64>>> {
+    Ok(PyArray1::from_vec(py, dd::pam_levels_w(m, p_avg_w, r_ex).py()?))
+}
+
+/// The optical modulation amplitude of power levels, :math:`P_{M-1} - P_0`: the OMA of
+/// on–off keying, the ``OMA_outer`` of the PAM4 specifications of IEEE Std 802.3-2022
+/// (121.8.5).
+///
+/// Args:
+///     levels_w (array_like): the power levels (W), non-decreasing, at least two.
+///
+/// Returns:
+///     float: the amplitude (W).
+///
+/// Raises:
+///     ValueError: for fewer than two levels, a negative or a decreasing level.
+///
+/// Examples:
+///     >>> import comnum
+///     >>> comnum.oma_w(comnum.pam_levels_w(4, 1.5, 0.5))
+///     1.0
+#[pyfunction]
+fn oma_w(levels_w: Vec<f64>) -> PyResult<f64> {
+    dd::oma_w(&levels_w).py()
+}
+
+/// The power penalty of unipolar M-PAM against on–off keying of the same average power
+/// and symbol rate on a thermal-noise-limited receiver, :math:`10 \log_{10}(M - 1)`: the
+/// eye opening is :math:`M - 1` times smaller. At the same bit rate the noise bandwidth
+/// shrinks by :math:`\log_2 M` and the penalty by :math:`5 \log_{10} \log_2 M` (4.77 and
+/// 3.27 dB for 4-PAM).
+///
+/// Args:
+///     m (int): the number of levels :math:`M \ge 2`.
+///
+/// Returns:
+///     float: the penalty (dB).
+///
+/// Raises:
+///     ValueError: for :math:`M < 2`.
+///
+/// Examples:
+///     >>> import comnum
+///     >>> round(comnum.multilevel_penalty_db(4), 2)
+///     4.77
+#[pyfunction]
+fn multilevel_penalty_db(m: usize) -> PyResult<f64> {
+    dd::multilevel_penalty_db(m).py()
 }
 
 /// The power penalty of the relative intensity noise of the source at a Q factor.
@@ -741,6 +923,9 @@ pub(crate) fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
         wrap_pyfunction!(quantum_limit_photons_per_bit, m)?,
         wrap_pyfunction!(quantum_limit_w, m)?,
         wrap_pyfunction!(extinction_ratio_penalty_db, m)?,
+        wrap_pyfunction!(pam_levels_w, m)?,
+        wrap_pyfunction!(oma_w, m)?,
+        wrap_pyfunction!(multilevel_penalty_db, m)?,
         wrap_pyfunction!(intensity_noise_penalty_db, m)?,
         wrap_pyfunction!(timing_jitter_penalty_db, m)?,
         wrap_pyfunction!(chirp_penalty_db, m)?,

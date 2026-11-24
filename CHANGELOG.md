@@ -8,6 +8,20 @@ and follow [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- The closed forms of unipolar M-PAM on the direct-detection receiver of Agrawal's
+  Gaussian model (`comnum_hardware::optical::direct_detection`): `pam_levels_w` (the
+  levels of an average power and an extinction ratio), `oma_w` (the optical modulation
+  amplitude, `OMA_outer` of IEEE 802.3), `multilevel_penalty_db` (10 log10(M − 1) of the
+  thermal-noise limit), and on `DirectDetectionReceiver` the Q factor of every eye
+  (`eye_q_factors`), the symbol and bit error rates of the adjacent-level errors
+  (`ser_pam`, `ber_pam`) and the sensitivity of M levels by bisection
+  (`sensitivity_pam_w`, `sensitivity_pam_dbm`); the same names in Python. Checked against
+  the on–off keying case (M = 2 reproduces eq. (4.5.17) and the BER of the Q factor to
+  1e-9), the thermal limit (4.77 dB for 4-PAM at the same symbol rate, 3.27 dB at the
+  same bit rate, the extinction-ratio penalty of on–off keying) and a simulated 4-PAM
+  `Photodiode` (the SER of its eyes within the sampling error). The sensitivity curves of
+  Walklin & Conradi, *J. Lightw. Technol.* 17(11), 1999, are not compared (status next).
+  No change of the results.
 - The Manakov-PMD channel validated on Bütler, Häger, Pfister, Liga & Alvarado, *J.
   Lightw. Technol.* 39(4), 2021, Fig. 8 (`validation/tests/fiber/butler2021.rs`, the card
   `butler2021_fig8`): 32 GBd over 10 × 100 km with 1000 PMD sections of 0.1 km per span,

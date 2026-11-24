@@ -439,7 +439,10 @@ The closed forms of on–off keying receivers (Agrawal, *Fiber-Optic Communicati
 Systems*, 3rd ed., 2002, Secs. 4.4–4.6 and 5.4): the Q factor, the sensitivity of p-i-n
 and avalanche photodiode receivers, the quantum limit and the power penalties of the
 extinction ratio, of the intensity noise, of the timing jitter, of the dispersive
-broadening and of the chirp.
+broadening and of the chirp; and the same model for the levels of unipolar M-PAM: the
+Q factor of every eye, the symbol and bit error rates, the sensitivity, the levels of an
+average power and an extinction ratio, the optical modulation amplitude and the penalty
+of the multilevel eye.
 
 .. autosummary::
    :toctree: generated
@@ -450,6 +453,9 @@ broadening and of the chirp.
    quantum_limit_photons_per_bit
    quantum_limit_w
    extinction_ratio_penalty_db
+   pam_levels_w
+   oma_w
+   multilevel_penalty_db
    intensity_noise_penalty_db
    timing_jitter_penalty_db
    gaussian_broadening_factor
