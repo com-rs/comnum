@@ -8,6 +8,18 @@ and follow [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- The Raman response-function models of silica as gain spectra
+  (`comnum_channel::optical::raman::RamanGain`): `blow_wood` (one damped oscillator,
+  Blow & Wood, *IEEE J. Quantum Electron.* 25(12), 1989), `lin_agrawal` (plus the boson
+  peak, Lin & Agrawal, *Opt. Lett.* 31(21), 2006) and `hollenbeck_cantrell` (thirteen
+  vibrational modes, Hollenbeck & Cantrell, *J. Opt. Soc. Am. B* 19(12), 2002, Table 1),
+  through `from_response`, the imaginary part of the Fourier transform of any response
+  $h_R(t)$ on a grid of 0.1 THz, scaled to a given peak. The `gain` mapping of `raman`
+  takes `model` and `peak_m_w` in place of the table (the table and `reference_thz`
+  unchanged), in the specifications and in Python. Checked against the Lorentzian of
+  Blow & Wood in closed form (2e-3 of the peak) and the table of standard single-mode
+  fibre: rms errors relative to the peak of 9, 3 and 3 % over 0–10 THz and 13, 13 and
+  4 % over 0–42 THz. No change of the results.
 - The closed forms of unipolar M-PAM on the direct-detection receiver of Agrawal's
   Gaussian model (`comnum_hardware::optical::direct_detection`): `pam_levels_w` (the
   levels of an average power and an extinction ratio), `oma_w` (the optical modulation

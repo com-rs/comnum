@@ -524,6 +524,38 @@ standard single-mode fibre (``gain`` replaces it), scaled with the pump frequenc
 conserve the number of photons. The spontaneous Raman scattering of the pumps adds a
 noise whose thermal factor grows near the pumps.
 
+The ``gain`` mapping is a measured table (``offsets_thz``, ``gain_m_w``, the gain
+coefficient times the effective area :math:`g_R A_{\mathrm{eff}}` of a pump at
+``reference_thz``) or one of the response-function models of silica, ``model``, scaled to
+``peak_m_w`` (the peak of standard single-mode fibre, :math:`3.33 \cdot 10^{-14}` m/W, by
+default). The gain spectrum is the imaginary part of the Fourier transform of the Raman
+response function :math:`h_R(t)` [#agrawal]_, and each model gives :math:`h_R(t)` in
+closed form: ``blow_wood``, one damped oscillator (:math:`\tau_1 = 12.2` fs,
+:math:`\tau_2 = 32` fs) [#blow]_, a Lorentzian that keeps the peak at 13 THz but misses
+the shoulder below 8 THz; ``lin_agrawal``, the same oscillator plus the boson peak of the
+glass (:math:`f_b = 0.21`, :math:`\tau_b = 96` fs) [#lin]_, which recovers the shoulder
+(the band that drives the inter-channel Raman scattering of a C+L comb); and
+``hollenbeck_cantrell``, thirteen vibrational modes with Gaussian and Lorentzian widths
+[#hollenbeck]_, which follows the whole measured spectrum to 40 THz. Against the table of
+standard single-mode fibre, the rms errors relative to the peak are 9 %, 3 % and 3 % over
+0–10 THz and 13 %, 13 % and 4 % over 0–42 THz.
+
+.. code-block:: python
+
+   raman = {"pumps": [{"wavelength_nm": 1450, "power_mw": 400, "direction": "counter"}],
+            "gain": {"model": "hollenbeck_cantrell", "reference_thz": 206.18}}
+
+.. [#agrawal] G. P. Agrawal, *Nonlinear Fiber Optics*, 5th ed., Academic Press, 2013,
+   Sec. 2.3.2 and 8.3.1.
+.. [#blow] K. J. Blow and D. Wood, "Theoretical description of transient stimulated
+   Raman scattering in optical fibers," *IEEE J. Quantum Electron.* 25(12), 2665–2673,
+   1989.
+.. [#lin] Q. Lin and G. P. Agrawal, "Raman response function for silica fibers," *Opt.
+   Lett.* 31(21), 3086–3088, 2006.
+.. [#hollenbeck] D. Hollenbeck and C. D. Cantrell, "Multiple-vibrational-mode model for
+   fiber-optic Raman gain spectrum and response function," *J. Opt. Soc. Am. B* 19(12),
+   2886–2892, 2002.
+
 ``Ssfm`` and ``Manakov`` apply the profile of every span to the field as a gain that
 depends on the position and on the frequency. The profile is solved for slices of the
 spectrum of the field (``slice_hz``, 25 GHz) at the input of the span. After the span

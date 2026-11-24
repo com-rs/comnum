@@ -271,10 +271,15 @@ fn format_moments(
 ///         own against frequency; that of ``fiber`` by default), ``temperature_k`` (300),
 ///         ``isrs`` (True:
 ///         the channels also exchange power), ``step_km`` (0.1), ``slice_hz`` (25e9, for
-///         the split-step solvers), ``gain`` (``{offsets_thz, gain_m_w,
-///         reference_thz, pump_scaling}``, the gain spectrum :math:`g_R A_{\mathrm{eff}}`,
-///         scaled with the frequency of the pump unless ``pump_scaling`` is False;
-///         standard single-mode fibre by default) and ``rayleigh_db_km`` (the Rayleigh
+///         the split-step solvers), ``gain`` (the gain spectrum :math:`g_R A_{\mathrm{eff}}`
+///         of a pump at ``reference_thz``: a measured table ``{offsets_thz, gain_m_w}`` or a
+///         response-function model of silica, ``model`` one of ``"blow_wood"`` (one damped
+///         oscillator, the peak only), ``"lin_agrawal"`` (plus the boson peak below 5 THz)
+///         and ``"hollenbeck_cantrell"`` (13 vibrational modes, the whole spectrum to 40
+///         THz), scaled to ``peak_m_w`` (the peak of standard single-mode fibre, 3.33e-14,
+///         by default); the efficiency scales with the frequency of the pump unless
+///         ``pump_scaling`` is False; the measured spectrum of standard single-mode fibre
+///         by default) and ``rayleigh_db_km`` (the Rayleigh
 ///         backscatter coupling of the signals, :math:`10 \log_{10}` of its value in 1/km,
 ///         about -40 for transmission fibre;
 ///         absent: no double Rayleigh backscattering).

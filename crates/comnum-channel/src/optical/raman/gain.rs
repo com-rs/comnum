@@ -1,8 +1,65 @@
 //! The Raman gain spectrum of a fibre: the measured spectrum of standard single-mode
-//! fibre (GNPy) or a table, scaled with the pump frequency unless
-//! [`RamanGain::with_pump_scaling`]`(false)`.
+//! fibre (GNPy), a table, a constant, or one of the response-function models of silica
+//! (Blow & Wood 1989, Lin & Agrawal 2006, Hollenbeck & Cantrell 2002), scaled with the
+//! pump frequency unless [`RamanGain::with_pump_scaling`]`(false)`.
+//!
+//! # Response-function models
+//!
+//! The delayed part of the nonlinear response of silica is the Raman response function
+//! $h_{R}(t)$, causal and normalised to $\int_{0}^{\infty} h_{R}(t)\, dt = 1$; the Raman
+//! gain spectrum is the imaginary part of its Fourier transform (Agrawal, *Nonlinear
+//! Fiber Optics*, 5th ed., Sec. 2.3.2 and 8.3.1),
+//!
+//! $$
+//! g_{R}(\Omega) \propto \operatorname{Im} \tilde{h}_{R}(\Omega),
+//! \qquad
+//! \tilde{h}_{R}(\Omega) = \int_{0}^{\infty} h_{R}(t)\, e^{i \Omega t}\, dt,
+//! $$
+//!
+//! so that $\operatorname{Im} \tilde{h}_{R}(\Omega) = \int_{0}^{\infty} h_{R}(t) \sin(\Omega t)\,
+//! dt$. The three models give $h_{R}(t)$ in closed form; the constructors evaluate the
+//! integral on a grid of 0.5 fs over 4 ps (the response has decayed by more than
+//! $e^{-40}$) at every 0.1 THz from 0 to 42 THz, and scale the spectrum so that its peak
+//! is the $g_{R} A_{\mathrm{eff}}$ asked for: the models give the shape of the gain, the
+//! peak comes from a measurement ([`RamanGain::ssmf`]`().peak()`, $3.33 \cdot 10^{-14}$
+//! m/W for a pump at 1454 nm). The prefactor of $g_{R}$ grows with the pump frequency
+//! (Agrawal, Sec. 8.1.2), the $f_{p}/f_{\mathrm{ref}}$ of [`RamanGain::efficiency`].
+//!
+//! | Model | $h_{R}(t)$ | Parameters | Keeps |
+//! | --- | --- | --- | --- |
+//! | [`RamanGain::blow_wood`] | $h_{a}(t) = \frac{\tau_{1}^{2} + \tau_{2}^{2}}{\tau_{1} \tau_{2}^{2}} e^{-t/\tau_{2}} \sin(t/\tau_{1})$ | $\tau_{1} = 12.2$ fs, $\tau_{2} = 32$ fs | the main peak (a Lorentzian at $1/(2\pi\tau_{1}) = 13.05$ THz) |
+//! | [`RamanGain::lin_agrawal`] | $(1 - f_{b})\, h_{a}(t) + f_{b}\, \frac{2\tau_{b} - t}{\tau_{b}^{2}} e^{-t/\tau_{b}}$ | $f_{b} = 0.21$, $\tau_{b} = 96$ fs | the peak and the boson-peak shoulder below 5 THz |
+//! | [`RamanGain::hollenbeck_cantrell`] | $\sum_{i=1}^{13} A_{i}\, e^{-\gamma_{i} t - \Gamma_{i}^{2} t^{2}/4} \sin(\omega_{i} t)$ | Table 1 of the paper | the whole measured spectrum to 40 THz |
+//!
+//! Where the parameters of the models are quoted the fractional Raman contribution $f_{R}$
+//! of each (0.18, 0.245 and 0.2) multiplies $h_{R}$ in the nonlinear response; it does
+//! not change the shape of the gain and is not used here.
+//!
+//! # References
+//! - K. J. Blow and D. Wood, "Theoretical description of transient stimulated Raman
+//!   scattering in optical fibers," *IEEE J. Quantum Electron.* 25(12), 2665–2673, 1989,
+//!   doi 10.1109/3.40655.
+//! - Q. Lin and G. P. Agrawal, "Raman response function for silica fibers," *Opt. Lett.*
+//!   31(21), 3086–3088, 2006, doi 10.1364/OL.31.003086.
+//! - D. Hollenbeck and C. D. Cantrell, "Multiple-vibrational-mode model for fiber-optic
+//!   Raman gain spectrum and response function," *J. Opt. Soc. Am. B* 19(12), 2886–2892,
+//!   2002, doi 10.1364/JOSAB.19.002886.
+//! - R. H. Stolen, J. P. Gordon, W. J. Tomlinson and H. A. Haus, "Raman response
+//!   function of silica-core fibers," *J. Opt. Soc. Am. B* 6(6), 1159–1166, 1989, doi
+//!   10.1364/JOSAB.6.001159 (the measured spectrum the three models are fitted to).
 
 use comnum_core::{Result, ensure, ensure_shape};
+use comnum_math::{SPEED_OF_LIGHT, trapezoid_uniform};
+
+/// The damped oscillator $h_{a}(t)$ of Blow & Wood 1989 (1/s) at the time `t_s`
+/// (s), $\tau_{1} = 12.2$ fs and $\tau_{2} = 32$ fs.
+fn blow_wood_response(t_s: f64) -> f64 {
+    const TAU_1_S: f64 = 12.2e-15;
+    const TAU_2_S: f64 = 32e-15;
+    (TAU_1_S * TAU_1_S + TAU_2_S * TAU_2_S) / (TAU_1_S * TAU_2_S * TAU_2_S)
+        * (-t_s / TAU_2_S).exp()
+        * (t_s / TAU_1_S).sin()
+}
 
 /// The Raman gain spectrum $g_{R}(\Delta f)$ of a fibre, as the product with the
 /// effective area $g_{R} A_{\mathrm{eff}}$ (m/W), for a pump at a reference frequency.
@@ -235,6 +292,214 @@ impl RamanGain {
         RamanGain::new(offsets, vec![g; 41], reference_hz)
     }
 
+    /// The gain spectrum of a Raman response function $h_{R}(t)$ (1/s, of the time in
+    /// seconds): $\operatorname{Im} \tilde{h}_{R}(2\pi \Delta f) = \int_{0}^{\infty}
+    /// h_{R}(t) \sin(2\pi \Delta f\, t)\, dt$ at every 0.1 THz from 0 to 42 THz (the
+    /// trapezoidal rule on 0.5 fs over 4 ps), scaled so that its peak is `peak_m_w`
+    /// (m/W, $g_{R} A_{\mathrm{eff}}$), for a pump at `reference_hz`. The three models of
+    /// the module call it; a user model (another set of oscillators, a measured response)
+    /// goes through it too.
+    ///
+    /// # Errors
+    /// [`comnum_core::Error::Config`] for a peak negative or not finite, a non-positive
+    /// reference frequency, or a response whose spectrum has no positive maximum.
+    ///
+    /// # Examples
+    /// ```
+    /// use comnum_channel::optical::raman::RamanGain;
+    /// // a single damped oscillator at 10 THz, 1 ps of decay
+    /// let (f0, tau) = (10e12, 1e-12);
+    /// let g = RamanGain::from_response(|t| (-t / tau).exp() * (2.0 * std::f64::consts::PI * f0 * t).sin(), 1e-14, 206e12)?;
+    /// let (f_peak, g_peak) = g.peak();
+    /// assert!((f_peak - 10e12).abs() <= 0.1e12 && (g_peak - 1e-14).abs() < 1e-30);
+    /// # Ok::<(), comnum_core::Error>(())
+    /// ```
+    pub fn from_response(h_r: impl Fn(f64) -> f64, peak_m_w: f64, reference_hz: f64) -> Result<RamanGain> {
+        const DT_S: f64 = 0.5e-15;
+        const N_T: usize = 8000;
+        const DF_HZ: f64 = 0.1e12;
+        const N_F: usize = 421;
+        ensure(peak_m_w.is_finite() && peak_m_w >= 0.0, || {
+            format!("the peak of the Raman gain must be finite and non-negative, got {peak_m_w}")
+        })?;
+        let h: Vec<f64> = (0..N_T).map(|k| h_r(k as f64 * DT_S)).collect();
+        let mut product = vec![0.0; N_T];
+        let offsets: Vec<f64> = (0..N_F).map(|k| k as f64 * DF_HZ).collect();
+        let mut gain: Vec<f64> = offsets
+            .iter()
+            .map(|&df| {
+                let omega = 2.0 * std::f64::consts::PI * df;
+                for (p, (k, hk)) in product.iter_mut().zip(h.iter().enumerate()) {
+                    *p = hk * (omega * k as f64 * DT_S).sin();
+                }
+                trapezoid_uniform(&product, DT_S)
+            })
+            .collect();
+        let max = gain.iter().copied().fold(0.0, f64::max);
+        ensure(max > 0.0 && max.is_finite(), || "the Raman response must have a positive gain spectrum".into())?;
+        for g in &mut gain {
+            // the models give the shape of the gain; a small negative lobe of the
+            // numerical integral (the tail of the time window) is a zero gain
+            *g = (*g / max * peak_m_w).max(0.0);
+        }
+        RamanGain::new(offsets, gain, reference_hz)
+    }
+
+    /// The single damped oscillator of Blow & Wood (*IEEE J. Quantum Electron.* 25(12),
+    /// 1989; Agrawal, *Nonlinear Fiber Optics*, Sec. 2.3.2),
+    ///
+    /// $$
+    /// h_{a}(t) = \frac{\tau_{1}^{2} + \tau_{2}^{2}}{\tau_{1} \tau_{2}^{2}}
+    /// e^{-t/\tau_{2}} \sin(t/\tau_{1}),
+    /// \qquad \tau_{1} = 12.2\ \mathrm{fs}, \quad \tau_{2} = 32\ \mathrm{fs},
+    /// $$
+    ///
+    /// whose gain spectrum is the Lorentzian
+    /// $\operatorname{Im} \tilde{h}_{a}(\Omega) \propto \Omega / \big[(\tau_{1}^{-2} +
+    /// \tau_{2}^{-2} - \Omega^{2})^{2} + 4 \Omega^{2} / \tau_{2}^{2}\big]$: the peak of
+    /// silica at 13.1 THz with its width, but a Lorentzian underestimates the gain
+    /// below 8 THz (the boson peak) and keeps none of the structure above 15 THz. The
+    /// default Raman term of the split-step solvers of the literature. Peak `peak_m_w`
+    /// ($g_{R} A_{\mathrm{eff}}$, m/W) for a pump at `reference_hz`.
+    ///
+    /// # Errors
+    /// Those of [`RamanGain::from_response`].
+    ///
+    /// # Examples
+    /// ```
+    /// use comnum_channel::optical::raman::RamanGain;
+    /// let ssmf = RamanGain::ssmf();
+    /// let (f_ref, peak) = (206.184_634_112_792e12, ssmf.peak().1);
+    /// let g = RamanGain::blow_wood(peak, f_ref)?;
+    /// assert!((g.peak().0 - 13.1e12).abs() <= 0.1e12);
+    /// // the Lorentzian misses the shoulder of silica at 3 THz
+    /// assert!(g.at(3e12) < 0.6 * ssmf.at(3e12));
+    /// # Ok::<(), comnum_core::Error>(())
+    /// ```
+    pub fn blow_wood(peak_m_w: f64, reference_hz: f64) -> Result<RamanGain> {
+        RamanGain::from_response(blow_wood_response, peak_m_w, reference_hz)
+    }
+
+    /// The response of Lin & Agrawal (*Opt. Lett.* 31(21), 2006; Agrawal, *Nonlinear Fiber
+    /// Optics*, Sec. 2.3.2): the oscillator of
+    /// [`RamanGain::blow_wood`] plus the boson peak of the glass,
+    ///
+    /// $$
+    /// h_{R}(t) = (1 - f_{b})\, h_{a}(t) + f_{b}\, h_{b}(t),
+    /// \qquad
+    /// h_{b}(t) = \frac{2 \tau_{b} - t}{\tau_{b}^{2}} e^{-t/\tau_{b}},
+    /// \qquad f_{b} = 0.21, \quad \tau_{b} = 96\ \mathrm{fs},
+    /// $$
+    ///
+    /// $f_{b}$ the share of the anisotropic response ($f_{a} = 0.75$ and $f_{c} = 0.04$
+    /// of the paper both multiply $h_{a}$; $f_{R} = 0.245$). The shoulder below 5 THz is
+    /// recovered, the one that matters for the inter-channel Raman scattering of a C+L
+    /// comb; the structure above 15 THz is still missing. Peak `peak_m_w` ($g_{R}
+    /// A_{\mathrm{eff}}$, m/W) for a pump at `reference_hz`.
+    ///
+    /// # Errors
+    /// Those of [`RamanGain::from_response`].
+    ///
+    /// # Examples
+    /// ```
+    /// use comnum_channel::optical::raman::RamanGain;
+    /// let ssmf = RamanGain::ssmf();
+    /// let (f_ref, peak) = (206.184_634_112_792e12, ssmf.peak().1);
+    /// let g = RamanGain::lin_agrawal(peak, f_ref)?;
+    /// // the boson peak brings the gain at 3 THz within 25 % of the measurement
+    /// assert!((g.at(3e12) / ssmf.at(3e12) - 1.0).abs() < 0.25);
+    /// # Ok::<(), comnum_core::Error>(())
+    /// ```
+    pub fn lin_agrawal(peak_m_w: f64, reference_hz: f64) -> Result<RamanGain> {
+        const F_B: f64 = 0.21;
+        const TAU_B_S: f64 = 96e-15;
+        RamanGain::from_response(
+            |t| {
+                let h_b = (2.0 * TAU_B_S - t) / (TAU_B_S * TAU_B_S) * (-t / TAU_B_S).exp();
+                (1.0 - F_B) * blow_wood_response(t) + F_B * h_b
+            },
+            peak_m_w,
+            reference_hz,
+        )
+    }
+
+    /// The intermediate-broadening model of Hollenbeck & Cantrell (*J. Opt. Soc. Am. B*
+    /// 19(12), 2002, Table 1): thirteen vibrational modes of the Si–O–Si
+    /// structure, each a damped oscillator with a Gaussian distribution of frequencies,
+    ///
+    /// $$
+    /// h_{R}(t) = \sum_{i=1}^{13} A_{i}\,
+    /// e^{-\gamma_{i} t}\, e^{-\Gamma_{i}^{2} t^{2}/4} \sin(\omega_{i} t),
+    /// \qquad
+    /// \omega_{i} = 2\pi c\, \nu_{i}, \quad
+    /// \Gamma_{i} = \pi c\, \Delta\nu_{G,i}, \quad
+    /// \gamma_{i} = \pi c\, \Delta\nu_{L,i},
+    /// $$
+    ///
+    /// with the position $\nu_{i}$, the amplitude $A_{i}$ and the Gaussian and
+    /// Lorentzian full widths $\Delta\nu_{G,i}$, $\Delta\nu_{L,i}$ (cm⁻¹) of the table,
+    /// fitted to the measured spectrum of Stolen et al. 1989. The whole spectrum to 40
+    /// THz is reproduced: the peak, the boson shoulder, the plateau at 18 THz and the
+    /// bands at 24 and 34 THz. Peak `peak_m_w` ($g_{R} A_{\mathrm{eff}}$, m/W) for a pump
+    /// at `reference_hz`.
+    ///
+    /// # Errors
+    /// Those of [`RamanGain::from_response`].
+    ///
+    /// # Examples
+    /// ```
+    /// use comnum_channel::optical::raman::RamanGain;
+    /// let ssmf = RamanGain::ssmf();
+    /// let (f_ref, peak) = (206.184_634_112_792e12, ssmf.peak().1);
+    /// let g = RamanGain::hollenbeck_cantrell(peak, f_ref)?;
+    /// // the band of silica at 24 THz above the dip at 21.5 THz, which the tail of a
+    /// // single Lorentzian does not have
+    /// assert!(g.at(24e12) > 1.5 * g.at(21.5e12));
+    /// assert!(RamanGain::blow_wood(peak, f_ref)?.at(24e12) < RamanGain::blow_wood(peak, f_ref)?.at(21.5e12));
+    /// # Ok::<(), comnum_core::Error>(())
+    /// ```
+    pub fn hollenbeck_cantrell(peak_m_w: f64, reference_hz: f64) -> Result<RamanGain> {
+        // Table 1: position (cm⁻¹), amplitude, Gaussian FWHM (cm⁻¹), Lorentzian FWHM (cm⁻¹)
+        const MODES: [(f64, f64, f64, f64); 13] = [
+            (56.25, 1.00, 52.10, 17.37),
+            (100.00, 11.40, 110.42, 38.81),
+            (231.25, 36.67, 175.00, 58.33),
+            (362.50, 67.67, 162.50, 54.17),
+            (463.00, 74.00, 135.33, 45.11),
+            (497.00, 4.50, 24.50, 8.17),
+            (611.50, 6.80, 41.50, 13.83),
+            (691.67, 4.60, 155.00, 51.67),
+            (793.67, 4.20, 59.50, 19.83),
+            (835.50, 4.50, 64.30, 21.43),
+            (930.00, 2.70, 150.00, 50.00),
+            (1080.00, 3.10, 91.00, 30.33),
+            (1215.00, 3.00, 160.00, 53.33),
+        ];
+        // c in cm/s turns a wavenumber (cm⁻¹) into a frequency (Hz)
+        let c_cm_s = SPEED_OF_LIGHT * 1e2;
+        let modes: Vec<(f64, f64, f64, f64)> = MODES
+            .iter()
+            .map(|&(nu, a, dg, dl)| {
+                let omega = 2.0 * std::f64::consts::PI * c_cm_s * nu;
+                let big_gamma = std::f64::consts::PI * c_cm_s * dg;
+                let gamma = std::f64::consts::PI * c_cm_s * dl;
+                (omega, a, big_gamma, gamma)
+            })
+            .collect();
+        RamanGain::from_response(
+            |t| {
+                modes
+                    .iter()
+                    .map(|&(omega, a, big_gamma, gamma)| {
+                        a * (-gamma * t - big_gamma * big_gamma * t * t / 4.0).exp() * (omega * t).sin()
+                    })
+                    .sum()
+            },
+            peak_m_w,
+            reference_hz,
+        )
+    }
+
     /// $g_{R} A_{\mathrm{eff}}$ (m/W) at the offset `df_hz` for a pump at the reference
     /// frequency (zero outside the table).
     pub fn at(&self, df_hz: f64) -> f64 {
@@ -264,5 +529,80 @@ impl RamanGain {
             .iter()
             .zip(&self.gain_m_w)
             .fold((0.0, 0.0), |(fo, go), (f, g)| if *g > go { (*f, *g) } else { (fo, go) })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    const F_REF: f64 = 206.184_634_112_792e12;
+
+    /// The rms and maximum error of a model against the table of GNPy over `[0, f_max]`,
+    /// relative to the peak of the table.
+    fn errors(model: &RamanGain, f_max_hz: f64) -> (f64, f64) {
+        let ssmf = RamanGain::ssmf();
+        let peak = ssmf.peak().1;
+        let (mut sum, mut max, mut n) = (0.0, 0.0_f64, 0);
+        for (f, g) in ssmf.offsets_hz.iter().zip(&ssmf.gain_m_w) {
+            if *f <= f_max_hz {
+                let e = (model.at(*f) - g) / peak;
+                sum += e * e;
+                max = max.max(e.abs());
+                n += 1;
+            }
+        }
+        ((sum / f64::from(n)).sqrt(), max)
+    }
+
+    #[test]
+    fn the_numerical_spectrum_of_blow_wood_is_its_lorentzian() {
+        let g = RamanGain::blow_wood(1.0, F_REF).unwrap();
+        let (a, b) = (1.0 / 32e-15, 1.0 / 12.2e-15);
+        let lorentzian = |w: f64| 2.0 * a * b * w / ((a * a + b * b - w * w).powi(2) + 4.0 * a * a * w * w);
+        let w_peak = 2.0 * std::f64::consts::PI * g.peak().0;
+        for df_thz in [1.0, 5.0, 10.0, 13.0, 16.0, 25.0, 40.0] {
+            let w = 2.0 * std::f64::consts::PI * df_thz * 1e12;
+            let expected = lorentzian(w) / lorentzian(w_peak);
+            assert!(
+                (g.at(df_thz * 1e12) - expected).abs() < 2e-3,
+                "{df_thz} THz: {} vs {expected}",
+                g.at(df_thz * 1e12)
+            );
+        }
+    }
+
+    #[test]
+    fn each_model_keeps_more_of_the_measured_spectrum_than_the_previous_one() {
+        let peak = RamanGain::ssmf().peak().1;
+        let bw = RamanGain::blow_wood(peak, F_REF).unwrap();
+        let la = RamanGain::lin_agrawal(peak, F_REF).unwrap();
+        let hc = RamanGain::hollenbeck_cantrell(peak, F_REF).unwrap();
+        for (name, g) in [("blow_wood", &bw), ("lin_agrawal", &la), ("hollenbeck_cantrell", &hc)] {
+            let (f, p) = g.peak();
+            let (rms10, max10) = errors(g, 10e12);
+            let (rms40, max40) = errors(g, 42e12);
+            println!(
+                "{name}: peak {:.2} THz {:.3e}, 0-10 THz rms {rms10:.3} max {max10:.3}, 0-42 THz rms {rms40:.3} max {max40:.3}; at 3 THz {:.3}, 18 THz {:.3}, 21.5 THz {:.3}, 24 THz {:.3}",
+                f / 1e12,
+                p,
+                g.at(3e12) / peak,
+                g.at(18e12) / peak,
+                g.at(21.5e12) / peak,
+                g.at(24e12) / peak
+            );
+            assert!((p - peak).abs() < 1e-28);
+            assert!((f - 13.25e12).abs() <= 0.5e12, "{name}: peak at {f}");
+        }
+        assert!(errors(&la, 10e12).0 < errors(&bw, 10e12).0);
+        assert!(errors(&hc, 42e12).0 < errors(&la, 42e12).0 && errors(&la, 42e12).0 < errors(&bw, 42e12).0);
+    }
+
+    #[test]
+    fn the_constructors_reject_a_bad_peak_and_a_bad_reference() {
+        assert!(RamanGain::blow_wood(-1.0, F_REF).is_err());
+        assert!(RamanGain::lin_agrawal(f64::NAN, F_REF).is_err());
+        assert!(RamanGain::hollenbeck_cantrell(1e-14, 0.0).is_err());
+        assert!(RamanGain::from_response(|_| 0.0, 1e-14, F_REF).is_err());
     }
 }
